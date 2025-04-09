@@ -49,9 +49,9 @@ const AppSidebar = () => {
         <div className="flex items-center gap-2">
           {sidebarExpanded && (
             <img 
-              src="/placeholder.svg" 
+              src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" 
               alt="Fricó Alimentos" 
-              className="h-8 w-8 rounded-md" 
+              className="h-8 w-auto rounded-md" 
             />
           )}
           {sidebarExpanded && <h1 className="text-lg font-bold">Fricó Alimentos</h1>}

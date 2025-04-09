@@ -12,9 +12,9 @@ const AuthLayout = ({ children }: AuthLayoutProps) => {
         <div className="flex justify-center mb-8">
           <div className="flex flex-col items-center">
             <img 
-              src="/placeholder.svg" 
+              src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" 
               alt="Fricó Alimentos Logo" 
-              className="h-16 w-16 mb-2" 
+              className="h-24 w-auto mb-2" 
             />
             <h1 className="text-2xl font-bold text-center">
               Fricó Alimentos <span className="text-primary">ADM</span>

@@ -40,14 +40,18 @@ const Login = () => {
 
     // Simulando autenticação (em produção isso seria uma chamada real de API)
     setTimeout(() => {
-      // Credenciais hardcoded para demonstração
-      if (formData.email === "admin@frico.com" && formData.senha === "admin") {
+      // Credenciais válidas para login
+      if ((formData.email === "admin@frico.com" && formData.senha === "admin") ||
+          (formData.email === "bruno.bm3051@gmail.com" && formData.senha === "portal@159")) {
         toast({
           title: "Login bem-sucedido",
           description: "Bem-vindo ao sistema Fricó Alimentos ADM!",
         });
         // Guardar informações de login (em produção seria um token JWT)
-        localStorage.setItem("fricoUser", JSON.stringify({ role: "admin", name: "Administrador" }));
+        localStorage.setItem("fricoUser", JSON.stringify({ 
+          role: "admin", 
+          name: formData.email === "bruno.bm3051@gmail.com" ? "Bruno" : "Administrador" 
+        }));
         navigate("/dashboard");
       } else {
         toast({
