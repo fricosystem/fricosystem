@@ -10,7 +10,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Produtos from "./pages/Produtos";
+import NotasFiscais from "./pages/NotasFiscais";
 import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -50,6 +52,7 @@ const App = () => {
               {/* Rotas protegidas */}
               <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
               <Route path="/produtos" element={<AuthGuard><Produtos /></AuthGuard>} />
+              <Route path="/notas-fiscais" element={<AuthGuard><NotasFiscais /></AuthGuard>} />
               
               {/* Rota 404 */}
               <Route path="*" element={<NotFound />} />
