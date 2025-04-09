@@ -15,7 +15,6 @@ import Relatorios from "./pages/Relatorios";
 import Administrativo from "./pages/Administrativo";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
-import Index from "./pages/Index";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -42,31 +41,29 @@ const NoAuthGuard = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => {
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Rotas públicas */}
-              <Route path="/" element={<NoAuthGuard><Login /></NoAuthGuard>} />
-              
-              {/* Rotas protegidas */}
-              <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
-              <Route path="/produtos" element={<AuthGuard><Produtos /></AuthGuard>} />
-              <Route path="/notas-fiscais" element={<AuthGuard><NotasFiscais /></AuthGuard>} />
-              <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
-              <Route path="/administrativo" element={<AuthGuard><Administrativo /></AuthGuard>} />
-              <Route path="/configuracoes" element={<AuthGuard><Configuracoes /></AuthGuard>} />
-              
-              {/* Rota 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Rotas públicas */}
+            <Route path="/" element={<NoAuthGuard><Login /></NoAuthGuard>} />
+            
+            {/* Rotas protegidas */}
+            <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
+            <Route path="/produtos" element={<AuthGuard><Produtos /></AuthGuard>} />
+            <Route path="/notas-fiscais" element={<AuthGuard><NotasFiscais /></AuthGuard>} />
+            <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
+            <Route path="/administrativo" element={<AuthGuard><Administrativo /></AuthGuard>} />
+            <Route path="/configuracoes" element={<AuthGuard><Configuracoes /></AuthGuard>} />
+            
+            {/* Rota 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 
