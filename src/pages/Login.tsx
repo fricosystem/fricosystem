@@ -1,161 +1,191 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
-import ThemeToggle from "@/components/ThemeToggle";
 import AuthLayout from "@/layouts/AuthLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    senha: "",
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [name, setName] = useState("");
   
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const { toast } = useToast();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
-
-    // Simulando autenticação (em produção isso seria uma chamada real de API)
-    setTimeout(() => {
-      // Credenciais válidas para login
-      if ((formData.email === "admin@frico.com" && formData.senha === "admin") ||
-          (formData.email === "bruno.bm3051@gmail.com" && formData.senha === "portal@159")) {
-        toast({
-          title: "Login bem-sucedido",
-          description: "Bem-vindo ao sistema Fricó Alimentos ADM!",
+    setIsLoading(true);
+    
+    try {
+      if (isRegistering) {
+        // Register logic
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              nome: name,
+            },
+          },
         });
-        // Guardar informações de login (em produção seria um token JWT)
-        localStorage.setItem("fricoUser", JSON.stringify({ 
-          role: "admin", 
-          name: formData.email === "bruno.bm3051@gmail.com" ? "Bruno" : "Administrador" 
-        }));
+
+        if (signUpError) throw signUpError;
+        
+        // Create profile
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { error: profileError } = await supabase.from('profiles').insert({
+            id: user.id,
+            email: user.email,
+            nome: name,
+            cargo: "Usuário",
+            perfil: "Regular"
+          });
+          
+          if (profileError) throw profileError;
+        }
+        
+        toast({
+          title: "Conta criada com sucesso",
+          description: "Você foi registrado e logado no sistema.",
+        });
+        
         navigate("/dashboard");
       } else {
-        toast({
-          title: "Falha no login",
-          description: "Email ou senha inválidos. Tente novamente.",
-          variant: "destructive",
-        });
+        // Login logic
+        const { error } = await signIn(email, password);
+        
+        if (error) throw error;
+        
+        navigate("/dashboard");
       }
-      setLoading(false);
-    }, 1500);
+    } catch (error: any) {
+      console.error("Authentication error:", error);
+      
+      toast({
+        title: "Erro de autenticação",
+        description: error.message || "Ocorreu um erro ao processar sua solicitação.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
+  
   return (
     <AuthLayout>
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>
-            Entre com suas credenciais para acessar o sistema
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">
+              Fricó Alimentos
+            </CardTitle>
+            <CardDescription className="text-center">
+              {isRegistering ? "Crie sua conta" : "Entre com suas credenciais"}
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              {isRegistering && (
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    placeholder="Seu nome completo"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
-                  name="email"
-                  placeholder="seu@email.com"
                   type="email"
-                  autoComplete="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="pl-10"
-                  value={formData.email}
-                  onChange={handleChange}
+                  disabled={isLoading}
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="senha">Senha</Label>
-                <Button 
-                  type="button" 
-                  variant="link" 
-                  size="sm" 
-                  className="p-0 h-auto text-xs text-muted-foreground"
-                  onClick={() => toast({
-                    title: "Recuperação de senha",
-                    description: "Entre em contato com o administrador do sistema",
-                  })}
-                >
-                  Esqueceu a senha?
-                </Button>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="senha"
-                  name="senha"
-                  placeholder="••••••••"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  className="pl-10"
-                  value={formData.senha}
-                  onChange={handleChange}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1"
-                  onClick={toggleShowPassword}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
+              
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  {!isRegistering && (
+                    <a href="#" className="text-sm text-primary hover:underline">
+                      Esqueceu a senha?
+                    </a>
                   )}
-                  <span className="sr-only">
-                    {showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  </span>
-                </Button>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
               </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-      <div className="text-center mt-4 text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Fricó Alimentos - Todos os direitos reservados
+            </CardContent>
+            
+            <CardFooter className="flex flex-col space-y-4">
+              <Button className="w-full" type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isRegistering ? "Criando conta..." : "Entrando..."}
+                  </>
+                ) : (
+                  <>{isRegistering ? "Registrar" : "Entrar"}</>
+                )}
+              </Button>
+              
+              <div className="text-center text-sm">
+                {isRegistering ? (
+                  <div>
+                    Já possui uma conta?{" "}
+                    <button
+                      type="button"
+                      className="text-primary hover:underline"
+                      onClick={() => setIsRegistering(false)}
+                      disabled={isLoading}
+                    >
+                      Entrar
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    Não possui uma conta?{" "}
+                    <button
+                      type="button"
+                      className="text-primary hover:underline"
+                      onClick={() => setIsRegistering(true)}
+                      disabled={isLoading}
+                    >
+                      Registrar
+                    </button>
+                  </div>
+                )}
+              </div>
+            </CardFooter>
+          </form>
+        </Card>
       </div>
     </AuthLayout>
   );

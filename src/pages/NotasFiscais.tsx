@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { FileText, Upload, Search, Download } from "lucide-react";
 
 import AppLayout from "@/layouts/AppLayout";
@@ -8,52 +7,23 @@ import { Input } from "@/components/ui/input";
 import EmptyState from "@/components/EmptyState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import useNotasFiscais from "@/hooks/useNotasFiscais";
+import { Loader2 } from "lucide-react";
 
 const NotasFiscais = () => {
-  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
-  const [carregando, setCarregando] = useState(false);
-  const { toast } = useToast();
-
-  const handleArquivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const arquivos = e.target.files;
-    if (arquivos && arquivos[0]) {
-      const arquivo = arquivos[0];
-      // Verificar se é um arquivo XML
-      if (arquivo.type !== "text/xml" && !arquivo.name.endsWith('.xml')) {
-        toast({
-          title: "Formato inválido",
-          description: "Por favor, selecione um arquivo XML.",
-          variant: "destructive",
-        });
-        return;
-      }
-      setArquivoSelecionado(arquivo);
-    }
-  };
+  const { 
+    notasFiscais,
+    loading,
+    arquivoSelecionado, 
+    carregando,
+    setArquivoSelecionado,
+    handleArquivoChange,
+    processarNota
+  } = useNotasFiscais();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!arquivoSelecionado) {
-      toast({
-        title: "Arquivo necessário",
-        description: "Por favor, selecione um arquivo XML da NFe.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setCarregando(true);
-    
-    // Simulando processamento do XML
-    setTimeout(() => {
-      setCarregando(false);
-      toast({
-        title: "XML processado com sucesso",
-        description: "Os itens da nota fiscal foram extraídos.",
-      });
-      // Redirecionar para página de confirmação (a ser implementada)
-    }, 2000);
+    processarNota();
   };
 
   return (
@@ -112,7 +82,12 @@ const NotasFiscais = () => {
 
                 <div className="flex justify-end">
                   <Button type="submit" disabled={!arquivoSelecionado || carregando}>
-                    {carregando ? "Processando..." : "Processar XML"}
+                    {carregando ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processando...
+                      </>
+                    ) : "Processar XML"}
                   </Button>
                 </div>
               </form>
@@ -120,7 +95,7 @@ const NotasFiscais = () => {
           </Card>
 
           <div className="mt-6">
-            <Tabs defaultValue="pendentes">
+            <Tabs defaultValue="processadas">
               <TabsList>
                 <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
                 <TabsTrigger value="processadas">Processadas</TabsTrigger>
@@ -146,54 +121,57 @@ const NotasFiscais = () => {
                       </div>
                     </div>
 
-                    <div className="border rounded-md">
-                      <table className="data-table">
-                        <thead className="data-table-header">
-                          <tr>
-                            <th className="data-table-head">Número</th>
-                            <th className="data-table-head">Fornecedor</th>
-                            <th className="data-table-head">Data</th>
-                            <th className="data-table-head">Valor</th>
-                            <th className="data-table-head">Status</th>
-                            <th className="data-table-head">Ações</th>
-                          </tr>
-                        </thead>
-                        <tbody className="data-table-body">
-                          <tr className="data-table-row">
-                            <td className="data-table-cell">NF-001234</td>
-                            <td className="data-table-cell">Distribuidora ABC</td>
-                            <td className="data-table-cell">12/04/2025</td>
-                            <td className="data-table-cell">R$ 4.850,00</td>
-                            <td className="data-table-cell">
-                              <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs px-2 py-1 rounded-full">
-                                Processada
-                              </span>
-                            </td>
-                            <td className="data-table-cell">
-                              <Button variant="ghost" size="sm">
-                                <Download className="h-4 w-4 mr-1" /> XML
-                              </Button>
-                            </td>
-                          </tr>
-                          <tr className="data-table-row">
-                            <td className="data-table-cell">NF-001233</td>
-                            <td className="data-table-cell">Alimentos XYZ</td>
-                            <td className="data-table-cell">11/04/2025</td>
-                            <td className="data-table-cell">R$ 2.320,00</td>
-                            <td className="data-table-cell">
-                              <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs px-2 py-1 rounded-full">
-                                Processada
-                              </span>
-                            </td>
-                            <td className="data-table-cell">
-                              <Button variant="ghost" size="sm">
-                                <Download className="h-4 w-4 mr-1" /> XML
-                              </Button>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                    {loading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <span className="ml-2">Carregando notas fiscais...</span>
+                      </div>
+                    ) : notasFiscais.length > 0 ? (
+                      <div className="border rounded-md">
+                        <table className="data-table">
+                          <thead className="data-table-header">
+                            <tr>
+                              <th className="data-table-head">Número</th>
+                              <th className="data-table-head">Fornecedor</th>
+                              <th className="data-table-head">Data</th>
+                              <th className="data-table-head">Valor</th>
+                              <th className="data-table-head">Status</th>
+                              <th className="data-table-head">Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody className="data-table-body">
+                            {notasFiscais.map((nota) => (
+                              <tr key={nota.id} className="data-table-row">
+                                <td className="data-table-cell">{nota.id}</td>
+                                <td className="data-table-cell">{nota.fornecedor}</td>
+                                <td className="data-table-cell">
+                                  {new Date(nota.data).toLocaleDateString('pt-BR')}
+                                </td>
+                                <td className="data-table-cell">
+                                  R$ {nota.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="data-table-cell">
+                                  <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs px-2 py-1 rounded-full">
+                                    {nota.status === 'processada' ? 'Processada' : 'Pendente'}
+                                  </span>
+                                </td>
+                                <td className="data-table-cell">
+                                  <Button variant="ghost" size="sm">
+                                    <Download className="h-4 w-4 mr-1" /> XML
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <EmptyState
+                        title="Nenhuma nota fiscal processada"
+                        description="Não existem notas fiscais processadas no momento."
+                        icon={<FileText size={50} />}
+                      />
+                    )}
                   </div>
                 </Card>
               </TabsContent>

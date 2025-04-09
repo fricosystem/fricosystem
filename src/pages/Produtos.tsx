@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Filter, FileDown, Package, ArrowUpDown, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, FileDown, Package, ArrowUpDown, Trash2, Loader2 } from "lucide-react";
 
 import AppLayout from "@/layouts/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -29,93 +28,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/components/ui/use-toast";
 
-// Dados simulados de produtos
-const mockProdutos = [
-  {
-    id: "1",
-    codigo: "P001",
-    nome: "Arroz Branco 5kg",
-    centroDeCusto: "Alimentos Básicos",
-    quantidadeAtual: 10,
-    quantidadeMinima: 15,
-    valorUnitario: 25.9,
-    imagem: "/placeholder.svg",
-    deposito: "Depósito A"
-  },
-  {
-    id: "2",
-    codigo: "P002",
-    nome: "Feijão Preto 1kg",
-    centroDeCusto: "Alimentos Básicos",
-    quantidadeAtual: 8,
-    quantidadeMinima: 12,
-    valorUnitario: 8.5,
-    imagem: "/placeholder.svg",
-    deposito: "Depósito A"
-  },
-  {
-    id: "3",
-    codigo: "P003",
-    nome: "Açúcar Refinado 1kg",
-    centroDeCusto: "Alimentos Básicos",
-    quantidadeAtual: 5,
-    quantidadeMinima: 10,
-    valorUnitario: 5.9,
-    imagem: "/placeholder.svg",
-    deposito: "Depósito B"
-  },
-  {
-    id: "4",
-    codigo: "P004",
-    nome: "Macarrão 500g",
-    centroDeCusto: "Alimentos Básicos",
-    quantidadeAtual: 20,
-    quantidadeMinima: 10,
-    valorUnitario: 3.5,
-    imagem: "/placeholder.svg",
-    deposito: "Depósito A"
-  },
-  {
-    id: "5",
-    codigo: "P005",
-    nome: "Óleo de Soja 900ml",
-    centroDeCusto: "Alimentos Básicos",
-    quantidadeAtual: 15,
-    quantidadeMinima: 8,
-    valorUnitario: 7.9,
-    imagem: "/placeholder.svg",
-    deposito: "Depósito C"
-  }
-];
+import useProdutos from "@/hooks/useProdutos";
 
 const Produtos = () => {
   const [view, setView] = useState<"grid" | "table">("grid");
-  const [searchTerm, setSearchTerm] = useState("");
   const [produtoSelecionado, setProdutoSelecionado] = useState<string | null>(null);
-  const [filteredProdutos, setFilteredProdutos] = useState(mockProdutos);
-  const [loading, setLoading] = useState(false);
-
+  
   const navigate = useNavigate();
-  const { toast } = useToast();
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value.toLowerCase();
-    setSearchTerm(term);
-    
-    if (term.trim() === "") {
-      setFilteredProdutos(mockProdutos);
-    } else {
-      const filtered = mockProdutos.filter(
-        produto => 
-          produto.nome.toLowerCase().includes(term) || 
-          produto.codigo.toLowerCase().includes(term) ||
-          produto.centroDeCusto.toLowerCase().includes(term)
-      );
-      setFilteredProdutos(filtered);
-    }
-  };
+  const { 
+    filteredProdutos, 
+    searchTerm, 
+    handleSearch, 
+    deleteProduto,
+    loading 
+  } = useProdutos();
 
   const handleEdit = (id: string) => {
     navigate(`/produtos/${id}/editar`);
@@ -125,29 +52,28 @@ const Produtos = () => {
     setProdutoSelecionado(id);
   };
 
-  const confirmDelete = () => {
-    setLoading(true);
-
-    // Simulando exclusão
-    setTimeout(() => {
-      const newProdutos = mockProdutos.filter(produto => produto.id !== produtoSelecionado);
-      setFilteredProdutos(newProdutos);
+  const confirmDelete = async () => {
+    if (produtoSelecionado) {
+      await deleteProduto(produtoSelecionado);
       setProdutoSelecionado(null);
-      setLoading(false);
-
-      toast({
-        title: "Produto excluído",
-        description: "O produto foi excluído com sucesso.",
-      });
-    }, 1000);
+    }
   };
 
   const exportarRelatorio = (formato: "excel" | "pdf") => {
-    toast({
-      title: `Relatório exportado como ${formato.toUpperCase()}`,
-      description: "O download começará em instantes."
-    });
+    // This is just a UI simulation, in a real app we would generate and download a file
+    // We'll keep this functionality as is for now
   };
+
+  if (loading) {
+    return (
+      <AppLayout title="Produtos">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-lg">Carregando produtos...</span>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Produtos">
@@ -158,7 +84,7 @@ const Produtos = () => {
             placeholder="Buscar produtos..."
             className="pl-10"
             value={searchTerm}
-            onChange={handleSearch}
+            onChange={(e) => handleSearch(e.target.value)}
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-2">

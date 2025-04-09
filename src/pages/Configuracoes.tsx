@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React from "react";
 import AppLayout from "@/layouts/AppLayout";
 import {
   Card,
@@ -14,49 +14,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { Loader2 } from "lucide-react";
 
 const Configuracoes = () => {
-  const { toast } = useToast();
-  const [emailConfig, setEmailConfig] = useState({
-    smtpServer: "smtp.fricoalimentos.com.br",
-    smtpPort: "587",
-    username: "notificacoes@fricoalimentos.com.br",
-    password: "********",
-    senderName: "Sistema Fricó",
-    senderEmail: "notificacoes@fricoalimentos.com.br",
-  });
-  
-  const [notificationSettings, setNotificationSettings] = useState({
-    lowStock: true,
-    newOrders: true,
-    systemUpdates: true,
-    dailyReports: false,
-    invoiceIssues: true,
-  });
-  
-  const [backupSettings, setBackupSettings] = useState({
-    frequency: "daily",
-    retentionDays: "30",
-    time: "02:00",
-    lastBackup: "09/04/2023 02:00:12",
-    nextBackup: "10/04/2023 02:00:00",
-  });
-
-  const [theme, setTheme] = useState({
-    mode: "light",
-    accentColor: "#9333ea",
-    sidebarCollapsed: false,
-  });
+  const { 
+    loading,
+    saveInProgress,
+    emailConfig, 
+    setEmailConfig,
+    notificationSettings, 
+    setNotificationSettings,
+    backupSettings, 
+    setBackupSettings,
+    theme, 
+    setTheme,
+    saveEmailConfig,
+    saveNotificationSettings,
+    saveBackupSettings,
+    saveThemeSettings,
+    triggerManualBackup
+  } = useConfiguracoes();
 
   const handleEmailFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Configurações de e-mail salvas",
-      description: "As configurações de e-mail foram atualizadas com sucesso.",
-    });
+    saveEmailConfig();
   };
 
   const handleNotificationSettingsChange = (key: string) => {
@@ -68,26 +52,24 @@ const Configuracoes = () => {
 
   const handleBackupSettingsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Configurações de backup salvas",
-      description: "As configurações de backup foram atualizadas com sucesso.",
-    });
-  };
-
-  const triggerManualBackup = () => {
-    toast({
-      title: "Backup iniciado",
-      description: "O backup manual foi iniciado e será concluído em breve.",
-    });
+    saveBackupSettings();
   };
 
   const handleThemeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Configurações de tema salvas",
-      description: "As configurações de tema foram atualizadas com sucesso.",
-    });
+    saveThemeSettings();
   };
+
+  if (loading) {
+    return (
+      <AppLayout title="Configurações">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-lg">Carregando configurações...</span>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Configurações">
@@ -178,7 +160,14 @@ const Configuracoes = () => {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit">Salvar Configurações</Button>
+                <Button type="submit" disabled={saveInProgress}>
+                  {saveInProgress ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : "Salvar Configurações"}
+                </Button>
                 <Button variant="outline" className="ml-2">
                   Testar Conexão
                 </Button>
@@ -277,15 +266,13 @@ const Configuracoes = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <Button
-                onClick={() =>
-                  toast({
-                    title: "Notificações salvas",
-                    description: "Suas preferências de notificação foram atualizadas.",
-                  })
-                }
-              >
-                Salvar Preferências
+              <Button onClick={saveNotificationSettings} disabled={saveInProgress}>
+                {saveInProgress ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : "Salvar Preferências"}
               </Button>
             </CardFooter>
           </Card>
@@ -363,9 +350,28 @@ const Configuracoes = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button type="submit">Salvar Configurações</Button>
-                <Button variant="outline" onClick={triggerManualBackup}>
-                  Iniciar Backup Manual
+                <Button type="submit" disabled={saveInProgress}>
+                  {saveInProgress ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : "Salvar Configurações"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    triggerManualBackup();
+                  }}
+                  disabled={saveInProgress}
+                >
+                  {saveInProgress ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Iniciando...
+                    </>
+                  ) : "Iniciar Backup Manual"}
                 </Button>
               </CardFooter>
             </form>
@@ -436,8 +442,26 @@ const Configuracoes = () => {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit">Salvar Preferências</Button>
-                <Button variant="outline" className="ml-2">
+                <Button type="submit" disabled={saveInProgress}>
+                  {saveInProgress ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : "Salvar Preferências"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="ml-2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setTheme({
+                      mode: "light",
+                      accentColor: "#9333ea",
+                      sidebarCollapsed: false,
+                    });
+                  }}
+                >
                   Restaurar Padrões
                 </Button>
               </CardFooter>
