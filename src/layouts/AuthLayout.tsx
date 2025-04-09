@@ -1,0 +1,33 @@
+
+import { ReactNode } from "react";
+
+interface AuthLayoutProps {
+  children: ReactNode;
+}
+
+const AuthLayout = ({ children }: AuthLayoutProps) => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
+        <div className="flex justify-center mb-8">
+          <div className="flex flex-col items-center">
+            <img 
+              src="/placeholder.svg" 
+              alt="Fricó Alimentos Logo" 
+              className="h-16 w-16 mb-2" 
+            />
+            <h1 className="text-2xl font-bold text-center">
+              Fricó Alimentos <span className="text-primary">ADM</span>
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Sistema de Gestão de Estoque
+            </p>
+          </div>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+export default AuthLayout;
