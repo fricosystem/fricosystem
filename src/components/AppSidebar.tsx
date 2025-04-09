@@ -44,7 +44,7 @@ const AppSidebar = () => {
   };
 
   return (
-    <Sidebar expanded={sidebarExpanded}>
+    <Sidebar className={sidebarExpanded ? "w-64" : "w-16"}>
       <SidebarHeader className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {sidebarExpanded && (

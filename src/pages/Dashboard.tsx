@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Package, DollarSign, TrendingUp, AlertTriangle, ShoppingCart } from "lucide-react";
+import { Package, DollarSign, TrendingUp, AlertTriangle, ShoppingCart, FileText } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import StatsCard from "@/components/StatsCard";
 import AlertaBaixoEstoque from "@/components/AlertaBaixoEstoque";
