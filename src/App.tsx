@@ -11,6 +11,9 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Produtos from "./pages/Produtos";
 import NotasFiscais from "./pages/NotasFiscais";
+import Relatorios from "./pages/Relatorios";
+import Administrativo from "./pages/Administrativo";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
 
@@ -53,6 +56,9 @@ const App = () => {
               <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
               <Route path="/produtos" element={<AuthGuard><Produtos /></AuthGuard>} />
               <Route path="/notas-fiscais" element={<AuthGuard><NotasFiscais /></AuthGuard>} />
+              <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
+              <Route path="/administrativo" element={<AuthGuard><Administrativo /></AuthGuard>} />
+              <Route path="/configuracoes" element={<AuthGuard><Configuracoes /></AuthGuard>} />
               
               {/* Rota 404 */}
               <Route path="*" element={<NotFound />} />
