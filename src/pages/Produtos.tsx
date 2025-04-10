@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Filter, FileDown, Package, ArrowUpDown, Trash2, Loader2, Upload, FilePlus2, FileUp2 } from "lucide-react";
+import { Search, Plus, Filter, FileDown, Package, ArrowUpDown, Trash2, Loader2, Upload, FilePlus2, FileUp } from "lucide-react";
 
 import AppLayout from "@/layouts/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -193,7 +192,7 @@ const Produtos = () => {
                 Cadastrar manualmente
               </DropdownMenuItem>
               <DropdownMenuItem onClick={importarProdutos}>
-                <FileUp2 className="mr-2 h-4 w-4" />
+                <FileUp className="mr-2 h-4 w-4" />
                 Importar de planilha
               </DropdownMenuItem>
               <DropdownMenuItem onClick={refreshProdutos}>
