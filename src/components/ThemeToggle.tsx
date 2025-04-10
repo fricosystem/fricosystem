@@ -1,37 +1,46 @@
 
-import { useTheme } from "next-themes";
+import { Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { SunIcon, MoonIcon } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
-interface ThemeToggleProps {
-  iconOnly?: boolean;
-}
+const ThemeToggle = () => {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const { toast } = useToast();
 
-const ThemeToggle = ({ iconOnly = false }: ThemeToggleProps) => {
-  const { theme, setTheme } = useTheme();
+  // Carrega o tema do localStorage ao iniciar
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.classList.toggle("dark", savedTheme === "dark");
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
 
+  // Atualiza o tema quando ele muda
   const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    localStorage.setItem("theme", newTheme);
+
+    toast({
+      description: `Tema alterado para ${newTheme === "light" ? "claro" : "escuro"}`,
+      duration: 2000,
+    });
   };
 
   return (
-    <Button
-      variant="ghost"
-      size={iconOnly ? "icon" : "default"}
-      onClick={toggleTheme}
-      title={theme === "light" ? "Modo escuro" : "Modo claro"}
-    >
+    <Button variant="ghost" size="icon" onClick={toggleTheme} title={`Mudar para tema ${theme === 'light' ? 'escuro' : 'claro'}`}>
       {theme === "light" ? (
-        <>
-          <MoonIcon className={iconOnly ? "h-5 w-5" : "h-4 w-4 mr-2"} />
-          {!iconOnly && <span>Escuro</span>}
-        </>
+        <Moon className="h-5 w-5" />
       ) : (
-        <>
-          <SunIcon className={iconOnly ? "h-5 w-5" : "h-4 w-4 mr-2"} />
-          {!iconOnly && <span>Claro</span>}
-        </>
+        <Sun className="h-5 w-5" />
       )}
+      <span className="sr-only">Alternar tema</span>
     </Button>
   );
 };
