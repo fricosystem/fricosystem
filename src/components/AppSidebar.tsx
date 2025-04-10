@@ -50,12 +50,23 @@ const AppSidebar = () => {
   
   // Estado para verificar se o usuário atual é o admin bruno.bm3051@gmail.com
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userName, setUserName] = useState("Usuário");
+  const [userRole, setUserRole] = useState("Admin");
   
   useEffect(() => {
     const userJson = localStorage.getItem("fricoUser");
     if (userJson) {
       const user = JSON.parse(userJson);
       setIsAdmin(user.email === "bruno.bm3051@gmail.com");
+      // Se o usuário tiver um nome, usamos ele, caso contrário, extraímos do email
+      if (user.nome) {
+        setUserName(user.nome);
+      } else if (user.email) {
+        setUserName(user.email.split('@')[0]);
+      }
+      if (user.cargo) {
+        setUserRole(user.cargo);
+      }
     }
   }, []);
   
@@ -64,6 +75,9 @@ const AppSidebar = () => {
     toast.success("Logout realizado com sucesso!");
     navigate("/");
   };
+
+  // Calcula o tamanho dos ícones com base no estado da barra lateral
+  const iconSize = sidebarExpanded ? 20 : 24;
 
   return (
     <Sidebar className={sidebarExpanded ? "w-64" : "w-16"}>
@@ -90,37 +104,49 @@ const AppSidebar = () => {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className={!sidebarExpanded ? "hidden" : ""}>Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton 
+                  asChild 
+                  tooltip={sidebarExpanded ? undefined : "Dashboard"}
+                >
                   <NavLink to="/dashboard" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <Home size={20} />
+                    <Home size={iconSize} />
                     {sidebarExpanded && <span>Dashboard</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton 
+                  asChild 
+                  tooltip={sidebarExpanded ? undefined : "Produtos"}
+                >
                   <NavLink to="/produtos" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <Package size={20} />
+                    <Package size={iconSize} />
                     {sidebarExpanded && <span>Produtos</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton 
+                  asChild 
+                  tooltip={sidebarExpanded ? undefined : "Notas Fiscais"}
+                >
                   <NavLink to="/notas-fiscais" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <FileText size={20} />
+                    <FileText size={iconSize} />
                     {sidebarExpanded && <span>Notas Fiscais</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton 
+                  asChild 
+                  tooltip={sidebarExpanded ? undefined : "Relatórios"}
+                >
                   <NavLink to="/relatorios" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <BarChart2 size={20} />
+                    <BarChart2 size={iconSize} />
                     {sidebarExpanded && <span>Relatórios</span>}
                   </NavLink>
                 </SidebarMenuButton>
@@ -130,23 +156,29 @@ const AppSidebar = () => {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Administração</SidebarGroupLabel>
+          <SidebarGroupLabel className={!sidebarExpanded ? "hidden" : ""}>Administração</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {isAdmin && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton 
+                    asChild 
+                    tooltip={sidebarExpanded ? undefined : "Administrativo"}
+                  >
                     <NavLink to="/administrativo" className={({isActive}) => isActive ? "text-primary" : ""}>
-                      <Users size={20} />
+                      <Users size={iconSize} />
                       {sidebarExpanded && <span>Administrativo</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton 
+                  asChild 
+                  tooltip={sidebarExpanded ? undefined : "Configurações"}
+                >
                   <NavLink to="/configuracoes" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <Settings size={20} />
+                    <Settings size={iconSize} />
                     {sidebarExpanded && <span>Configurações</span>}
                   </NavLink>
                 </SidebarMenuButton>
@@ -159,23 +191,33 @@ const AppSidebar = () => {
       <SidebarFooter className="border-t p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {sidebarExpanded && (
+            {sidebarExpanded ? (
               <>
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="" alt="Avatar" />
-                  <AvatarFallback>UA</AvatarFallback>
+                  <AvatarFallback>{userName.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col text-sm">
-                  <span className="font-medium">Usuário</span>
-                  <span className="text-xs text-muted-foreground">Admin</span>
+                  <span className="font-medium truncate max-w-[120px]">{userName}</span>
+                  <span className="text-xs text-muted-foreground">{userRole}</span>
                 </div>
               </>
+            ) : (
+              <Avatar className="h-8 w-8">
+                <AvatarImage src="" alt="Avatar" />
+                <AvatarFallback>{userName.substring(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
             )}
           </div>
           <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <Button variant="ghost" size="icon" title="Sair" onClick={handleLogout}>
-              <LogOut size={18} />
+            <ThemeToggle iconOnly={!sidebarExpanded} />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              title="Sair" 
+              onClick={handleLogout}
+            >
+              <LogOut size={sidebarExpanded ? 18 : 20} />
             </Button>
           </div>
         </div>
