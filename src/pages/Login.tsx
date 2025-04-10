@@ -45,13 +45,15 @@ const Login = () => {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
-          const { error: profileError } = await supabase.from('profiles').insert({
-            id: user.id,
-            email: user.email,
-            nome: name,
-            cargo: "Usuário",
-            perfil: "Regular"
-          });
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email,
+              nome: name,
+              cargo: "Usuário",
+              perfil: "Regular"
+            });
           
           if (profileError) throw profileError;
         }

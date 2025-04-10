@@ -37,7 +37,7 @@ export const useProdutos = () => {
       if (error) throw error;
       
       // Transform to match our interface structure
-      const formattedProdutos: Produto[] = data.map((item: any) => ({
+      const formattedProdutos: Produto[] = data.map((item) => ({
         id: item.id,
         codigo: item.codigo,
         nome: item.nome,

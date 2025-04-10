@@ -78,25 +78,25 @@ export const useConfiguracoes = () => {
         // Fetch all configuration types
         const { data: emailData } = await supabase
           .from('configuracoes')
-          .select('valor')
+          .select('*')
           .eq('id', 'email')
           .single();
           
         const { data: notificacoesData } = await supabase
           .from('configuracoes')
-          .select('valor')
+          .select('*')
           .eq('id', 'notificacoes')
           .single();
           
         const { data: backupData } = await supabase
           .from('configuracoes')
-          .select('valor')
+          .select('*')
           .eq('id', 'backup')
           .single();
           
         const { data: themeData } = await supabase
           .from('configuracoes')
-          .select('valor')
+          .select('*')
           .eq('id', 'theme')
           .single();
 
