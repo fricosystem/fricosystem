@@ -1,6 +1,7 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Filter, FileDown, Package, ArrowUpDown, Trash2, Loader2 } from "lucide-react";
+import { Search, Plus, Filter, FileDown, Package, ArrowUpDown, Trash2, Loader2, Upload, FilePlus2, FileUp2 } from "lucide-react";
 
 import AppLayout from "@/layouts/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProdutoCard from "@/components/ProdutoCard";
 import EmptyState from "@/components/EmptyState";
+import LoadingIndicator from "@/components/LoadingIndicator";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -34,6 +36,7 @@ import useProdutos from "@/hooks/useProdutos";
 const Produtos = () => {
   const [view, setView] = useState<"grid" | "table">("grid");
   const [produtoSelecionado, setProdutoSelecionado] = useState<string | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   
   const navigate = useNavigate();
   const { 
@@ -41,8 +44,27 @@ const Produtos = () => {
     searchTerm, 
     handleSearch, 
     deleteProduto,
-    loading 
+    loading, 
+    refreshProdutos
   } = useProdutos();
+
+  // Simulate loading progress
+  useEffect(() => {
+    if (loading) {
+      const interval = setInterval(() => {
+        setLoadingProgress(prev => {
+          const newProgress = prev + 5;
+          if (newProgress >= 100) {
+            clearInterval(interval);
+            return 100;
+          }
+          return newProgress;
+        });
+      }, 100);
+      
+      return () => clearInterval(interval);
+    }
+  }, [loading]);
 
   const handleEdit = (id: string) => {
     navigate(`/produtos/${id}/editar`);
@@ -61,16 +83,22 @@ const Produtos = () => {
 
   const exportarRelatorio = (formato: "excel" | "pdf") => {
     // This is just a UI simulation, in a real app we would generate and download a file
-    // We'll keep this functionality as is for now
+  };
+
+  const importarProdutos = () => {
+    // This would be implemented to handle CSV/Excel import
+    // For now, just a placeholder notification
+    alert("Funcionalidade de importação de produtos será implementada em breve!");
   };
 
   if (loading) {
     return (
       <AppLayout title="Produtos">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2 text-lg">Carregando produtos...</span>
-        </div>
+        <LoadingIndicator 
+          message="Carregando produtos..." 
+          progress={loadingProgress}
+          showProgress={true}
+        />
       </AppLayout>
     );
   }
@@ -153,9 +181,27 @@ const Produtos = () => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button onClick={() => navigate("/produtos/novo")}>
-            <Plus className="mr-2 h-4 w-4" /> Novo Produto
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Novo Produto
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => navigate("/produtos/novo")}>
+                <FilePlus2 className="mr-2 h-4 w-4" />
+                Cadastrar manualmente
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={importarProdutos}>
+                <FileUp2 className="mr-2 h-4 w-4" />
+                Importar de planilha
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={refreshProdutos}>
+                <Loader2 className="mr-2 h-4 w-4" />
+                Atualizar lista
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

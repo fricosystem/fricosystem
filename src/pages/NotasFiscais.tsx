@@ -1,14 +1,22 @@
 
-import { FileText, Upload, Search, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, Upload, Search, Download, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 import AppLayout from "@/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import EmptyState from "@/components/EmptyState";
+import LoadingIndicator from "@/components/LoadingIndicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import useNotasFiscais from "@/hooks/useNotasFiscais";
-import { Loader2 } from "lucide-react";
+
+// Simulated SEFAZ status check
+interface SefazStatus {
+  status: "online" | "partial" | "offline";
+  message: string;
+  lastChecked: string;
+}
 
 const NotasFiscais = () => {
   const { 
@@ -21,10 +29,79 @@ const NotasFiscais = () => {
     processarNota
   } = useNotasFiscais();
 
+  const [sefazStatus, setSefazStatus] = useState<SefazStatus>({
+    status: "online",
+    message: "Sistema online e operacional",
+    lastChecked: new Date().toLocaleTimeString('pt-BR')
+  });
+
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [checkingSefaz, setCheckingSefaz] = useState(false);
+
+  // Simulate loading progress
+  useEffect(() => {
+    if (loading) {
+      const interval = setInterval(() => {
+        setLoadingProgress(prev => {
+          const newProgress = prev + 5;
+          if (newProgress >= 100) {
+            clearInterval(interval);
+            return 100;
+          }
+          return newProgress;
+        });
+      }, 100);
+      
+      return () => clearInterval(interval);
+    }
+  }, [loading]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     processarNota();
   };
+
+  const checkSefazStatus = () => {
+    setCheckingSefaz(true);
+    
+    // Simulate API call to check SEFAZ status
+    setTimeout(() => {
+      // Randomly select a status for demonstration
+      const statusOptions: ("online" | "partial" | "offline")[] = ["online", "online", "online", "partial", "offline"];
+      const randomStatus = statusOptions[Math.floor(Math.random() * statusOptions.length)];
+      
+      const messages = {
+        online: "Sistema online e operacional",
+        partial: "Sistema operando com instabilidade",
+        offline: "Sistema temporariamente indisponível"
+      };
+      
+      setSefazStatus({
+        status: randomStatus,
+        message: messages[randomStatus],
+        lastChecked: new Date().toLocaleTimeString('pt-BR')
+      });
+      
+      setCheckingSefaz(false);
+    }, 2000);
+  };
+
+  // Check SEFAZ status on component mount
+  useEffect(() => {
+    checkSefazStatus();
+  }, []);
+
+  if (loading) {
+    return (
+      <AppLayout title="Notas Fiscais">
+        <LoadingIndicator 
+          message="Buscando notas fiscais..." 
+          progress={loadingProgress}
+          showProgress={true}
+        />
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Notas Fiscais">
@@ -207,14 +284,47 @@ const NotasFiscais = () => {
           </Card>
           
           <Card className="mt-4">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Status da SEFAZ</CardTitle>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={checkSefazStatus}
+                disabled={checkingSefaz}
+              >
+                {checkingSefaz ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verificar"}
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-2">
-                <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                <span className="text-sm">Sistema online e operacional</span>
-              </div>
+              {checkingSefaz ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Verificando status da SEFAZ...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center space-x-2">
+                    {sefazStatus.status === 'online' && (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    )}
+                    {sefazStatus.status === 'partial' && (
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                    )}
+                    {sefazStatus.status === 'offline' && (
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className={`text-sm ${
+                      sefazStatus.status === 'online' ? 'text-green-500' :
+                      sefazStatus.status === 'partial' ? 'text-amber-500' : 'text-red-500'
+                    }`}>
+                      {sefazStatus.message}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Última verificação: {sefazStatus.lastChecked}
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

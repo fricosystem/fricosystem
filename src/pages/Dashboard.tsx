@@ -1,76 +1,173 @@
 
-import { useState } from "react";
-import { Package, DollarSign, TrendingUp, AlertTriangle, ShoppingCart, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Package, DollarSign, TrendingUp, AlertTriangle, ShoppingCart, FileText, Loader2 } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import StatsCard from "@/components/StatsCard";
 import AlertaBaixoEstoque from "@/components/AlertaBaixoEstoque";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Dados simulados para o dashboard
-const mockProdutosBaixoEstoque = [
-  {
-    id: "1",
-    nome: "Arroz Branco 5kg",
-    quantidadeAtual: 10,
-    quantidadeMinima: 15
-  },
-  {
-    id: "2",
-    nome: "Feijão Preto 1kg",
-    quantidadeAtual: 8,
-    quantidadeMinima: 12
-  },
-  {
-    id: "3",
-    nome: "Açúcar Refinado 1kg",
-    quantidadeAtual: 5,
-    quantidadeMinima: 10
-  }
-];
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 const Dashboard = () => {
   const [period, setPeriod] = useState<"hoje" | "semana" | "mes">("semana");
+  const [loading, setLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [dashboardData, setDashboardData] = useState({
+    totalProdutos: "0",
+    valorEstoque: "R$ 0,00",
+    movimentacoes: "0",
+    alertas: "0",
+    produtosBaixoEstoque: [],
+    ultimasMovimentacoes: [],
+    ultimasNotasFiscais: []
+  });
+  const { toast } = useToast();
+
+  // Simulate loading progress
+  useEffect(() => {
+    if (loading) {
+      const interval = setInterval(() => {
+        setLoadingProgress(prev => {
+          const newProgress = prev + 5;
+          if (newProgress >= 100) {
+            clearInterval(interval);
+            return 100;
+          }
+          return newProgress;
+        });
+      }, 100);
+      
+      return () => clearInterval(interval);
+    }
+  }, [loading]);
+
+  // Load data from Supabase
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      setLoadingProgress(0);
+      
+      try {
+        // Get total products
+        const { data: produtos, error: produtosError } = await supabase
+          .from('produtos')
+          .select('*');
+          
+        if (produtosError) throw produtosError;
+        setLoadingProgress(25);
+        
+        // Calculate total value
+        const valorTotal = produtos
+          ? produtos.reduce((sum, p) => sum + (p.quantidade_atual * p.valor_unitario), 0)
+          : 0;
+          
+        // Get products with low stock
+        const produtosBaixoEstoque = produtos
+          ? produtos.filter(p => p.quantidade_atual <= p.quantidade_minima)
+            .map(p => ({
+              id: p.id,
+              nome: p.nome,
+              quantidadeAtual: p.quantidade_atual,
+              quantidadeMinima: p.quantidade_minima
+            }))
+          : [];
+        setLoadingProgress(50);
+            
+        // Get latest movements
+        const { data: movimentacoes, error: movimentacoesError } = await supabase
+          .from('movimentacoes')
+          .select('*')
+          .order('data', { ascending: false })
+          .limit(5);
+          
+        if (movimentacoesError) throw movimentacoesError;
+        setLoadingProgress(75);
+        
+        // Get latest invoices
+        const { data: notasFiscais, error: notasFiscaisError } = await supabase
+          .from('notas_fiscais')
+          .select('*')
+          .order('data', { ascending: false })
+          .limit(3);
+          
+        if (notasFiscaisError) throw notasFiscaisError;
+        setLoadingProgress(100);
+        
+        // Process latest movements
+        const ultimasMovimentacoes = movimentacoes
+          ? await Promise.all(movimentacoes.map(async mov => {
+              const { data: produto } = await supabase
+                .from('produtos')
+                .select('nome')
+                .eq('id', mov.produto_id)
+                .single();
+                
+              return {
+                id: mov.id,
+                produto: produto?.nome || "Produto não encontrado",
+                tipo: mov.tipo,
+                quantidade: mov.quantidade,
+                data: formatRelativeDate(mov.data)
+              };
+            }))
+          : [];
+        
+        // Format invoices
+        const ultimasNotasFiscais = notasFiscais
+          ? notasFiscais.map(nota => ({
+              id: nota.id,
+              fornecedor: nota.fornecedor,
+              valor: `R$ ${nota.valor.toFixed(2).replace('.', ',').replace(/\d(?=(\d{3})+,)/g, '$&.')}`,
+              data: formatRelativeDate(nota.data),
+              status: nota.status
+            }))
+          : [];
+        
+        // Update dashboard data
+        setDashboardData({
+          totalProdutos: produtos?.length.toString() || "0",
+          valorEstoque: `R$ ${valorTotal.toFixed(2).replace('.', ',').replace(/\d(?=(\d{3})+,)/g, '$&.')}`,
+          movimentacoes: movimentacoes?.length.toString() || "0",
+          alertas: produtosBaixoEstoque.length.toString(),
+          produtosBaixoEstoque,
+          ultimasMovimentacoes,
+          ultimasNotasFiscais
+        });
+        
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+        toast({
+          title: "Erro ao carregar dados",
+          description: "Não foi possível carregar os dados do dashboard.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, [period, toast]);
   
-  // No futuro, esses dados viriam de uma API baseado no período selecionado
-  const dadosPeriodo = {
-    hoje: {
-      totalProdutos: "184",
-      valorEstoque: "R$ 23.450",
-      movimentacoes: "12",
-      alertas: "5"
-    },
-    semana: {
-      totalProdutos: "196", 
-      valorEstoque: "R$ 27.850",
-      movimentacoes: "68",
-      alertas: "3"
-    },
-    mes: {
-      totalProdutos: "203",
-      valorEstoque: "R$ 32.980",
-      movimentacoes: "215",
-      alertas: "7"
+  // Helper function to format relative dates
+  const formatRelativeDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return `hoje, ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+    } else if (diffDays === 1) {
+      return `ontem, ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+    } else if (diffDays < 7) {
+      return `há ${diffDays} dias`;
+    } else {
+      return date.toLocaleDateString('pt-BR');
     }
   };
-
-  // Últimas movimentações de estoque (simulado)
-  const ultimasMovimentacoes = [
-    { id: "1", produto: "Arroz Branco 5kg", tipo: "entrada", quantidade: 50, data: "hoje, 14:32" },
-    { id: "2", produto: "Feijão Preto 1kg", tipo: "saída", quantidade: 20, data: "hoje, 11:15" },
-    { id: "3", produto: "Macarrão 500g", tipo: "entrada", quantidade: 100, data: "ontem, 16:45" },
-    { id: "4", produto: "Óleo de Soja 900ml", tipo: "saída", quantidade: 30, data: "ontem, 09:20" },
-    { id: "5", produto: "Açúcar Refinado 1kg", tipo: "entrada", quantidade: 25, data: "há 2 dias" }
-  ];
-
-  // Últimas notas fiscais processadas (simulado)
-  const ultimasNotasFiscais = [
-    { id: "NF-001234", fornecedor: "Distribuidora ABC", valor: "R$ 4.850,00", data: "hoje, 15:20", status: "processada" },
-    { id: "NF-001233", fornecedor: "Alimentos XYZ", valor: "R$ 2.320,00", data: "ontem, 09:45", status: "pendente" },
-    { id: "NF-001232", fornecedor: "Distribuidora ABC", valor: "R$ 1.750,00", data: "há 3 dias", status: "processada" }
-  ];
-
-  const dados = dadosPeriodo[period];
 
   return (
     <AppLayout title="Dashboard">
@@ -85,102 +182,125 @@ const Dashboard = () => {
         </Tabs>
       </div>
 
-      {/* Cards de estatísticas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatsCard
-          title="Total de Produtos"
-          value={dados.totalProdutos}
-          icon={<Package size={18} />}
-          trend={{ value: 2.5, positive: true, label: "vs. período anterior" }}
-        />
-        <StatsCard
-          title="Valor Total em Estoque"
-          value={dados.valorEstoque}
-          icon={<DollarSign size={18} />}
-          trend={{ value: 4.2, positive: true, label: "vs. período anterior" }}
-        />
-        <StatsCard
-          title="Movimentações"
-          value={dados.movimentacoes}
-          icon={<TrendingUp size={18} />}
-          trend={{ value: 1.8, positive: true, label: "vs. período anterior" }}
-        />
-        <StatsCard
-          title="Alertas de Estoque"
-          value={dados.alertas}
-          icon={<AlertTriangle size={18} />}
-          trend={{ value: 0.5, positive: false, label: "vs. período anterior" }}
-          className={Number(dados.alertas) > 0 ? "border-warning" : ""}
-        />
-      </div>
-
-      {/* Alertas de baixo estoque */}
-      <div className="mb-6">
-        <AlertaBaixoEstoque produtos={mockProdutosBaixoEstoque} />
-      </div>
-
-      {/* Grid com últimas atividades */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Últimas movimentações */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ShoppingCart size={18} /> Últimas Movimentações
-            </CardTitle>
-            <CardDescription>Últimas entradas e saídas de estoque</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {ultimasMovimentacoes.map(movimentacao => (
-                <div key={movimentacao.id} className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
-                  <div>
-                    <p className="font-medium">{movimentacao.produto}</p>
-                    <p className="text-xs text-muted-foreground">{movimentacao.data}</p>
-                  </div>
-                  <div className={`flex items-center ${movimentacao.tipo === 'entrada' ? 'text-green-500' : 'text-red-500'}`}>
-                    <span>{movimentacao.tipo === 'entrada' ? '+' : '-'}{movimentacao.quantidade}</span>
-                  </div>
-                </div>
-              ))}
+      {loading ? (
+        <Card className="mb-6 p-6">
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-lg font-medium">Carregando dados do dashboard...</p>
+            <div className="w-full max-w-md">
+              <Progress value={loadingProgress} className="h-2" />
+              <p className="text-sm text-muted-foreground text-center mt-2">{loadingProgress}%</p>
             </div>
-          </CardContent>
+          </div>
         </Card>
+      ) : (
+        <>
+          {/* Cards de estatísticas */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            <StatsCard
+              title="Total de Produtos"
+              value={dashboardData.totalProdutos}
+              icon={<Package size={18} />}
+              trend={{ value: 2.5, positive: true, label: "vs. período anterior" }}
+            />
+            <StatsCard
+              title="Valor Total em Estoque"
+              value={dashboardData.valorEstoque}
+              icon={<DollarSign size={18} />}
+              trend={{ value: 4.2, positive: true, label: "vs. período anterior" }}
+            />
+            <StatsCard
+              title="Movimentações"
+              value={dashboardData.movimentacoes}
+              icon={<TrendingUp size={18} />}
+              trend={{ value: 1.8, positive: true, label: "vs. período anterior" }}
+            />
+            <StatsCard
+              title="Alertas de Estoque"
+              value={dashboardData.alertas}
+              icon={<AlertTriangle size={18} />}
+              trend={{ value: 0.5, positive: false, label: "vs. período anterior" }}
+              className={parseInt(dashboardData.alertas) > 0 ? "border-warning" : ""}
+            />
+          </div>
 
-        {/* Últimas notas fiscais */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText size={18} /> Últimas Notas Fiscais
-            </CardTitle>
-            <CardDescription>Notas fiscais recebidas recentemente</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {ultimasNotasFiscais.map(nota => (
-                <div key={nota.id} className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
-                  <div>
-                    <p className="font-medium">{nota.id}</p>
-                    <p className="text-xs">{nota.fornecedor}</p>
-                    <p className="text-xs text-muted-foreground">{nota.data}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{nota.valor}</p>
-                    <span 
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        nota.status === 'processada' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-                      }`}
-                    >
-                      {nota.status === 'processada' ? 'Processada' : 'Pendente'}
-                    </span>
-                  </div>
+          {/* Alertas de baixo estoque */}
+          <div className="mb-6">
+            <AlertaBaixoEstoque produtos={dashboardData.produtosBaixoEstoque} />
+          </div>
+
+          {/* Grid com últimas atividades */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Últimas movimentações */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <ShoppingCart size={18} /> Últimas Movimentações
+                </CardTitle>
+                <CardDescription>Últimas entradas e saídas de estoque</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {dashboardData.ultimasMovimentacoes.length > 0 ? (
+                    dashboardData.ultimasMovimentacoes.map(movimentacao => (
+                      <div key={movimentacao.id} className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
+                        <div>
+                          <p className="font-medium">{movimentacao.produto}</p>
+                          <p className="text-xs text-muted-foreground">{movimentacao.data}</p>
+                        </div>
+                        <div className={`flex items-center ${movimentacao.tipo === 'entrada' ? 'text-green-500' : 'text-red-500'}`}>
+                          <span>{movimentacao.tipo === 'entrada' ? '+' : '-'}{movimentacao.quantidade}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center py-4 text-muted-foreground">Nenhuma movimentação recente</p>
+                  )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              </CardContent>
+            </Card>
+
+            {/* Últimas notas fiscais */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText size={18} /> Últimas Notas Fiscais
+                </CardTitle>
+                <CardDescription>Notas fiscais recebidas recentemente</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {dashboardData.ultimasNotasFiscais.length > 0 ? (
+                    dashboardData.ultimasNotasFiscais.map(nota => (
+                      <div key={nota.id} className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
+                        <div>
+                          <p className="font-medium">{nota.id}</p>
+                          <p className="text-xs">{nota.fornecedor}</p>
+                          <p className="text-xs text-muted-foreground">{nota.data}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{nota.valor}</p>
+                          <span 
+                            className={`text-xs px-2 py-1 rounded-full ${
+                              nota.status === 'processada' 
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
+                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                            }`}
+                          >
+                            {nota.status === 'processada' ? 'Processada' : 'Pendente'}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center py-4 text-muted-foreground">Nenhuma nota fiscal recente</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </AppLayout>
   );
 };

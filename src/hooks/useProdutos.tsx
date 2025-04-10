@@ -52,6 +52,11 @@ export const useProdutos = () => {
       setProdutos(formattedProdutos);
       setFilteredProdutos(formattedProdutos);
       
+      toast({
+        title: "Dados carregados",
+        description: `${formattedProdutos.length} produtos foram carregados.`,
+      });
+      
     } catch (error: any) {
       console.error("Error fetching produtos:", error);
       toast({
