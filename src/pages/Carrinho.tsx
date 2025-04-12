@@ -7,6 +7,7 @@ import { ShoppingCart, Minus, Plus, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Produto {
   id: string;
@@ -28,6 +29,7 @@ const Carrinho = () => {
   const navigate = useNavigate();
   const [carrinho, setCarrinho] = useState<Produto[]>(location.state?.carrinho || []);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
   // Função para remover um produto do carrinho
   const handleRemover = (id: string) => {
@@ -83,20 +85,23 @@ const Carrinho = () => {
     try {
       setIsSubmitting(true);
       
+      // Obter nome do usuário logado
+      const userName = user?.user_metadata?.nome || "Usuário não identificado";
+      
       // Construir os dados para envio
       const formData = carrinho.map((produto) => ({
-        bb: produto.codigoMaterial,
-        cc: produto.codigoEstoque,
-        dd: produto.nome,
-        ee: produto.unidade,
-        ff: produto.deposito,
-        gg: produto.quantidadeAtual,
-        hh: produto.quantidadeMinima,
-        ii: produto.detalhes,
-        jj: produto.imagem,
-        kk: produto.unidadeMedida,
-        ll: produto.valorUnitario,
-        mm: "UsuarioLogado", // Substitua pelo usuário logado, se aplicável
+        aa: produto.codigoMaterial,
+        bb: produto.codigoEstoque,
+        cc: produto.nome,
+        dd: produto.unidade,
+        ee: produto.deposito,
+        ff: produto.quantidadeAtual.toString(),
+        gg: produto.quantidadeMinima.toString(),
+        hh: produto.detalhes,
+        ii: produto.imagem,
+        jj: produto.unidadeMedida,
+        kk: produto.valorUnitario.toString(),
+        ll: userName,
       }));
 
       // Enviar cada item do carrinho como uma entrada separada
@@ -104,19 +109,18 @@ const Carrinho = () => {
         // Usando iframe oculto para contornar limitações de CORS com Google Forms
         const formUrl = new URL("https://docs.google.com/forms/d/e/1FAIpQLSfh_WWxIroAYEEEtnecpwWxk-SzZAQ6vTM99z8bvN1f3vlXmQ/formResponse");
         
-        formUrl.searchParams.append("entry.950738290", "aa"); // Campo fixo ou dinâmico
-        formUrl.searchParams.append("entry.1093321090", data.bb); // Código Material
-        formUrl.searchParams.append("entry.289277253", data.cc); // Código Estoque
-        formUrl.searchParams.append("entry.1094520217", data.dd); // Nome
-        formUrl.searchParams.append("entry.338874101", data.ee); // Unidade
-        formUrl.searchParams.append("entry.668169828", data.ff); // Depósito
-        formUrl.searchParams.append("entry.1153735670", String(data.gg)); // Quantidade
-        formUrl.searchParams.append("entry.355652948", String(data.hh)); // Quantidade Mínima
-        formUrl.searchParams.append("entry.150763117", data.ii); // Detalhes
-        formUrl.searchParams.append("entry.251730834", data.jj); // Imagem
-        formUrl.searchParams.append("entry.1457202272", data.kk); // Unidade de Medida
-        formUrl.searchParams.append("entry.917646528", String(data.ll)); // Valor Unitário
-        formUrl.searchParams.append("entry.123456789", data.mm); // Usuário
+        formUrl.searchParams.append("entry.950738290", data.aa); // Código Material
+        formUrl.searchParams.append("entry.1093321090", data.bb); // Código Estoque
+        formUrl.searchParams.append("entry.289277253", data.cc); // Nome
+        formUrl.searchParams.append("entry.1094520217", data.dd); // Unidade
+        formUrl.searchParams.append("entry.338874101", data.ee); // Depósito
+        formUrl.searchParams.append("entry.668169828", data.ff); // Quantidade
+        formUrl.searchParams.append("entry.1153735670", data.gg); // Quantidade Mínima
+        formUrl.searchParams.append("entry.150763117", data.hh); // Detalhes
+        formUrl.searchParams.append("entry.251730834", data.ii); // Imagem
+        formUrl.searchParams.append("entry.1457202272", data.jj); // Unidade de Medida
+        formUrl.searchParams.append("entry.917646528", data.kk); // Valor Unitário
+        formUrl.searchParams.append("entry.123456789", data.ll); // Usuário logado
         
         // Criar iframe temporário
         const iframe = document.createElement('iframe');
