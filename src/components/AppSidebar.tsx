@@ -1,0 +1,187 @@
+
+import { useState, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { 
+  Home, 
+  Package, 
+  FileText, 
+  ClipboardList, 
+  Settings, 
+  LogOut, 
+  Menu, 
+  X,
+  BarChart2,
+  Users,
+  ChevronRight,
+  ChevronLeft
+} from "lucide-react";
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  useSidebar
+} from "@/components/ui/sidebar";
+
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ThemeToggle from "./ThemeToggle";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
+
+const AppSidebar = () => {
+  const [expanded, setExpanded] = useState(true);
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  
+  // Em dispositivos móveis, o sidebar é recolhido por padrão
+  const sidebarExpanded = isMobile ? false : expanded;
+
+  const toggleSidebar = () => {
+    setExpanded(!expanded);
+  };
+  
+  // Estado para verificar se o usuário atual é o admin bruno.bm3051@gmail.com
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    const userJson = localStorage.getItem("fricoUser");
+    if (userJson) {
+      const user = JSON.parse(userJson);
+      setIsAdmin(user.email === "bruno.bm3051@gmail.com");
+    }
+  }, []);
+  
+  const handleLogout = () => {
+    localStorage.removeItem("fricoUser");
+    toast.success("Logout realizado com sucesso!");
+    navigate("/");
+  };
+
+  return (
+    <Sidebar className={sidebarExpanded ? "w-64" : "w-16"}>
+      <SidebarHeader className="p-4 flex flex-col items-center">
+        <div className="flex flex-col items-center justify-center w-full">
+          <img 
+            src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" 
+            alt="Fricó Alimentos" 
+            className={`${sidebarExpanded ? 'h-10 w-auto' : 'h-8 w-auto'} rounded-md`} 
+          />
+          {sidebarExpanded && <h1 className="text-lg font-bold mt-2">Fricó Alimentos</h1>}
+          
+          {/* Botão para expandir/recolher abaixo do ícone */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleSidebar} 
+            className="mt-2 h-8 w-8"
+          >
+            {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+          </Button>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Principal</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/dashboard" className={({isActive}) => isActive ? "text-primary" : ""}>
+                    <Home size={20} />
+                    {sidebarExpanded && <span>Dashboard</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/produtos" className={({isActive}) => isActive ? "text-primary" : ""}>
+                    <Package size={20} />
+                    {sidebarExpanded && <span>Produtos</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/notas-fiscais" className={({isActive}) => isActive ? "text-primary" : ""}>
+                    <FileText size={20} />
+                    {sidebarExpanded && <span>Notas Fiscais</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/relatorios" className={({isActive}) => isActive ? "text-primary" : ""}>
+                    <BarChart2 size={20} />
+                    {sidebarExpanded && <span>Relatórios</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Administração</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/administrativo" className={({isActive}) => isActive ? "text-primary" : ""}>
+                      <Users size={20} />
+                      {sidebarExpanded && <span>Administrativo</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/configuracoes" className={({isActive}) => isActive ? "text-primary" : ""}>
+                    <Settings size={20} />
+                    {sidebarExpanded && <span>Configurações</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {sidebarExpanded && (
+              <>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="" alt="Avatar" />
+                  <AvatarFallback>UA</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col text-sm">
+                  <span className="font-medium">Usuário</span>
+                  <span className="text-xs text-muted-foreground">Admin</span>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" title="Sair" onClick={handleLogout}>
+              <LogOut size={18} />
+            </Button>
+          </div>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  );
+};
+
+export default AppSidebar;
