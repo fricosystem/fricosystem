@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -22,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProdutoCard from "@/components/ProdutoCard";
 import EmptyState from "@/components/EmptyState";
 import LoadingIndicator from "@/components/LoadingIndicator";
+import AddProdutoModal from "@/components/AddProdutoModal";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -43,7 +43,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 
-// Interface para os produtos da planilha
 interface ProdutoSheets {
   id: string;
   codigo: string;
@@ -57,7 +56,7 @@ interface ProdutoSheets {
   dataHora: string;
   imagem: string;
   valorUnitario: number;
-  centroDeCusto?: string; // Mantido para compatibilidade
+  centroDeCusto?: string;
 }
 
 const Produtos = () => {
@@ -68,15 +67,14 @@ const Produtos = () => {
   const [produtos, setProdutos] = useState<ProdutoSheets[]>([]);
   const [filteredProdutos, setFilteredProdutos] = useState<ProdutoSheets[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // URL da planilha do Google Sheets (exportação CSV)
   const SHEETS_ID = "1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs";
   const SHEET_GID = "736804534";
   const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEETS_ID}/export?format=csv&gid=${SHEET_GID}`;
 
-  // Buscar dados da planilha
   const fetchSheetData = async () => {
     setLoading(true);
     setLoadingProgress(0);
@@ -85,7 +83,6 @@ const Produtos = () => {
       if (!response.ok) {
         throw new Error("Não foi possível carregar os dados da planilha");
       }
-      // Simular progresso de carregamento
       const progressInterval = setInterval(() => {
         setLoadingProgress((prev) => {
           const newProgress = prev + 10;
@@ -100,7 +97,6 @@ const Produtos = () => {
       const csvText = await response.text();
       const parsedData = parseCSV(csvText);
 
-      // Finalizar o progresso
       clearInterval(progressInterval);
       setLoadingProgress(100);
       setProdutos(parsedData);
@@ -124,7 +120,6 @@ const Produtos = () => {
     }
   };
 
-  // Formatar valor para o padrão brasileiro (R$ 0.000,00)
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -132,21 +127,17 @@ const Produtos = () => {
     }).format(value);
   };
 
-  // Função para adicionar ao carrinho
   const handleAddToCart = (produto: ProdutoSheets) => {
     const carrinhoAtual = JSON.parse(localStorage.getItem("carrinho") || "[]");
 
-    // Verificar se o produto já está no carrinho
     const produtoExistente = carrinhoAtual.find((item: ProdutoSheets) => item.id === produto.id);
 
     if (produtoExistente) {
-      // Se o produto já existe, aumentar a quantidade
       const novoCarrinho = carrinhoAtual.map((item: ProdutoSheets) =>
         item.id === produto.id ? { ...item, quantidadeAtual: item.quantidadeAtual + 1 } : item
       );
       localStorage.setItem("carrinho", JSON.stringify(novoCarrinho));
     } else {
-      // Se o produto não existe, adicioná-lo ao carrinho
       const novoCarrinho = [...carrinhoAtual, { ...produto, quantidadeAtual: 1 }];
       localStorage.setItem("carrinho", JSON.stringify(novoCarrinho));
     }
@@ -163,69 +154,58 @@ const Produtos = () => {
     });
   };
 
-  // Analisar o CSV retornado e adicionar campos para imagem e valor unitário
   const parseCSV = (csvText: string): ProdutoSheets[] => {
     const lines = csvText.split("\n");
-    // Remover a primeira linha (cabeçalho)
     const headers = lines[0].split(",");
     const dataRows = lines.slice(1);
     return dataRows
-      .filter((row) => row.trim() !== "") // Filtrar linhas vazias
+      .filter((row) => row.trim() !== "")
       .map((row, index) => {
-        // Separar valores considerando que campos possam conter vírgulas dentro de aspas
         const values = row.split(",").map((value) => value.trim());
-        // Obter valores reais das colunas específicas
         const imagemValue = values[9] ? values[9].trim() : "";
         const unidadeValue = values[10] ? values[10].trim() : "";
-        // Processar valor unitário da coluna 11
         let valorUnitarioValue = 0;
         if (values[11]) {
-          // Remover caracteres não numéricos (como R$) e converter para número
           const valorString = values[11].replace(/[^0-9.,]/g, "").replace(",", ".");
           valorUnitarioValue = parseFloat(valorString) || 0;
         }
-        // Validar URL da imagem
         let imageUrl = imagemValue;
         if (!imageUrl || imageUrl.trim() === "") {
-          // Fallback para placeholder se imagem estiver vazia
           imageUrl = "/placeholder.svg";
         }
-        // Verificar se é uma URL válida
         const isValidUrl = (url: string) => {
           try {
             new URL(url);
             return true;
           } catch {
-            return url.startsWith("/"); // Aceitar caminhos relativos
+            return url.startsWith("/");
           }
         };
         if (!isValidUrl(imageUrl)) {
           imageUrl = "/placeholder.svg";
         }
         return {
-          id: `produto-${index}`, // Gerar ID único
+          id: `produto-${index}`,
           dataHora: values[0] || "",
           codigo: values[1] || "",
           codigoEstoque: values[2] || "",
           nome: values[3] || "",
-          unidade: unidadeValue || values[4] || "", // Usar o valor específico ou o valor antigo como fallback
+          unidade: unidadeValue || values[4] || "",
           deposito: values[5] || "",
           quantidadeAtual: parseFloat(values[6]) || 0,
           quantidadeMinima: parseFloat(values[7]) || 0,
           detalhes: values[8] || "",
-          centroDeCusto: "Geral", // Valor padrão para compatibilidade
-          valorUnitario: valorUnitarioValue, // Usar o valor real da coluna 11
-          imagem: imageUrl, // Usar imagem real da coluna 9
+          centroDeCusto: "Geral",
+          valorUnitario: valorUnitarioValue,
+          imagem: imageUrl,
         };
       });
   };
 
-  // Buscar dados ao carregar o componente
   useEffect(() => {
     fetchSheetData();
   }, []);
 
-  // Filtrar produtos baseado na busca
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setFilteredProdutos(produtos);
@@ -257,10 +237,12 @@ const Produtos = () => {
     setProdutoSelecionado(id);
   };
 
+  const handleOpenAddModal = () => {
+    setShowAddModal(true);
+  };
+
   const confirmDelete = async () => {
     if (produtoSelecionado) {
-      // Em um ambiente real, você chamaria uma API para deletar o produto
-      // Aqui estamos apenas simulando a exclusão
       const newProdutos = produtos.filter((produto) => produto.id !== produtoSelecionado);
       setProdutos(newProdutos);
       setFilteredProdutos(
@@ -278,7 +260,6 @@ const Produtos = () => {
   };
 
   const exportarRelatorio = (formato: "excel" | "pdf") => {
-    // Simulação de exportação
     toast({
       title: "Exportação iniciada",
       description: `Exportação em formato ${formato.toUpperCase()} será implementada em breve!`,
@@ -333,7 +314,6 @@ const Produtos = () => {
               <DropdownMenuCheckboxItem checked>
                 Todos Depósitos
               </DropdownMenuCheckboxItem>
-              {/* Gerar dinamicamente baseado nos depósitos presentes na planilha */}
               {Array.from(new Set(produtos.map((p) => p.deposito)))
                 .filter(Boolean)
                 .map((deposito) => (
@@ -365,27 +345,9 @@ const Produtos = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Novo Produto
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => navigate("/produtos/novo")}>
-                <FilePlus2 className="mr-2 h-4 w-4" />
-                Cadastrar manualmente
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={importarProdutos}>
-                <FileUp className="mr-2 h-4 w-4" />
-                Importar de planilha
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={refreshProdutos}>
-                <Loader2 className="mr-2 h-4 w-4" />
-                Atualizar da planilha
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button onClick={handleOpenAddModal}>
+            <Plus className="mr-2 h-4 w-4" /> Novo Produto
+          </Button>
         </div>
       </div>
       <div className="mb-6">
@@ -667,6 +629,12 @@ const Produtos = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <AddProdutoModal 
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        onSuccess={refreshProdutos}
+      />
+      
       <AlertDialog
         open={produtoSelecionado !== null}
         onOpenChange={() => setProdutoSelecionado(null)}

@@ -117,6 +117,52 @@ export const useProdutos = () => {
     }
   };
 
+  const addProduto = async (novoProduto: Partial<Produto>) => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('produtos')
+        .insert([novoProduto])
+        .select();
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const formattedProduto: Produto = {
+          id: data[0].id,
+          codigo: data[0].codigo,
+          nome: data[0].nome,
+          centroDeCusto: data[0].centro_de_custo || '',
+          quantidadeAtual: data[0].quantidade_atual,
+          quantidadeMinima: data[0].quantidade_minima,
+          valorUnitario: data[0].valor_unitario,
+          imagem: data[0].imagem || '/placeholder.svg',
+          deposito: data[0].deposito || ''
+        };
+        
+        // Update local state with the new product
+        setProdutos(prevProdutos => [...prevProdutos, formattedProduto]);
+        setFilteredProdutos(prevFiltered => [...prevFiltered, formattedProduto]);
+        
+        toast({
+          title: "Produto adicionado",
+          description: "O produto foi adicionado com sucesso.",
+        });
+      }
+      
+    } catch (error: any) {
+      console.error("Error adding produto:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o produto.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     produtos,
     filteredProdutos,
@@ -124,6 +170,7 @@ export const useProdutos = () => {
     searchTerm,
     handleSearch,
     deleteProduto,
+    addProduto,
     refreshProdutos: fetchProdutos
   };
 };
