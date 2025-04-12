@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { Loader2, Save, X } from "lucide-react";
+import { useForm } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
@@ -52,31 +53,27 @@ interface FormData {
 const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfh_WWxIroAYEEEtnecpwWxk-SzZAQ6vTM99z8bvN1f3vlXmQ/formResponse";
 
 const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps) => {
-  const [formData, setFormData] = useState<FormData>({
-    codigo: "",
-    codigoEstoque: "",
-    nome: "",
-    unidade: "",
-    deposito: "",
-    quantidade: "",
-    quantidadeMinima: "",
-    detalhes: "",
-    imagem: "",
-    unidadeMedida: "",
-    valorUnitario: "",
-  });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  
+  // Initialize react-hook-form
+  const form = useForm<FormData>({
+    defaultValues: {
+      codigo: "",
+      codigoEstoque: "",
+      nome: "",
+      unidade: "",
+      deposito: "",
+      quantidade: "",
+      quantidadeMinima: "",
+      detalhes: "",
+      imagem: "",
+      unidadeMedida: "",
+      valorUnitario: "",
+    }
+  });
 
-  const handleChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (formData: FormData) => {
     setLoading(true);
 
     try {
@@ -116,19 +113,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         onSuccess();
         
         // Limpar formulário
-        setFormData({
-          codigo: "",
-          codigoEstoque: "",
-          nome: "",
-          unidade: "",
-          deposito: "",
-          quantidade: "",
-          quantidadeMinima: "",
-          detalhes: "",
-          imagem: "",
-          unidadeMedida: "",
-          valorUnitario: "",
-        });
+        form.reset();
       }, 2000);
     } catch (error) {
       setLoading(false);
@@ -150,200 +135,274 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
             Preencha os dados do produto para adicionar ao inventário.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormItem>
-              <FormLabel>Código*</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Ex: 04-000.001" 
-                  value={formData.codigo}
-                  onChange={(e) => handleChange("codigo", e.target.value)}
-                  required
-                />
-              </FormControl>
-            </FormItem>
-            
-            <FormItem>
-              <FormLabel>Código Estoque*</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Ex: 1" 
-                  value={formData.codigoEstoque}
-                  onChange={(e) => handleChange("codigoEstoque", e.target.value)}
-                  required
-                />
-              </FormControl>
-            </FormItem>
-          </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="codigo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Código*</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: 04-000.001" 
+                        {...field}
+                        required
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="codigoEstoque"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Código Estoque*</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: 1" 
+                        {...field}
+                        required
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-          <FormItem>
-            <FormLabel>Nome do Produto*</FormLabel>
-            <FormControl>
-              <Input 
-                placeholder="Nome do produto" 
-                value={formData.nome}
-                onChange={(e) => handleChange("nome", e.target.value)}
-                required
-              />
-            </FormControl>
-          </FormItem>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <FormItem>
-              <FormLabel>Unidade*</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Ex: FR01" 
-                  value={formData.unidade}
-                  onChange={(e) => handleChange("unidade", e.target.value)}
-                  required
-                />
-              </FormControl>
-            </FormItem>
-            
-            <FormItem>
-              <FormLabel>Unidade de Medida*</FormLabel>
-              <Select 
-                value={formData.unidadeMedida}
-                onValueChange={(value) => handleChange("unidadeMedida", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="KG">KG</SelectItem>
-                  <SelectItem value="L">L</SelectItem>
-                  <SelectItem value="UN">UN</SelectItem>
-                  <SelectItem value="CX">CX</SelectItem>
-                  <SelectItem value="PC">PC</SelectItem>
-                </SelectContent>
-              </Select>
-            </FormItem>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <FormItem>
-              <FormLabel>Quantidade Atual*</FormLabel>
-              <FormControl>
-                <Input 
-                  type="number" 
-                  min="0" 
-                  placeholder="Ex: 100" 
-                  value={formData.quantidade}
-                  onChange={(e) => handleChange("quantidade", e.target.value)}
-                  required
-                />
-              </FormControl>
-            </FormItem>
-            
-            <FormItem>
-              <FormLabel>Quantidade Mínima*</FormLabel>
-              <FormControl>
-                <Input 
-                  type="number" 
-                  min="0" 
-                  placeholder="Ex: 10" 
-                  value={formData.quantidadeMinima}
-                  onChange={(e) => handleChange("quantidadeMinima", e.target.value)}
-                  required
-                />
-              </FormControl>
-            </FormItem>
-          </div>
-          
-          <FormItem>
-            <FormLabel>Depósito/Localização*</FormLabel>
-            <Select 
-              value={formData.deposito}
-              onValueChange={(value) => handleChange("deposito", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o depósito" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Manutenção">Manutenção</SelectItem>
-                <SelectItem value="Depósito A">Depósito A</SelectItem>
-                <SelectItem value="Depósito B">Depósito B</SelectItem>
-                <SelectItem value="Depósito C">Depósito C</SelectItem>
-                <SelectItem value="Cozinha">Cozinha</SelectItem>
-              </SelectContent>
-            </Select>
-          </FormItem>
-          
-          <FormItem>
-            <FormLabel>Valor Unitário*</FormLabel>
-            <FormControl>
-              <Input 
-                type="text" 
-                placeholder="Ex: 15,75" 
-                value={formData.valorUnitario}
-                onChange={(e) => handleChange("valorUnitario", e.target.value)}
-                required
-              />
-            </FormControl>
-          </FormItem>
-          
-          <FormItem>
-            <FormLabel>Detalhes</FormLabel>
-            <FormControl>
-              <Textarea 
-                placeholder="Descrição ou detalhes do produto" 
-                className="resize-none"
-                value={formData.detalhes}
-                onChange={(e) => handleChange("detalhes", e.target.value)}
-              />
-            </FormControl>
-          </FormItem>
-          
-          <FormItem>
-            <FormLabel>URL da Imagem</FormLabel>
-            <FormControl>
-              <Input 
-                placeholder="https://exemplo.com/imagem.jpg" 
-                value={formData.imagem}
-                onChange={(e) => handleChange("imagem", e.target.value)}
-              />
-            </FormControl>
-            {formData.imagem && (
-              <div className="mt-2 border rounded-md p-2 w-32 h-32 flex items-center justify-center overflow-hidden">
-                <img 
-                  src={formData.imagem} 
-                  alt="Preview" 
-                  className="max-w-full max-h-full object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/placeholder.svg";
-                  }}
-                />
-              </div>
-            )}
-          </FormItem>
-          
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)} 
-              disabled={loading}
-            >
-              <X className="mr-2 h-4 w-4" />
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Salvar Produto
-                </>
+            <FormField
+              control={form.control}
+              name="nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Produto*</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Nome do produto" 
+                      {...field}
+                      required
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </Button>
-          </DialogFooter>
-        </form>
+            />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="unidade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unidade*</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: FR01" 
+                        {...field}
+                        required
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="unidadeMedida"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unidade de Medida*</FormLabel>
+                    <Select 
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="KG">KG</SelectItem>
+                        <SelectItem value="L">L</SelectItem>
+                        <SelectItem value="UN">UN</SelectItem>
+                        <SelectItem value="CX">CX</SelectItem>
+                        <SelectItem value="PC">PC</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="quantidade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantidade Atual*</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        placeholder="Ex: 100" 
+                        {...field}
+                        required
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="quantidadeMinima"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantidade Mínima*</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        placeholder="Ex: 10" 
+                        {...field}
+                        required
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="deposito"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Depósito/Localização*</FormLabel>
+                  <Select 
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o depósito" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Manutenção">Manutenção</SelectItem>
+                      <SelectItem value="Depósito A">Depósito A</SelectItem>
+                      <SelectItem value="Depósito B">Depósito B</SelectItem>
+                      <SelectItem value="Depósito C">Depósito C</SelectItem>
+                      <SelectItem value="Cozinha">Cozinha</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="valorUnitario"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor Unitário*</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="text" 
+                      placeholder="Ex: 15,75" 
+                      {...field}
+                      required
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="detalhes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Detalhes</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Descrição ou detalhes do produto" 
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="imagem"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL da Imagem</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="https://exemplo.com/imagem.jpg" 
+                      {...field}
+                    />
+                  </FormControl>
+                  {field.value && (
+                    <div className="mt-2 border rounded-md p-2 w-32 h-32 flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={field.value} 
+                        alt="Preview" 
+                        className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/placeholder.svg";
+                        }}
+                      />
+                    </div>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)} 
+                disabled={loading}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Salvar Produto
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
