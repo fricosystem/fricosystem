@@ -35,11 +35,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ThemeToggle from "./ThemeToggle";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AppSidebar = () => {
   const [expanded, setExpanded] = useState(true);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   
   // Em dispositivos móveis, o sidebar é recolhido por padrão
   const sidebarExpanded = isMobile ? false : expanded;
@@ -52,17 +54,30 @@ const AppSidebar = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   
   useEffect(() => {
-    const userJson = localStorage.getItem("fricoUser");
-    if (userJson) {
-      const user = JSON.parse(userJson);
+    if (user) {
       setIsAdmin(user.email === "bruno.bm3051@gmail.com");
     }
-  }, []);
+  }, [user]);
   
-  const handleLogout = () => {
-    localStorage.removeItem("fricoUser");
-    toast.success("Logout realizado com sucesso!");
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success("Logout realizado com sucesso!");
+      navigate("/");
+    } catch (error) {
+      toast.error("Erro ao fazer logout");
+      console.error(error);
+    }
+  };
+
+  // Extract user info
+  const userName = user?.user_metadata?.nome || "Usuário";
+  const userEmail = user?.email || "";
+  const userRole = user?.user_metadata?.cargo || "Usuário";
+  
+  // Get first letter of name for avatar fallback
+  const getInitials = (name: string) => {
+    return name.charAt(0).toUpperCase();
   };
 
   return (
@@ -162,12 +177,12 @@ const AppSidebar = () => {
             {sidebarExpanded && (
               <>
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="" alt="Avatar" />
-                  <AvatarFallback>UA</AvatarFallback>
+                  <AvatarImage src="" alt={userName} />
+                  <AvatarFallback>{getInitials(userName)}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col text-sm">
-                  <span className="font-medium">Usuário</span>
-                  <span className="text-xs text-muted-foreground">Admin</span>
+                  <span className="font-medium">{userName}</span>
+                  <span className="text-xs text-muted-foreground truncate max-w-[120px]">{userEmail}</span>
                 </div>
               </>
             )}
