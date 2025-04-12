@@ -1,5 +1,7 @@
 
 import { ReactNode } from "react";
+import { useTheme } from "next-themes";
+import { useEffect } from "react";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -8,6 +10,12 @@ interface AuthLayoutProps {
 const AuthLayout = ({
   children
 }: AuthLayoutProps) => {
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    setTheme("dark");
+  }, [setTheme]);
+
   return (
     <div 
       className="min-h-screen flex items-center justify-center bg-cover bg-center p-4" 
@@ -23,7 +31,7 @@ const AuthLayout = ({
             <img src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" alt="Fricó Alimentos Logo" className="h-24 w-auto mb-2 rounded-lg shadow-lg" />
           </div>
         </div>
-        <div className="backdrop-blur-sm bg-white/40 dark:bg-black/50 rounded-lg shadow-xl">
+        <div className="backdrop-blur-sm bg-white/20 dark:bg-black/50 rounded-lg shadow-xl">
           {children}
         </div>
       </div>

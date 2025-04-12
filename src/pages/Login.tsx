@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -84,12 +85,12 @@ const Login = () => {
   return (
     <AuthLayout>
       <div className="flex items-center justify-center pt-4">
-        <Card className="w-full max-w-md border-none bg-transparent shadow-none">
+        <Card className="w-full max-w-md border-none bg-transparent shadow-none dark:bg-transparent">
           <form onSubmit={handleSubmit} className="space-y-4">
             <CardContent className="space-y-4 pt-0">
               {isRegistering && (
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-white font-medium">Nome</Label>
+                  <Label htmlFor="name" className="text-white dark:text-white/90 font-medium">Nome</Label>
                   <Input
                     id="name"
                     placeholder="Seu nome completo"
@@ -103,7 +104,7 @@ const Login = () => {
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white font-medium">Email</Label>
+                <Label htmlFor="email" className="text-white dark:text-white/90 font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -118,9 +119,9 @@ const Login = () => {
               
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <Label htmlFor="password" className="text-white font-medium">Senha</Label>
+                  <Label htmlFor="password" className="text-white dark:text-white/90 font-medium">Senha</Label>
                   {!isRegistering && (
-                    <a href="#" className="text-sm text-white hover:text-primary hover:underline">
+                    <a href="#" className="text-sm text-white dark:text-white/90 hover:text-primary hover:underline">
                       Esqueceu a senha?
                     </a>
                   )}
@@ -155,11 +156,11 @@ const Login = () => {
               
               <div className="text-center text-sm">
                 {isRegistering ? (
-                  <div className="text-white">
+                  <div className="text-white dark:text-white/90">
                     Já possui uma conta?{" "}
                     <button
                       type="button"
-                      className="text-white font-medium hover:underline"
+                      className="text-white dark:text-white/90 font-medium hover:underline"
                       onClick={() => setIsRegistering(false)}
                       disabled={isLoading}
                     >
@@ -167,11 +168,11 @@ const Login = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="text-white">
+                  <div className="text-white dark:text-white/90">
                     Não possui uma conta?{" "}
                     <button
                       type="button"
-                      className="text-white font-medium hover:underline"
+                      className="text-white dark:text-white/90 font-medium hover:underline"
                       onClick={() => setIsRegistering(true)}
                       disabled={isLoading}
                     >
