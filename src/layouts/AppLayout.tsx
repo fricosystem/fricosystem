@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import AppHeader from "@/components/AppHeader";
+import { useLocation } from "react-router-dom";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -10,6 +11,8 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children, title }: AppLayoutProps) => {
+  const location = useLocation();
+  
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">

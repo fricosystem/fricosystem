@@ -1,9 +1,10 @@
 
 import { useState } from "react";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const AppHeader = ({ title }: { title: string }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [notifications, setNotifications] = useState([
     { 
       id: 1, 
@@ -31,6 +34,10 @@ const AppHeader = ({ title }: { title: string }) => {
       time: "20 minutos atrás"
     }
   ]);
+  
+  // Get cart items count from localStorage or state management
+  const cartItems = location.state?.carrinho || [];
+  const cartItemsCount = cartItems.length;
 
   return (
     <header className="flex items-center justify-between py-4 px-6 bg-background border-b">
@@ -47,6 +54,21 @@ const AppHeader = ({ title }: { title: string }) => {
             className="pl-8 w-full"
           />
         </div>
+
+        {/* Carrinho button */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="relative"
+          onClick={() => navigate("/carrinho", { state: { carrinho: cartItems } })}
+        >
+          <ShoppingCart size={20} />
+          {cartItemsCount > 0 && (
+            <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+              {cartItemsCount}
+            </Badge>
+          )}
+        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
