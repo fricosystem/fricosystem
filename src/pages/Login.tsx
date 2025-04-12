@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import AuthLayout from "@/layouts/AuthLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,7 +27,6 @@ const Login = () => {
     
     try {
       if (isRegistering) {
-        // Register logic
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -41,7 +39,6 @@ const Login = () => {
 
         if (signUpError) throw signUpError;
         
-        // Create profile
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
@@ -65,7 +62,6 @@ const Login = () => {
         
         navigate("/dashboard");
       } else {
-        // Login logic
         const { error } = await signIn(email, password);
         
         if (error) throw error;
@@ -87,21 +83,13 @@ const Login = () => {
   
   return (
     <AuthLayout>
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              Fricó Alimentos
-            </CardTitle>
-            <CardDescription className="text-center">
-              {isRegistering ? "Crie sua conta" : "Entre com suas credenciais"}
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+      <div className="flex items-center justify-center pt-4">
+        <Card className="w-full max-w-md border-none bg-transparent shadow-none">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <CardContent className="space-y-4 pt-0">
               {isRegistering && (
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome</Label>
+                  <Label htmlFor="name" className="text-white font-medium">Nome</Label>
                   <Input
                     id="name"
                     placeholder="Seu nome completo"
@@ -109,12 +97,13 @@ const Login = () => {
                     onChange={(e) => setName(e.target.value)}
                     required
                     disabled={isLoading}
+                    className="bg-white/80 dark:bg-gray-800/80"
                   />
                 </div>
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-white font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -123,14 +112,15 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
+                  className="bg-white/80 dark:bg-gray-800/80"
                 />
               </div>
               
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="password" className="text-white font-medium">Senha</Label>
                   {!isRegistering && (
-                    <a href="#" className="text-sm text-primary hover:underline">
+                    <a href="#" className="text-sm text-white hover:text-primary hover:underline">
                       Esqueceu a senha?
                     </a>
                   )}
@@ -142,12 +132,17 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
+                  className="bg-white/80 dark:bg-gray-800/80"
                 />
               </div>
             </CardContent>
             
-            <CardFooter className="flex flex-col space-y-4">
-              <Button className="w-full" type="submit" disabled={isLoading}>
+            <CardFooter className="flex flex-col space-y-4 pt-0">
+              <Button 
+                className="w-full bg-primary hover:bg-primary/90" 
+                type="submit" 
+                disabled={isLoading}
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -160,11 +155,11 @@ const Login = () => {
               
               <div className="text-center text-sm">
                 {isRegistering ? (
-                  <div>
+                  <div className="text-white">
                     Já possui uma conta?{" "}
                     <button
                       type="button"
-                      className="text-primary hover:underline"
+                      className="text-white font-medium hover:underline"
                       onClick={() => setIsRegistering(false)}
                       disabled={isLoading}
                     >
@@ -172,11 +167,11 @@ const Login = () => {
                     </button>
                   </div>
                 ) : (
-                  <div>
+                  <div className="text-white">
                     Não possui uma conta?{" "}
                     <button
                       type="button"
-                      className="text-primary hover:underline"
+                      className="text-white font-medium hover:underline"
                       onClick={() => setIsRegistering(true)}
                       disabled={isLoading}
                     >
