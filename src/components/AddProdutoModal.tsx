@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Loader2, Save, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -50,7 +49,7 @@ interface FormData {
   valorUnitario: string;
 }
 
-const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfh_WWxIroAYEEEtnecpwWxk-SzZAQ6vTM99z8bvN1f3vlXmQ/formResponse";
+const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeKqG3o3Ii74NRthA9yIjqdnQuKQwKJV0CBH8PNFVzeY5MTwg/formResponse";
 
 const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps) => {
   const [loading, setLoading] = useState(false);
@@ -80,19 +79,19 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       // Monta a URL com os parâmetros para o Google Forms
       // Os entry.XXXXX são os IDs dos campos no formulário
       const timestamp = new Date().toISOString();
-      const url = `https://docs.google.com/forms/d/e/1FAIpQLSfh_WWxIroAYEEEtnecpwWxk-SzZAQ6vTM99z8bvN1f3vlXmQ/formResponse?` +
-        `entry.950738290=${encodeURIComponent(timestamp)}` +
-        `&entry.1093321090=${encodeURIComponent(formData.codigo)}` +
-        `&entry.289277253=${encodeURIComponent(formData.codigoEstoque)}` +
-        `&entry.1094520217=${encodeURIComponent(formData.nome)}` +
-        `&entry.338874101=${encodeURIComponent(formData.unidade)}` +
-        `&entry.668169828=${encodeURIComponent(formData.deposito)}` +
-        `&entry.1153735670=${encodeURIComponent(formData.quantidade)}` +
-        `&entry.355652948=${encodeURIComponent(formData.quantidadeMinima)}` +
-        `&entry.150763117=${encodeURIComponent(formData.detalhes)}` +
-        `&entry.251730834=${encodeURIComponent(formData.imagem)}` +
-        `&entry.1457202272=${encodeURIComponent(formData.unidadeMedida)}` +
-        `&entry.917646528=${encodeURIComponent(formData.valorUnitario)}`;
+      const url = `https://docs.google.com/forms/d/e/1FAIpQLSeKqG3o3Ii74NRthA9yIjqdnQuKQwKJV0CBH8PNFVzeY5MTwg/formResponse?` +
+        `entry.1845532124=${encodeURIComponent(timestamp)}` +
+        `&entry.122319208=${encodeURIComponent(formData.codigo)}` +
+        `&entry.1615179481=${encodeURIComponent(formData.codigoEstoque)}` +
+        `&entry.299583938=${encodeURIComponent(formData.nome)}` +
+        `&entry.448760118=${encodeURIComponent(formData.unidade)}` +
+        `&entry.1830771148=${encodeURIComponent(formData.deposito)}` +
+        `&entry.1553940355=${encodeURIComponent(formData.quantidade)}` +
+        `&entry.1835465159=${encodeURIComponent(formData.quantidadeMinima)}` +
+        `&entry.378487173=${encodeURIComponent(formData.detalhes)}` +
+        `&entry.589741230=${encodeURIComponent(formData.imagem)}` +
+        `&entry.2144116999=${encodeURIComponent(formData.unidadeMedida)}` +
+        `&entry.1445343828=${encodeURIComponent(formData.valorUnitario)}`;
 
       // Usamos um iframe oculto para submeter o formulário
       // Isso é necessário porque o Google Forms não permite CORS diretamente
