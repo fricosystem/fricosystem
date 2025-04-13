@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
@@ -41,6 +42,7 @@ const Produtos = () => {
   }, [produtos]);
 
   const handleAdicionarAoCarrinho = (produto: any) => {
+    // Ensure the product has all required fields for ProdutoSheets type
     const produtoCompleto = {
       ...produto,
       codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
