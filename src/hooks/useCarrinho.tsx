@@ -62,13 +62,13 @@ export const useCarrinho = () => {
         imagem: produto.imagem || '/placeholder.svg',
         quantidadeAtual: 1,
         codigoMaterial: produto.codigo,
-        codigoEstoque: produto.codigoEstoque,
-        unidade: produto.unidade,
-        deposito: produto.deposito,
-        quantidadeMinima: produto.quantidadeMinima,
+        codigoEstoque: produto.codigoEstoque || '',
+        unidade: produto.unidade || 'UN',
+        deposito: produto.deposito || '',
+        quantidadeMinima: produto.quantidadeMinima || 0,
         detalhes: produto.detalhes || '',
-        unidadeMedida: produto.unidadeMedida || '',
-        valorUnitario: produto.valorUnitario,
+        unidadeMedida: produto.unidade || '',
+        valorUnitario: produto.valorUnitario || 0,
       };
       
       setItensCarrinho(itens => [...itens, novoProduto]);

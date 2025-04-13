@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchIcon } from "lucide-react";
@@ -12,6 +13,7 @@ import { useProdutos } from "@/hooks/useProdutos";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { toast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat("pt-BR", {
@@ -25,39 +27,21 @@ const formatCurrency = (value: number): string => {
 const Produtos = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const { produtos, isLoading, isError, mutate } = useProdutos();
-  const { adicionarProduto } = useCarrinho();
-  const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState([]);
+  const { produtos, loading: isLoading, refreshProdutos } = useProdutos();
+  const { adicionarAoCarrinho } = useCarrinho();
+  const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<any[]>([]);
 
   useEffect(() => {
     if (produtos) {
       const produtosComBaixoEstoque = produtos.filter(
-        (produto) => produto.estoque <= 5
+        (produto) => produto.quantidadeAtual <= produto.quantidadeMinima
       );
       setProdutosEmBaixoEstoque(produtosComBaixoEstoque);
     }
   }, [produtos]);
 
-  if (isLoading) {
-    return (
-      <AppLayout title="Produtos">
-        <LoadingIndicator />
-      </AppLayout>
-    );
-  }
-
-  if (isError) {
-    return (
-      <AppLayout title="Produtos">
-        <div className="text-red-500">
-          Erro ao carregar os produtos. Por favor, tente novamente.
-        </div>
-      </AppLayout>
-    );
-  }
-
   const handleAdicionarAoCarrinho = (produto: any) => {
-    adicionarProduto(produto);
+    adicionarAoCarrinho(produto);
     toast({
       title: "Produto adicionado!",
       description: `O produto ${produto.nome} foi adicionado ao carrinho.`,
@@ -93,7 +77,22 @@ const Produtos = () => {
         <AlertaBaixoEstoque produtos={produtosEmBaixoEstoque} />
       )}
 
-      {produtosFiltrados.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array(8).fill(0).map((_, index) => (
+            <Card key={index} className="overflow-hidden">
+              <div className="h-48 bg-muted">
+                <Skeleton className="h-full w-full" />
+              </div>
+              <div className="p-4 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : produtosFiltrados.length === 0 ? (
         <EmptyState
           title="Nenhum produto encontrado"
           description="Verifique sua busca ou adicione novos produtos."
@@ -104,8 +103,9 @@ const Produtos = () => {
             <ProdutoCard
               key={produto.id}
               produto={produto}
-              onAdicionarAoCarrinho={() => handleAdicionarAoCarrinho(produto)}
-              formatCurrency={formatCurrency}
+              onEdit={() => {}} 
+              onDelete={() => {}}
+              onAddToCart={() => handleAdicionarAoCarrinho(produto)}
             />
           ))}
         </div>
@@ -114,7 +114,7 @@ const Produtos = () => {
       <AddProdutoModal
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        mutate={mutate}
+        onSuccess={refreshProdutos}
       />
     </AppLayout>
   );

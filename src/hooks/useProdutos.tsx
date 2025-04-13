@@ -13,13 +13,67 @@ interface Produto {
   valorUnitario: number;
   imagem?: string;
   deposito: string;
+  codigoEstoque?: string;
+  unidade?: string;
+  detalhes?: string;
+  dataHora?: string;
 }
+
+// Sample mock data for development
+const mockProdutos: Produto[] = [
+  {
+    id: '1',
+    codigo: 'PROD001',
+    nome: 'Parafuso 10mm',
+    centroDeCusto: 'ESTOQUE-GERAL',
+    quantidadeAtual: 150,
+    quantidadeMinima: 50,
+    valorUnitario: 1.599069,
+    imagem: '/placeholder.svg',
+    deposito: 'Depósito A',
+    codigoEstoque: 'EST-001',
+    unidade: 'PÇ',
+    detalhes: 'Parafuso de aço inox',
+    dataHora: new Date().toISOString()
+  },
+  {
+    id: '2',
+    codigo: 'PROD002',
+    nome: 'Porca 8mm',
+    centroDeCusto: 'ESTOQUE-GERAL',
+    quantidadeAtual: 200,
+    quantidadeMinima: 30,
+    valorUnitario: 0.599069,
+    imagem: '/placeholder.svg',
+    deposito: 'Depósito A',
+    codigoEstoque: 'EST-002',
+    unidade: 'PÇ',
+    detalhes: 'Porca de aço inox',
+    dataHora: new Date().toISOString()
+  },
+  {
+    id: '3',
+    codigo: 'PROD003',
+    nome: 'Arruela 12mm',
+    centroDeCusto: 'ESTOQUE-GERAL',
+    quantidadeAtual: 5,
+    quantidadeMinima: 20,
+    valorUnitario: 0.299069,
+    imagem: '/placeholder.svg',
+    deposito: 'Depósito B',
+    codigoEstoque: 'EST-003',
+    unidade: 'PÇ',
+    detalhes: 'Arruela de aço inox',
+    dataHora: new Date().toISOString()
+  },
+];
 
 export const useProdutos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [filteredProdutos, setFilteredProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [useMockData, setUseMockData] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,28 +88,48 @@ export const useProdutos = () => {
         .from('produtos')
         .select('*');
         
-      if (error) throw error;
-      
-      // Transform to match our interface structure
-      const formattedProdutos: Produto[] = data.map((item) => ({
-        id: item.id,
-        codigo: item.codigo,
-        nome: item.nome,
-        centroDeCusto: item.centro_de_custo || '',
-        quantidadeAtual: item.quantidade_atual,
-        quantidadeMinima: item.quantidade_minima,
-        valorUnitario: item.valor_unitario,
-        imagem: item.imagem || '/placeholder.svg',
-        deposito: item.deposito || ''
-      }));
-      
-      setProdutos(formattedProdutos);
-      setFilteredProdutos(formattedProdutos);
-      
-      toast({
-        title: "Dados carregados",
-        description: `${formattedProdutos.length} produtos foram carregados.`,
-      });
+      if (error) {
+        console.error("Error fetching produtos:", error);
+        
+        // If table doesn't exist, use mock data
+        if (error.code === '42P01') {
+          setUseMockData(true);
+          setProdutos(mockProdutos);
+          setFilteredProdutos(mockProdutos);
+          
+          toast({
+            title: "Usando dados de exemplo",
+            description: "A tabela 'produtos' não foi encontrada. Usando dados de exemplo para demonstração.",
+          });
+        } else {
+          throw error;
+        }
+      } else if (data) {
+        // Transform to match our interface structure
+        const formattedProdutos: Produto[] = data.map((item) => ({
+          id: item.id,
+          codigo: item.codigo,
+          nome: item.nome,
+          centroDeCusto: item.centro_de_custo || '',
+          quantidadeAtual: item.quantidade_atual,
+          quantidadeMinima: item.quantidade_minima,
+          valorUnitario: item.valor_unitario,
+          imagem: item.imagem || '/placeholder.svg',
+          deposito: item.deposito || '',
+          codigoEstoque: item.codigo_estoque || '',
+          unidade: item.unidade || 'UN',
+          detalhes: item.detalhes || '',
+          dataHora: item.data_hora || new Date().toISOString()
+        }));
+        
+        setProdutos(formattedProdutos);
+        setFilteredProdutos(formattedProdutos);
+        
+        toast({
+          title: "Dados carregados",
+          description: `${formattedProdutos.length} produtos foram carregados.`,
+        });
+      }
       
     } catch (error: any) {
       console.error("Error fetching produtos:", error);
@@ -64,6 +138,11 @@ export const useProdutos = () => {
         description: "Não foi possível carregar a lista de produtos.",
         variant: "destructive",
       });
+      
+      // Fallback to mock data
+      setProdutos(mockProdutos);
+      setFilteredProdutos(mockProdutos);
+      setUseMockData(true);
     } finally {
       setLoading(false);
     }
@@ -88,6 +167,18 @@ export const useProdutos = () => {
   const deleteProduto = async (id: string) => {
     try {
       setLoading(true);
+      
+      if (useMockData) {
+        // Remove from mock data
+        setProdutos(prevProdutos => prevProdutos.filter(p => p.id !== id));
+        setFilteredProdutos(prevFiltered => prevFiltered.filter(p => p.id !== id));
+        
+        toast({
+          title: "Produto excluído",
+          description: "O produto foi excluído com sucesso.",
+        });
+        return;
+      }
       
       const { error } = await supabase
         .from('produtos')
@@ -121,6 +212,32 @@ export const useProdutos = () => {
     try {
       setLoading(true);
       
+      if (useMockData) {
+        // Add to mock data with generated ID
+        const newProduto = {
+          id: Date.now().toString(),
+          ...novoProduto,
+          codigo: novoProduto.codigo || `PROD${Date.now().toString().slice(-4)}`,
+          nome: novoProduto.nome || 'Novo Produto',
+          quantidadeAtual: novoProduto.quantidadeAtual || 0,
+          quantidadeMinima: novoProduto.quantidadeMinima || 0,
+          valorUnitario: novoProduto.valorUnitario || 0,
+          centroDeCusto: novoProduto.centroDeCusto || '',
+          deposito: novoProduto.deposito || '',
+          imagem: novoProduto.imagem || '/placeholder.svg',
+        } as Produto;
+        
+        setProdutos(prevProdutos => [...prevProdutos, newProduto]);
+        setFilteredProdutos(prevFiltered => [...prevFiltered, newProduto]);
+        
+        toast({
+          title: "Produto adicionado",
+          description: "O produto foi adicionado com sucesso.",
+        });
+        
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('produtos')
         .insert([novoProduto])
@@ -138,7 +255,11 @@ export const useProdutos = () => {
           quantidadeMinima: data[0].quantidade_minima,
           valorUnitario: data[0].valor_unitario,
           imagem: data[0].imagem || '/placeholder.svg',
-          deposito: data[0].deposito || ''
+          deposito: data[0].deposito || '',
+          codigoEstoque: data[0].codigo_estoque || '',
+          unidade: data[0].unidade || 'UN',
+          detalhes: data[0].detalhes || '',
+          dataHora: data[0].data_hora || new Date().toISOString()
         };
         
         // Update local state with the new product
