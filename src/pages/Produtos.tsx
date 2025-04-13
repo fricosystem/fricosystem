@@ -162,14 +162,18 @@ const Produtos = () => {
       .filter((row) => row.trim() !== "")
       .map((row, index) => {
         const values = row.split(",").map((value) => value.trim());
-        const imagemValue = values[9] ? values[9].trim() : "";
-        const unidadeValue = values[10] ? values[10].trim() : "";
+        
         let valorUnitarioValue = 0;
         if (values[11]) {
-          const valorString = values[11].replace(/[^0-9.,]/g, "").replace(",", ".");
+          const valorString = values[11]
+            .replace(/\./g, '')    // Remove thousands separator
+            .replace(',', '.')     // Replace comma with dot for decimal
+            .replace(/[^\d.]/g, '') // Remove any remaining non-numeric characters
+        
           valorUnitarioValue = parseFloat(valorString) || 0;
         }
-        let imageUrl = imagemValue;
+
+        let imageUrl = values[9] ? values[9].trim() : "";
         if (!imageUrl || imageUrl.trim() === "") {
           imageUrl = "/placeholder.svg";
         }
@@ -184,19 +188,20 @@ const Produtos = () => {
         if (!isValidUrl(imageUrl)) {
           imageUrl = "/placeholder.svg";
         }
+
         return {
           id: `produto-${index}`,
           dataHora: values[0] || "",
           codigo: values[1] || "",
           codigoEstoque: values[2] || "",
           nome: values[3] || "",
-          unidade: unidadeValue || values[4] || "",
+          unidade: values[4] || "",
           deposito: values[5] || "",
           quantidadeAtual: parseFloat(values[6]) || 0,
           quantidadeMinima: parseFloat(values[7]) || 0,
           detalhes: values[8] || "",
           centroDeCusto: "Geral",
-          valorUnitario: valorUnitarioValue,
+          valorUnitario: parseFloat(valorUnitarioValue.toFixed(2)),
           imagem: imageUrl,
         };
       });
