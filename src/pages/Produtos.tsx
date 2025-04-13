@@ -12,7 +12,7 @@ import AlertaBaixoEstoque from "@/components/AlertaBaixoEstoque";
 import { useProdutos } from "@/hooks/useProdutos";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useCarrinho } from "@/hooks/useCarrinho";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const formatCurrency = (value: number): string => {
@@ -29,6 +29,7 @@ const Produtos = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { produtos, loading: isLoading, refreshProdutos } = useProdutos();
   const { adicionarAoCarrinho } = useCarrinho();
+  const { toast } = useToast();
   const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<any[]>([]);
 
   useEffect(() => {

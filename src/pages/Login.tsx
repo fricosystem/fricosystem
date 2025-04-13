@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import AuthLayout from "@/layouts/AuthLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -83,107 +84,111 @@ const Login = () => {
   
   return (
     <AuthLayout>
-      <div className="flex items-center justify-center pt-4">
-        <Card className="w-full max-w-md border-none bg-transparent shadow-none">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <CardContent className="space-y-4 pt-0">
-              {isRegistering && (
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-white font-medium">Nome</Label>
-                  <Input
-                    id="name"
-                    placeholder="Seu nome completo"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
+      <Card className="border-none bg-white/70 dark:bg-black/60 backdrop-blur-md shadow-xl w-full">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold">
+            {isRegistering ? "Criar uma conta" : "Entrar no sistema"}
+          </CardTitle>
+        </CardHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="space-y-4">
+            {isRegistering && (
+              <div className="space-y-2">
+                <Label htmlFor="name" className="font-medium">Nome</Label>
+                <Input
+                  id="name"
+                  placeholder="Seu nome completo"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="bg-white/80 dark:bg-gray-800/80"
+                />
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="email" className="font-medium">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+                className="bg-white/80 dark:bg-gray-800/80"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label htmlFor="password" className="font-medium">Senha</Label>
+                {!isRegistering && (
+                  <a href="#" className="text-sm text-primary hover:underline">
+                    Esqueceu a senha?
+                  </a>
+                )}
+              </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                className="bg-white/80 dark:bg-gray-800/80"
+              />
+            </div>
+          </CardContent>
+          
+          <CardFooter className="flex flex-col space-y-4">
+            <Button 
+              className="w-full bg-primary hover:bg-primary/90" 
+              type="submit" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isRegistering ? "Criando conta..." : "Entrando..."}
+                </>
+              ) : (
+                <>{isRegistering ? "Registrar" : "Entrar"}</>
+              )}
+            </Button>
+            
+            <div className="text-center text-sm">
+              {isRegistering ? (
+                <div>
+                  Já possui uma conta?{" "}
+                  <button
+                    type="button"
+                    className="text-primary font-medium hover:underline"
+                    onClick={() => setIsRegistering(false)}
                     disabled={isLoading}
-                    className="bg-white/80 dark:bg-gray-800/80"
-                  />
+                  >
+                    Entrar
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  Não possui uma conta?{" "}
+                  <button
+                    type="button"
+                    className="text-primary font-medium hover:underline"
+                    onClick={() => setIsRegistering(true)}
+                    disabled={isLoading}
+                  >
+                    Registrar
+                  </button>
                 </div>
               )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-white font-medium">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="bg-white/80 dark:bg-gray-800/80"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="password" className="text-white font-medium">Senha</Label>
-                  {!isRegistering && (
-                    <a href="#" className="text-sm text-white hover:text-primary hover:underline">
-                      Esqueceu a senha?
-                    </a>
-                  )}
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="bg-white/80 dark:bg-gray-800/80"
-                />
-              </div>
-            </CardContent>
-            
-            <CardFooter className="flex flex-col space-y-4 pt-0">
-              <Button 
-                className="w-full bg-primary hover:bg-primary/90" 
-                type="submit" 
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isRegistering ? "Criando conta..." : "Entrando..."}
-                  </>
-                ) : (
-                  <>{isRegistering ? "Registrar" : "Entrar"}</>
-                )}
-              </Button>
-              
-              <div className="text-center text-sm">
-                {isRegistering ? (
-                  <div className="text-white">
-                    Já possui uma conta?{" "}
-                    <button
-                      type="button"
-                      className="text-white font-medium hover:underline"
-                      onClick={() => setIsRegistering(false)}
-                      disabled={isLoading}
-                    >
-                      Entrar
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-white">
-                    Não possui uma conta?{" "}
-                    <button
-                      type="button"
-                      className="text-white font-medium hover:underline"
-                      onClick={() => setIsRegistering(true)}
-                      disabled={isLoading}
-                    >
-                      Registrar
-                    </button>
-                  </div>
-                )}
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
-      </div>
+            </div>
+          </CardFooter>
+        </form>
+      </Card>
     </AuthLayout>
   );
 };

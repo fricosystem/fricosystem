@@ -1,200 +1,135 @@
 
-import { useState, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { 
-  Home, 
-  Package, 
-  FileText, 
-  ClipboardList, 
-  Settings, 
-  LogOut, 
-  Menu, 
-  X,
-  BarChart2,
-  Users,
-  ChevronRight,
-  ChevronLeft
-} from "lucide-react";
-
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
-  useSidebar
+  SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import ThemeToggle from "./ThemeToggle";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  Home,
+  Package,
+  FileText,
+  BarChart3,
+  Settings,
+  LogOut,
+  ShoppingCart,
+  Users,
+  ClipboardList,
+} from "lucide-react";
+import { useCarrinho } from "@/hooks/useCarrinho";
 
 const AppSidebar = () => {
-  const [expanded, setExpanded] = useState(true);
-  const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const location = useLocation();
+  const { signOut } = useAuth();
+  const { totalItens } = useCarrinho();
   
-  // Em dispositivos móveis, o sidebar é recolhido por padrão
-  const sidebarExpanded = isMobile ? false : expanded;
+  const navItems = [
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: Home,
+    },
+    {
+      title: "Produtos",
+      url: "/produtos",
+      icon: Package,
+    },
+    {
+      title: "Requisições",
+      url: "/requisicoes",
+      icon: ClipboardList,
+    },
+    {
+      title: "Notas Fiscais",
+      url: "/notas-fiscais",
+      icon: FileText,
+    },
+    {
+      title: "Relatórios",
+      url: "/relatorios",
+      icon: BarChart3,
+    },
+    {
+      title: "Administrativo",
+      url: "/administrativo",
+      icon: Users,
+    },
+    {
+      title: "Configurações",
+      url: "/configuracoes",
+      icon: Settings,
+    },
+  ];
 
-  const toggleSidebar = () => {
-    setExpanded(!expanded);
-  };
-  
-  // Estado para verificar se o usuário atual é o admin bruno.bm3051@gmail.com
-  const [isAdmin, setIsAdmin] = useState(false);
-  
-  useEffect(() => {
-    if (user) {
-      setIsAdmin(user.email === "bruno.bm3051@gmail.com");
-    }
-  }, [user]);
-  
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      toast.success("Logout realizado com sucesso!");
-      navigate("/");
-    } catch (error) {
-      toast.error("Erro ao fazer logout");
-      console.error(error);
-    }
-  };
-
-  // Extract user info
-  const userName = user?.user_metadata?.nome || "Usuário";
-  const userEmail = user?.email || "";
-  const userRole = user?.user_metadata?.cargo || "Usuário";
-  
-  // Get first letter of name for avatar fallback
-  const getInitials = (name: string) => {
-    return name.charAt(0).toUpperCase();
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
   };
 
   return (
-    <Sidebar className={sidebarExpanded ? "w-64" : "w-16"}>
-      <SidebarHeader className="p-4 flex flex-col items-center">
-        <div className="flex flex-col items-center justify-center w-full">
-          <img 
-            src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" 
-            alt="Fricó Alimentos" 
-            className={`${sidebarExpanded ? 'h-10 w-auto' : 'h-8 w-auto'} rounded-md`} 
-          />
-          {sidebarExpanded && <h1 className="text-lg font-bold mt-2">Fricó Alimentos</h1>}
-          
-          {/* Botão para expandir/recolher abaixo do ícone */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={toggleSidebar} 
-            className="mt-2 h-8 w-8"
-          >
-            {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-          </Button>
-        </div>
-      </SidebarHeader>
-
+    <Sidebar className="border-r border-border">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Principal</SidebarGroupLabel>
+          <div className="flex justify-center py-4">
+            <img
+              src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png"
+              alt="Logo"
+              className="h-10 w-auto"
+            />
+          </div>
           <SidebarGroupContent>
             <SidebarMenu>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    active={location.pathname === item.url}
+                    onClick={() => navigate(item.url)}
+                    className="flex items-center"
+                  >
+                    <item.icon className="mr-2 h-5 w-5" />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/dashboard" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <Home size={20} />
-                    {sidebarExpanded && <span>Dashboard</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/produtos" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <Package size={20} />
-                    {sidebarExpanded && <span>Produtos</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/notas-fiscais" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <FileText size={20} />
-                    {sidebarExpanded && <span>Notas Fiscais</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/relatorios" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <BarChart2 size={20} />
-                    {sidebarExpanded && <span>Relatórios</span>}
-                  </NavLink>
+                <SidebarMenuButton
+                  active={location.pathname === "/carrinho"}
+                  onClick={() => navigate("/carrinho")}
+                  className="flex items-center"
+                >
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  <span>Carrinho</span>
+                  {totalItens > 0 && (
+                    <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-primary rounded-full">
+                      {totalItens}
+                    </span>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Administração</SidebarGroupLabel>
+        
+        <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <SidebarMenu>
-              {isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <NavLink to="/administrativo" className={({isActive}) => isActive ? "text-primary" : ""}>
-                      <Users size={20} />
-                      {sidebarExpanded && <span>Administrativo</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/configuracoes" className={({isActive}) => isActive ? "text-primary" : ""}>
-                    <Settings size={20} />
-                    {sidebarExpanded && <span>Configurações</span>}
-                  </NavLink>
+                <SidebarMenuButton onClick={handleSignOut} className="flex items-center text-red-500">
+                  <LogOut className="mr-2 h-5 w-5" />
+                  <span>Sair</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="border-t p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {sidebarExpanded && (
-              <>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="" alt={userName} />
-                  <AvatarFallback>{getInitials(userName)}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col text-sm">
-                  <span className="font-medium">{userName}</span>
-                  <span className="text-xs text-muted-foreground truncate max-w-[120px]">{userEmail}</span>
-                </div>
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <Button variant="ghost" size="icon" title="Sair" onClick={handleLogout}>
-              <LogOut size={18} />
-            </Button>
-          </div>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 };
