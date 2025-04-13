@@ -1,4 +1,3 @@
-
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -89,7 +88,7 @@ const AppSidebar = () => {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    active={location.pathname === item.url}
+                    isActive={location.pathname === item.url}
                     onClick={() => navigate(item.url)}
                     className="flex items-center"
                   >
@@ -100,7 +99,7 @@ const AppSidebar = () => {
               ))}
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  active={location.pathname === "/carrinho"}
+                  isActive={location.pathname === "/carrinho"}
                   onClick={() => navigate("/carrinho")}
                   className="flex items-center"
                 >

@@ -9,12 +9,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchIcon, Filter, FileDownload, Plus } from "lucide-react";
+import { SearchIcon, Filter, Download, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Requisicao {
@@ -203,20 +204,22 @@ const Requisicoes = () => {
 
       <div className="flex flex-col md:flex-row gap-4 mb-4">
         <div className="flex-1">
-          <Input
-            placeholder="Buscar por número, solicitante ou departamento..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-            icon={SearchIcon}
-          />
+          <div className="relative">
+            <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por número, solicitante ou departamento..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-8"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon">
             <Filter className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="icon">
-            <FileDownload className="h-4 w-4" />
+            <Download className="h-4 w-4" />
           </Button>
         </div>
       </div>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
@@ -42,7 +41,12 @@ const Produtos = () => {
   }, [produtos]);
 
   const handleAdicionarAoCarrinho = (produto: any) => {
-    adicionarAoCarrinho(produto);
+    const produtoCompleto = {
+      ...produto,
+      codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
+    };
+    
+    adicionarAoCarrinho(produtoCompleto);
     toast({
       title: "Produto adicionado!",
       description: `O produto ${produto.nome} foi adicionado ao carrinho.`,
