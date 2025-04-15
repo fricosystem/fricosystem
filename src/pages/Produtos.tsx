@@ -46,6 +46,9 @@ const Produtos = () => {
     const produtoCompleto = {
       ...produto,
       codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
+      unidade: produto.unidade || 'UN',
+      detalhes: produto.detalhes || '',
+      dataHora: produto.dataHora || new Date().toISOString(),
     };
     
     adicionarAoCarrinho(produtoCompleto);
@@ -106,15 +109,26 @@ const Produtos = () => {
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {produtosFiltrados.map((produto) => (
-            <ProdutoCard
-              key={produto.id}
-              produto={produto}
-              onEdit={() => {}} 
-              onDelete={() => {}}
-              onAddToCart={() => handleAdicionarAoCarrinho(produto)}
-            />
-          ))}
+          {produtosFiltrados.map((produto) => {
+            // Ensure all required properties exist to satisfy ProdutoSheets type
+            const produtoCompleto = {
+              ...produto,
+              codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
+              unidade: produto.unidade || 'UN',
+              detalhes: produto.detalhes || '',
+              dataHora: produto.dataHora || new Date().toISOString(),
+            };
+            
+            return (
+              <ProdutoCard
+                key={produto.id}
+                produto={produtoCompleto}
+                onEdit={() => {}} 
+                onDelete={() => {}}
+                onAddToCart={() => handleAdicionarAoCarrinho(produto)}
+              />
+            );
+          })}
         </div>
       )}
 
