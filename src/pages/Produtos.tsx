@@ -49,6 +49,7 @@ const Produtos = () => {
       unidade: produto.unidade || 'UN',
       detalhes: produto.detalhes || '',
       dataHora: produto.dataHora || new Date().toISOString(),
+      imagem: produto.imagem || '/placeholder.svg', // Add default value for imagem
     };
     
     adicionarAoCarrinho(produtoCompleto);
@@ -117,6 +118,7 @@ const Produtos = () => {
               unidade: produto.unidade || 'UN',
               detalhes: produto.detalhes || '',
               dataHora: produto.dataHora || new Date().toISOString(),
+              imagem: produto.imagem || '/placeholder.svg', // Add default value for imagem
             };
             
             return (
