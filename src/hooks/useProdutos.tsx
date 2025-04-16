@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +16,8 @@ interface Produto {
   unidade?: string;
   detalhes?: string;
   dataHora?: string;
+  prateleira?: string;
+  dataVencimento?: string;
 }
 
 // Sample mock data for development
@@ -74,60 +75,73 @@ export const useProdutos = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [useMockData, setUseMockData] = useState<boolean>(false);
+  const [dataSource, setDataSource] = useState<'supabase' | 'googleSheets' | 'mock'>('supabase');
   const { toast } = useToast();
 
   useEffect(() => {
     fetchProdutos();
-  }, []);
+  }, [dataSource]);
 
   const fetchProdutos = async () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('produtos')
-        .select('*');
-        
-      if (error) {
-        console.error("Error fetching produtos:", error);
-        
-        // If table doesn't exist, use mock data
-        if (error.code === '42P01') {
-          setUseMockData(true);
-          setProdutos(mockProdutos);
-          setFilteredProdutos(mockProdutos);
+      if (dataSource === 'supabase') {
+        const { data, error } = await supabase
+          .from('produtos')
+          .select('*');
+          
+        if (error) {
+          console.error("Error fetching produtos:", error);
+          
+          // If table doesn't exist, use mock data
+          if (error.code === '42P01') {
+            setUseMockData(true);
+            setDataSource('mock');
+            
+            toast({
+              title: "Usando dados de exemplo",
+              description: "A tabela 'produtos' não foi encontrada. Usando dados de exemplo para demonstração.",
+            });
+          } else {
+            throw error;
+          }
+        } else if (data) {
+          // Transform to match our interface structure
+          const formattedProdutos: Produto[] = data.map((item) => ({
+            id: item.id,
+            codigo: item.codigo,
+            nome: item.nome,
+            centroDeCusto: item.centro_de_custo || '',
+            quantidadeAtual: item.quantidade_atual,
+            quantidadeMinima: item.quantidade_minima,
+            valorUnitario: item.valor_unitario,
+            imagem: item.imagem || '/placeholder.svg',
+            deposito: item.deposito || '',
+            codigoEstoque: item.codigo_estoque || '',
+            unidade: item.unidade || 'UN',
+            detalhes: item.detalhes || '',
+            dataHora: item.data_hora || new Date().toISOString(),
+            prateleira: item.prateleira || '',
+            dataVencimento: item.data_vencimento || '',
+          }));
+          
+          setProdutos(formattedProdutos);
+          setFilteredProdutos(formattedProdutos);
           
           toast({
-            title: "Usando dados de exemplo",
-            description: "A tabela 'produtos' não foi encontrada. Usando dados de exemplo para demonstração.",
+            title: "Dados carregados",
+            description: `${formattedProdutos.length} produtos foram carregados.`,
           });
-        } else {
-          throw error;
         }
-      } else if (data) {
-        // Transform to match our interface structure
-        const formattedProdutos: Produto[] = data.map((item) => ({
-          id: item.id,
-          codigo: item.codigo,
-          nome: item.nome,
-          centroDeCusto: item.centro_de_custo || '',
-          quantidadeAtual: item.quantidade_atual,
-          quantidadeMinima: item.quantidade_minima,
-          valorUnitario: item.valor_unitario,
-          imagem: item.imagem || '/placeholder.svg',
-          deposito: item.deposito || '',
-          codigoEstoque: item.codigo_estoque || '',
-          unidade: item.unidade || 'UN',
-          detalhes: item.detalhes || '',
-          dataHora: item.data_hora || new Date().toISOString()
-        }));
-        
-        setProdutos(formattedProdutos);
-        setFilteredProdutos(formattedProdutos);
+      } else if (dataSource === 'mock') {
+        // Use mock data
+        setProdutos(mockProdutos);
+        setFilteredProdutos(mockProdutos);
         
         toast({
-          title: "Dados carregados",
-          description: `${formattedProdutos.length} produtos foram carregados.`,
+          title: "Dados de exemplo",
+          description: "Usando dados de exemplo para demonstração.",
         });
       }
       
@@ -142,7 +156,7 @@ export const useProdutos = () => {
       // Fallback to mock data
       setProdutos(mockProdutos);
       setFilteredProdutos(mockProdutos);
-      setUseMockData(true);
+      setDataSource('mock');
     } finally {
       setLoading(false);
     }
@@ -168,14 +182,14 @@ export const useProdutos = () => {
     try {
       setLoading(true);
       
-      if (useMockData) {
-        // Remove from mock data
+      if (dataSource === 'mock' || dataSource === 'googleSheets') {
+        // Remove from local data
         setProdutos(prevProdutos => prevProdutos.filter(p => p.id !== id));
         setFilteredProdutos(prevFiltered => prevFiltered.filter(p => p.id !== id));
         
         toast({
           title: "Produto excluído",
-          description: "O produto foi excluído com sucesso.",
+          description: "O produto foi excluído localmente (não no Google Sheets).",
         });
         return;
       }
@@ -212,8 +226,8 @@ export const useProdutos = () => {
     try {
       setLoading(true);
       
-      if (useMockData) {
-        // Add to mock data with generated ID
+      if (dataSource === 'mock' || dataSource === 'googleSheets') {
+        // Add to local data
         const newProduto = {
           id: Date.now().toString(),
           ...novoProduto,
@@ -225,6 +239,10 @@ export const useProdutos = () => {
           centroDeCusto: novoProduto.centroDeCusto || '',
           deposito: novoProduto.deposito || '',
           imagem: novoProduto.imagem || '/placeholder.svg',
+          codigoEstoque: novoProduto.codigoEstoque || '',
+          unidade: novoProduto.unidade || 'UN',
+          detalhes: novoProduto.detalhes || '',
+          dataHora: novoProduto.dataHora || new Date().toISOString(),
         } as Produto;
         
         setProdutos(prevProdutos => [...prevProdutos, newProduto]);
@@ -232,7 +250,9 @@ export const useProdutos = () => {
         
         toast({
           title: "Produto adicionado",
-          description: "O produto foi adicionado com sucesso.",
+          description: dataSource === 'googleSheets' 
+            ? "O produto foi adicionado localmente (não no Google Sheets)." 
+            : "O produto foi adicionado com sucesso.",
         });
         
         return;
@@ -259,7 +279,9 @@ export const useProdutos = () => {
           codigoEstoque: data[0].codigo_estoque || '',
           unidade: data[0].unidade || 'UN',
           detalhes: data[0].detalhes || '',
-          dataHora: data[0].data_hora || new Date().toISOString()
+          dataHora: data[0].data_hora || new Date().toISOString(),
+          prateleira: data[0].prateleira || '',
+          dataVencimento: data[0].data_vencimento || '',
         };
         
         // Update local state with the new product
@@ -289,10 +311,12 @@ export const useProdutos = () => {
     filteredProdutos,
     loading,
     searchTerm,
+    dataSource,
     handleSearch,
     deleteProduto,
     addProduto,
-    refreshProdutos: fetchProdutos
+    refreshProdutos: fetchProdutos,
+    setDataSource
   };
 };
 
