@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { fetchGoogleSheetsData } from '@/utils/googleSheetsUtil';
 
 interface Produto {
   id: string;
@@ -71,16 +69,13 @@ const mockProdutos: Produto[] = [
   },
 ];
 
-// Google Sheets ID extracted from the provided URL
-const GOOGLE_SHEET_ID = "1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs";
-
 export const useProdutos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [filteredProdutos, setFilteredProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [useMockData, setUseMockData] = useState<boolean>(false);
-  const [dataSource, setDataSource] = useState<'supabase' | 'googleSheets' | 'mock'>('googleSheets');
+  const [dataSource, setDataSource] = useState<'supabase' | 'googleSheets' | 'mock'>('supabase');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -90,32 +85,6 @@ export const useProdutos = () => {
   const fetchProdutos = async () => {
     try {
       setLoading(true);
-      
-      if (dataSource === 'googleSheets') {
-        try {
-          const sheetsData = await fetchGoogleSheetsData(GOOGLE_SHEET_ID);
-          setProdutos(sheetsData);
-          setFilteredProdutos(sheetsData);
-          
-          toast({
-            title: "Dados carregados da planilha",
-            description: `${sheetsData.length} produtos foram carregados do Google Sheets.`,
-          });
-          
-          return;
-        } catch (error: any) {
-          console.error("Error fetching Google Sheets data:", error);
-          toast({
-            title: "Erro ao carregar planilha",
-            description: "Tentando carregar dados do Supabase...",
-            variant: "destructive",
-          });
-          
-          // If Google Sheets fails, try Supabase
-          setDataSource('supabase');
-          return;
-        }
-      }
       
       if (dataSource === 'supabase') {
         const { data, error } = await supabase
