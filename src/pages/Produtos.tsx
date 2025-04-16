@@ -4,7 +4,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchIcon } from "lucide-react";
+import { Database, FileSpreadsheet, SearchIcon, Trash2, RefreshCw } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import ProdutoCard from "@/components/ProdutoCard";
 import AddProdutoModal from "@/components/AddProdutoModal";
@@ -14,20 +14,25 @@ import LoadingIndicator from "@/components/LoadingIndicator";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-    minimumFractionDigits: 6,
-    maximumFractionDigits: 6
   }).format(value);
 };
 
 const Produtos = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const { produtos, loading: isLoading, refreshProdutos } = useProdutos();
+  const { 
+    produtos, 
+    loading: isLoading, 
+    refreshProdutos, 
+    dataSource,
+    setDataSource 
+  } = useProdutos();
   const { adicionarAoCarrinho } = useCarrinho();
   const { toast } = useToast();
   const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<any[]>([]);
@@ -59,6 +64,20 @@ const Produtos = () => {
     });
   };
 
+  const changeDataSource = (source: 'supabase' | 'googleSheets' | 'mock') => {
+    setDataSource(source);
+    toast({
+      title: "Fonte de dados alterada",
+      description: `Os dados serão carregados de ${
+        source === 'supabase' 
+          ? 'Supabase' 
+          : source === 'googleSheets' 
+            ? 'Google Sheets' 
+            : 'dados de exemplo'
+      }.`,
+    });
+  };
+
   const produtosFiltrados = produtos
     ? produtos.filter((produto) =>
         produto.nome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -67,21 +86,61 @@ const Produtos = () => {
 
   return (
     <AppLayout title="Produtos">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold">Lista de Produtos</h1>
+      <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
+        <div className="flex items-center">
+          <h1 className="text-2xl font-semibold">Lista de Produtos</h1>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="ml-2" 
+            onClick={refreshProdutos}
+            title="Atualizar dados"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="ml-2">
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                {dataSource === 'googleSheets' 
+                  ? 'Google Sheets' 
+                  : dataSource === 'supabase' 
+                    ? 'Supabase' 
+                    : 'Dados de exemplo'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => changeDataSource('googleSheets')}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Google Sheets
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeDataSource('supabase')}>
+                <Database className="h-4 w-4 mr-2" />
+                Supabase
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeDataSource('mock')}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Dados de exemplo
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
           Adicionar Produto
         </Button>
       </div>
 
       <div className="mb-4 flex items-center space-x-2">
-        <Input
-          type="text"
-          placeholder="Buscar produto..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <SearchIcon className="h-5 w-5 text-gray-500" />
+        <div className="relative flex-1">
+          <Input
+            type="text"
+            placeholder="Buscar produto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+          <SearchIcon className="h-5 w-5 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
+        </div>
       </div>
 
       {produtosEmBaixoEstoque.length > 0 && (
