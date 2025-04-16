@@ -1,3 +1,4 @@
+
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -5,6 +6,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarGroupAction,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -20,14 +22,43 @@ import {
   ShoppingCart,
   Users,
   ClipboardList,
+  Sun,
+  Moon,
+  ChevronUp,
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
+import { useEffect, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const AppSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const { totalItens } = useCarrinho();
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  
+  // Load theme from localStorage on component mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    localStorage.setItem("theme", newTheme);
+  };
   
   const navItems = [
     {
@@ -119,11 +150,43 @@ const AppSidebar = () => {
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <SidebarMenu>
+              {/* User Profile Dropdown */}
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleSignOut} className="flex items-center text-red-500">
-                  <LogOut className="mr-2 h-5 w-5" />
-                  <span>Sair</span>
-                </SidebarMenuButton>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton className="flex items-center justify-between w-full">
+                      <div className="flex items-center">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground mr-2">
+                          {user?.email?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium text-sm">{user?.email?.split('@')[0] || "Usuário"}</span>
+                          <span className="text-xs text-muted-foreground truncate max-w-[140px]">{user?.email || ""}</span>
+                        </div>
+                      </div>
+                      <ChevronUp className="h-4 w-4" />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={toggleTheme}>
+                      {theme === "light" ? (
+                        <Moon className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Sun className="mr-2 h-4 w-4" />
+                      )}
+                      <span>Mudar para tema {theme === "light" ? "escuro" : "claro"}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/configuracoes")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Configurações</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-red-500">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sair</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
