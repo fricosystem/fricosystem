@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
@@ -16,7 +15,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Google Sheets interface and utilities - moved from googleSheetsUtil.ts
 interface GoogleSheetsResponse {
   feed: {
     entry: Array<{
@@ -29,59 +27,44 @@ interface GoogleSheetsResponse {
   }
 }
 
-// Convert spreadsheet data to a more usable format
 const parseGoogleSheetsData = (data: GoogleSheetsResponse) => {
   const entries = data.feed.entry;
   const rows: Record<string, Record<string, string>> = {};
   
-  // Map of column indices to field names
-  const columnMap: Record<string, string> = {};
+  const columnMap: Record<string, string> = {
+    "1": "codigo",
+    "2": "codigoEstoque",
+    "3": "nome",
+    "4": "unidade",
+    "5": "deposito",
+    "6": "quantidadeAtual",
+    "7": "quantidadeMinima",
+    "8": "detalhes",
+    "9": "imagem",
+    "10": "unidadeMedida",
+    "11": "valorUnitario",
+    "12": "prateleira",
+    "13": "dataVencimento",
+    "14": "dataHora",
+  };
   
-  // Process header row to create column mapping
-  entries
-    .filter(entry => entry.gs$cell.row === "1")
-    .forEach(entry => {
-      const headerText = entry.gs$cell.$t.trim();
-      const columnIndex = entry.gs$cell.col;
-      
-      // Map Google Sheets column headers to our field names
-      switch (headerText) {
-        case "Codigo material": columnMap[columnIndex] = "codigo"; break;
-        case "Codigo estoque": columnMap[columnIndex] = "codigoEstoque"; break;
-        case "Nome": columnMap[columnIndex] = "nome"; break;
-        case "Unidade": columnMap[columnIndex] = "unidade"; break;
-        case "Deposito": columnMap[columnIndex] = "deposito"; break;
-        case "Quantidade": columnMap[columnIndex] = "quantidadeAtual"; break;
-        case "Quantidade minima": columnMap[columnIndex] = "quantidadeMinima"; break;
-        case "Detalhes": columnMap[columnIndex] = "detalhes"; break;
-        case "Imagem": columnMap[columnIndex] = "imagem"; break;
-        case "Valor unitario": columnMap[columnIndex] = "valorUnitario"; break;
-        case "Prateleira": columnMap[columnIndex] = "prateleira"; break;
-        case "Data vencimento": columnMap[columnIndex] = "dataVencimento"; break;
-        case "Data criacao": columnMap[columnIndex] = "dataHora"; break;
-        default: columnMap[columnIndex] = headerText.toLowerCase().replace(/\s/g, "_"); 
-      }
-    });
+  entries.forEach(entry => {
+    const rowIndex = entry.gs$cell.row;
+    const colIndex = entry.gs$cell.col;
+    const value = entry.gs$cell.$t;
+    
+    if (rowIndex === "1") return;
+    
+    if (!rows[rowIndex]) {
+      rows[rowIndex] = {};
+    }
+    
+    const fieldName = columnMap[colIndex];
+    if (fieldName) {
+      rows[rowIndex][fieldName] = value;
+    }
+  });
 
-  // Process data rows
-  entries
-    .filter(entry => entry.gs$cell.row !== "1") // Skip header row
-    .forEach(entry => {
-      const rowIndex = entry.gs$cell.row;
-      const colIndex = entry.gs$cell.col;
-      const value = entry.gs$cell.$t;
-      
-      if (!rows[rowIndex]) {
-        rows[rowIndex] = {};
-      }
-      
-      const fieldName = columnMap[colIndex];
-      if (fieldName) {
-        rows[rowIndex][fieldName] = value;
-      }
-    });
-
-  // Convert rows object to array and transform data types
   return Object.values(rows).map((row, index) => ({
     id: row.id || `sheet-${index + 1}`,
     codigo: row.codigo || "",
@@ -101,10 +84,10 @@ const parseGoogleSheetsData = (data: GoogleSheetsResponse) => {
   }));
 };
 
-// Fetch Google Sheets data as JSON
 const fetchGoogleSheetsData = async (sheetId: string, sheetNumber = 1) => {
   try {
     const url = `https://spreadsheets.google.com/feeds/cells/${sheetId}/${sheetNumber}/public/full?alt=json`;
+    console.log("Fetching from URL:", url);
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -112,6 +95,7 @@ const fetchGoogleSheetsData = async (sheetId: string, sheetNumber = 1) => {
     }
     
     const data = await response.json();
+    console.log("Raw Sheet Data:", data);
     return parseGoogleSheetsData(data);
   } catch (error) {
     console.error("Error fetching Google Sheets data:", error);
@@ -126,7 +110,6 @@ const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-// Google Sheets ID extracted from the provided URL
 const GOOGLE_SHEET_ID = "1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs";
 
 const Produtos = () => {
@@ -164,13 +147,11 @@ const Produtos = () => {
             variant: "destructive",
           });
           
-          // If Google Sheets fails, try Supabase
           setDataSource('mock');
           return;
         }
       }
       
-      // Mock data for example
       const mockProdutos = [
         {
           id: '1',
@@ -219,7 +200,6 @@ const Produtos = () => {
         },
       ];
       
-      // Use mock data
       setProdutos(mockProdutos);
       
       toast({
@@ -235,7 +215,6 @@ const Produtos = () => {
         variant: "destructive",
       });
       
-      // Fallback to empty array
       setProdutos([]);
     } finally {
       setLoading(false);
@@ -256,7 +235,6 @@ const Produtos = () => {
   }, [produtos]);
 
   const handleAdicionarAoCarrinho = (produto: any) => {
-    // Ensure the product has all required fields for ProdutoSheets type
     const produtoCompleto = {
       ...produto,
       codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
@@ -379,7 +357,6 @@ const Produtos = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {produtosFiltrados.map((produto) => {
-            // Ensure all required properties exist to satisfy ProdutoSheets type
             const produtoCompleto = {
               ...produto,
               codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
@@ -412,4 +389,3 @@ const Produtos = () => {
 };
 
 export default Produtos;
-

@@ -1,5 +1,5 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface AuthLayoutProps {
@@ -9,6 +9,15 @@ interface AuthLayoutProps {
 const AuthLayout = ({
   children
 }: AuthLayoutProps) => {
+  // Set dark mode by default on the login page
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (!savedTheme || savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    }
+  }, []);
+
   return (
     <div 
       className="min-h-screen flex flex-col items-center justify-center bg-cover bg-center p-4 sm:p-6 md:p-8" 

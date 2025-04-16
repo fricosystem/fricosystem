@@ -41,15 +41,18 @@ const AppSidebar = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { totalItens } = useCarrinho();
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   
   // Load theme from localStorage on component mount
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
     if (savedTheme) {
       setTheme(savedTheme);
-    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    } else {
+      // Default to dark theme
       setTheme("dark");
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     }
   }, []);
 
