@@ -1,0 +1,27 @@
+Para enviar diretamente para a branch main, você pode seguir estes passos simplificados:
+
+1- Primeiro, garanta que você está na branch main:
+git switch main
+
+2- Adicione todos os arquivos modificados:
+git add .
+
+3- Faça um commit das alterações:
+git commit -m "Backup do projeto - [data de hoje]"
+
+4- Envie para o GitHub:
+git push origin main
+
+Para receber o projeto do GitHub (ou seja, baixar a versão mais recente do repositório), você tem algumas opções dependendo do seu cenário:
+Se você já tem o repositório localmente e quer atualizar:
+
+1- Certifique-se de estar na branch main:
+git switch main
+
+2- Baixe as alterações do GitHub:
+git pull origin main
+
+
+Esse comando git pull combina dois comandos: git fetch (baixa as mudanças) e git merge (integra as mudanças ao seu código local).
+
+
