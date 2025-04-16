@@ -9,11 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
+import EmptyState from "@/components/EmptyState";
 
 const Dashboard = () => {
   const [period, setPeriod] = useState<"hoje" | "semana" | "mes">("semana");
   const [loading, setLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState({
     totalProdutos: "0",
     valorEstoque: "R$ 0,00",
@@ -48,6 +50,7 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       setLoadingProgress(0);
+      setError(null);
       
       try {
         // Get total products
@@ -55,8 +58,11 @@ const Dashboard = () => {
           .from('produtos')
           .select('*');
           
-        if (produtosError) throw produtosError;
-        setLoadingProgress(25);
+        if (produtosError) {
+          console.error("Error loading products:", produtosError);
+          // Continue with placeholder data instead of throwing
+          setLoadingProgress(25);
+        }
         
         // Calculate total value
         const valorTotal = produtos
@@ -82,7 +88,10 @@ const Dashboard = () => {
           .order('data', { ascending: false })
           .limit(5);
           
-        if (movimentacoesError) throw movimentacoesError;
+        if (movimentacoesError) {
+          console.error("Error loading movements:", movimentacoesError);
+          // Continue with empty movements
+        }
         setLoadingProgress(75);
         
         // Get latest invoices
@@ -92,27 +101,32 @@ const Dashboard = () => {
           .order('data', { ascending: false })
           .limit(3);
           
-        if (notasFiscaisError) throw notasFiscaisError;
+        if (notasFiscaisError) {
+          console.error("Error loading invoices:", notasFiscaisError);
+          // Continue with empty invoices
+        }
         setLoadingProgress(100);
         
         // Process latest movements
-        const ultimasMovimentacoes = movimentacoes
-          ? await Promise.all(movimentacoes.map(async mov => {
-              const { data: produto } = await supabase
-                .from('produtos')
-                .select('nome')
-                .eq('id', mov.produto_id)
-                .single();
-                
-              return {
-                id: mov.id,
-                produto: produto?.nome || "Produto não encontrado",
-                tipo: mov.tipo,
-                quantidade: mov.quantidade,
-                data: formatRelativeDate(mov.data)
-              };
-            }))
-          : [];
+        let ultimasMovimentacoes = [];
+        if (movimentacoes && movimentacoes.length > 0) {
+          ultimasMovimentacoes = await Promise.all(movimentacoes.map(async mov => {
+            let nomeProduto = "Produto não encontrado";
+            
+            if (produtos) {
+              const produto = produtos.find(p => p.id === mov.produto_id);
+              if (produto) nomeProduto = produto.nome;
+            }
+            
+            return {
+              id: mov.id,
+              produto: nomeProduto,
+              tipo: mov.tipo,
+              quantidade: mov.quantidade,
+              data: formatRelativeDate(mov.data)
+            };
+          }));
+        }
         
         // Format invoices
         const ultimasNotasFiscais = notasFiscais
@@ -127,17 +141,19 @@ const Dashboard = () => {
         
         // Update dashboard data
         setDashboardData({
-          totalProdutos: produtos?.length.toString() || "0",
+          totalProdutos: produtos ? produtos.length.toString() : "0",
           valorEstoque: `R$ ${valorTotal.toFixed(2).replace('.', ',').replace(/\d(?=(\d{3})+,)/g, '$&.')}`,
-          movimentacoes: movimentacoes?.length.toString() || "0",
+          movimentacoes: movimentacoes ? movimentacoes.length.toString() : "0",
           alertas: produtosBaixoEstoque.length.toString(),
           produtosBaixoEstoque,
           ultimasMovimentacoes,
           ultimasNotasFiscais
         });
         
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error loading dashboard data:", error);
+        setError("Não foi possível carregar os dados do dashboard. Verifique sua conexão ou tente novamente mais tarde.");
+        
         toast({
           title: "Erro ao carregar dados",
           description: "Não foi possível carregar os dados do dashboard.",
@@ -193,6 +209,11 @@ const Dashboard = () => {
             </div>
           </div>
         </Card>
+      ) : error ? (
+        <EmptyState
+          title="Erro ao carregar dados"
+          description={error}
+        />
       ) : (
         <>
           {/* Cards de estatísticas */}
@@ -225,9 +246,11 @@ const Dashboard = () => {
           </div>
 
           {/* Alertas de baixo estoque */}
-          <div className="mb-6">
-            <AlertaBaixoEstoque produtos={dashboardData.produtosBaixoEstoque} />
-          </div>
+          {dashboardData.produtosBaixoEstoque.length > 0 && (
+            <div className="mb-6">
+              <AlertaBaixoEstoque produtos={dashboardData.produtosBaixoEstoque} />
+            </div>
+          )}
 
           {/* Grid com últimas atividades */}
           <div className="grid gap-6 md:grid-cols-2">

@@ -1,19 +1,18 @@
+
 import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Database, FileSpreadsheet, SearchIcon, Trash2, RefreshCw } from "lucide-react";
+import { SearchIcon, RefreshCw, FileSpreadsheet } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import ProdutoCard from "@/components/ProdutoCard";
 import AddProdutoModal from "@/components/AddProdutoModal";
 import AlertaBaixoEstoque from "@/components/AlertaBaixoEstoque";
-import { useProdutos } from "@/hooks/useProdutos";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface GoogleSheetsResponse {
   feed: {
@@ -27,25 +26,45 @@ interface GoogleSheetsResponse {
   }
 }
 
+// Interface para produtos
+interface Produto {
+  id: string;
+  codigo: string;
+  codigoEstoque: string;
+  nome: string;
+  unidade: string;
+  deposito: string;
+  quantidadeAtual: number;
+  quantidadeMinima: number;
+  detalhes: string;
+  dataHora: string;
+  imagem: string;
+  valorUnitario: number;
+  centroDeCusto?: string;
+  prateleira?: string;
+  dataVencimento?: string;
+}
+
 const parseGoogleSheetsData = (data: GoogleSheetsResponse) => {
   const entries = data.feed.entry;
   const rows: Record<string, Record<string, string>> = {};
   
+  // Mapeamento correto das colunas para campos
   const columnMap: Record<string, string> = {
-    "1": "codigo",
-    "2": "codigoEstoque",
-    "3": "nome",
-    "4": "unidade",
-    "5": "deposito",
-    "6": "quantidadeAtual",
-    "7": "quantidadeMinima",
-    "8": "detalhes",
-    "9": "imagem",
-    "10": "unidadeMedida",
-    "11": "valorUnitario",
-    "12": "prateleira",
-    "13": "dataVencimento",
-    "14": "dataHora",
+    "1": "codigo",            // 1 = Codigo material
+    "2": "codigoEstoque",     // 2 = Codigo estoque
+    "3": "nome",              // 3 = Nome
+    "4": "unidade",           // 4 = Unidade
+    "5": "deposito",          // 5 = Deposito
+    "6": "quantidadeAtual",   // 6 = Quantidade
+    "7": "quantidadeMinima",  // 7 = Quantidade minima
+    "8": "detalhes",          // 8 = Detalhes
+    "9": "imagem",            // 9 = Imagem
+    "10": "unidadeMedida",    // 10 = Unidade de medida
+    "11": "valorUnitario",    // 11 = Valor unitario
+    "12": "prateleira",       // 12 = Prateleira
+    "13": "dataVencimento",   // 13 = Data vencimento
+    "14": "dataHora",         // 14 = Data criacao
   };
   
   entries.forEach(entry => {
@@ -53,7 +72,7 @@ const parseGoogleSheetsData = (data: GoogleSheetsResponse) => {
     const colIndex = entry.gs$cell.col;
     const value = entry.gs$cell.$t;
     
-    if (rowIndex === "1") return;
+    if (rowIndex === "1") return; // Pular cabeçalho
     
     if (!rows[rowIndex]) {
       rows[rowIndex] = {};
@@ -66,7 +85,7 @@ const parseGoogleSheetsData = (data: GoogleSheetsResponse) => {
   });
 
   return Object.values(rows).map((row, index) => ({
-    id: row.id || `sheet-${index + 1}`,
+    id: `sheet-${index + 1}`,
     codigo: row.codigo || "",
     codigoEstoque: row.codigoEstoque || "",
     nome: row.nome || "",
@@ -80,7 +99,7 @@ const parseGoogleSheetsData = (data: GoogleSheetsResponse) => {
     prateleira: row.prateleira || "",
     dataVencimento: row.dataVencimento ? new Date(row.dataVencimento).toISOString() : "",
     dataHora: row.dataHora ? new Date(row.dataHora).toISOString() : new Date().toISOString(),
-    centroDeCusto: row.centroDeCusto || "ESTOQUE-GERAL"
+    centroDeCusto: "ESTOQUE-GERAL"
   }));
 };
 
@@ -110,112 +129,53 @@ const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
+// ID da planilha Google
 const GOOGLE_SHEET_ID = "1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs";
 
 const Produtos = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [produtos, setProdutos] = useState<any[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dataSource, setDataSource] = useState<'supabase' | 'googleSheets' | 'mock'>('googleSheets');
   const { adicionarAoCarrinho } = useCarrinho();
   const { toast } = useToast();
-  const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<any[]>([]);
-  
+  const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<Produto[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Função para buscar os dados da planilha
   const fetchProdutos = async () => {
     try {
       setLoading(true);
+      setErrorMessage(null);
       
-      if (dataSource === 'googleSheets') {
-        try {
-          console.log("Fetching data from Google Sheets...");
-          const sheetsData = await fetchGoogleSheetsData(GOOGLE_SHEET_ID);
-          console.log("Google Sheets data:", sheetsData);
-          setProdutos(sheetsData);
-          
-          toast({
-            title: "Dados carregados da planilha",
-            description: `${sheetsData.length} produtos foram carregados do Google Sheets.`,
-          });
-          
-          return;
-        } catch (error: any) {
-          console.error("Error fetching Google Sheets data:", error);
-          toast({
-            title: "Erro ao carregar planilha",
-            description: "Tentando carregar dados do Supabase...",
-            variant: "destructive",
-          });
-          
-          setDataSource('mock');
-          return;
-        }
+      console.log("Fetching data from Google Sheets...");
+      
+      try {
+        const sheetsData = await fetchGoogleSheetsData(GOOGLE_SHEET_ID);
+        console.log("Google Sheets data:", sheetsData);
+        setProdutos(sheetsData);
+        
+        toast({
+          title: "Dados carregados",
+          description: `${sheetsData.length} produtos foram carregados da planilha.`,
+        });
+        
+        return;
+      } catch (error: any) {
+        console.error("Error fetching Google Sheets data:", error);
+        setErrorMessage(
+          "Não foi possível carregar os dados da planilha. " + 
+          "Verifique se a planilha existe e está compartilhada publicamente."
+        );
+        
+        toast({
+          title: "Erro ao carregar dados",
+          description: "Não foi possível carregar os dados da planilha.",
+          variant: "destructive",
+        });
+        
+        setProdutos([]);
       }
-      
-      const mockProdutos = [
-        {
-          id: '1',
-          codigo: 'PROD001',
-          nome: 'Parafuso 10mm',
-          centroDeCusto: 'ESTOQUE-GERAL',
-          quantidadeAtual: 150,
-          quantidadeMinima: 50,
-          valorUnitario: 1.599069,
-          imagem: '/placeholder.svg',
-          deposito: 'Depósito A',
-          codigoEstoque: 'EST-001',
-          unidade: 'PÇ',
-          detalhes: 'Parafuso de aço inox',
-          dataHora: new Date().toISOString()
-        },
-        {
-          id: '2',
-          codigo: 'PROD002',
-          nome: 'Porca 8mm',
-          centroDeCusto: 'ESTOQUE-GERAL',
-          quantidadeAtual: 200,
-          quantidadeMinima: 30,
-          valorUnitario: 0.599069,
-          imagem: '/placeholder.svg',
-          deposito: 'Depósito A',
-          codigoEstoque: 'EST-002',
-          unidade: 'PÇ',
-          detalhes: 'Porca de aço inox',
-          dataHora: new Date().toISOString()
-        },
-        {
-          id: '3',
-          codigo: 'PROD003',
-          nome: 'Arruela 12mm',
-          centroDeCusto: 'ESTOQUE-GERAL',
-          quantidadeAtual: 5,
-          quantidadeMinima: 20,
-          valorUnitario: 0.299069,
-          imagem: '/placeholder.svg',
-          deposito: 'Depósito B',
-          codigoEstoque: 'EST-003',
-          unidade: 'PÇ',
-          detalhes: 'Arruela de aço inox',
-          dataHora: new Date().toISOString()
-        },
-      ];
-      
-      setProdutos(mockProdutos);
-      
-      toast({
-        title: "Dados de exemplo",
-        description: "Usando dados de exemplo para demonstração.",
-      });
-      
-    } catch (error: any) {
-      console.error("Error fetching produtos:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar a lista de produtos.",
-        variant: "destructive",
-      });
-      
-      setProdutos([]);
     } finally {
       setLoading(false);
     }
@@ -223,7 +183,7 @@ const Produtos = () => {
   
   useEffect(() => {
     fetchProdutos();
-  }, [dataSource]);
+  }, []);
   
   useEffect(() => {
     if (produtos) {
@@ -234,40 +194,18 @@ const Produtos = () => {
     }
   }, [produtos]);
 
-  const handleAdicionarAoCarrinho = (produto: any) => {
-    const produtoCompleto = {
-      ...produto,
-      codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
-      unidade: produto.unidade || 'UN',
-      detalhes: produto.detalhes || '',
-      dataHora: produto.dataHora || new Date().toISOString(),
-      imagem: produto.imagem || '/placeholder.svg',
-    };
-    
-    adicionarAoCarrinho(produtoCompleto);
+  const handleAdicionarAoCarrinho = (produto: Produto) => {
+    adicionarAoCarrinho(produto);
     toast({
       title: "Produto adicionado!",
       description: `O produto ${produto.nome} foi adicionado ao carrinho.`,
     });
   };
 
-  const changeDataSource = (source: 'supabase' | 'googleSheets' | 'mock') => {
-    setDataSource(source);
-    toast({
-      title: "Fonte de dados alterada",
-      description: `Os dados serão carregados de ${
-        source === 'supabase' 
-          ? 'Supabase' 
-          : source === 'googleSheets' 
-            ? 'Google Sheets' 
-            : 'dados de exemplo'
-      }.`,
-    });
-  };
-
   const produtosFiltrados = produtos
     ? produtos.filter((produto) =>
-        produto.nome.toLowerCase().includes(searchTerm.toLowerCase())
+        produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        produto.codigo.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
 
@@ -285,32 +223,10 @@ const Produtos = () => {
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="ml-2">
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                {dataSource === 'googleSheets' 
-                  ? 'Google Sheets' 
-                  : dataSource === 'supabase' 
-                    ? 'Supabase' 
-                    : 'Dados de exemplo'}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => changeDataSource('googleSheets')}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Google Sheets
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeDataSource('supabase')}>
-                <Database className="h-4 w-4 mr-2" />
-                Supabase
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeDataSource('mock')}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Dados de exemplo
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="ml-2 flex items-center text-sm text-muted-foreground">
+            <FileSpreadsheet className="h-4 w-4 mr-1" />
+            <span>Dados da planilha Google Sheets</span>
+          </div>
         </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
           Adicionar Produto
@@ -349,6 +265,11 @@ const Produtos = () => {
             </Card>
           ))}
         </div>
+      ) : errorMessage ? (
+        <EmptyState
+          title="Erro ao carregar produtos"
+          description={errorMessage}
+        />
       ) : produtosFiltrados.length === 0 ? (
         <EmptyState
           title="Nenhum produto encontrado"
@@ -356,26 +277,15 @@ const Produtos = () => {
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {produtosFiltrados.map((produto) => {
-            const produtoCompleto = {
-              ...produto,
-              codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
-              unidade: produto.unidade || 'UN',
-              detalhes: produto.detalhes || '',
-              dataHora: produto.dataHora || new Date().toISOString(),
-              imagem: produto.imagem || '/placeholder.svg',
-            };
-            
-            return (
-              <ProdutoCard
-                key={produto.id}
-                produto={produtoCompleto}
-                onEdit={() => {}} 
-                onDelete={() => {}}
-                onAddToCart={() => handleAdicionarAoCarrinho(produto)}
-              />
-            );
-          })}
+          {produtosFiltrados.map((produto) => (
+            <ProdutoCard
+              key={produto.id}
+              produto={produto}
+              onEdit={() => {}} 
+              onDelete={() => {}}
+              onAddToCart={() => handleAdicionarAoCarrinho(produto)}
+            />
+          ))}
         </div>
       )}
 
