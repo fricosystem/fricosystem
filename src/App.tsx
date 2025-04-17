@@ -18,6 +18,7 @@ import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 import Carrinho from "./pages/Carrinho";
 import Requisicoes from "./pages/Requisicoes";
+import Inventory from "./pages/Inventory";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -79,6 +80,7 @@ const AppContent = () => {
           <Route path="/configuracoes" element={<AuthGuard><Configuracoes /></AuthGuard>} />
           <Route path="/carrinho" element={<AuthGuard><Carrinho /></AuthGuard>} />
           <Route path="/requisicoes" element={<AuthGuard><Requisicoes /></AuthGuard>} />
+          <Route path="/inventory" element={<AuthGuard><Inventory /></AuthGuard>} />
           
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />

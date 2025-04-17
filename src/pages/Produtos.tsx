@@ -1,123 +1,38 @@
-
 import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Database, FileSpreadsheet, SearchIcon, Trash2, RefreshCw } from "lucide-react";
+import { FileSpreadsheet, SearchIcon, RefreshCw } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import ProdutoCard from "@/components/ProdutoCard";
 import AddProdutoModal from "@/components/AddProdutoModal";
 import AlertaBaixoEstoque from "@/components/AlertaBaixoEstoque";
-import { useProdutos } from "@/hooks/useProdutos";
-import LoadingIndicator from "@/components/LoadingIndicator";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Google Sheets interface and utilities - moved from googleSheetsUtil.ts
-interface GoogleSheetsResponse {
-  feed: {
-    entry: Array<{
-      gs$cell: {
-        row: string;
-        col: string;
-        $t: string;
-      }
-    }>
-  }
+// URL base para o endpoint do Apps Script
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKwqQZzpe21ONIcNmiydlqxiheQ73e8f4lQlB0YWuXTH6l6X5um1SHTkM2cTwWfeaV/exec";
+
+// Interface para o produto
+interface Produto {
+  id: string;
+  codigo: string;
+  codigoEstoque: string;
+  nome: string;
+  unidade: string;
+  deposito: string;
+  quantidadeAtual: number;
+  quantidadeMinima: number;
+  detalhes: string;
+  imagem: string;
+  valorUnitario: number;
+  prateleira: string;
+  dataVencimento: string;
+  dataHora: string;
+  centroDeCusto: string;
 }
-
-// Convert spreadsheet data to a more usable format
-const parseGoogleSheetsData = (data: GoogleSheetsResponse) => {
-  const entries = data.feed.entry;
-  const rows: Record<string, Record<string, string>> = {};
-  
-  // Map of column indices to field names
-  const columnMap: Record<string, string> = {};
-  
-  // Process header row to create column mapping
-  entries
-    .filter(entry => entry.gs$cell.row === "1")
-    .forEach(entry => {
-      const headerText = entry.gs$cell.$t.trim();
-      const columnIndex = entry.gs$cell.col;
-      
-      // Map Google Sheets column headers to our field names
-      switch (headerText) {
-        case "Codigo material": columnMap[columnIndex] = "codigo"; break;
-        case "Codigo estoque": columnMap[columnIndex] = "codigoEstoque"; break;
-        case "Nome": columnMap[columnIndex] = "nome"; break;
-        case "Unidade": columnMap[columnIndex] = "unidade"; break;
-        case "Deposito": columnMap[columnIndex] = "deposito"; break;
-        case "Quantidade": columnMap[columnIndex] = "quantidadeAtual"; break;
-        case "Quantidade minima": columnMap[columnIndex] = "quantidadeMinima"; break;
-        case "Detalhes": columnMap[columnIndex] = "detalhes"; break;
-        case "Imagem": columnMap[columnIndex] = "imagem"; break;
-        case "Valor unitario": columnMap[columnIndex] = "valorUnitario"; break;
-        case "Prateleira": columnMap[columnIndex] = "prateleira"; break;
-        case "Data vencimento": columnMap[columnIndex] = "dataVencimento"; break;
-        case "Data criacao": columnMap[columnIndex] = "dataHora"; break;
-        default: columnMap[columnIndex] = headerText.toLowerCase().replace(/\s/g, "_"); 
-      }
-    });
-
-  // Process data rows
-  entries
-    .filter(entry => entry.gs$cell.row !== "1") // Skip header row
-    .forEach(entry => {
-      const rowIndex = entry.gs$cell.row;
-      const colIndex = entry.gs$cell.col;
-      const value = entry.gs$cell.$t;
-      
-      if (!rows[rowIndex]) {
-        rows[rowIndex] = {};
-      }
-      
-      const fieldName = columnMap[colIndex];
-      if (fieldName) {
-        rows[rowIndex][fieldName] = value;
-      }
-    });
-
-  // Convert rows object to array and transform data types
-  return Object.values(rows).map((row, index) => ({
-    id: row.id || `sheet-${index + 1}`,
-    codigo: row.codigo || "",
-    codigoEstoque: row.codigoEstoque || "",
-    nome: row.nome || "",
-    unidade: row.unidade || "UN",
-    deposito: row.deposito || "",
-    quantidadeAtual: parseFloat(row.quantidadeAtual) || 0,
-    quantidadeMinima: parseFloat(row.quantidadeMinima) || 0,
-    detalhes: row.detalhes || "",
-    imagem: row.imagem || "/placeholder.svg",
-    valorUnitario: parseFloat(row.valorUnitario?.replace(",", ".")) || 0,
-    prateleira: row.prateleira || "",
-    dataVencimento: row.dataVencimento ? new Date(row.dataVencimento).toISOString() : "",
-    dataHora: row.dataHora ? new Date(row.dataHora).toISOString() : new Date().toISOString(),
-    centroDeCusto: row.centroDeCusto || "ESTOQUE-GERAL"
-  }));
-};
-
-// Fetch Google Sheets data as JSON
-const fetchGoogleSheetsData = async (sheetId: string, sheetNumber = 1) => {
-  try {
-    const url = `https://spreadsheets.google.com/feeds/cells/${sheetId}/${sheetNumber}/public/full?alt=json`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch spreadsheet: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return parseGoogleSheetsData(data);
-  } catch (error) {
-    console.error("Error fetching Google Sheets data:", error);
-    throw error;
-  }
-};
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat("pt-BR", {
@@ -126,117 +41,139 @@ const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-// Google Sheets ID extracted from the provided URL
-const GOOGLE_SHEET_ID = "1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs";
+// Função para buscar dados via Apps Script
+const fetchSheetDataFromAppsScript = async () => {
+  console.log("Buscando dados via Apps Script...");
+  
+  try {
+    // Adiciona um timestamp para evitar cache
+    const url = `${APPS_SCRIPT_URL}?action=getProdutos&_t=${new Date().getTime()}`;
+    console.log(`URL da requisição: ${url}`);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`Falha ao buscar dados. Status: ${response.status}, Texto: ${response.statusText}`);
+      throw new Error(`Falha ao buscar dados: ${response.status} ${response.statusText}`);
+    }
+    
+    const text = await response.text();
+    console.log("Resposta bruta:", text);
+    
+    try {
+      // Tenta analisar o JSON
+      const data = JSON.parse(text);
+      console.log("Resposta do Apps Script analisada:", data);
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      if (!Array.isArray(data.produtos)) {
+        console.error("Formato de resposta inválido - produtos não é um array:", data);
+        throw new Error("Formato de resposta inválido: produtos não é um array");
+      }
+      
+      return data.produtos;
+    } catch (parseError) {
+      console.error("Erro ao analisar a resposta JSON:", parseError);
+      throw new Error(`A resposta não é um JSON válido: ${parseError.message}`);
+    }
+  } catch (error) {
+    console.error("Erro ao buscar dados via Apps Script:", error);
+    throw error;
+  }
+};
+
+// Função para criar produtos demo para testes
+const createDemoProducts = (count: number = 10): Produto[] => {
+  return Array(count).fill(0).map((_, index) => ({
+    id: `demo-${index + 1}`,
+    codigo: `PROD${String(index + 1).padStart(3, '0')}`,
+    codigoEstoque: `EST-${index + 1}`,
+    nome: `Produto Demo ${index + 1}`,
+    unidade: 'UN',
+    deposito: 'Principal',
+    quantidadeAtual: Math.floor(Math.random() * 100),
+    quantidadeMinima: 10,
+    detalhes: 'Produto para demonstração',
+    imagem: '/placeholder.svg',
+    valorUnitario: Math.random() * 100 + 10,
+    prateleira: `P${Math.floor(Math.random() * 10) + 1}`,
+    dataVencimento: new Date(2023, 11, 31).toISOString(),
+    dataHora: new Date().toISOString(),
+    centroDeCusto: 'ESTOQUE-GERAL'
+  }));
+};
 
 const Produtos = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [produtos, setProdutos] = useState<any[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dataSource, setDataSource] = useState<'supabase' | 'googleSheets' | 'mock'>('googleSheets');
+  const [error, setError] = useState<string | null>(null);
+  const [useDemoData, setUseDemoData] = useState(false);
   const { adicionarAoCarrinho } = useCarrinho();
   const { toast } = useToast();
-  const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<any[]>([]);
+  const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<Produto[]>([]);
   
   const fetchProdutos = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      if (dataSource === 'googleSheets') {
-        try {
-          console.log("Fetching data from Google Sheets...");
-          const sheetsData = await fetchGoogleSheetsData(GOOGLE_SHEET_ID);
-          console.log("Google Sheets data:", sheetsData);
-          setProdutos(sheetsData);
-          
+      if (useDemoData) {
+        // Carregar dados demo após um pequeno delay para simular requisição
+        setTimeout(() => {
+          const demoProdutos = createDemoProducts(15);
+          setProdutos(demoProdutos);
           toast({
-            title: "Dados carregados da planilha",
-            description: `${sheetsData.length} produtos foram carregados do Google Sheets.`,
+            title: "Dados demo carregados",
+            description: `${demoProdutos.length} produtos de demonstração foram carregados.`,
           });
-          
-          return;
-        } catch (error: any) {
-          console.error("Error fetching Google Sheets data:", error);
-          toast({
-            title: "Erro ao carregar planilha",
-            description: "Tentando carregar dados do Supabase...",
-            variant: "destructive",
-          });
-          
-          // If Google Sheets fails, try Supabase
-          setDataSource('mock');
-          return;
-        }
+          setLoading(false);
+        }, 1000);
+        return;
       }
       
-      // Mock data for example
-      const mockProdutos = [
-        {
-          id: '1',
-          codigo: 'PROD001',
-          nome: 'Parafuso 10mm',
-          centroDeCusto: 'ESTOQUE-GERAL',
-          quantidadeAtual: 150,
-          quantidadeMinima: 50,
-          valorUnitario: 1.599069,
-          imagem: '/placeholder.svg',
-          deposito: 'Depósito A',
-          codigoEstoque: 'EST-001',
-          unidade: 'PÇ',
-          detalhes: 'Parafuso de aço inox',
-          dataHora: new Date().toISOString()
-        },
-        {
-          id: '2',
-          codigo: 'PROD002',
-          nome: 'Porca 8mm',
-          centroDeCusto: 'ESTOQUE-GERAL',
-          quantidadeAtual: 200,
-          quantidadeMinima: 30,
-          valorUnitario: 0.599069,
-          imagem: '/placeholder.svg',
-          deposito: 'Depósito A',
-          codigoEstoque: 'EST-002',
-          unidade: 'PÇ',
-          detalhes: 'Porca de aço inox',
-          dataHora: new Date().toISOString()
-        },
-        {
-          id: '3',
-          codigo: 'PROD003',
-          nome: 'Arruela 12mm',
-          centroDeCusto: 'ESTOQUE-GERAL',
-          quantidadeAtual: 5,
-          quantidadeMinima: 20,
-          valorUnitario: 0.299069,
-          imagem: '/placeholder.svg',
-          deposito: 'Depósito B',
-          codigoEstoque: 'EST-003',
-          unidade: 'PÇ',
-          detalhes: 'Arruela de aço inox',
-          dataHora: new Date().toISOString()
-        },
-      ];
+      console.log("Buscando dados via Apps Script...");
       
-      // Use mock data
-      setProdutos(mockProdutos);
-      
-      toast({
-        title: "Dados de exemplo",
-        description: "Usando dados de exemplo para demonstração.",
-      });
-      
-    } catch (error: any) {
-      console.error("Error fetching produtos:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar a lista de produtos.",
-        variant: "destructive",
-      });
-      
-      // Fallback to empty array
-      setProdutos([]);
+      try {
+        const produtosData = await fetchSheetDataFromAppsScript();
+        console.log(`Dados obtidos: ${produtosData.length} produtos`);
+        
+        if (!produtosData || produtosData.length === 0) {
+          toast({
+            title: "Aviso",
+            description: "Nenhum produto encontrado na planilha. Verifique se a planilha contém dados."
+          });
+          setProdutos([]);
+        } else {
+          setProdutos(produtosData);
+          
+          toast({
+            title: "Dados carregados",
+            description: `${produtosData.length} produtos foram carregados com sucesso.`,
+          });
+        }
+      } catch (error: any) {
+        console.error("Erro ao buscar dados via Apps Script:", error);
+        
+        const errorMessage = error.message || "Erro ao carregar dados";
+        setError(errorMessage);
+        
+        toast({
+          title: "Erro ao carregar dados",
+          description: `Não foi possível carregar os dados: ${errorMessage}. Usando dados de demonstração.`,
+          variant: "destructive",
+          duration: 5000,
+        });
+        
+        // Carregar dados demo como fallback
+        const demoProdutos = createDemoProducts(12);
+        setProdutos(demoProdutos);
+        setUseDemoData(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -244,19 +181,21 @@ const Produtos = () => {
   
   useEffect(() => {
     fetchProdutos();
-  }, [dataSource]);
+  }, []);
   
   useEffect(() => {
-    if (produtos) {
+    if (produtos && produtos.length > 0) {
       const produtosComBaixoEstoque = produtos.filter(
         (produto) => produto.quantidadeAtual <= produto.quantidadeMinima
       );
       setProdutosEmBaixoEstoque(produtosComBaixoEstoque);
+    } else {
+      setProdutosEmBaixoEstoque([]);
     }
   }, [produtos]);
 
-  const handleAdicionarAoCarrinho = (produto: any) => {
-    // Ensure the product has all required fields for ProdutoSheets type
+  const handleAdicionarAoCarrinho = (produto: Produto) => {
+    // Garante que o produto tenha todos os campos necessários
     const produtoCompleto = {
       ...produto,
       codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
@@ -273,23 +212,28 @@ const Produtos = () => {
     });
   };
 
-  const changeDataSource = (source: 'supabase' | 'googleSheets' | 'mock') => {
-    setDataSource(source);
-    toast({
-      title: "Fonte de dados alterada",
-      description: `Os dados serão carregados de ${
-        source === 'supabase' 
-          ? 'Supabase' 
-          : source === 'googleSheets' 
-            ? 'Google Sheets' 
-            : 'dados de exemplo'
-      }.`,
-    });
+  const toggleDataSource = () => {
+    setUseDemoData(!useDemoData);
+    setLoading(true);
+    
+    if (!useDemoData) {
+      // Mudar para dados demo
+      const demoProdutos = createDemoProducts(15);
+      setProdutos(demoProdutos);
+      toast({
+        title: "Modo de demonstração",
+        description: "Usando dados de demonstração.",
+      });
+    } else {
+      // Tentar carregar dados reais
+      fetchProdutos();
+    }
   };
 
   const produtosFiltrados = produtos
     ? produtos.filter((produto) =>
-        produto.nome.toLowerCase().includes(searchTerm.toLowerCase())
+        produto.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        produto.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
 
@@ -307,32 +251,15 @@ const Produtos = () => {
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="ml-2">
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                {dataSource === 'googleSheets' 
-                  ? 'Google Sheets' 
-                  : dataSource === 'supabase' 
-                    ? 'Supabase' 
-                    : 'Dados de exemplo'}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => changeDataSource('googleSheets')}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Google Sheets
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeDataSource('supabase')}>
-                <Database className="h-4 w-4 mr-2" />
-                Supabase
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeDataSource('mock')}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Dados de exemplo
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="ml-2"
+            onClick={toggleDataSource}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            {useDemoData ? "Dados de Demonstração" : "Dados da Planilha"}
+          </Button>
         </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
           Adicionar Produto
@@ -343,7 +270,7 @@ const Produtos = () => {
         <div className="relative flex-1">
           <Input
             type="text"
-            placeholder="Buscar produto..."
+            placeholder="Buscar produto por nome ou código..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -351,6 +278,23 @@ const Produtos = () => {
           <SearchIcon className="h-5 w-5 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
         </div>
       </div>
+
+      {useDemoData && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 p-4 mb-4 rounded-md">
+          <h3 className="font-medium">Modo de demonstração</h3>
+          <p className="text-sm">Exibindo dados de demonstração. Clique em "Dados da Planilha" para tentar carregar dados reais.</p>
+        </div>
+      )}
+
+      {error && !useDemoData && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 mb-4 rounded-md">
+          <h3 className="font-medium">Erro ao carregar dados</h3>
+          <p className="text-sm">{error}</p>
+          <p className="text-sm mt-2">
+            Verifique se o Apps Script está configurado corretamente e se a planilha contém todos os cabeçalhos necessários.
+          </p>
+        </div>
+      )}
 
       {produtosEmBaixoEstoque.length > 0 && (
         <AlertaBaixoEstoque produtos={produtosEmBaixoEstoque} />
@@ -374,28 +318,40 @@ const Produtos = () => {
       ) : produtosFiltrados.length === 0 ? (
         <EmptyState
           title="Nenhum produto encontrado"
-          description="Verifique sua busca ou adicione novos produtos."
+          description={
+            searchTerm 
+              ? "Nenhum produto corresponde à sua busca."
+              : error && !useDemoData
+                ? "Ocorreu um erro ao carregar os dados. Tente novamente ou use dados de demonstração."
+                : "Adicione novos produtos para começar."
+          }
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {produtosFiltrados.map((produto) => {
-            // Ensure all required properties exist to satisfy ProdutoSheets type
+            // Garante que todas as propriedades necessárias existam
             const produtoCompleto = {
               ...produto,
-              codigoEstoque: produto.codigoEstoque || `EST-${produto.id}`,
+              id: produto.id || `temp-${Math.random().toString(36).substr(2, 9)}`,
+              codigo: produto.codigo || "",
+              codigoEstoque: produto.codigoEstoque || `EST-${produto.id || ""}`,
+              nome: produto.nome || "Produto sem nome",
               unidade: produto.unidade || 'UN',
               detalhes: produto.detalhes || '',
               dataHora: produto.dataHora || new Date().toISOString(),
               imagem: produto.imagem || '/placeholder.svg',
+              valorUnitario: produto.valorUnitario || 0,
+              quantidadeAtual: produto.quantidadeAtual || 0,
+              quantidadeMinima: produto.quantidadeMinima || 0
             };
             
             return (
               <ProdutoCard
-                key={produto.id}
+                key={produtoCompleto.id}
                 produto={produtoCompleto}
                 onEdit={() => {}} 
                 onDelete={() => {}}
-                onAddToCart={() => handleAdicionarAoCarrinho(produto)}
+                onAddToCart={() => handleAdicionarAoCarrinho(produtoCompleto)}
               />
             );
           })}
@@ -412,4 +368,3 @@ const Produtos = () => {
 };
 
 export default Produtos;
-

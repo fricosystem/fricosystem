@@ -1,4 +1,3 @@
-
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -6,22 +5,27 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarGroupAction,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Home,
-  Package,
+  LayoutDashboard,
+  Box,
+  ClipboardList,
+  ShoppingCart,
+  PackageSearch,
+  Warehouse,
+  Receipt,
+  Truck,
   FileText,
+  Wallet,
   BarChart3,
+  Users,
+  Home,
   Settings,
   LogOut,
-  ShoppingCart,
-  Users,
-  ClipboardList,
   Sun,
   Moon,
   ChevronUp,
@@ -35,6 +39,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+// Definindo a interface para os itens do sidebar
+interface SidebarItem {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+}
+
+// Definindo a interface para as categorias do sidebar
+interface SidebarCategory {
+  label: string;
+  items: SidebarItem[];
+}
 
 const AppSidebar = () => {
   const navigate = useNavigate();
@@ -60,41 +77,42 @@ const AppSidebar = () => {
     localStorage.setItem("theme", newTheme);
   };
   
-  const navItems = [
+  // Categorias do sidebar com seus respectivos itens
+  const sidebarCategories: SidebarCategory[] = [
     {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: Home,
+      label: "Principal",
+      items: [
+        { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+        { to: "/produtos", icon: Box, label: "Produtos" },
+        { to: "/requisicoes", icon: ClipboardList, label: "Requisições" },
+        { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
+      ],
     },
     {
-      title: "Produtos",
-      url: "/produtos",
-      icon: Package,
+      label: "Almoxarifado",
+      items: [
+        { to: "/inventory", icon: PackageSearch, label: "Inventário" },
+        { to: "/addressing", icon: Warehouse, label: "Endereçamento" },
+        { to: "/invoices", icon: Receipt, label: "Notas Fiscais" },
+        { to: "/orders", icon: Truck, label: "Compras/Pedidos" },
+        { to: "/transfer", icon: FileText, label: "Entrada/Transferência" },
+      ],
     },
     {
-      title: "Requisições",
-      url: "/requisicoes",
-      icon: ClipboardList,
+      label: "Financeiro",
+      items: [
+        { to: "/financial", icon: Wallet, label: "Financeiro" },
+        { to: "/cost-centers", icon: BarChart3, label: "Centros de Custo" },
+        { to: "/suppliers", icon: Users, label: "Fornecedores" },
+        { to: "/reports", icon: Home, label: "Relatórios" },
+      ],
     },
     {
-      title: "Notas Fiscais",
-      url: "/notas-fiscais",
-      icon: FileText,
-    },
-    {
-      title: "Relatórios",
-      url: "/relatorios",
-      icon: BarChart3,
-    },
-    {
-      title: "Administrativo",
-      url: "/administrativo",
-      icon: Users,
-    },
-    {
-      title: "Configurações",
-      url: "/configuracoes",
-      icon: Settings,
+      label: "Sistema",
+      items: [
+        { to: "/admin", icon: Settings, label: "Administrativo" },
+        { to: "/settings", icon: Settings, label: "Configurações" },
+      ],
     },
   ];
 
@@ -114,37 +132,34 @@ const AppSidebar = () => {
               className="h-10 w-auto"
             />
           </div>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    isActive={location.pathname === item.url}
-                    onClick={() => navigate(item.url)}
-                    className="flex items-center"
-                  >
-                    <item.icon className="mr-2 h-5 w-5" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={location.pathname === "/carrinho"}
-                  onClick={() => navigate("/carrinho")}
-                  className="flex items-center"
-                >
-                  <ShoppingCart className="mr-2 h-5 w-5" />
-                  <span>Carrinho</span>
-                  {totalItens > 0 && (
-                    <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-primary rounded-full">
-                      {totalItens}
-                    </span>
-                  )}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
+          
+          {/* Renderizar cada categoria do sidebar */}
+          {sidebarCategories.map((category, index) => (
+            <SidebarGroup key={index}>
+              <SidebarGroupLabel>{category.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {category.items.map((item) => (
+                    <SidebarMenuItem key={item.to}>
+                      <SidebarMenuButton
+                        isActive={location.pathname === item.to}
+                        onClick={() => navigate(item.to)}
+                        className="flex items-center"
+                      >
+                        <item.icon className="mr-2 h-5 w-5" />
+                        <span>{item.label}</span>
+                        {item.to === "/cart" && totalItens > 0 && (
+                          <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-primary rounded-full">
+                            {totalItens}
+                          </span>
+                        )}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </SidebarGroup>
         
         <SidebarGroup className="mt-auto">
@@ -176,7 +191,7 @@ const AppSidebar = () => {
                       )}
                       <span>Mudar para tema {theme === "light" ? "escuro" : "claro"}</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/configuracoes")}>
+                    <DropdownMenuItem onClick={() => navigate("/settings")}>
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Configurações</span>
                     </DropdownMenuItem>
