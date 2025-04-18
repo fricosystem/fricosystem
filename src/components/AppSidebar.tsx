@@ -92,7 +92,7 @@ const AppSidebar = () => {
       label: "Almoxarifado",
       items: [
         { to: "/inventory", icon: PackageSearch, label: "Inventário" },
-        { to: "/addressing", icon: Warehouse, label: "Endereçamento" },
+        { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
         { to: "/invoices", icon: Receipt, label: "Notas Fiscais" },
         { to: "/orders", icon: Truck, label: "Compras/Pedidos" },
         { to: "/transfer", icon: FileText, label: "Entrada/Transferência" },

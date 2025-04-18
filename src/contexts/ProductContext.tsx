@@ -40,61 +40,62 @@ interface ProductProviderProps {
   children: ReactNode;
 }
 
+// Constantes para acesso à planilha Google Sheets
+const SHEETS_ID = "1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs";
+const SHEET_GID = "736804534";
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEETS_ID}/export?format=csv&gid=${SHEET_GID}`;
+
+// URL do Google Apps Script Web App (único)
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzKG2k1M9bznqqpAZFlheRA58T4Jojfu9VGwa-6mjxcCnv1-lULbM6I21MsnurzdxTq/exec";
+
 export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // URL pública da planilha (CSV ou JSON)
-  const PRODUCTS_SHEET_URL = "https://docs.google.com/spreadsheets/d/1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs/edit?gid=736804534&output=csv";
+  const parseCSV = (csvText: string): string[][] => {
+    const rows = csvText.split('\n');
+    return rows.map(row => row.split(',').map(cell => cell.trim()));
+  };
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(PRODUCTS_SHEET_URL);
+      const response = await fetch(CSV_URL);
       if (!response.ok) {
         throw new Error("Falha ao carregar os dados dos produtos");
       }
       
       const csvText = await response.text();
+      const rows = parseCSV(csvText);
       
-      // Parse CSV
-      const lines = csvText.split("\n");
-      const headers = lines[0].split(",");
+      // Pular a primeira linha (cabeçalho)
+      const dataRows = rows.slice(1);
       
-      // Map CSV rows to products
-      const parsedProducts: Product[] = [];
-      
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        const values = lines[i].split(",");
-        const product: Record<string, any> = {};
-        
-        headers.forEach((header, index) => {
-          const cleanHeader = header.trim();
-          product[cleanHeader] = values[index]?.trim() || "";
+      const parsedProducts: Product[] = dataRows
+        .filter(values => values.length >= 11) // Garantir que a linha tem dados suficientes
+        .map((values, index) => {
+          const valorUnitarioText = values[10] || "0";
+          const valorUnitarioValue = parseFloat(valorUnitarioText.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+          
+          return {
+            id: `produto-${index}`,
+            codigo: values[1] || "", // Código material (coluna 1)
+            codigoEstoque: values[2] || "", // Código estoque (coluna 2)
+            nome: values[3] || "", // Nome (coluna 3)
+            unidadeMedida: values[10] || "", // Unidade de medida (coluna 10)
+            deposito: values[5] || "", // Depósito (coluna 5)
+            quantidade: parseFloat(values[6]) || 0, // Quantidade (coluna 6)
+            quantidadeMinima: parseFloat(values[7]) || 0, // Quantidade mínima (coluna 7)
+            detalhes: values[8] || "", // Detalhes (coluna 8)
+            imagem: values[9] || "", // Imagem (coluna 9)
+            valorUnitario: valorUnitarioValue,
+            location: values[12] || "", // Prateleira (coluna 12)
+            prateleira: values[12] || "", // Prateleira (coluna 12)
+          };
         });
-        
-        // Mapear os nomes das colunas da planilha para as propriedades do objeto Product
-        parsedProducts.push({
-          id: product["Codigo material"] || String(i),
-          codigo: product["Codigo material"] || "",
-          codigoEstoque: product["Codigo estoque"] || "",
-          nome: product["Nome"] || "",
-          deposito: product["Deposito"] || "",
-          quantidade: product["Quantidade"] ? Number(product["Quantidade"]) : undefined,
-          quantidadeMinima: product["Quantidade minima"] ? Number(product["Quantidade minima"]) : undefined,
-          detalhes: product["Detalhes"] || "",
-          imagem: product["Imagem"] || "",
-          unidadeMedida: product["Unidade de medida"] || "",
-          valorUnitario: product["Valor unitario"] ? Number(product["Valor unitario"]) : undefined,
-          location: product["Prateleira"] || "",
-          prateleira: product["Prateleira"] || "",
-        });
-      }
       
       setProducts(parsedProducts);
     } catch (err) {
@@ -115,7 +116,15 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
 
   const updateProductLocation = async (productId: string, location: string) => {
     try {
-      // Atualizar localmente primeiro para feedback imediato
+      // Encontrar o produto que estamos atualizando
+      const productToUpdate = products.find(p => p.id === productId);
+      if (!productToUpdate) {
+        throw new Error("Produto não encontrado");
+      }
+  
+      console.log("Atualizando localização do produto:", productToUpdate.codigo, "para", location);
+  
+      // Atualizar o produto localmente primeiro (para UI responsiva)
       setProducts(prevProducts => 
         prevProducts.map(product => 
           product.id === productId 
@@ -123,13 +132,42 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
             : product
         )
       );
-
-      // Simulação de atualização bem sucedida com feedback
-      // Em uma implementação real, isso seria substituído por uma chamada para atualizar a planilha
+  
+      // Preparar URL com parâmetros para o Google Apps Script
+      const url = new URL(APPS_SCRIPT_URL);
+      url.searchParams.append('action', 'updateLocation');
+      url.searchParams.append('codigo', productToUpdate.codigo);
+      url.searchParams.append('location', location);
+  
+      console.log("Enviando requisição para:", url.toString());
+  
+      // Usar fetch com CORS habilitado
+      const response = await fetch(url.toString(), {
+        method: 'GET', // Mudar para GET que funciona melhor com Apps Script
+        // Remover o mode: 'no-cors' para poder receber respostas
+      });
+  
+      // Tentar processar a resposta
+      try {
+        const responseData = await response.json();
+        console.log("Resposta recebida:", responseData);
+        
+        if (!responseData.success) {
+          throw new Error(responseData.message || "Erro desconhecido");
+        }
+      } catch (e) {
+        console.log("Não foi possível analisar a resposta JSON, mas a requisição foi enviada");
+      }
+  
       toast({
         title: "Localização atualizada",
-        description: `Produto movido para ${location}`,
+        description: `Produto ${productToUpdate.nome} movido para ${location}`,
       });
+  
+      // Atualizar a lista após um breve delay para dar tempo do Apps Script processar
+      setTimeout(() => {
+        refreshProducts();
+      }, 3000);
     } catch (error) {
       console.error("Erro ao atualizar localização:", error);
       toast({
@@ -142,7 +180,15 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
 
   const updateProduct = async (productId: string, updatedData: Partial<Product>) => {
     try {
-      // Atualizar localmente primeiro para feedback imediato
+      // Encontrar o produto que estamos atualizando
+      const productToUpdate = products.find(p => p.id === productId);
+      if (!productToUpdate) {
+        throw new Error("Produto não encontrado");
+      }
+
+      console.log("Atualizando produto:", productToUpdate.codigo, "com dados:", updatedData);
+
+      // Atualizar o produto localmente primeiro
       setProducts(prevProducts => 
         prevProducts.map(product => 
           product.id === productId 
@@ -151,11 +197,38 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
         )
       );
 
-      // Feedback ao usuário
+      // Enviar dados para o Google Apps Script
+      const formData = new FormData();
+      formData.append('action', 'updateProduct');
+      formData.append('codigo', productToUpdate.codigo);
+      
+      // Adicionar todos os campos atualizados
+      Object.entries(updatedData).forEach(([key, value]) => {
+        // Converter prateleira/location para o campo correto na planilha
+        if (key === 'location' || key === 'prateleira') {
+          formData.append('prateleira', String(value));
+        } else {
+          formData.append(key, String(value));
+        }
+      });
+
+      console.log("Enviando requisição para:", APPS_SCRIPT_URL);
+
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: formData,
+        mode: 'no-cors'
+      });
+
       toast({
         title: "Produto atualizado",
         description: "As alterações foram salvas com sucesso.",
       });
+
+      // Atualizar a lista após um breve delay
+      setTimeout(() => {
+        refreshProducts();
+      }, 3000);
     } catch (error) {
       console.error("Erro ao atualizar produto:", error);
       toast({

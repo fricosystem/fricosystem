@@ -14,11 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import WarehouseGrid from "@/components/WarehouseGrid";
-import ProductCard from "@/components/ProductCard";
-import AppLayout from "@/layouts/AppLayoutInventory";
+import ProductCard from "@/components/ProductCardEnderecamento";
 
 // Create a wrapped component that uses the hook
-const InventoryContent = () => {
+const EnderecamentoContent = () => {
   const { products, loading, error, refreshProducts } = useProducts();
   const [searchQuery, setSearchQuery] = useState("");
   const [draggedProduct, setDraggedProduct] = useState<Product | null>(null);
@@ -197,14 +196,16 @@ const InventoryContent = () => {
 };
 
 // Main component that wraps the content with ProductProvider
-const Inventory = () => {
+const Enderecamento = () => {
   return (
-    <AppLayout>
-      <ProductProvider>
-        <InventoryContent />
-      </ProductProvider>
-    </AppLayout>
+    <div className="min-h-screen flex flex-col bg-muted/20">
+      <main className="flex-1">
+        <ProductProvider>
+          <EnderecamentoContent />
+        </ProductProvider>
+      </main>
+    </div>
   );
 };
 
-export default Inventory;
+export default Enderecamento;

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useProducts, Product } from "@/contexts/ProductContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import ProductCard from "@/components/ProductCard";
+import ProductCard from "./ProductCard";
 
 interface WarehouseGridProps {
   draggedProduct: Product | null;
@@ -51,6 +51,7 @@ const WarehouseGrid: React.FC<WarehouseGridProps> = ({
   const { updateProductLocation } = useProducts();
   const [customLocation, setCustomLocation] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [updatingLocation, setUpdatingLocation] = useState(false);
 
   const getProductsInLocation = (locationId: string) => {
     return products.filter(p => p.location === locationId);
@@ -63,30 +64,47 @@ const WarehouseGrid: React.FC<WarehouseGridProps> = ({
 
   const handleDrop = async (e: React.DragEvent, locationId: string) => {
     e.preventDefault();
+    setUpdatingLocation(true);
     
-    if (!draggedProduct) {
-      const jsonData = e.dataTransfer.getData("application/json");
-      if (jsonData) {
-        try {
-          const parsedProduct = JSON.parse(jsonData) as Product;
-          await updateProductLocation(parsedProduct.id, locationId);
-        } catch (err) {
-          console.error("Error parsing dragged product:", err);
+    try {
+      if (!draggedProduct) {
+        const jsonData = e.dataTransfer.getData("application/json");
+        if (jsonData) {
+          try {
+            const parsedProduct = JSON.parse(jsonData) as Product;
+            console.log("Produto arrastado recuperado do JSON:", parsedProduct);
+            await updateProductLocation(parsedProduct.id, locationId);
+          } catch (err) {
+            console.error("Erro ao analisar produto arrastado:", err);
+          }
         }
+        return;
       }
-      return;
+      
+      console.log("Movendo produto para localização:", locationId);
+      await updateProductLocation(draggedProduct.id, locationId);
+      setDraggedProduct(null);
+    } catch (error) {
+      console.error("Erro ao atualizar localização:", error);
+    } finally {
+      setUpdatingLocation(false);
     }
-    
-    await updateProductLocation(draggedProduct.id, locationId);
-    setDraggedProduct(null);
   };
 
   const handleCustomLocationSubmit = async () => {
     if (draggedProduct && customLocation.trim()) {
-      await updateProductLocation(draggedProduct.id, customLocation.trim());
-      setDraggedProduct(null);
-      setCustomLocation("");
-      setShowCustomInput(false);
+      setUpdatingLocation(true);
+      try {
+        console.log("Atualizando para localização personalizada:", customLocation);
+        await updateProductLocation(draggedProduct.id, customLocation.trim());
+        setDraggedProduct(null);
+        setCustomLocation("");
+        setShowCustomInput(false);
+      } catch (error) {
+        console.error("Erro ao atualizar localização personalizada:", error);
+      } finally {
+        setUpdatingLocation(false);
+      }
     }
   };
 
@@ -98,6 +116,16 @@ const WarehouseGrid: React.FC<WarehouseGridProps> = ({
 
   return (
     <div className="space-y-4">
+      {updatingLocation && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-background p-6 rounded-lg shadow-lg flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+            <p className="text-lg font-medium">Atualizando localização...</p>
+            <p className="text-muted-foreground">Isso pode levar alguns segundos</p>
+          </div>
+        </div>
+      )}
+
       {showCustomInput && (
         <div className="bg-muted/30 p-4 rounded-md mb-4">
           <h3 className="font-medium mb-2">Localização Personalizada</h3>
@@ -108,8 +136,10 @@ const WarehouseGrid: React.FC<WarehouseGridProps> = ({
               placeholder="Digite a localização (ex: F7)"
               className="flex-1"
             />
-            <Button onClick={handleCustomLocationSubmit}>Salvar</Button>
-            <Button variant="outline" onClick={handleCustomLocationCancel}>
+            <Button onClick={handleCustomLocationSubmit} disabled={updatingLocation}>
+              Salvar
+            </Button>
+            <Button variant="outline" onClick={handleCustomLocationCancel} disabled={updatingLocation}>
               Cancelar
             </Button>
           </div>
@@ -122,6 +152,7 @@ const WarehouseGrid: React.FC<WarehouseGridProps> = ({
           size="sm"
           onClick={() => setShowCustomInput(true)}
           className="mb-4"
+          disabled={updatingLocation}
         >
           + Adicionar Localização Personalizada
         </Button>
