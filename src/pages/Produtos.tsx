@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileSpreadsheet, SearchIcon, RefreshCw } from "lucide-react";
+import { SearchIcon, RefreshCw } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import ProdutoCard from "@/components/ProdutoCard";
 import AddProdutoModal from "@/components/AddProdutoModal";
@@ -12,8 +12,9 @@ import { useCarrinho } from "@/hooks/useCarrinho";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// URL base para o endpoint do Apps Script
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKwqQZzpe21ONIcNmiydlqxiheQ73e8f4lQlB0YWuXTH6l6X5um1SHTkM2cTwWfeaV/exec";
+// URL da planilha do Google Sheets (versão pública)
+const SHEET_ID = "1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs";
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=736804534`;
 
 // Interface para o produto
 interface Produto {
@@ -31,7 +32,7 @@ interface Produto {
   prateleira: string;
   dataVencimento: string;
   dataHora: string;
-  centroDeCusto: string;
+  fornecedor: string;
 }
 
 const formatCurrency = (value: number): string => {
@@ -41,69 +42,65 @@ const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-// Função para buscar dados via Apps Script
-const fetchSheetDataFromAppsScript = async () => {
-  console.log("Buscando dados via Apps Script...");
+const parseCSV = (csvText: string): Produto[] => {
+  // Divide o CSV em linhas e remove linhas vazias
+  const lines = csvText.split('\n').filter(line => line.trim() !== '');
   
-  try {
-    // Adiciona um timestamp para evitar cache
-    const url = `${APPS_SCRIPT_URL}?action=getProdutos&_t=${new Date().getTime()}`;
-    console.log(`URL da requisição: ${url}`);
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error(`Falha ao buscar dados. Status: ${response.status}, Texto: ${response.statusText}`);
-      throw new Error(`Falha ao buscar dados: ${response.status} ${response.statusText}`);
-    }
-    
-    const text = await response.text();
-    console.log("Resposta bruta:", text);
-    
-    try {
-      // Tenta analisar o JSON
-      const data = JSON.parse(text);
-      console.log("Resposta do Apps Script analisada:", data);
+  // A primeira linha contém os cabeçalhos, então começamos da segunda (índice 1)
+  const productos: Produto[] = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    // Parse CSV considerando valores com vírgulas dentro de aspas
+    const parseLine = (line: string): string[] => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
       
-      if (data.error) {
-        throw new Error(data.error);
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
       }
       
-      if (!Array.isArray(data.produtos)) {
-        console.error("Formato de resposta inválido - produtos não é um array:", data);
-        throw new Error("Formato de resposta inválido: produtos não é um array");
-      }
+      // Adiciona o último valor
+      result.push(current);
       
-      return data.produtos;
-    } catch (parseError) {
-      console.error("Erro ao analisar a resposta JSON:", parseError);
-      throw new Error(`A resposta não é um JSON válido: ${parseError.message}`);
+      return result;
+    };
+    
+    const values = parseLine(lines[i]);
+    
+    if (values.length >= 15) { // Garantir que temos todos os campos necessários
+      const produto: Produto = {
+        id: `sheet-${i}`,
+        codigo: values[1].trim() || `PROD${i}`,
+        codigoEstoque: values[2].trim() || `EST-${i}`,
+        nome: values[3].trim() || `Produto ${i}`,
+        unidade: values[4].trim() || 'UN',
+        deposito: values[5].trim() || 'Principal',
+        quantidadeAtual: parseFloat(values[6]) || 0,
+        quantidadeMinima: parseFloat(values[7]) || 0,
+        detalhes: values[8].trim() || '',
+        imagem: values[9].trim() || '/placeholder.svg',
+        valorUnitario: parseFloat(values[11]) || 0,
+        prateleira: values[12].trim() || '',
+        dataVencimento: values[13].trim() || '',
+        dataHora: values[14].trim() || new Date().toISOString(),
+        fornecedor: values[15].trim() || ''
+      };
+      
+      productos.push(produto);
     }
-  } catch (error) {
-    console.error("Erro ao buscar dados via Apps Script:", error);
-    throw error;
   }
-};
-
-// Função para criar produtos demo para testes
-const createDemoProducts = (count: number = 10): Produto[] => {
-  return Array(count).fill(0).map((_, index) => ({
-    id: `demo-${index + 1}`,
-    codigo: `PROD${String(index + 1).padStart(3, '0')}`,
-    codigoEstoque: `EST-${index + 1}`,
-    nome: `Produto Demo ${index + 1}`,
-    unidade: 'UN',
-    deposito: 'Principal',
-    quantidadeAtual: Math.floor(Math.random() * 100),
-    quantidadeMinima: 10,
-    detalhes: 'Produto para demonstração',
-    imagem: '/placeholder.svg',
-    valorUnitario: Math.random() * 100 + 10,
-    prateleira: `P${Math.floor(Math.random() * 10) + 1}`,
-    dataVencimento: new Date(2023, 11, 31).toISOString(),
-    dataHora: new Date().toISOString(),
-    centroDeCusto: 'ESTOQUE-GERAL'
-  }));
+  
+  return productos;
 };
 
 const Produtos = () => {
@@ -112,7 +109,6 @@ const Produtos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [useDemoData, setUseDemoData] = useState(false);
   const { adicionarAoCarrinho } = useCarrinho();
   const { toast } = useToast();
   const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<Produto[]>([]);
@@ -122,58 +118,52 @@ const Produtos = () => {
       setLoading(true);
       setError(null);
       
-      if (useDemoData) {
-        // Carregar dados demo após um pequeno delay para simular requisição
-        setTimeout(() => {
-          const demoProdutos = createDemoProducts(15);
-          setProdutos(demoProdutos);
-          toast({
-            title: "Dados demo carregados",
-            description: `${demoProdutos.length} produtos de demonstração foram carregados.`,
-          });
-          setLoading(false);
-        }, 1000);
-        return;
+      console.log("Buscando dados da planilha do Google Sheets...");
+      
+      // Adiciona um timestamp para evitar cache
+      const url = `${SHEET_URL}&_t=${new Date().getTime()}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Falha ao buscar dados: ${response.status} ${response.statusText}`);
       }
       
-      console.log("Buscando dados via Apps Script...");
+      const csvData = await response.text();
       
-      try {
-        const produtosData = await fetchSheetDataFromAppsScript();
-        console.log(`Dados obtidos: ${produtosData.length} produtos`);
-        
-        if (!produtosData || produtosData.length === 0) {
-          toast({
-            title: "Aviso",
-            description: "Nenhum produto encontrado na planilha. Verifique se a planilha contém dados."
-          });
-          setProdutos([]);
-        } else {
-          setProdutos(produtosData);
-          
-          toast({
-            title: "Dados carregados",
-            description: `${produtosData.length} produtos foram carregados com sucesso.`,
-          });
-        }
-      } catch (error: any) {
-        console.error("Erro ao buscar dados via Apps Script:", error);
-        
-        const errorMessage = error.message || "Erro ao carregar dados";
-        setError(errorMessage);
+      // Analisa o CSV e converte para objetos de produto
+      const produtosData = parseCSV(csvData);
+      
+      console.log(`Dados obtidos: ${produtosData.length} produtos`);
+      
+      if (!produtosData || produtosData.length === 0) {
+        toast({
+          title: "Aviso",
+          description: "Nenhum produto encontrado na planilha. Verifique se a planilha contém dados."
+        });
+        setProdutos([]);
+      } else {
+        setProdutos(produtosData);
         
         toast({
-          title: "Erro ao carregar dados",
-          description: `Não foi possível carregar os dados: ${errorMessage}. Usando dados de demonstração.`,
-          variant: "destructive",
-          duration: 5000,
+          title: "Dados carregados",
+          description: `${produtosData.length} produtos foram carregados com sucesso.`,
         });
-        
-        // Carregar dados demo como fallback
-        const demoProdutos = createDemoProducts(12);
-        setProdutos(demoProdutos);
-        setUseDemoData(true);
       }
+    } catch (error: any) {
+      console.error("Erro ao buscar dados da planilha:", error);
+      
+      const errorMessage = error.message || "Erro ao carregar dados";
+      setError(errorMessage);
+      
+      toast({
+        title: "Erro ao carregar dados",
+        description: `Não foi possível carregar os dados: ${errorMessage}.`,
+        variant: "destructive",
+        duration: 5000,
+      });
+      
+      setProdutos([]);
     } finally {
       setLoading(false);
     }
@@ -212,24 +202,6 @@ const Produtos = () => {
     });
   };
 
-  const toggleDataSource = () => {
-    setUseDemoData(!useDemoData);
-    setLoading(true);
-    
-    if (!useDemoData) {
-      // Mudar para dados demo
-      const demoProdutos = createDemoProducts(15);
-      setProdutos(demoProdutos);
-      toast({
-        title: "Modo de demonstração",
-        description: "Usando dados de demonstração.",
-      });
-    } else {
-      // Tentar carregar dados reais
-      fetchProdutos();
-    }
-  };
-
   const produtosFiltrados = produtos
     ? produtos.filter((produto) =>
         produto.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -251,15 +223,6 @@ const Produtos = () => {
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="ml-2"
-            onClick={toggleDataSource}
-          >
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            {useDemoData ? "Dados de Demonstração" : "Dados da Planilha"}
-          </Button>
         </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
           Adicionar Produto
@@ -279,19 +242,12 @@ const Produtos = () => {
         </div>
       </div>
 
-      {useDemoData && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 p-4 mb-4 rounded-md">
-          <h3 className="font-medium">Modo de demonstração</h3>
-          <p className="text-sm">Exibindo dados de demonstração. Clique em "Dados da Planilha" para tentar carregar dados reais.</p>
-        </div>
-      )}
-
-      {error && !useDemoData && (
+      {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 mb-4 rounded-md">
           <h3 className="font-medium">Erro ao carregar dados</h3>
           <p className="text-sm">{error}</p>
           <p className="text-sm mt-2">
-            Verifique se o Apps Script está configurado corretamente e se a planilha contém todos os cabeçalhos necessários.
+            Verifique se a planilha está acessível publicamente e contém todos os cabeçalhos necessários.
           </p>
         </div>
       )}
@@ -321,8 +277,8 @@ const Produtos = () => {
           description={
             searchTerm 
               ? "Nenhum produto corresponde à sua busca."
-              : error && !useDemoData
-                ? "Ocorreu um erro ao carregar os dados. Tente novamente ou use dados de demonstração."
+              : error
+                ? "Ocorreu um erro ao carregar os dados. Tente novamente."
                 : "Adicione novos produtos para começar."
           }
         />
