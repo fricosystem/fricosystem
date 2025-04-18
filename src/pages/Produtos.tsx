@@ -3,15 +3,24 @@ import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+<<<<<<< HEAD
 import { SearchIcon, RefreshCw } from "lucide-react";
+=======
+import { SearchIcon, RefreshCw, FileSpreadsheet } from "lucide-react";
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
 import EmptyState from "@/components/EmptyState";
 import ProdutoCard from "@/components/ProdutoCard";
 import AddProdutoModal from "@/components/AddProdutoModal";
 import AlertaBaixoEstoque from "@/components/AlertaBaixoEstoque";
+<<<<<<< HEAD
+=======
+import LoadingIndicator from "@/components/LoadingIndicator";
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
+<<<<<<< HEAD
 // URL da planilha do Google Sheets (versão pública)
 const SHEET_ID = "1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs";
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=736804534`;
@@ -35,6 +44,116 @@ interface Produto {
   fornecedor: string;
 }
 
+=======
+interface GoogleSheetsResponse {
+  feed: {
+    entry: Array<{
+      gs$cell: {
+        row: string;
+        col: string;
+        $t: string;
+      }
+    }>
+  }
+}
+
+// Interface para produtos
+interface Produto {
+  id: string;
+  codigo: string;
+  codigoEstoque: string;
+  nome: string;
+  unidade: string;
+  deposito: string;
+  quantidadeAtual: number;
+  quantidadeMinima: number;
+  detalhes: string;
+  dataHora: string;
+  imagem: string;
+  valorUnitario: number;
+  centroDeCusto?: string;
+  prateleira?: string;
+  dataVencimento?: string;
+}
+
+const parseGoogleSheetsData = (data: GoogleSheetsResponse) => {
+  const entries = data.feed.entry;
+  const rows: Record<string, Record<string, string>> = {};
+  
+  // Mapeamento correto das colunas para campos
+  const columnMap: Record<string, string> = {
+    "1": "codigo",            // 1 = Codigo material
+    "2": "codigoEstoque",     // 2 = Codigo estoque
+    "3": "nome",              // 3 = Nome
+    "4": "unidade",           // 4 = Unidade
+    "5": "deposito",          // 5 = Deposito
+    "6": "quantidadeAtual",   // 6 = Quantidade
+    "7": "quantidadeMinima",  // 7 = Quantidade minima
+    "8": "detalhes",          // 8 = Detalhes
+    "9": "imagem",            // 9 = Imagem
+    "10": "unidadeMedida",    // 10 = Unidade de medida
+    "11": "valorUnitario",    // 11 = Valor unitario
+    "12": "prateleira",       // 12 = Prateleira
+    "13": "dataVencimento",   // 13 = Data vencimento
+    "14": "dataHora",         // 14 = Data criacao
+  };
+  
+  entries.forEach(entry => {
+    const rowIndex = entry.gs$cell.row;
+    const colIndex = entry.gs$cell.col;
+    const value = entry.gs$cell.$t;
+    
+    if (rowIndex === "1") return; // Pular cabeçalho
+    
+    if (!rows[rowIndex]) {
+      rows[rowIndex] = {};
+    }
+    
+    const fieldName = columnMap[colIndex];
+    if (fieldName) {
+      rows[rowIndex][fieldName] = value;
+    }
+  });
+
+  return Object.values(rows).map((row, index) => ({
+    id: `sheet-${index + 1}`,
+    codigo: row.codigo || "",
+    codigoEstoque: row.codigoEstoque || "",
+    nome: row.nome || "",
+    unidade: row.unidade || "UN",
+    deposito: row.deposito || "",
+    quantidadeAtual: parseFloat(row.quantidadeAtual) || 0,
+    quantidadeMinima: parseFloat(row.quantidadeMinima) || 0,
+    detalhes: row.detalhes || "",
+    imagem: row.imagem || "/placeholder.svg",
+    valorUnitario: parseFloat(row.valorUnitario?.replace(",", ".")) || 0,
+    prateleira: row.prateleira || "",
+    dataVencimento: row.dataVencimento ? new Date(row.dataVencimento).toISOString() : "",
+    dataHora: row.dataHora ? new Date(row.dataHora).toISOString() : new Date().toISOString(),
+    centroDeCusto: "ESTOQUE-GERAL"
+  }));
+};
+
+const fetchGoogleSheetsData = async (sheetId: string, sheetNumber = 1) => {
+  try {
+    const url = `https://spreadsheets.google.com/feeds/cells/${sheetId}/${sheetNumber}/public/full?alt=json`;
+    console.log("Fetching from URL:", url);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch spreadsheet: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Raw Sheet Data:", data);
+    return parseGoogleSheetsData(data);
+  } catch (error) {
+    console.error("Error fetching Google Sheets data:", error);
+    throw error;
+  }
+};
+
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -42,6 +161,7 @@ const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
+<<<<<<< HEAD
 const parseCSV = (csvText: string): Produto[] => {
   // Divide o CSV em linhas e remove linhas vazias
   const lines = csvText.split('\n').filter(line => line.trim() !== '');
@@ -102,12 +222,17 @@ const parseCSV = (csvText: string): Produto[] => {
   
   return productos;
 };
+=======
+// ID da planilha Google
+const GOOGLE_SHEET_ID = "1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs";
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
 
 const Produtos = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
   const [error, setError] = useState<string | null>(null);
   const { adicionarAoCarrinho } = useCarrinho();
   const { toast } = useToast();
@@ -164,6 +289,47 @@ const Produtos = () => {
       });
       
       setProdutos([]);
+=======
+  const { adicionarAoCarrinho } = useCarrinho();
+  const { toast } = useToast();
+  const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<Produto[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Função para buscar os dados da planilha
+  const fetchProdutos = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
+      
+      console.log("Fetching data from Google Sheets...");
+      
+      try {
+        const sheetsData = await fetchGoogleSheetsData(GOOGLE_SHEET_ID);
+        console.log("Google Sheets data:", sheetsData);
+        setProdutos(sheetsData);
+        
+        toast({
+          title: "Dados carregados",
+          description: `${sheetsData.length} produtos foram carregados da planilha.`,
+        });
+        
+        return;
+      } catch (error: any) {
+        console.error("Error fetching Google Sheets data:", error);
+        setErrorMessage(
+          "Não foi possível carregar os dados da planilha. " + 
+          "Verifique se a planilha existe e está compartilhada publicamente."
+        );
+        
+        toast({
+          title: "Erro ao carregar dados",
+          description: "Não foi possível carregar os dados da planilha.",
+          variant: "destructive",
+        });
+        
+        setProdutos([]);
+      }
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
     } finally {
       setLoading(false);
     }
@@ -185,6 +351,7 @@ const Produtos = () => {
   }, [produtos]);
 
   const handleAdicionarAoCarrinho = (produto: Produto) => {
+<<<<<<< HEAD
     // Garante que o produto tenha todos os campos necessários
     const produtoCompleto = {
       ...produto,
@@ -196,6 +363,9 @@ const Produtos = () => {
     };
     
     adicionarAoCarrinho(produtoCompleto);
+=======
+    adicionarAoCarrinho(produto);
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
     toast({
       title: "Produto adicionado!",
       description: `O produto ${produto.nome} foi adicionado ao carrinho.`,
@@ -204,8 +374,13 @@ const Produtos = () => {
 
   const produtosFiltrados = produtos
     ? produtos.filter((produto) =>
+<<<<<<< HEAD
         produto.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         produto.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
+=======
+        produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        produto.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
       )
     : [];
 
@@ -223,6 +398,13 @@ const Produtos = () => {
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
+<<<<<<< HEAD
+=======
+          <div className="ml-2 flex items-center text-sm text-muted-foreground">
+            <FileSpreadsheet className="h-4 w-4 mr-1" />
+            <span>Dados da planilha Google Sheets</span>
+          </div>
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
         </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
           Adicionar Produto
@@ -271,6 +453,11 @@ const Produtos = () => {
             </Card>
           ))}
         </div>
+      ) : errorMessage ? (
+        <EmptyState
+          title="Erro ao carregar produtos"
+          description={errorMessage}
+        />
       ) : produtosFiltrados.length === 0 ? (
         <EmptyState
           title="Nenhum produto encontrado"
@@ -284,6 +471,7 @@ const Produtos = () => {
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+<<<<<<< HEAD
           {produtosFiltrados.map((produto) => {
             // Garante que todas as propriedades necessárias existam
             const produtoCompleto = {
@@ -311,6 +499,17 @@ const Produtos = () => {
               />
             );
           })}
+=======
+          {produtosFiltrados.map((produto) => (
+            <ProdutoCard
+              key={produto.id}
+              produto={produto}
+              onEdit={() => {}} 
+              onDelete={() => {}}
+              onAddToCart={() => handleAdicionarAoCarrinho(produto)}
+            />
+          ))}
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
         </div>
       )}
 
@@ -323,4 +522,8 @@ const Produtos = () => {
   );
 };
 
+<<<<<<< HEAD
 export default Produtos;
+=======
+export default Produtos;
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696

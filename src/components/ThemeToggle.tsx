@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
 const ThemeToggle = () => {
+<<<<<<< HEAD
   const [theme, setTheme] = useState<"light" | "dark">("dark"); // Inicializado como dark
+=======
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
   const { toast } = useToast();
 
   // Carrega o tema do localStorage ao iniciar
@@ -17,10 +21,17 @@ const ThemeToggle = () => {
       setTheme(savedTheme);
       document.documentElement.classList.toggle("dark", savedTheme === "dark");
     } else {
+<<<<<<< HEAD
       // Define o tema escuro como padrão
       setTheme("dark");
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark"); // Salva o tema padrão
+=======
+      // Default to dark theme
+      setTheme("dark");
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+>>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
     }
   }, []);
 
