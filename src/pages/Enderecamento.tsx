@@ -1,424 +1,173 @@
-<<<<<<< HEAD
-import React, { useState, useRef, useEffect } from "react";
-import { useProducts, Product, ProductProvider } from "@/contexts/ProductContext";
-import { 
-  PackageSearch, 
-  PackageCheck, 
-  MoveHorizontal, 
-  Grid3X3, 
-  RefreshCw,
-  Clipboard,
-  Map
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
-import WarehouseGrid from "@/components/WarehouseGrid";
-import ProductCard from "@/components/ProductCardEnderecamento";
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useProdutos } from '@/hooks/useProdutos';
+import { WarehouseGrid } from '@/components/WarehouseGrid';
+import { ProductList } from '@/components/ProductList';
+import { Product } from '../types/Product';
+import { useState, useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, LayoutDashboard } from 'lucide-react';
+import AppLayout from '@/layouts/AppLayout';
 
-// Create a wrapped component that uses the hook
-const EnderecamentoContent = () => {
-  const { products, loading, error, refreshProducts } = useProducts();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [draggedProduct, setDraggedProduct] = useState<Product | null>(null);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Reference for detecting outside clicks
-  const warehouseRef = useRef<HTMLDivElement>(null);
+const Enderecamento = () => {
+  const { produtos, loading, error, updatePrateleira } = useProdutos();
+  const [activeStock, setActiveStock] = useState("estoque1");
+  const [debugInfo, setDebugInfo] = useState({count: 0, firstProduct: null});
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Filter products based on search query
+  // Verificar se é dispositivo móvel
   useEffect(() => {
-    if (products) {
-      const filtered = products.filter(product => 
-        product.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.codigo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.codigoEstoque && product.codigoEstoque.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (product.deposito && product.deposito.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (product.location && product.location.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-      setFilteredProducts(filtered);
-    }
-  }, [products, searchQuery]);
-
-  // Handle refresh button click
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await refreshProducts();
-    setIsRefreshing(false);
-    toast({
-      title: "Atualizado",
-      description: "Dados dos produtos foram atualizados.",
-    });
-  };
-
-  // Copy product list to clipboard
-  const copyToClipboard = () => {
-    const productText = filteredProducts
-      .map(p => `${p.codigo} | ${p.nome} | ${p.location || 'Sem localização'}`)
-      .join('\n');
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
     
-    navigator.clipboard.writeText(productText)
-      .then(() => {
-        toast({
-          title: "Copiado para área de transferência",
-          description: "Lista de produtos copiada para a área de transferência.",
-        });
-      })
-      .catch(err => {
-        console.error('Failed to copy: ', err);
-        toast({
-          title: "Erro",
-          description: "Falha ao copiar para a área de transferência.",
-          variant: "destructive",
-        });
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  // Debug para verificar carregamento dos produtos
+  useEffect(() => {
+    if (produtos && produtos.length > 0) {
+      console.log(`Produtos carregados: ${produtos.length}`);
+      setDebugInfo({
+        count: produtos.length,
+        firstProduct: produtos[0]
       });
+    }
+  }, [produtos]);
+
+  const handleUpdateProductPosition = async (product: Product, row: number, column: number, estoque: string) => {
+    const andar = Math.ceil(row / 5);
+    const palete = ((row - 1) % 5) + 1;
+    const newShelf = `${estoque} - Rua ${column.toString().padStart(2, '0')} - A${andar}P${palete}`;
+    await updatePrateleira(product.id, newShelf);
   };
 
-  return (
-    <div className="container mx-auto py-6 max-w-7xl">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Map className="h-6 w-6 text-primary" />
-            Sistema de Endereçamento de Produtos
-          </h1>
-          <p className="text-muted-foreground">
-            Arraste e solte produtos para atribuir localizações no estoque
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={handleRefresh} 
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={copyToClipboard}
-          >
-            <Clipboard className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+  const handleRemoveShelf = async (product: Product) => {
+    await updatePrateleira(product.id, null);
+  };
 
-      <div className="mb-6">
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder="Buscar por nome, código, depósito ou localização..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-          <PackageSearch className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-        </div>
-      </div>
+  const filtrarProdutosPorEstoque = (estoque: string) => {
+    return produtos;
+  };
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          <p className="mt-4 text-muted-foreground">Carregando produtos...</p>
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-full py-20">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Carregando dados do estoque...</p>
+          </div>
         </div>
-      ) : error ? (
-        <Card className="bg-destructive/10 border-destructive/30">
-          <CardContent className="pt-6">
-            <p className="text-center text-destructive">{error}</p>
-            <Button 
-              variant="outline" 
-              className="mx-auto mt-4 block"
-              onClick={handleRefresh}
-            >
-              Tentar Novamente
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Product list (draggable items) */}
-          <div className="lg:col-span-1">
-            <div className="bg-card rounded-lg shadow p-4 h-full">
-              <div className="flex items-center gap-2 mb-4">
-                <PackageCheck className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Produtos</h2>
-                <span className="ml-auto bg-primary/10 text-primary text-xs font-medium px-2.5 py-0.5 rounded-full">
-                  {filteredProducts.length}
-                </span>
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="flex items-center justify-center h-full p-4">
+          <Alert variant="destructive" className="max-w-xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erro ao carregar produtos</AlertTitle>
+            <AlertDescription>
+              {error}
+              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+                Verifique se a conexão com o Firebase está configurada corretamente.
               </div>
-              
-              <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                {filteredProducts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhum produto encontrado com sua busca.
-                  </p>
-                ) : (
-                  filteredProducts.map(product => (
-                    <ProductCard 
-                      key={product.id} 
-                      product={product}
-                      isDraggable
-                      setDraggedProduct={setDraggedProduct}
-                    />
-                  ))
-                )}
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
+    }
+
+    if (!produtos || produtos.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-full p-4">
+          <Alert className="max-w-xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Nenhum produto encontrado</AlertTitle>
+            <AlertDescription>
+              Não foram encontrados produtos na coleção. Verifique se existem documentos na coleção "produtos" do Firebase.
+              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+                Debug: {JSON.stringify(debugInfo)}
               </div>
-            </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col h-full">
+        <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-6 h-full`}>
+          {/* Coluna da esquerda com a lista de produtos */}
+          <div className={`${isMobile ? 'w-full' : 'w-96'} flex-shrink-0`}>
+            <ProductList 
+              products={filtrarProdutosPorEstoque(activeStock)} 
+              onRemoveShelf={handleRemoveShelf}
+              currentStock={activeStock}
+            />
           </div>
           
-          {/* Warehouse grid (droppable areas) */}
-          <div className="lg:col-span-2" ref={warehouseRef}>
-            <div className="bg-card rounded-lg shadow p-4 h-full">
-              <div className="flex items-center gap-2 mb-4">
-                <Grid3X3 className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Layout do Estoque</h2>
-                <MoveHorizontal className="ml-2 h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Arraste produtos aqui para atribuir localizações
-                </span>
-              </div>
+          {/* Coluna da direita com o grid de endereçamento */}
+          <div className="flex-grow h-full">
+            {/* Tabs integradas ao card */}
+            <Tabs 
+              defaultValue="estoque1" 
+              value={activeStock}
+              onValueChange={setActiveStock} 
+              className="flex flex-col bg-gray-50 dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+            >
+              <TabsList className="grid grid-cols-5 w-full bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                <TabsTrigger value="estoque1">Estoque 1</TabsTrigger>
+                <TabsTrigger value="estoque2">Estoque 2</TabsTrigger>
+                <TabsTrigger value="estoque3">Estoque 3</TabsTrigger>
+                <TabsTrigger value="estoque4">Estoque 4</TabsTrigger>
+                <TabsTrigger value="estoque5">Estoque 5</TabsTrigger>
+              </TabsList>
               
-              <WarehouseGrid 
-                draggedProduct={draggedProduct} 
-                setDraggedProduct={setDraggedProduct}
-                products={products}
-              />
-            </div>
+              {/* Conteúdo das tabs */}
+              {["estoque1", "estoque2", "estoque3", "estoque4", "estoque5"].map((estoque) => (
+                <TabsContent key={estoque} value={estoque} className="p-4">
+                  <WarehouseGrid 
+                    products={filtrarProdutosPorEstoque(estoque)}
+                    onUpdateProductPosition={(product, row, column) => 
+                      handleUpdateProductPosition(product, row, column, estoque)}
+                    currentStock={estoque}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
           </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Main component that wraps the content with ProductProvider
-const Enderecamento = () => {
-  return (
-    <div className="min-h-screen flex flex-col bg-muted/20">
-      <main className="flex-1">
-        <ProductProvider>
-          <EnderecamentoContent />
-        </ProductProvider>
-      </main>
-    </div>
-  );
-};
-
-=======
-import React, { useState, useRef, useEffect } from "react";
-import { useProducts, Product, ProductProvider } from "@/contexts/ProductContext";
-import { 
-  PackageSearch, 
-  PackageCheck, 
-  MoveHorizontal, 
-  Grid3X3, 
-  RefreshCw,
-  Clipboard,
-  Map
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
-import WarehouseGrid from "@/components/WarehouseGrid";
-import ProductCard from "@/components/ProductCardEnderecamento";
-
-// Create a wrapped component that uses the hook
-const EnderecamentoContent = () => {
-  const { products, loading, error, refreshProducts } = useProducts();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [draggedProduct, setDraggedProduct] = useState<Product | null>(null);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Reference for detecting outside clicks
-  const warehouseRef = useRef<HTMLDivElement>(null);
-
-  // Filter products based on search query
-  useEffect(() => {
-    if (products) {
-      const filtered = products.filter(product => 
-        product.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.codigo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.codigoEstoque && product.codigoEstoque.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (product.deposito && product.deposito.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (product.location && product.location.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-      setFilteredProducts(filtered);
-    }
-  }, [products, searchQuery]);
-
-  // Handle refresh button click
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await refreshProducts();
-    setIsRefreshing(false);
-    toast({
-      title: "Atualizado",
-      description: "Dados dos produtos foram atualizados.",
-    });
-  };
-
-  // Copy product list to clipboard
-  const copyToClipboard = () => {
-    const productText = filteredProducts
-      .map(p => `${p.codigo} | ${p.nome} | ${p.location || 'Sem localização'}`)
-      .join('\n');
-    
-    navigator.clipboard.writeText(productText)
-      .then(() => {
-        toast({
-          title: "Copiado para área de transferência",
-          description: "Lista de produtos copiada para a área de transferência.",
-        });
-      })
-      .catch(err => {
-        console.error('Failed to copy: ', err);
-        toast({
-          title: "Erro",
-          description: "Falha ao copiar para a área de transferência.",
-          variant: "destructive",
-        });
-      });
-  };
-
-  return (
-    <div className="container mx-auto py-6 max-w-7xl">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Map className="h-6 w-6 text-primary" />
-            Sistema de Endereçamento de Produtos
-          </h1>
-          <p className="text-muted-foreground">
-            Arraste e solte produtos para atribuir localizações no estoque
-          </p>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={handleRefresh} 
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={copyToClipboard}
-          >
-            <Clipboard className="h-4 w-4" />
-          </Button>
+        {/* Instruções de uso */}
+        <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
+          <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Como usar:</h3>
+          <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+            <li>Arraste produtos da lista para a prateleira desejada</li>
+            <li>Arraste produtos entre diferentes posições nas prateleiras</li>
+            <li>Solte produtos na lista de produtos para remover endereçamento</li>
+          </ul>
         </div>
       </div>
+    );
+  };
 
-      <div className="mb-6">
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder="Buscar por nome, código, depósito ou localização..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-          <PackageSearch className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex flex-col items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          <p className="mt-4 text-muted-foreground">Carregando produtos...</p>
-        </div>
-      ) : error ? (
-        <Card className="bg-destructive/10 border-destructive/30">
-          <CardContent className="pt-6">
-            <p className="text-center text-destructive">{error}</p>
-            <Button 
-              variant="outline" 
-              className="mx-auto mt-4 block"
-              onClick={handleRefresh}
-            >
-              Tentar Novamente
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Product list (draggable items) */}
-          <div className="lg:col-span-1">
-            <div className="bg-card rounded-lg shadow p-4 h-full">
-              <div className="flex items-center gap-2 mb-4">
-                <PackageCheck className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Produtos</h2>
-                <span className="ml-auto bg-primary/10 text-primary text-xs font-medium px-2.5 py-0.5 rounded-full">
-                  {filteredProducts.length}
-                </span>
-              </div>
-              
-              <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                {filteredProducts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhum produto encontrado com sua busca.
-                  </p>
-                ) : (
-                  filteredProducts.map(product => (
-                    <ProductCard 
-                      key={product.id} 
-                      product={product}
-                      isDraggable
-                      setDraggedProduct={setDraggedProduct}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-          
-          {/* Warehouse grid (droppable areas) */}
-          <div className="lg:col-span-2" ref={warehouseRef}>
-            <div className="bg-card rounded-lg shadow p-4 h-full">
-              <div className="flex items-center gap-2 mb-4">
-                <Grid3X3 className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Layout do Estoque</h2>
-                <MoveHorizontal className="ml-2 h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Arraste produtos aqui para atribuir localizações
-                </span>
-              </div>
-              
-              <WarehouseGrid 
-                draggedProduct={draggedProduct} 
-                setDraggedProduct={setDraggedProduct}
-                products={products}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Main component that wraps the content with ProductProvider
-const Enderecamento = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-muted/20">
-      <main className="flex-1">
-        <ProductProvider>
-          <EnderecamentoContent />
-        </ProductProvider>
-      </main>
-    </div>
+    <DndProvider backend={HTML5Backend}>
+      <AppLayout title="Gerenciamento de Endereçamento">
+        <div className="h-full flex flex-col">
+          {renderContent()}
+        </div>
+      </AppLayout>
+    </DndProvider>
   );
 };
 
->>>>>>> 31c14901166975e070d1d9141daf9f5e61b8f696
 export default Enderecamento;

@@ -1,0 +1,18 @@
+Crie uma página para listar produtos de um estoque com endereçamento de Prateleiras com grid de 5 ruas e 4 andares cada. Os produtos são da planilha de link público: https://docs.google.com/spreadsheets/d/1eASDt7YXnc7-XTW8cuwKqkIILP1dY_22YXjs-R7tEMs/edit?gid=736804534#gid=736804534. As colunas são: 
+1 = Codigo material
+2 = Codigo estoque
+3 = Nome
+4 = Unidade
+5 = Deposito
+6 = Quantidade
+7 = Quantidade minima
+8 = Detalhes
+9 = Imagem
+10 = Unidade de medida
+11 = Valor unitario
+12 = Prateleira
+13 = Data vencimento
+14 = Data criacao
+15 = Fornecedor atual.
+
+Os números são indices de cada coluna sendo 0 a coluna criada automaticamente pelo google spreadsheets que é a de Data/hora. Coloque para quando atualizar os produtos de prateleira ser atualizado no google spreadsheets. Deixe tudo no mesmo código da página e nenhum intermediário.

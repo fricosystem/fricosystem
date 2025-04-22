@@ -28,6 +28,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { addDoc, collection } from "firebase/firestore";
+import { db } from "@/firebase/firebase";
 
 interface AddProdutoModalProps {
   open: boolean;
@@ -49,12 +51,10 @@ interface FormData {
   valorUnitario: string;
 }
 
-const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeKqG3o3Ii74NRthA9yIjqdnQuKQwKJV0CBH8PNFVzeY5MTwg/formResponse";
-
 const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  
+
   // Initialize react-hook-form
   const form = useForm<FormData>({
     defaultValues: {
@@ -69,57 +69,49 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       imagem: "",
       unidadeMedida: "",
       valorUnitario: "",
-    }
+    },
   });
 
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
-
     try {
-      // Monta a URL com os parâmetros para o Google Forms
-      // Os entry.XXXXX são os IDs dos campos no formulário
-      const url = `${GOOGLE_FORM_URL}?` +
-        `entry.1845532124=${encodeURIComponent(formData.codigo)}` +
-        `&entry.122319208=${encodeURIComponent(formData.codigoEstoque)}` +
-        `&entry.1615179481=${encodeURIComponent(formData.nome)}` +
-        `&entry.299583938=${encodeURIComponent(formData.unidade)}` +
-        `&entry.448760118=${encodeURIComponent(formData.deposito)}` +
-        `&entry.1830771148=${encodeURIComponent(formData.quantidade)}` +
-        `&entry.1553940355=${encodeURIComponent(formData.quantidadeMinima)}` +
-        `&entry.1835465159=${encodeURIComponent(formData.detalhes)}` +
-        `&entry.378487173=${encodeURIComponent(formData.imagem)}` +
-        `&entry.589741230=${encodeURIComponent(formData.unidadeMedida)}` +
-        `&entry.2144116999=${encodeURIComponent(formData.valorUnitario)}`;
+      // Convert numeric fields to numbers
+      const produtoData = {
+        codigo_material: formData.codigo,
+        codigo_estoque: formData.codigoEstoque,
+        nome: formData.nome,
+        unidade: formData.unidadeMedida,
+        deposito: formData.deposito,
+        quantidade: parseFloat(formData.quantidade),
+        quantidade_minima: parseFloat(formData.quantidadeMinima),
+        detalhes: formData.detalhes,
+        imagem: formData.imagem || "/placeholder.svg",
+        valor_unitario: parseFloat(formData.valorUnitario),
+        data_criacao: new Date().toISOString(),
+      };
 
-      // Usamos um iframe oculto para submeter o formulário
-      // Isso é necessário porque o Google Forms não permite CORS diretamente
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      document.body.appendChild(iframe);
-      iframe.src = url;
+      // Add the product to Firestore
+      await addDoc(collection(db, "produtos"), produtoData);
 
-      // Mostramos uma mensagem de sucesso após um tempo
-      setTimeout(() => {
-        setLoading(false);
-        toast({
-          title: "Produto adicionado",
-          description: "O produto foi adicionado com sucesso à planilha.",
-        });
-        document.body.removeChild(iframe);
-        onOpenChange(false);
-        onSuccess();
-        
-        // Limpar formulário
-        form.reset();
-      }, 2000);
+      // Show success message
+      toast({
+        title: "Produto adicionado",
+        description: "O produto foi adicionado com sucesso ao Firestore.",
+      });
+
+      // Close modal and reset form
+      onOpenChange(false);
+      onSuccess();
+      form.reset();
     } catch (error) {
-      setLoading(false);
       console.error("Erro ao adicionar produto:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível adicionar o produto à planilha.",
+        description: "Não foi possível adicionar o produto ao Firestore.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -142,17 +134,12 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                   <FormItem>
                     <FormLabel>Código*</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Ex: 04-000.001" 
-                        {...field}
-                        required
-                      />
+                      <Input placeholder="Ex: 04-000.001" {...field} required />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={form.control}
                 name="codigoEstoque"
@@ -160,18 +147,13 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                   <FormItem>
                     <FormLabel>Código Estoque*</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Ex: 1" 
-                        {...field}
-                        required
-                      />
+                      <Input placeholder="Ex: 1" {...field} required />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-
             <FormField
               control={form.control}
               name="nome"
@@ -179,17 +161,12 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 <FormItem>
                   <FormLabel>Nome do Produto*</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Nome do produto" 
-                      {...field}
-                      required
-                    />
+                    <Input placeholder="Nome do produto" {...field} required />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -198,38 +175,49 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                   <FormItem>
                     <FormLabel>Unidade*</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Ex: FR01" 
-                        {...field}
-                        required
-                      />
+                      <Input placeholder="Ex: FR01" {...field} required />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={form.control}
                 name="unidadeMedida"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unidade de Medida*</FormLabel>
-                    <Select 
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="KG">KG</SelectItem>
-                        <SelectItem value="L">L</SelectItem>
-                        <SelectItem value="UN">UN</SelectItem>
-                        <SelectItem value="CX">CX</SelectItem>
-                        <SelectItem value="PC">PC</SelectItem>
+                        <SelectItem value="UN">Unidade (UN)</SelectItem>
+                        <SelectItem value="KG">Quilograma (KG)</SelectItem>
+                        <SelectItem value="GR">Grama (GR)</SelectItem>
+                        <SelectItem value="MG">Miligrama (MG)</SelectItem>
+                        <SelectItem value="LT">Litro (LT)</SelectItem>
+                        <SelectItem value="ML">Mililitro (ML)</SelectItem>
+                        <SelectItem value="CX">Caixa (CX)</SelectItem>
+                        <SelectItem value="PC">Peça (PC)</SelectItem>
+                        <SelectItem value="MT">Metro (MT)</SelectItem>
+                        <SelectItem value="CM">Centímetro (CM)</SelectItem>
+                        <SelectItem value="MM">Milímetro (MM)</SelectItem>
+                        <SelectItem value="M2">Metro Quadrado (M²)</SelectItem>
+                        <SelectItem value="M3">Metro Cúbico (M³)</SelectItem>
+                        <SelectItem value="PCT">Pacote (PCT)</SelectItem>
+                        <SelectItem value="FD">Fardo (FD)</SelectItem>
+                        <SelectItem value="AMP">Ampola (AMP)</SelectItem>
+                        <SelectItem value="FR">Frasco (FR)</SelectItem>
+                        <SelectItem value="RL">Rolo (RL)</SelectItem>
+                        <SelectItem value="KIT">Kit (KIT)</SelectItem>
+                        <SelectItem value="TN">Tonelada (TN)</SelectItem>
+                        <SelectItem value="SC">Saco (SC)</SelectItem>
+                        <SelectItem value="BL">Bloco (BL)</SelectItem>
+                        <SelectItem value="CT">Cartela (CT)</SelectItem>
+                        <SelectItem value="JG">Jogo (JG)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -237,7 +225,6 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 )}
               />
             </div>
-            
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -246,19 +233,12 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                   <FormItem>
                     <FormLabel>Quantidade Atual*</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min="0" 
-                        placeholder="Ex: 100" 
-                        {...field}
-                        required
-                      />
+                      <Input type="number" min="0" placeholder="Ex: 100" {...field} required />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={form.control}
                 name="quantidadeMinima"
@@ -266,48 +246,35 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                   <FormItem>
                     <FormLabel>Quantidade Mínima*</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min="0" 
-                        placeholder="Ex: 10" 
-                        {...field}
-                        required
-                      />
+                      <Input type="number" min="0" placeholder="Ex: 10" {...field} required />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            
             <FormField
               control={form.control}
               name="deposito"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Depósito/Localização*</FormLabel>
-                  <Select 
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  >
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o depósito" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Manutenção">Manutenção</SelectItem>
-                      <SelectItem value="Depósito A">Depósito A</SelectItem>
-                      <SelectItem value="Depósito B">Depósito B</SelectItem>
-                      <SelectItem value="Depósito C">Depósito C</SelectItem>
-                      <SelectItem value="Cozinha">Cozinha</SelectItem>
+                      <SelectItem value="Manutenção">MANUTENÇÃO</SelectItem>
+                      <SelectItem value="Cozinha">COZINHA</SelectItem>
+                      <SelectItem value="Produção">PRODUÇÃO</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
             <FormField
               control={form.control}
               name="valorUnitario"
@@ -315,18 +282,12 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 <FormItem>
                   <FormLabel>Valor Unitário*</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="text" 
-                      placeholder="Ex: 15,75" 
-                      {...field}
-                      required
-                    />
+                    <Input type="text" placeholder="Ex: 15,75" {...field} required />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
             <FormField
               control={form.control}
               name="detalhes"
@@ -334,8 +295,8 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 <FormItem>
                   <FormLabel>Detalhes</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Descrição ou detalhes do produto" 
+                    <Textarea
+                      placeholder="Descrição ou detalhes do produto"
                       className="resize-none"
                       {...field}
                     />
@@ -344,7 +305,6 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 </FormItem>
               )}
             />
-            
             <FormField
               control={form.control}
               name="imagem"
@@ -352,16 +312,13 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 <FormItem>
                   <FormLabel>URL da Imagem</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="https://exemplo.com/imagem.jpg" 
-                      {...field}
-                    />
+                    <Input placeholder="https://exemplo.com/imagem.jpg" {...field} />
                   </FormControl>
                   {field.value && (
                     <div className="mt-2 border rounded-md p-2 w-32 h-32 flex items-center justify-center overflow-hidden">
-                      <img 
-                        src={field.value} 
-                        alt="Preview" 
+                      <img
+                        src={field.value}
+                        alt="Preview"
                         className="max-w-full max-h-full object-contain"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = "/placeholder.svg";
@@ -373,12 +330,11 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 </FormItem>
               )}
             />
-            
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)} 
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
                 disabled={loading}
               >
                 <X className="mr-2 h-4 w-4" />

@@ -1,10 +1,12 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Search, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useLocation } from "react-router-dom";
+import { db } from "@/firebase/firebase";
+import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import { useAuth } from "@/contexts/AuthContext"; // Assumindo que você tem um contexto de autenticação
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +19,9 @@ import {
 const AppHeader = ({ title }: { title: string }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth(); // Obtém o usuário atual
+  const [cartItemsCount, setCartItemsCount] = useState(0);
+  
   const [notifications, setNotifications] = useState([
     { 
       id: 1, 
@@ -34,33 +39,52 @@ const AppHeader = ({ title }: { title: string }) => {
       time: "20 minutos atrás"
     }
   ]);
-  
-  // Get cart items count from localStorage or state management
-  const cartItems = location.state?.carrinho || [];
-  const cartItemsCount = cartItems.length;
+
+  // Buscar a contagem de itens no carrinho do Firestore
+  useEffect(() => {
+    if (!user || !user.email) return;
+
+    // Função para carregar a contagem inicial
+    const loadCartCount = async () => {
+      try {
+        const carrinhoRef = collection(db, "carrinho");
+        const q = query(carrinhoRef, where("email", "==", user.email));
+        const querySnapshot = await getDocs(q);
+        setCartItemsCount(querySnapshot.size);
+      } catch (error) {
+        console.error("Erro ao buscar contagem do carrinho:", error);
+      }
+    };
+
+    // Carregar a contagem inicial
+    loadCartCount();
+
+    // Configurar um listener para mudanças na coleção "carrinho"
+    const carrinhoRef = collection(db, "carrinho");
+    const q = query(carrinhoRef, where("email", "==", user.email));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setCartItemsCount(snapshot.size);
+    }, (error) => {
+      console.error("Erro no listener do carrinho:", error);
+    });
+
+    // Limpar o listener quando o componente for desmontado
+    return () => unsubscribe();
+  }, [user]);
 
   return (
     <header className="flex items-center justify-between py-4 px-6 bg-background border-b">
       <div>
         <h1 className="text-2xl font-bold">{title}</h1>
       </div>
-
       <div className="flex items-center space-x-4">
-        <div className="hidden md:flex relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar..."
-            className="pl-8 w-full"
-          />
-        </div>
-
         {/* Carrinho button */}
         <Button 
           variant="ghost" 
           size="icon" 
           className="relative"
-          onClick={() => navigate("/carrinho", { state: { carrinho: cartItems } })}
+          onClick={() => navigate("/carrinho")}
         >
           <ShoppingCart size={20} />
           {cartItemsCount > 0 && (

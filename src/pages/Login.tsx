@@ -1,236 +1,208 @@
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, PackageOpen, Mail, Lock, UserPlus, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import AuthLayout from "@/layouts/AuthLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Lock, LogIn, Mail, User, UserPlus } from "lucide-react";
+
+// Definindo métodos que estamos utilizando do AuthContext
+interface AuthContextMethods {
+  signIn?: (email: string, password: string) => Promise<any>;
+  signUp?: (email: string, password: string, displayName: string) => Promise<any>;
+  user?: any;
+}
 
 const Login = () => {
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [nome, setNome] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [name, setName] = useState("");
-  
   const navigate = useNavigate();
-  const { signIn } = useAuth();
-  const { toast } = useToast();
   
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      if (isRegistering) {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              nome: name,
-            },
-          },
-        });
+  // Utilizando useAuth com as propriedades corretas do seu contexto
+  const auth = useAuth() as AuthContextMethods;
 
-        if (signUpError) throw signUpError;
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: user.id,
-              email: user.email,
-              nome: name,
-              cargo: "Usuário",
-              perfil: "Regular"
-            });
-          
-          if (profileError) throw profileError;
-        }
-        
-        toast({
-          title: "Conta criada com sucesso",
-          description: "Você foi registrado e logado no sistema.",
-        });
-        
-        navigate("/dashboard");
-      } else {
-        const { error } = await signIn(email, password);
-        
-        if (error) throw error;
-        
-        navigate("/dashboard");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isLogin) {
+      if (!email || !password) {
+        toast.error("Por favor, preencha todos os campos");
+        return;
       }
-    } catch (error: any) {
-      console.error("Authentication error:", error);
       
-      toast({
-        title: "Erro de autenticação",
-        description: error.message || "Ocorreu um erro ao processar sua solicitação.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      setIsLoading(true);
+      
+      try {
+        // Usando signIn em vez de login
+        await auth.signIn?.(email, password);
+        toast.success("Login realizado com sucesso!");
+        navigate("/dashboard");
+      } catch (error: any) {
+        toast.error("Erro ao fazer login: " + (error.message || "Tente novamente"));
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      if (!nome || !email || !password || !confirmPassword) {
+        toast.error("Por favor, preencha todos os campos");
+        return;
+      }
+      
+      if (password !== confirmPassword) {
+        toast.error("As senhas não coincidem");
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      try {
+        // Usando signUp em vez de register
+        await auth.signUp?.(email, password, nome);
+        toast.success("Cadastro realizado com sucesso!");
+        navigate("/dashboard");
+      } catch (error: any) {
+        toast.error("Erro ao cadastrar: " + (error.message || "Tente novamente"));
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.6 } }
+  const toggleForm = () => {
+    setIsLogin(!isLogin);
+    setEmail("");
+    setPassword("");
+    setNome("");
+    setConfirmPassword("");
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { duration: 0.5 } }
-  };
-  
   return (
-    <AuthLayout>
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-        className="w-full"
-      >
-        <Card className="border-none bg-white/70 dark:bg-black/60 backdrop-blur-md shadow-xl w-full">
-          <CardHeader className="space-y-1 text-center">
-            <motion.div variants={itemVariants} className="flex justify-center mb-4">
-              <div className="p-3 rounded-full bg-primary/10 text-primary">
-                <PackageOpen className="h-10 w-10" />
-              </div>
-            </motion.div>
-            <motion.div variants={itemVariants}>
-              <CardTitle className="text-2xl font-bold">
-                {isRegistering ? "Criar uma conta" : "Entrar no sistema"}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-2">
-                {isRegistering 
-                  ? "Complete os campos abaixo para criar seu acesso" 
-                  : "Entre com suas credenciais para acessar o sistema"}
-              </p>
-            </motion.div>
-          </CardHeader>
-          
+    <div className="min-h-screen flex items-center justify-center bg-[#1A1F2C] p-4">
+      <Card className="w-full max-w-md border-gray-800 bg-gray-900/50 backdrop-blur-xl">
+        <CardHeader className="space-y-1">
+          <div className="flex flex-col items-center space-y-2 mb-4">
+            <img 
+              src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" 
+              alt="Frico Logo" 
+              className="h-20 mb-2"
+            />
+            <CardTitle className="text-2xl font-bold text-gray-100">
+              {isLogin ? "Bem-vindo ao Sistema Fricó" : "Criar Conta Fricó"}
+            </CardTitle>
+            <p className="text-sm text-gray-400">
+              {isLogin ? "Faça login para continuar" : "Preencha seus dados para se cadastrar"}
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <CardContent className="space-y-4">
-              {isRegistering && (
-                <motion.div variants={itemVariants} className="space-y-2">
-                  <Label htmlFor="name" className="font-medium">Nome</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      placeholder="Seu nome completo"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      disabled={isLoading}
-                      className="pl-10 bg-white/80 dark:bg-gray-800/80"
-                    />
-                  </div>
-                </motion.div>
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="nome" className="text-gray-200">Nome</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                  <Input 
+                    id="nome" 
+                    type="text" 
+                    placeholder="Seu nome completo" 
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    className="pl-10 bg-gray-800/50 border-gray-700 text-gray-100 placeholder:text-gray-500"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-gray-200">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="seu@email.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 bg-gray-800/50 border-gray-700 text-gray-100 placeholder:text-gray-500"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-gray-200">Senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="******" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 bg-gray-800/50 border-gray-700 text-gray-100 placeholder:text-gray-500"
+                />
+              </div>
+            </div>
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-gray-200">Confirmar Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                  <Input 
+                    id="confirmPassword" 
+                    type="password" 
+                    placeholder="******" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-10 bg-gray-800/50 border-gray-700 text-gray-100 placeholder:text-gray-500"
+                  />
+                </div>
+              </div>
+            )}
+            <Button 
+              type="submit" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+              disabled={isLoading}
+            >
+              {isLogin ? (
+                <LogIn className="mr-2 h-4 w-4" />
+              ) : (
+                <UserPlus className="mr-2 h-4 w-4" />
               )}
-              
-              <motion.div variants={itemVariants} className="space-y-2">
-                <Label htmlFor="email" className="font-medium">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    className="pl-10 bg-white/80 dark:bg-gray-800/80"
-                  />
-                </div>
-              </motion.div>
-              
-              <motion.div variants={itemVariants} className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="password" className="font-medium">Senha</Label>
-                  {!isRegistering && (
-                    <a href="#" className="text-sm text-primary hover:underline">
-                      Esqueceu a senha?
-                    </a>
-                  )}
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    className="pl-10 bg-white/80 dark:bg-gray-800/80"
-                  />
-                </div>
-              </motion.div>
-            </CardContent>
-            
-            <CardFooter className="flex flex-col space-y-4 px-6 pb-6">
-              <motion.div variants={itemVariants} className="w-full">
-                <Button 
-                  className="w-full bg-primary hover:bg-primary/90 transition-all duration-200 font-medium text-base"
-                  type="submit" 
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {isRegistering ? "Criando conta..." : "Entrando..."}
-                    </>
-                  ) : (
-                    <>{isRegistering ? "Registrar" : "Entrar"}</>
-                  )}
-                </Button>
-              </motion.div>
-              
-              <motion.div variants={itemVariants} className="text-center text-sm">
-                {isRegistering ? (
-                  <div>
-                    Já possui uma conta?{" "}
-                    <button
-                      type="button"
-                      className="text-primary font-medium hover:underline transition-colors"
-                      onClick={() => setIsRegistering(false)}
-                      disabled={isLoading}
-                    >
-                      Entrar
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    Não possui uma conta?{" "}
-                    <button
-                      type="button"
-                      className="text-primary font-medium hover:underline transition-colors"
-                      onClick={() => setIsRegistering(true)}
-                      disabled={isLoading}
-                    >
-                      Registrar
-                    </button>
-                  </div>
-                )}
-              </motion.div>
-            </CardFooter>
+              {isLoading ? (isLogin ? "Entrando..." : "Cadastrando...") : (isLogin ? "Entrar" : "Cadastrar")}
+            </Button>
           </form>
-        </Card>
-      </motion.div>
-    </AuthLayout>
+          <div className="mt-4 text-center">
+            <p className="text-gray-400">
+              {isLogin ? (
+                <>
+                  Não tem uma conta?{" "}
+                  <button
+                    onClick={toggleForm}
+                    className="text-blue-400 hover:text-blue-300 hover:underline"
+                  >
+                    Cadastre-se
+                  </button>
+                </>
+              ) : (
+                <>
+                  Já tem uma conta?{" "}
+                  <button
+                    onClick={toggleForm}
+                    className="text-blue-400 hover:text-blue-300 hover:underline"
+                  >
+                    Fazer login
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

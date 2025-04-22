@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Package, DollarSign, TrendingUp, AlertTriangle, ShoppingCart, FileText, Loader2 } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
@@ -6,16 +5,80 @@ import StatsCard from "@/components/StatsCard";
 import AlertaBaixoEstoque from "@/components/AlertaBaixoEstoque";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
-import EmptyState from "@/components/EmptyState";
+
+// Mock data to replace Supabase data
+const mockData = {
+  hoje: {
+    totalProdutos: "42",
+    valorEstoque: "R$ 15.678,90",
+    movimentacoes: "8",
+    alertas: "3",
+    produtosBaixoEstoque: [
+      { id: 1, nome: "Produto A", quantidadeAtual: 5, quantidadeMinima: 10 },
+      { id: 2, nome: "Produto B", quantidadeAtual: 3, quantidadeMinima: 8 },
+      { id: 3, nome: "Produto C", quantidadeAtual: 2, quantidadeMinima: 5 }
+    ],
+    ultimasMovimentacoes: [
+      { id: 1, produto: "Produto A", tipo: "saida", quantidade: 2, data: "hoje, 14:30" },
+      { id: 2, produto: "Produto B", tipo: "entrada", quantidade: 10, data: "hoje, 11:15" },
+      { id: 3, produto: "Produto D", tipo: "saida", quantidade: 5, data: "hoje, 09:20" }
+    ],
+    ultimasNotasFiscais: [
+      { id: "NF-2345", fornecedor: "Fornecedor X", valor: "R$ 1.250,00", data: "hoje, 15:42", status: "pendente" },
+      { id: "NF-2344", fornecedor: "Fornecedor Y", valor: "R$ 3.780,50", data: "hoje, 10:15", status: "processada" }
+    ]
+  },
+  semana: {
+    totalProdutos: "45",
+    valorEstoque: "R$ 17.890,50",
+    movimentacoes: "23",
+    alertas: "2",
+    produtosBaixoEstoque: [
+      { id: 1, nome: "Produto A", quantidadeAtual: 5, quantidadeMinima: 10 },
+      { id: 2, nome: "Produto C", quantidadeAtual: 2, quantidadeMinima: 5 }
+    ],
+    ultimasMovimentacoes: [
+      { id: 1, produto: "Produto A", tipo: "saida", quantidade: 2, data: "hoje, 14:30" },
+      { id: 2, produto: "Produto B", tipo: "entrada", quantidade: 10, data: "ontem, 11:15" },
+      { id: 3, produto: "Produto D", tipo: "saida", quantidade: 5, data: "ontem, 09:20" },
+      { id: 4, produto: "Produto E", tipo: "entrada", quantidade: 15, data: "há 2 dias" },
+      { id: 5, produto: "Produto F", tipo: "saida", quantidade: 3, data: "há 3 dias" }
+    ],
+    ultimasNotasFiscais: [
+      { id: "NF-2345", fornecedor: "Fornecedor X", valor: "R$ 1.250,00", data: "hoje, 15:42", status: "pendente" },
+      { id: "NF-2344", fornecedor: "Fornecedor Y", valor: "R$ 3.780,50", data: "ontem, 10:15", status: "processada" },
+      { id: "NF-2343", fornecedor: "Fornecedor Z", valor: "R$ 920,75", data: "há 3 dias", status: "processada" }
+    ]
+  },
+  mes: {
+    totalProdutos: "52",
+    valorEstoque: "R$ 21.457,80",
+    movimentacoes: "87",
+    alertas: "1",
+    produtosBaixoEstoque: [
+      { id: 1, nome: "Produto A", quantidadeAtual: 5, quantidadeMinima: 10 }
+    ],
+    ultimasMovimentacoes: [
+      { id: 1, produto: "Produto A", tipo: "saida", quantidade: 2, data: "hoje, 14:30" },
+      { id: 2, produto: "Produto B", tipo: "entrada", quantidade: 10, data: "ontem, 11:15" },
+      { id: 3, produto: "Produto D", tipo: "saida", quantidade: 5, data: "há 5 dias" },
+      { id: 4, produto: "Produto E", tipo: "entrada", quantidade: 15, data: "há 7 dias" },
+      { id: 5, produto: "Produto F", tipo: "saida", quantidade: 3, data: "há 12 dias" }
+    ],
+    ultimasNotasFiscais: [
+      { id: "NF-2345", fornecedor: "Fornecedor X", valor: "R$ 1.250,00", data: "hoje, 15:42", status: "pendente" },
+      { id: "NF-2344", fornecedor: "Fornecedor Y", valor: "R$ 3.780,50", data: "ontem, 10:15", status: "processada" },
+      { id: "NF-2335", fornecedor: "Fornecedor W", valor: "R$ 5.430,25", data: "há 15 dias", status: "processada" }
+    ]
+  }
+};
 
 const Dashboard = () => {
   const [period, setPeriod] = useState<"hoje" | "semana" | "mes">("semana");
   const [loading, setLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState({
     totalProdutos: "0",
     valorEstoque: "R$ 0,00",
@@ -45,115 +108,26 @@ const Dashboard = () => {
     }
   }, [loading]);
 
-  // Load data from Supabase
+  // Load mock data instead of fetching from Supabase
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       setLoadingProgress(0);
-      setError(null);
       
       try {
-        // Get total products
-        const { data: produtos, error: produtosError } = await supabase
-          .from('produtos')
-          .select('*');
-          
-        if (produtosError) {
-          console.error("Error loading products:", produtosError);
-          // Continue with placeholder data instead of throwing
-          setLoadingProgress(25);
-        }
-        
-        // Calculate total value
-        const valorTotal = produtos
-          ? produtos.reduce((sum, p) => sum + (p.quantidade_atual * p.valor_unitario), 0)
-          : 0;
-          
-        // Get products with low stock
-        const produtosBaixoEstoque = produtos
-          ? produtos.filter(p => p.quantidade_atual <= p.quantidade_minima)
-            .map(p => ({
-              id: p.id,
-              nome: p.nome,
-              quantidadeAtual: p.quantidade_atual,
-              quantidadeMinima: p.quantidade_minima
-            }))
-          : [];
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
         setLoadingProgress(50);
-            
-        // Get latest movements
-        const { data: movimentacoes, error: movimentacoesError } = await supabase
-          .from('movimentacoes')
-          .select('*')
-          .order('data', { ascending: false })
-          .limit(5);
-          
-        if (movimentacoesError) {
-          console.error("Error loading movements:", movimentacoesError);
-          // Continue with empty movements
-        }
-        setLoadingProgress(75);
         
-        // Get latest invoices
-        const { data: notasFiscais, error: notasFiscaisError } = await supabase
-          .from('notas_fiscais')
-          .select('*')
-          .order('data', { ascending: false })
-          .limit(3);
-          
-        if (notasFiscaisError) {
-          console.error("Error loading invoices:", notasFiscaisError);
-          // Continue with empty invoices
-        }
+        // Simulate another delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
         setLoadingProgress(100);
         
-        // Process latest movements
-        let ultimasMovimentacoes = [];
-        if (movimentacoes && movimentacoes.length > 0) {
-          ultimasMovimentacoes = await Promise.all(movimentacoes.map(async mov => {
-            let nomeProduto = "Produto não encontrado";
-            
-            if (produtos) {
-              const produto = produtos.find(p => p.id === mov.produto_id);
-              if (produto) nomeProduto = produto.nome;
-            }
-            
-            return {
-              id: mov.id,
-              produto: nomeProduto,
-              tipo: mov.tipo,
-              quantidade: mov.quantidade,
-              data: formatRelativeDate(mov.data)
-            };
-          }));
-        }
+        // Set mock data based on selected period
+        setDashboardData(mockData[period]);
         
-        // Format invoices
-        const ultimasNotasFiscais = notasFiscais
-          ? notasFiscais.map(nota => ({
-              id: nota.id,
-              fornecedor: nota.fornecedor,
-              valor: `R$ ${nota.valor.toFixed(2).replace('.', ',').replace(/\d(?=(\d{3})+,)/g, '$&.')}`,
-              data: formatRelativeDate(nota.data),
-              status: nota.status
-            }))
-          : [];
-        
-        // Update dashboard data
-        setDashboardData({
-          totalProdutos: produtos ? produtos.length.toString() : "0",
-          valorEstoque: `R$ ${valorTotal.toFixed(2).replace('.', ',').replace(/\d(?=(\d{3})+,)/g, '$&.')}`,
-          movimentacoes: movimentacoes ? movimentacoes.length.toString() : "0",
-          alertas: produtosBaixoEstoque.length.toString(),
-          produtosBaixoEstoque,
-          ultimasMovimentacoes,
-          ultimasNotasFiscais
-        });
-        
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error loading dashboard data:", error);
-        setError("Não foi possível carregar os dados do dashboard. Verifique sua conexão ou tente novamente mais tarde.");
-        
         toast({
           title: "Erro ao carregar dados",
           description: "Não foi possível carregar os dados do dashboard.",
@@ -166,24 +140,6 @@ const Dashboard = () => {
     
     fetchDashboardData();
   }, [period, toast]);
-  
-  // Helper function to format relative dates
-  const formatRelativeDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      return `hoje, ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-    } else if (diffDays === 1) {
-      return `ontem, ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-    } else if (diffDays < 7) {
-      return `há ${diffDays} dias`;
-    } else {
-      return date.toLocaleDateString('pt-BR');
-    }
-  };
 
   return (
     <AppLayout title="Dashboard">
@@ -209,11 +165,6 @@ const Dashboard = () => {
             </div>
           </div>
         </Card>
-      ) : error ? (
-        <EmptyState
-          title="Erro ao carregar dados"
-          description={error}
-        />
       ) : (
         <>
           {/* Cards de estatísticas */}
@@ -246,11 +197,9 @@ const Dashboard = () => {
           </div>
 
           {/* Alertas de baixo estoque */}
-          {dashboardData.produtosBaixoEstoque.length > 0 && (
-            <div className="mb-6">
-              <AlertaBaixoEstoque produtos={dashboardData.produtosBaixoEstoque} />
-            </div>
-          )}
+          <div className="mb-6">
+            <AlertaBaixoEstoque produtos={dashboardData.produtosBaixoEstoque} />
+          </div>
 
           {/* Grid com últimas atividades */}
           <div className="grid gap-6 md:grid-cols-2">

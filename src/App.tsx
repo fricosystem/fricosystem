@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -19,6 +18,12 @@ import NotFound from "./pages/NotFound";
 import Carrinho from "./pages/Carrinho";
 import Requisicoes from "./pages/Requisicoes";
 import Enderecamento from "./pages/Enderecamento";
+import OrdensServico from "./pages/OrdensServico";
+
+// Páginas de Produção
+import DashboardProducao from "@/pages/Producao/DashboardProducao";
+import PlanejamentoProducao from "@/pages/Producao/PlanejamentoProducao";
+import FuncionariosProducao from "@/pages/Producao/FuncionariosProducao";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -81,6 +86,12 @@ const AppContent = () => {
           <Route path="/carrinho" element={<AuthGuard><Carrinho /></AuthGuard>} />
           <Route path="/requisicoes" element={<AuthGuard><Requisicoes /></AuthGuard>} />
           <Route path="/enderecamento" element={<AuthGuard><Enderecamento /></AuthGuard>} />
+          <Route path="/ordensServico" element={<AuthGuard><OrdensServico /></AuthGuard>} />
+          
+          {/* Rotas de Produção */}
+          <Route path="/producao" element={<AuthGuard><DashboardProducao /></AuthGuard>} />
+          <Route path="/producao/planejamento" element={<AuthGuard><PlanejamentoProducao /></AuthGuard>} />
+          <Route path="/producao/funcionarios" element={<AuthGuard><FuncionariosProducao /></AuthGuard>} />
           
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />

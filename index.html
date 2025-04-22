@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.9" />
     <title>Fricó Alimentos ADM - Sistema de Gestão de Estoque</title>
-    <meta name="description" content="Sistema de gestão de estoque para Fricó Alimentos" />
+    <meta name="description" content="Sistema de gestão de estoque Fricó Alimentos" />
     <meta name="author" content="Fricó Alimentos" />
 
     <meta property="og:title" content="Fricó Alimentos ADM - Sistema de Gestão de Estoque" />
@@ -21,6 +20,63 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+      /* Aplicar Roboto em todos os elementos dentro do sidebar */
+      .font-roboto, .font-roboto * {
+        font-family: 'Roboto', sans-serif;
+        letter-spacing: 0.02em;
+        font-size: 0.9rem;
+      }
+      
+      /* Ajustes para pesos de fonte específicos do Firebase */
+      .font-roboto .text-sm {
+        font-weight: 600;
+      }
+      
+      .font-roboto .text-xs {
+        font-weight: 600;
+      }
+      
+      .font-roboto .font-medium {
+        font-weight: 600;
+      }
+      
+      /* Ajustes para melhorar a visibilidade no tema claro */
+      :root:not(.dark) .font-roboto {
+        color: #333333; /* Cor escura para texto em tema claro */
+      }
+      
+      :root:not(.dark) .text-gray-300 {
+        color: #333333 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
+      }
+      
+      :root:not(.dark) .text-gray-400 {
+        color: #555555 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
+      }
+      
+      :root:not(.dark) .text-gray-500 {
+        color: #666666 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
+      }
+      
+      /* Ajustes para os items do menu no tema claro */
+      :root:not(.dark) .hover\:bg-\[\#2c384a\]:hover {
+        background-color: #e0e0e0 !important; /* Fundo mais claro para hover no tema claro */
+      }
+      
+      :root:not(.dark) .bg-\[\#2c384a\] {
+        background-color: #f0f0f0 !important; /* Fundo mais claro no tema claro */
+      }
+      
+      :root:not(.dark) .bg-\[\#1c2834\] {
+        background-color: #ffffff !important; /* Fundo do sidebar no tema claro */
+      }
+      
+      :root:not(.dark) .border-\[\#3e4a5e\] {
+        border-color: #dddddd !important; /* Cor da borda para tema claro */
+      }
+    </style>
   </head>
 
   <body>

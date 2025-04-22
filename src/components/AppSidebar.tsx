@@ -14,13 +14,14 @@ import {
   LayoutDashboard,
   Box,
   ClipboardList,
+  BarChart,
   ShoppingCart,
   PackageSearch,
   Warehouse,
+  Wallet,
   Receipt,
   Truck,
   FileText,
-  Wallet,
   BarChart3,
   Users,
   Home,
@@ -29,6 +30,21 @@ import {
   Sun,
   Moon,
   ChevronUp,
+  ChevronDown,
+  Clipboard,
+  Factory,
+  LineChart,
+  UserRound,
+  Calendar,
+  GraduationCap,
+  ClipboardCheck,
+  Layers,
+  Boxes,
+  Building2,
+  Network,
+  BadgePercent,
+  Monitor,
+  HardHat,
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useEffect, useState } from "react";
@@ -39,6 +55,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { db } from "@/firebase/firebase";
+import { collection, query, where, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
+import { useToast } from "@/components/ui/use-toast";
+import { AnimatePresence, motion } from "framer-motion";
 
 // Definindo a interface para os itens do sidebar
 interface SidebarItem {
@@ -50,6 +70,7 @@ interface SidebarItem {
 // Definindo a interface para as categorias do sidebar
 interface SidebarCategory {
   label: string;
+  icon: React.ElementType;
   items: SidebarItem[];
 }
 
@@ -58,63 +79,222 @@ const AppSidebar = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { totalItens } = useCarrinho();
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("dark"); // Firebase usa tema escuro por padrão
+  const { toast } = useToast();
   
-  // Load theme from localStorage on component mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else {
-      // Default to dark theme
-      setTheme("dark");
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
-    localStorage.setItem("theme", newTheme);
+  // Estado para controlar quais categorias estão expandidas
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  
+  // Função auxiliar para obter o email do usuário de forma segura
+  const getUserEmail = () => {
+    if (!user) return null;
+    return user.email || null;
   };
   
-  // Categorias do sidebar com seus respectivos itens
+  // Inicializa as categorias expandidas com base na rota atual
+  useEffect(() => {
+    const initialExpandedState: Record<string, boolean> = {};
+    
+    // Determina qual categoria deve estar expandida com base na rota atual
+    sidebarCategories.forEach((category) => {
+      const shouldExpand = category.items.some(item => location.pathname === item.to);
+      initialExpandedState[category.label] = shouldExpand;
+    });
+    
+    setExpandedCategories(initialExpandedState);
+  }, [location.pathname]);
+  
+  // Carrega o tema do Firestore quando o componente montar
+  useEffect(() => {
+    const loadTheme = async () => {
+      const userEmail = getUserEmail();
+      if (!userEmail) return;
+      
+      try {
+        // Busca o documento do usuário baseado no email
+        const usuariosRef = collection(db, "usuarios");
+        const q = query(usuariosRef, where("email", "==", userEmail));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          // Usuário encontrado pelo email
+          const userDoc = querySnapshot.docs[0];
+          if (userDoc.data().tema) {
+            const savedTheme = userDoc.data().tema as "light" | "dark";
+            setTheme(savedTheme);
+            document.documentElement.classList.toggle("dark", savedTheme === "dark");
+          } else {
+            // Documento existe mas não tem tema definido
+            const defaultTheme = "dark";
+            setTheme(defaultTheme);
+            document.documentElement.classList.toggle("dark", defaultTheme === "dark");
+            
+            // Atualiza o documento existente com o tema padrão
+            await setDoc(doc(db, "usuarios", userDoc.id), { tema: defaultTheme }, { merge: true });
+          }
+        } else {
+          // Usuário não encontrado, cria novo documento
+          const defaultTheme = "dark";
+          setTheme(defaultTheme);
+          document.documentElement.classList.toggle("dark", defaultTheme === "dark");
+          
+          // Cria um novo documento de usuário com email e tema
+          const newUserDocRef = doc(collection(db, "usuarios"));
+          await setDoc(newUserDocRef, { 
+            email: userEmail, 
+            tema: defaultTheme 
+          });
+        }
+      } catch (error) {
+        console.error("Erro detalhado ao carregar tema:", error);
+        
+        // Em caso de erro, usa o tema baseado na preferência do sistema
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const fallbackTheme = prefersDark ? "dark" : "light";
+        setTheme(fallbackTheme);
+        document.documentElement.classList.toggle("dark", fallbackTheme === "dark");
+      }
+    };
+    
+    loadTheme();
+    
+    // Adiciona a fonte Roboto ao head
+    const addRobotoFont = () => {
+      const fontLink = document.createElement('link');
+      fontLink.rel = 'stylesheet';
+      fontLink.href = 'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap';
+      document.head.appendChild(fontLink);
+      
+      // Aplica a fonte Roboto globalmente
+      document.body.style.fontFamily = '"Roboto", sans-serif';
+    };
+    
+    addRobotoFont();
+  }, [user]);
+  
+  // Função para alternar o tema
+  const toggleTheme = async () => {
+    const userEmail = getUserEmail();
+    if (!userEmail) return;
+    
+    const newTheme = theme === "light" ? "dark" : "light";
+    
+    try {
+      // Atualiza o tema na interface primeiro (para resposta imediata)
+      setTheme(newTheme);
+      document.documentElement.classList.toggle("dark", newTheme === "dark");
+      
+      // Busca o documento do usuário baseado no email
+      const usuariosRef = collection(db, "usuarios");
+      const q = query(usuariosRef, where("email", "==", userEmail));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        // Atualiza o documento existente
+        const userDoc = querySnapshot.docs[0];
+        await setDoc(doc(db, "usuarios", userDoc.id), { tema: newTheme }, { merge: true });
+      } else {
+        // Cria um novo documento se por algum motivo não existir
+        const newUserDocRef = doc(collection(db, "usuarios"));
+        await setDoc(newUserDocRef, { 
+          email: userEmail, 
+          tema: newTheme 
+        });
+        console.log(`Novo documento criado com tema ${newTheme} para o usuário ${userEmail}`);
+      }
+      
+      // Notifica o usuário sobre a mudança de tema
+      toast({
+        description: `Tema alterado para ${newTheme === "light" ? "claro" : "escuro"}`,
+        duration: 2000,
+      });
+    } catch (error) {
+      
+      // Em caso de erro, reverte para o tema anterior
+      setTheme(theme);
+      document.documentElement.classList.toggle("dark", theme === "dark");
+      
+      toast({
+        description: "Erro ao salvar preferência de tema. Tente novamente.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  };
+  
+  // Função para alternar o estado de expansão de uma categoria
+  const toggleCategoryExpansion = (categoryLabel: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryLabel]: !prev[categoryLabel]
+    }));
+  };
+  
+  // Categorias do sidebar com seus respectivos ícones e itens
   const sidebarCategories: SidebarCategory[] = [
     {
       label: "Principal",
+      icon: Layers,
       items: [
         { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-        { to: "/produtos", icon: Box, label: "Produtos" },
         { to: "/requisicoes", icon: ClipboardList, label: "Requisições" },
         { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
       ],
     },
     {
-      label: "Almoxarifado",
+      label: "Estoque",
+      icon: Boxes,
       items: [
+        { to: "/produtos", icon: Box, label: "Produtos" },
         { to: "/inventory", icon: PackageSearch, label: "Inventário" },
         { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
-        { to: "/invoices", icon: Receipt, label: "Notas Fiscais" },
-        { to: "/orders", icon: Truck, label: "Compras/Pedidos" },
         { to: "/transfer", icon: FileText, label: "Entrada/Transferência" },
       ],
     },
     {
+      label: "Operacional",
+      icon: Network,
+      items: [
+        { to: "/ordensServico", icon: Clipboard, label: "Ordens de Serviço" },
+        { to: "/orders", icon: Truck, label: "Compras/Pedidos" },
+        { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
+      ],
+    },
+    {
+      label: "Produção",
+      icon: Factory,
+      items: [
+        { to: "/producao", icon: BarChart, label: "Dashboard Prod" },
+        { to: "/producao/planejamento", icon: ClipboardCheck, label: "Planejamento" },
+        { to: "/producao/funcionarios", icon: Factory, label: "Funcionários" },
+        { to: "/linhas-producao", icon: LineChart, label: "Linhas de Produção" },
+      ],
+    },
+    {
+      label: "Recursos Humanos",
+      icon: HardHat,
+      items: [
+        { to: "/rh/funcionarios", icon: UserRound, label: "Funcionários" },
+        { to: "/rh/ponto", icon: Calendar, label: "Ponto Eletrônico" },
+        { to: "/rh/treinamentos", icon: GraduationCap, label: "Treinamentos" },
+      ],
+    },
+    {
       label: "Financeiro",
+      icon: Wallet,
       items: [
         { to: "/financial", icon: Wallet, label: "Financeiro" },
         { to: "/cost-centers", icon: BarChart3, label: "Centros de Custo" },
         { to: "/suppliers", icon: Users, label: "Fornecedores" },
-        { to: "/reports", icon: Home, label: "Relatórios" },
+        { to: "/relatorios", icon: Home, label: "Relatórios" },
       ],
     },
     {
       label: "Sistema",
+      icon: Monitor,
       items: [
-        { to: "/admin", icon: Settings, label: "Administrativo" },
-        { to: "/settings", icon: Settings, label: "Configurações" },
+        { to: "/administrativo", icon: Settings, label: "Administrativo" },
+        { to: "/configuracoes", icon: Settings, label: "Configurações" },
       ],
     },
   ];
@@ -124,43 +304,210 @@ const AppSidebar = () => {
     navigate("/");
   };
 
+  // Obter a primeira letra do nome do usuário ou do email
+  const getUserInitial = () => {
+    if (user?.user_metadata?.nome) {
+      return user.user_metadata.nome.charAt(0).toUpperCase();
+    } else if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
+
+  // Obter o nome de exibição
+  const getDisplayName = () => {
+    if (user?.user_metadata?.nome) {
+      return user.user_metadata.nome;
+    } else if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return "Usuário";
+  };
+
+  // Variantes para animação de expansão
+  const contentVariants = {
+    hidden: { 
+      opacity: 0,
+      height: 0,
+      transition: { duration: 0.2 }
+    },
+    visible: { 
+      opacity: 1,
+      height: "auto",
+      transition: { duration: 0.3 }
+    }
+  };
+
+  // Classes CSS comuns para botões expansivos e itens de menu
+  const categoryBtnClasses = `
+    flex items-center justify-between px-3 h-10 cursor-pointer transition-all duration-200
+    rounded-md mx-1 my-0.5 font-medium
+  `;
+
+  // Classes para o estilo Firebase com a fonte Roboto
+  const firebaseClasses = {
+    sidebar: "bg-[#1c2834] border-none font-roboto",
+    categoryBtn: {
+      active: 'bg-[#2c384a] text-white',
+      hover: 'hover:bg-[#2c384a] text-gray-300 hover:text-white'
+    },
+    menuItem: {
+      active: 'bg-[#2c384a] text-white',
+      hover: 'hover:bg-[#2c384a] text-gray-300 hover:text-white'
+    },
+    userProfile: {
+      bg: "bg-[#2c384a]",
+      text: "text-white",
+      mutedText: "text-gray-400"
+    },
+    dropdownMenu: "bg-[#2c384a] border-[#3e4a5e]",
+    // Classes específicas para a fonte Roboto
+    text: {
+      heading: "font-roboto font-medium",
+      normal: "font-roboto font-normal",
+      small: "font-roboto text-sm",
+      tiny: "font-roboto text-xs"
+    }
+  };
+
   return (
-    <Sidebar className="border-r border-border">
+    <Sidebar className={`${firebaseClasses.sidebar} border-r border-[#3e4a5e]`}>
       <SidebarContent>
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+          
+          /* Aplicar Roboto em todos os elementos dentro do sidebar */
+          .font-roboto, .font-roboto * {
+            font-family: 'Roboto', sans-serif;
+            letter-spacing: 0.02em;
+            font-size: 0.9rem;
+          }
+          
+          /* Ajustes para pesos de fonte específicos do Firebase */
+          .font-roboto .text-sm {
+            font-weight: 600;
+          }
+          
+          .font-roboto .text-xs {
+            font-weight: 600;
+          }
+          
+          .font-roboto .font-medium {
+            font-weight: 600;
+          }
+          
+          /* Ajustes para melhorar a visibilidade no tema claro */
+          :root:not(.dark) .font-roboto {
+            color: #333333; /* Cor escura para texto em tema claro */
+          }
+          
+          :root:not(.dark) .text-gray-300 {
+            color: #333333 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
+          }
+          
+          :root:not(.dark) .text-gray-400 {
+            color: #555555 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
+          }
+          
+          :root:not(.dark) .text-gray-500 {
+            color: #666666 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
+          }
+          
+          /* Ajustes para os items do menu no tema claro */
+          :root:not(.dark) .hover\\:bg-\\[\\#2c384a\\]:hover {
+            background-color: #e0e0e0 !important; /* Fundo mais claro para hover no tema claro */
+          }
+          
+          :root:not(.dark) .bg-\\[\\#2c384a\\] {
+            background-color: #f0f0f0 !important; /* Fundo mais claro no tema claro */
+          }
+          
+          :root:not(.dark) .bg-\\[\\#1c2834\\] {
+            background-color: #ffffff !important; /* Fundo do sidebar no tema claro */
+          }
+          
+          :root:not(.dark) .border-\\[\\#3e4a5e\\] {
+            border-color: #dddddd !important; /* Cor da borda para tema claro */
+          }
+        `}
+      </style>
         <SidebarGroup>
-          <div className="flex justify-center py-4">
+          <div className="flex items-center px-4 py-4">
             <img
               src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png"
               alt="Logo"
-              className="h-10 w-auto"
+              className="h-6 w-auto mr-2"
             />
+            <span className="text-[#ff7a59] font-medium text-xl">Fricó</span>
+          </div>
+          {/* Categorias do Firebase que estão na imagem */}
+          <div className="px-4 py-2">
+            <div className={`text-gray-400 ${firebaseClasses.text.small}`}>Categorias dos produtos</div>
           </div>
           
           {/* Renderizar cada categoria do sidebar */}
           {sidebarCategories.map((category, index) => (
             <SidebarGroup key={index}>
-              <SidebarGroupLabel>{category.label}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {category.items.map((item) => (
-                    <SidebarMenuItem key={item.to}>
-                      <SidebarMenuButton
-                        isActive={location.pathname === item.to}
-                        onClick={() => navigate(item.to)}
-                        className="flex items-center"
-                      >
-                        <item.icon className="mr-2 h-5 w-5" />
-                        <span>{item.label}</span>
-                        {item.to === "/cart" && totalItens > 0 && (
-                          <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-primary rounded-full">
-                            {totalItens}
-                          </span>
-                        )}
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
+              {/* Categoria com ícone e botão para expandir/colapsar */}
+              <div 
+                className={`${categoryBtnClasses} ${
+                  expandedCategories[category.label] 
+                    ? firebaseClasses.categoryBtn.active
+                    : firebaseClasses.categoryBtn.hover
+                } ${firebaseClasses.text.normal}`}
+                onClick={() => toggleCategoryExpansion(category.label)}
+              >
+                <div className="flex items-center gap-2">
+                  <category.icon className="h-5 w-5" />
+                  <SidebarGroupLabel className={`flex-1 ${firebaseClasses.text.normal}`}>{category.label}</SidebarGroupLabel>
+                </div>
+                <motion.div
+                  animate={{ rotate: expandedCategories[category.label] ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </motion.div>
+              </div>
+              
+              {/* Conteúdo da categoria com animação */}
+              <AnimatePresence>
+                {expandedCategories[category.label] && (
+                  <motion.div
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={contentVariants}
+                    className="overflow-hidden"
+                  >
+                    <SidebarGroupContent className="pl-8 pr-1">
+                      <SidebarMenu>
+                        {category.items.map((item) => (
+                          <SidebarMenuItem key={item.to}>
+                            <SidebarMenuButton
+                              isActive={location.pathname === item.to}
+                              onClick={() => navigate(item.to)}
+                              className={`flex items-center h-10 transition-all duration-200 rounded-md ${
+                                location.pathname === item.to 
+                                  ? firebaseClasses.menuItem.active 
+                                  : firebaseClasses.menuItem.hover
+                              } ${firebaseClasses.text.normal}`}
+                            >
+                              <item.icon className="mr-2 h-5 w-5" />
+                              <span>{item.label}</span>
+                              {item.to === "/carrinho" && totalItens > 0 && (
+                                <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                                  {totalItens}
+                                </span>
+                              )}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </SidebarGroup>
           ))}
         </SidebarGroup>
@@ -172,21 +519,23 @@ const AppSidebar = () => {
               <SidebarMenuItem>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton className="flex items-center justify-between w-full">
+                    <SidebarMenuButton className={`flex items-center justify-between w-full h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-1 my-0.5`}>
                       <div className="flex items-center">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground mr-2">
-                          {user?.email?.charAt(0).toUpperCase() || "U"}
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ff7a59] text-white mr-2">
+                          {getUserInitial()}
                         </div>
                         <div className="flex flex-col items-start">
-                          <span className="font-medium text-sm">{user?.email?.split('@')[0] || "Usuário"}</span>
-                          <span className="text-xs text-muted-foreground truncate max-w-[140px]">{user?.email || ""}</span>
+                          <span className={`font-medium text-sm text-gray-300 ${firebaseClasses.text.small}`}>{getDisplayName()}</span>
+                          <span className={`text-xs text-gray-500 truncate max-w-[140px] ${firebaseClasses.text.tiny}`}>
+                            {user?.email || ""}
+                          </span>
                         </div>
                       </div>
                       <ChevronUp className="h-4 w-4" />
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem onClick={toggleTheme}>
+                  <DropdownMenuContent align="end" className={`w-56 bg-[#2c384a] border-[#3e4a5e] text-gray-300 ${firebaseClasses.text.normal}`}>
+                    <DropdownMenuItem onClick={toggleTheme} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e]">
                       {theme === "light" ? (
                         <Moon className="mr-2 h-4 w-4" />
                       ) : (
@@ -194,12 +543,12 @@ const AppSidebar = () => {
                       )}
                       <span>Mudar para tema {theme === "light" ? "escuro" : "claro"}</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <DropdownMenuItem onClick={() => navigate("/configuracoes")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e]">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Configurações</span>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="text-red-500">
+                    <DropdownMenuSeparator className="bg-[#3e4a5e]" />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-[#ff7a59] hover:bg-[#3e4a5e] focus:bg-[#3e4a5e]">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Sair</span>
                     </DropdownMenuItem>

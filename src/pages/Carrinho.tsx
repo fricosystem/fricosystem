@@ -1,78 +1,179 @@
-
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import AppLayout from "@/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Minus, Plus, Trash2 } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Trash2, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { collection, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, addDoc, orderBy, limit } from "firebase/firestore";
+import { db } from "@/firebase/firebase";
 
-interface Produto {
+interface ProdutoCarrinho {
   id: string;
   nome: string;
-  imagem: string;
-  quantidadeAtual: number; // Quantidade atual no carrinho
-  codigoMaterial: string; // Adicionado campo para Código Material
-  codigoEstoque: string; // Adicionado campo para Código Estoque
-  unidade: string; // Adicionado campo para Unidade
-  deposito: string; // Adicionado campo para Depósito
-  quantidadeMinima: number; // Adicionado campo para Quantidade Mínima
-  detalhes: string; // Adicionado campo para Detalhes
-  unidadeMedida: string; // Adicionado campo para Unidade de Medida
-  valorUnitario: number; // Adicionado campo para Valor Unitário
+  imagem?: string;
+  quantidade: number;
+  codigo_material?: string;
+  codigo_estoque?: string;
+  unidade?: string;
+  deposito?: string;
+  quantidade_minima?: number;
+  detalhes?: string;
+  unidade_de_medida?: string;
+  valor_unitario: number;
+  prateleira?: string;
+  email?: string;
+  timestamp?: number;
 }
 
 const Carrinho = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const [carrinho, setCarrinho] = useState<Produto[]>(location.state?.carrinho || []);
+  const [carrinho, setCarrinho] = useState<ProdutoCarrinho[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
 
+  // Carregar itens do carrinho do Firebase
+  useEffect(() => {
+    const carregarCarrinho = async () => {
+      if (!user || !user.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        
+        // Consultar itens no carrinho do usuário atual
+        const carrinhoRef = collection(db, "carrinho");
+        const q = query(carrinhoRef, where("email", "==", user.email));
+        const querySnapshot = await getDocs(q);
+        
+        const itensCarrinho: ProdutoCarrinho[] = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as ProdutoCarrinho[];
+        
+        // Ordenar por timestamp, do mais recente para o mais antigo
+        itensCarrinho.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        
+        setCarrinho(itensCarrinho);
+      } catch (error) {
+        console.error("Erro ao carregar carrinho:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os itens do carrinho",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    carregarCarrinho();
+  }, [user]);
+
   // Função para remover um produto do carrinho
-  const handleRemover = (id: string) => {
-    setCarrinho((prevCarrinho) => prevCarrinho.filter((item) => item.id !== id));
-    toast({
-      title: "Item removido",
-      description: "O item foi removido do carrinho",
-    });
+  const handleRemover = async (id: string) => {
+    try {
+      // Remover do Firebase
+      await deleteDoc(doc(db, "carrinho", id));
+      
+      // Atualizar estado local
+      setCarrinho((prevCarrinho) => prevCarrinho.filter((item) => item.id !== id));
+      
+      toast({
+        title: "Item removido",
+        description: "O item foi removido do carrinho",
+      });
+    } catch (error) {
+      console.error("Erro ao remover item:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o item do carrinho",
+        variant: "destructive",
+      });
+    }
   };
 
   // Função para atualizar a quantidade de um produto
-  const handleQuantidadeChange = (id: string, novaQuantidade: number) => {
+  const handleQuantidadeChange = async (id: string, novaQuantidade: number) => {
     if (novaQuantidade < 1) return;
     
-    setCarrinho((prevCarrinho) =>
-      prevCarrinho.map((produto) =>
-        produto.id === id ? { ...produto, quantidadeAtual: novaQuantidade } : produto
-      )
-    );
+    try {
+      // Atualizar no Firebase
+      const docRef = doc(db, "carrinho", id);
+      await updateDoc(docRef, {
+        quantidade: novaQuantidade,
+        timestamp: new Date().getTime()
+      });
+      
+      // Atualizar estado local
+      setCarrinho((prevCarrinho) =>
+        prevCarrinho.map((produto) =>
+          produto.id === id ? { ...produto, quantidade: novaQuantidade } : produto
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao atualizar quantidade:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a quantidade",
+        variant: "destructive",
+      });
+    }
   };
 
   // Função para aumentar a quantidade
   const handleIncrease = (id: string) => {
-    setCarrinho((prevCarrinho) =>
-      prevCarrinho.map((produto) =>
-        produto.id === id ? { ...produto, quantidadeAtual: produto.quantidadeAtual + 1 } : produto
-      )
-    );
+    const produto = carrinho.find(item => item.id === id);
+    if (produto) {
+      handleQuantidadeChange(id, produto.quantidade + 1);
+    }
   };
 
   // Função para diminuir a quantidade
   const handleDecrease = (id: string) => {
-    setCarrinho((prevCarrinho) =>
-      prevCarrinho.map((produto) =>
-        produto.id === id && produto.quantidadeAtual > 1
-          ? { ...produto, quantidadeAtual: produto.quantidadeAtual - 1 }
-          : produto
-      )
-    );
+    const produto = carrinho.find(item => item.id === id);
+    if (produto && produto.quantidade > 1) {
+      handleQuantidadeChange(id, produto.quantidade - 1);
+    }
   };
 
-  // Função para enviar os itens do carrinho para o Google Forms
-  const handleSubmitToGoogleForms = async () => {
+  // Função para gerar o próximo ID sequencial
+  const getNextRequestId = async () => {
+    try {
+      // Buscar todas as requisições ordenadas pelo ID de forma decrescente
+      const requisicaoRef = collection(db, "requisicoes");
+      const q = query(requisicaoRef, orderBy("requisicao_id", "desc"), limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      // Se não houver requisições, começar com REQ-01
+      if (querySnapshot.empty) {
+        return "REQ-01";
+      }
+      
+      // Obter o último ID
+      const lastReq = querySnapshot.docs[0].data();
+      const lastId = lastReq.requisicao_id || "REQ-00";
+      
+      // Extrair o número e incrementar
+      const match = lastId.match(/REQ-(\d+)/);
+      if (!match) return "REQ-01";
+      
+      const nextNum = parseInt(match[1], 10) + 1;
+      // Formatar com zeros à esquerda (01, 02, etc.)
+      return `REQ-${nextNum.toString().padStart(2, '0')}`;
+    } catch (error) {
+      console.error("Erro ao gerar ID sequencial:", error);
+      // Em caso de erro, gerar um ID baseado em timestamp
+      return `REQ-${new Date().getTime().toString().substr(-6)}`;
+    }
+  };
+
+  // Função para finalizar o pedido enviando para a coleção "requisicoes"
+  const handleFinalizarPedido = async () => {
     if (carrinho.length === 0) {
       toast({
         title: "Carrinho vazio",
@@ -86,67 +187,56 @@ const Carrinho = () => {
       setIsSubmitting(true);
       
       // Obter nome do usuário logado
-      const userName = user?.user_metadata?.nome || "Usuário não identificado";
+      const userName = user?.user_metadata?.nome || user?.email || "Usuário não identificado";
       
-      // Construir os dados para envio
-      const formData = carrinho.map((produto) => ({
-        aa: produto.codigoMaterial,
-        bb: produto.codigoEstoque,
-        cc: produto.nome,
-        dd: produto.unidade,
-        ee: produto.deposito,
-        ff: produto.quantidadeAtual.toString(),
-        gg: produto.quantidadeMinima.toString(),
-        hh: produto.detalhes,
-        ii: produto.imagem,
-        jj: produto.unidadeMedida,
-        kk: produto.valorUnitario.toString(),
-        ll: userName,
-      }));
-
-      // Enviar cada item do carrinho como uma entrada separada
-      for (const data of formData) {
-        // Usando iframe oculto para contornar limitações de CORS com Google Forms
-        const formUrl = new URL("https://docs.google.com/forms/d/e/1FAIpQLSfh_WWxIroAYEEEtnecpwWxk-SzZAQ6vTM99z8bvN1f3vlXmQ/formResponse");
-        
-        formUrl.searchParams.append("entry.950738290", data.aa); // Código Material
-        formUrl.searchParams.append("entry.1093321090", data.bb); // Código Estoque
-        formUrl.searchParams.append("entry.289277253", data.cc); // Nome
-        formUrl.searchParams.append("entry.1094520217", data.dd); // Unidade
-        formUrl.searchParams.append("entry.338874101", data.ee); // Depósito
-        formUrl.searchParams.append("entry.668169828", data.ff); // Quantidade
-        formUrl.searchParams.append("entry.1153735670", data.gg); // Quantidade Mínima
-        formUrl.searchParams.append("entry.150763117", data.hh); // Detalhes
-        formUrl.searchParams.append("entry.251730834", data.ii); // Imagem
-        formUrl.searchParams.append("entry.1457202272", data.jj); // Unidade de Medida
-        formUrl.searchParams.append("entry.917646528", data.kk); // Valor Unitário
-        formUrl.searchParams.append("entry.123456789", data.ll); // Usuário logado
-        
-        // Criar iframe temporário
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        iframe.src = formUrl.toString();
-        
-        // Esperar um pouco para garantir que a solicitação seja enviada
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Limpar iframe
-        document.body.removeChild(iframe);
+      // Gerar o próximo ID sequencial
+      const nextId = await getNextRequestId();
+      
+      // Criar um único documento de requisição com todos os itens
+      const requisicaoData = {
+        requisicao_id: nextId, // Campo com ID sequencial
+        status: "pendente", // Status padrão
+        itens: carrinho.map(item => ({
+          nome: item.nome,
+          codigo_material: item.codigo_material || "",
+          codigo_estoque: item.codigo_estoque || "",
+          quantidade: item.quantidade,
+          valor_unitario: item.valor_unitario,
+          unidade: item.unidade || item.unidade_de_medida || "",
+          deposito: item.deposito || "",
+          prateleira: item.prateleira || "",
+          detalhes: item.detalhes || "",
+          imagem: item.imagem || ""
+        })),
+        usuario: {
+          email: user?.email,
+          nome: userName
+        },
+        data_criacao: serverTimestamp(),
+        valor_total: valorTotal
+      };
+      
+      // Adicionar à coleção de requisições
+      await addDoc(collection(db, "requisicoes"), requisicaoData);
+      
+      // Remover todos os itens do carrinho após a criação da requisição
+      for (const item of carrinho) {
+        await deleteDoc(doc(db, "carrinho", item.id));
       }
 
       toast({
         title: "Sucesso!",
-        description: "Itens enviados com sucesso!",
+        description: `Requisição ${nextId} enviada com sucesso!`,
       });
       
-      setCarrinho([]); // Limpar o carrinho após o envio
+      // Limpar o carrinho após o envio
+      setCarrinho([]);
       
     } catch (error) {
-      console.error("Erro ao enviar dados:", error);
+      console.error("Erro ao finalizar pedido:", error);
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao enviar os itens. Tente novamente mais tarde.",
+        description: "Ocorreu um erro ao enviar a requisição. Tente novamente mais tarde.",
         variant: "destructive",
       });
     } finally {
@@ -156,7 +246,7 @@ const Carrinho = () => {
 
   // Calcular o valor total do carrinho
   const valorTotal = carrinho.reduce(
-    (total, produto) => total + produto.valorUnitario * produto.quantidadeAtual,
+    (total, produto) => total + produto.valor_unitario * produto.quantidade,
     0
   );
 
@@ -170,13 +260,19 @@ const Carrinho = () => {
 
   return (
     <AppLayout title="Carrinho de Compras">
-      <div className="container mx-auto max-w-4xl">
+      {/* Removida a limitação de largura máxima e adicionado padding horizontal */}
+      <div className="w-full h-full px-4 md:px-6">
         <div className="flex items-center gap-2 mb-6">
           <ShoppingCart className="text-primary" />
           <h1 className="text-2xl font-bold">Carrinho de Compras</h1>
         </div>
 
-        {carrinho.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12 bg-muted/30 rounded-lg border">
+            <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
+            <p className="mt-4 text-lg text-muted-foreground">Carregando seu carrinho...</p>
+          </div>
+        ) : carrinho.length === 0 ? (
           <div className="text-center py-12 bg-muted/30 rounded-lg border">
             <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground" />
             <p className="mt-4 text-lg text-muted-foreground">Seu carrinho está vazio</p>
@@ -187,8 +283,8 @@ const Carrinho = () => {
         ) : (
           <div className="space-y-6">
             <div className="bg-card rounded-lg shadow">
-              {/* Cabeçalho da tabela */}
-              <div className="grid grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 font-medium border-b">
+              {/* Cabeçalho da tabela com responsividade melhorada */}
+              <div className="grid grid-cols-[0.5fr,2fr,1fr,1fr,1fr] md:grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 font-medium border-b">
                 <div>Imagem</div>
                 <div>Produto</div>
                 <div className="text-center">Quantidade</div>
@@ -196,20 +292,20 @@ const Carrinho = () => {
                 <div className="text-right">Subtotal</div>
               </div>
 
-              {/* Itens do carrinho */}
+              {/* Itens do carrinho com responsividade melhorada */}
               {carrinho.map((produto) => (
-                <div key={produto.id} className="grid grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 items-center border-b">
+                <div key={produto.id} className="grid grid-cols-[0.5fr,2fr,1fr,1fr,1fr] md:grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 items-center border-b">
                   <div>
                     <img
                       src={produto.imagem || "/placeholder.svg"}
                       alt={produto.nome}
-                      className="w-16 h-16 object-cover rounded"
+                      className="w-12 h-12 md:w-16 md:h-16 object-cover rounded"
                     />
                   </div>
                   <div>
                     <div className="font-medium">{produto.nome}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Código: {produto.codigoMaterial} | Depósito: {produto.deposito}
+                      Código: {produto.codigo_material || "N/A"} | Depósito: {produto.deposito || "N/A"}
                     </div>
                     <Button
                       variant="ghost"
@@ -228,14 +324,14 @@ const Carrinho = () => {
                         size="icon"
                         className="h-8 w-8 p-0 rounded-none"
                         onClick={() => handleDecrease(produto.id)}
-                        disabled={produto.quantidadeAtual <= 1}
+                        disabled={produto.quantidade <= 1}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
                       <input
                         type="number"
                         min="1"
-                        value={produto.quantidadeAtual}
+                        value={produto.quantidade}
                         onChange={(e) => handleQuantidadeChange(produto.id, parseInt(e.target.value, 10) || 1)}
                         className="w-10 text-center border-none focus:ring-0 bg-transparent"
                       />
@@ -251,10 +347,10 @@ const Carrinho = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    {formatCurrency(produto.valorUnitario)}
+                    {formatCurrency(produto.valor_unitario)}
                   </div>
                   <div className="text-right font-medium">
-                    {formatCurrency(produto.valorUnitario * produto.quantidadeAtual)}
+                    {formatCurrency(produto.valor_unitario * produto.quantidade)}
                   </div>
                 </div>
               ))}
@@ -269,15 +365,21 @@ const Carrinho = () => {
             </div>
 
             {/* Botões de ação */}
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-col sm:flex-row justify-between gap-4">
               <Button variant="outline" onClick={() => navigate("/produtos")}>
                 Continuar Comprando
               </Button>
               <Button 
-                onClick={handleSubmitToGoogleForms}
+                onClick={handleFinalizarPedido}
                 disabled={isSubmitting || carrinho.length === 0}
+                className="sm:ml-auto"
               >
-                {isSubmitting ? "Enviando..." : "Finalizar Pedido"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : "Finalizar Pedido"}
               </Button>
             </div>
           </div>

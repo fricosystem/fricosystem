@@ -1,204 +1,173 @@
-import React, { useState } from "react";
-import { useProducts, Product } from "@/contexts/ProductContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import ProductCard from "./ProductCard";
+import { Product } from '@/types/Product';
+import { ShelfSlot } from '@/components/ShelfSlot';
+import { useCallback, useState } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Truck, Warehouse } from 'lucide-react';
 
 interface WarehouseGridProps {
-  draggedProduct: Product | null;
-  setDraggedProduct: (product: Product | null) => void;
   products: Product[];
+  onUpdateProductPosition: (product: Product, row: number, column: number) => void;
+  currentStock: string;
 }
 
-// Layout estático do armazém - isso poderia ser configurável futuramente
-const WAREHOUSE_LAYOUT = {
-  rows: 5,
-  cols: 5,
-  areas: [
-    { id: "A1", label: "A1" },
-    { id: "A2", label: "A2" },
-    { id: "A3", label: "A3" },
-    { id: "A4", label: "A4" },
-    { id: "A5", label: "A5" },
-    { id: "B1", label: "B1" },
-    { id: "B2", label: "B2" },
-    { id: "B3", label: "B3" },
-    { id: "B4", label: "B4" },
-    { id: "B5", label: "B5" },
-    { id: "C1", label: "C1" },
-    { id: "C2", label: "C2" },
-    { id: "C3", label: "C3" },
-    { id: "C4", label: "C4" },
-    { id: "C5", label: "C5" },
-    { id: "D1", label: "D1" },
-    { id: "D2", label: "D2" },
-    { id: "D3", label: "D3" },
-    { id: "D4", label: "D4" },
-    { id: "D5", label: "D5" },
-    { id: "E1", label: "E1" },
-    { id: "E2", label: "E2" },
-    { id: "E3", label: "E3" },
-    { id: "E4", label: "E4" },
-    { id: "E5", label: "E5" },
-  ],
-};
-
-const WarehouseGrid: React.FC<WarehouseGridProps> = ({
-  draggedProduct,
-  setDraggedProduct,
-  products,
-}) => {
-  const { updateProductLocation } = useProducts();
-  const [customLocation, setCustomLocation] = useState("");
-  const [showCustomInput, setShowCustomInput] = useState(false);
-  const [updatingLocation, setUpdatingLocation] = useState(false);
-
-  const getProductsInLocation = (locationId: string) => {
-    return products.filter(p => p.location === locationId);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = async (e: React.DragEvent, locationId: string) => {
-    e.preventDefault();
-    setUpdatingLocation(true);
+export function WarehouseGrid({ products, onUpdateProductPosition, currentStock }: WarehouseGridProps) {
+  const [selectedRua, setSelectedRua] = useState<number>(1);
+  
+  // Configuração de endereçamento
+  const ruas = 6; // 6 ruas
+  const andares = 5; // 5 andares
+  const paletesPorAndar = 5; // 5 paletes por andar
+  
+  // Filtramos apenas os produtos do estoque atual
+  const productsInCurrentStock = products.filter(product => 
+    product.prateleira?.startsWith(currentStock)
+  );
+  
+  // Método para encontrar um produto em uma posição específica
+  const findProductAtPosition = useCallback((rua: number, andar: number, palete: number) => {
+    const positionKey = `${currentStock} - Rua ${rua.toString().padStart(2, '0')} - A${andar}P${palete}`;
+    return products.find(product => product.prateleira === positionKey) || null;
+  }, [products, currentStock]);
+  
+  // Manipulador para quando um produto é movido para um slot
+  const handleProductDrop = useCallback((product: Product, rua: number, andar: number, palete: number) => {
+    // Verificar se o produto já está na posição alvo
+    const currentShelf = product.prateleira;
+    const newShelf = `${currentStock} - Rua ${rua.toString().padStart(2, '0')} - A${andar}P${palete}`;
     
-    try {
-      if (!draggedProduct) {
-        const jsonData = e.dataTransfer.getData("application/json");
-        if (jsonData) {
-          try {
-            const parsedProduct = JSON.parse(jsonData) as Product;
-            console.log("Produto arrastado recuperado do JSON:", parsedProduct);
-            await updateProductLocation(parsedProduct.id, locationId);
-          } catch (err) {
-            console.error("Erro ao analisar produto arrastado:", err);
-          }
-        }
-        return;
+    if (currentShelf === newShelf) {
+      // O produto já está na posição alvo, não fazer nada
+      return false;
+    }
+    
+    // Verificar se já existe um produto na posição alvo
+    const existingProduct = findProductAtPosition(rua, andar, palete);
+    if (existingProduct) {
+      // Já existe um produto na posição
+      return false;
+    }
+    
+    // Converter para o formato row, column para compatibilidade com o handler
+    const row = ((andar - 1) * paletesPorAndar) + palete;
+    onUpdateProductPosition(product, row, rua);
+    return true;
+  }, [findProductAtPosition, onUpdateProductPosition, currentStock, paletesPorAndar]);
+  
+  // Renderizar o grid de uma rua específica
+  const renderRuaGrid = () => {
+    const grid = [];
+    
+    // Para cada andar (de cima para baixo)
+    for (let andar = andares; andar >= 1; andar--) {
+      const rowSlots = [];
+      
+      // Para cada palete no andar
+      for (let palete = 1; palete <= paletesPorAndar; palete++) {
+        const product = findProductAtPosition(selectedRua, andar, palete);
+        rowSlots.push(
+          <ShelfSlot
+            key={`${selectedRua}-${andar}-${palete}`}
+            row={((andar - 1) * paletesPorAndar) + palete}
+            column={selectedRua}
+            product={product}
+            onProductDrop={(prod) => handleProductDrop(prod, selectedRua, andar, palete)}
+            positionLabel={`A${andar}P${palete}`}
+          />
+        );
       }
       
-      console.log("Movendo produto para localização:", locationId);
-      await updateProductLocation(draggedProduct.id, locationId);
-      setDraggedProduct(null);
-    } catch (error) {
-      console.error("Erro ao atualizar localização:", error);
-    } finally {
-      setUpdatingLocation(false);
+      grid.push(
+        <motion.div 
+          key={andar} 
+          className="grid grid-cols-6 gap-1 mb-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 * (andares - andar), duration: 0.3 }}
+        >
+          <div className="flex items-center justify-center">
+            <div className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">
+              Andar {andar}
+            </div>
+          </div>
+          <div className="col-span-5 grid grid-cols-5 gap-1">
+            {rowSlots}
+          </div>
+        </motion.div>
+      );
     }
-  };
-
-  const handleCustomLocationSubmit = async () => {
-    if (draggedProduct && customLocation.trim()) {
-      setUpdatingLocation(true);
-      try {
-        console.log("Atualizando para localização personalizada:", customLocation);
-        await updateProductLocation(draggedProduct.id, customLocation.trim());
-        setDraggedProduct(null);
-        setCustomLocation("");
-        setShowCustomInput(false);
-      } catch (error) {
-        console.error("Erro ao atualizar localização personalizada:", error);
-      } finally {
-        setUpdatingLocation(false);
-      }
-    }
-  };
-
-  const handleCustomLocationCancel = () => {
-    setDraggedProduct(null);
-    setCustomLocation("");
-    setShowCustomInput(false);
+    
+    return grid;
   };
 
   return (
-    <div className="space-y-4">
-      {updatingLocation && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-background p-6 rounded-lg shadow-lg flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
-            <p className="text-lg font-medium">Atualizando localização...</p>
-            <p className="text-muted-foreground">Isso pode levar alguns segundos</p>
-          </div>
+    <motion.div 
+      className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-3 h-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center">
+          <Warehouse className="mr-2 text-blue-500 dark:text-blue-400" size={20} />
+          <h2 className="text-lg font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
+            {currentStock.replace('estoque', 'Estoque ')}
+          </h2>
         </div>
-      )}
-
-      {showCustomInput && (
-        <div className="bg-muted/30 p-4 rounded-md mb-4">
-          <h3 className="font-medium mb-2">Localização Personalizada</h3>
-          <div className="flex gap-2">
-            <Input
-              value={customLocation}
-              onChange={(e) => setCustomLocation(e.target.value)}
-              placeholder="Digite a localização (ex: F7)"
-              className="flex-1"
-            />
-            <Button onClick={handleCustomLocationSubmit} disabled={updatingLocation}>
-              Salvar
-            </Button>
-            <Button variant="outline" onClick={handleCustomLocationCancel} disabled={updatingLocation}>
-              Cancelar
-            </Button>
-          </div>
+        <div className="text-xs text-gray-600 dark:text-gray-300 font-medium px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center">
+          <Truck className="mr-1 text-gray-500 dark:text-gray-400" size={14} />
+          6 Ruas × 5 Andares × 5 Paletes
         </div>
-      )}
-
-      {!showCustomInput && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowCustomInput(true)}
-          className="mb-4"
-          disabled={updatingLocation}
-        >
-          + Adicionar Localização Personalizada
-        </Button>
-      )}
-
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-        {WAREHOUSE_LAYOUT.areas.map((area) => {
-          const productsHere = getProductsInLocation(area.id);
-          
-          return (
-            <div 
-              key={area.id}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, area.id)}
-              className={`
-                border-2 rounded-md p-2 min-h-[100px] flex flex-col
-                ${draggedProduct ? "border-dashed border-primary/50" : "border-muted"}
-                ${productsHere.length > 0 ? "bg-primary/5" : ""}
-              `}
-            >
-              <div className="font-semibold text-center bg-muted/30 rounded py-1 mb-2">
-                {area.label}
-              </div>
-              
-              <div className="flex-1 flex flex-col gap-2">
-                {productsHere.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center mt-4">
-                    Vazio
-                  </p>
-                ) : (
-                  productsHere.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      isDraggable
-                      setDraggedProduct={setDraggedProduct}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
       </div>
-    </div>
+      
+      <div className="mb-4">
+        <label className="text-sm font-medium mb-1 block text-gray-700 dark:text-gray-300">Selecione a Rua:</label>
+        <Select 
+          value={selectedRua.toString()} 
+          onValueChange={(value) => setSelectedRua(parseInt(value))}
+        >
+          <SelectTrigger className="w-full max-w-xs bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <SelectValue placeholder="Selecione uma rua" />
+          </SelectTrigger>
+          <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            {Array.from({ length: ruas }, (_, i) => i + 1).map((rua) => (
+              <SelectItem key={rua} value={rua.toString()}>
+                Rua {rua.toString().padStart(2, '0')}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-inner border border-gray-100 dark:border-gray-700">
+        <div className="flex items-center mb-3">
+          <h3 className="text-base font-medium text-gray-800 dark:text-gray-200">
+            Rua {selectedRua.toString().padStart(2, '0')}
+          </h3>
+          <span className="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 rounded-full text-xs">
+            {productsInCurrentStock.filter(p => p.prateleira?.includes(`Rua ${selectedRua.toString().padStart(2, '0')}`)).length} produtos
+          </span>
+        </div>
+        
+        <div className="grid grid-cols-6 border-b border-gray-200 dark:border-gray-700 pb-1 mb-2">
+          <div className="col-span-1"></div>
+          <div className="col-span-5 grid grid-cols-5 gap-1">
+            {Array.from({ length: paletesPorAndar }, (_, i) => i + 1).map((palete) => (
+              <div key={palete} className="text-center text-xs font-medium text-gray-700 dark:text-gray-300">
+                P{palete}
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {renderRuaGrid()}
+      </div>
+    </motion.div>
   );
-};
-
-export default WarehouseGrid;
+}
