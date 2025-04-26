@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -115,6 +114,11 @@ export const useCarrinho = () => {
     navigate('/carrinho', { state: { carrinho: itensCarrinho } });
   };
 
+  // Calcular o total de itens no carrinho (soma das quantidades)
+  const calcularTotalItens = () => {
+    return itensCarrinho.reduce((total, item) => total + item.quantidadeAtual, 0);
+  };
+
   return {
     itensCarrinho,
     adicionarAoCarrinho,
@@ -122,7 +126,8 @@ export const useCarrinho = () => {
     atualizarQuantidade,
     limparCarrinho,
     irParaCarrinho,
-    totalItens: itensCarrinho.length,
+    // Aqui está a principal modificação: agora somamos as quantidades de cada item
+    totalItens: calcularTotalItens(),
     valorTotal: itensCarrinho.reduce(
       (total, item) => total + item.valorUnitario * item.quantidadeAtual,
       0

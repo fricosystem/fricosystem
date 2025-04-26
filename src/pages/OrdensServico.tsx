@@ -7,18 +7,17 @@ import AppLayout from "@/layouts/AppLayout";
 const OrdensServico = () => {
   return (
     <AppLayout title="Ordens de Serviço">
-      <div className="w-full">
+      <div className="container mx-auto py-6">
+        <h1 className="text-3xl font-bold mb-6 text-center">Ordens de Serviço</h1>
         <Tabs defaultValue="nova" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="nova">Nova Ordem</TabsTrigger>
-            <TabsTrigger value="lista">Listar Ordens</TabsTrigger>
+            <TabsTrigger value="listar">Listar Ordens</TabsTrigger>
           </TabsList>
-          
           <TabsContent value="nova">
             <NovaOrdemServico />
           </TabsContent>
-          
-          <TabsContent value="lista">
+          <TabsContent value="listar">
             <ListaOrdensServico />
           </TabsContent>
         </Tabs>

@@ -87,13 +87,13 @@ const Login = () => {
       <Card className="w-full max-w-md border-gray-800 bg-gray-900/50 backdrop-blur-xl">
         <CardHeader className="space-y-1">
           <div className="flex flex-col items-center space-y-2 mb-4">
-            <img 
-              src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" 
-              alt="Frico Logo" 
-              className="h-20 mb-2"
-            />
+              <img 
+                src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" 
+                alt="Frico Logo" 
+                className="h-20 mb-2 rounded-lg shadow-md"
+              />
             <CardTitle className="text-2xl font-bold text-gray-100">
-              {isLogin ? "Bem-vindo ao Sistema Fricó" : "Criar Conta Fricó"}
+              {isLogin ? "Bem-vindo ao Sistema Fricó Master" : "Criar Conta Fricó"}
             </CardTitle>
             <p className="text-sm text-gray-400">
               {isLogin ? "Faça login para continuar" : "Preencha seus dados para se cadastrar"}

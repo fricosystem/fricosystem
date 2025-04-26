@@ -5,7 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Edit, Trash2, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import AdicionarAoCarrinho from "./AdicionarAoCarrinho";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { db } from "@/firebase/firebase"; // Certifique-se de importar a referência ao seu Firestore
+import { doc, getDoc } from "firebase/firestore"; // Importe as funções necessárias
 
 // Interface para os produtos do Firebase - compatível com ambos os componentes
 export interface Produto {
@@ -52,7 +54,55 @@ const ProdutoCard = ({
   onAddToCart 
 }: ProdutoCardProps) => {
   const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null);
+  const [unidadeMedida, setUnidadeMedida] = useState<string>("");
   const { user } = useAuth();
+
+  // Buscar unidade_de_medida diretamente do Firestore se não estiver no objeto
+  useEffect(() => {
+    
+    // Se o produto tem um ID mas não tem unidade_de_medida, buscamos do Firestore
+    const fetchUnidadeMedida = async () => {
+      if (produto.id && !produto.unidade_de_medida) {
+        try {
+          // Usamos a coleção 'produtos' - ajuste conforme necessário
+          const docRef = doc(db, "produtos", produto.id);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            if (data.unidade_de_medida) {
+              setUnidadeMedida(data.unidade_de_medida);
+            } else {
+              // Tentar extrair da string do nome se contiver KG, UN, etc.
+              const medidaNoNome = extrairUnidadeMedidaDoNome(produto.nome);
+              if (medidaNoNome) {
+                setUnidadeMedida(medidaNoNome);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao buscar unidade de medida:", error);
+        }
+      }
+    };
+    
+    fetchUnidadeMedida();
+  }, [produto]);
+
+  // Função para extrair unidade de medida do nome se estiver presente
+  const extrairUnidadeMedidaDoNome = (nome: string): string => {
+    const unidadesPossiveis = ["KG", "G", "UN", "L", "ML", "CX", "PCT", "TN"];
+    const nomeUpper = nome.toUpperCase();
+    
+    for (const unidade of unidadesPossiveis) {
+      if (nomeUpper.includes(` ${unidade}`) || nomeUpper.endsWith(` ${unidade}`)) {
+        return unidade;
+      }
+    }
+    
+    return "";
+  };
 
   // Compatibilidade com os diferentes formatos de dados
   const quantidade = produto.quantidadeAtual !== undefined ? produto.quantidadeAtual : produto.quantidade || 0;
@@ -60,7 +110,11 @@ const ProdutoCard = ({
   const codigo = produto.codigo || produto.codigo_material || "";
   const codigoEstoque = produto.codigoEstoque || produto.codigo_estoque || "";
   const valorUnitario = produto.valorUnitario !== undefined ? produto.valorUnitario : produto.valor_unitario || 0;
-  const unidade = produto.unidade || produto.unidade_de_medida || "";
+  const unidade = produto.unidade || ""; // Unidade da empresa (FR01, FR02, etc)
+  
+  // Usar o valor do estado ou o valor do produto se disponível
+  const unidade_de_medida = produto.unidade_de_medida || unidadeMedida || extrairUnidadeMedidaDoNome(produto.nome);
+  
   const fornecedor = produto.fornecedor || produto.fornecedor_atual || "";
   const dataVencimento = produto.dataVencimento || produto.data_vencimento;
   const dataCriacao = produto.dataHora || produto.data_criacao;
@@ -100,6 +154,12 @@ const ProdutoCard = ({
     }
   };
 
+  // Função para exibir a quantidade com a unidade adequada
+  const formatQuantidade = (qtd: number, un: string): string => {
+    if (!un) return `${qtd}`;
+    return `${qtd} ${un}`;
+  };
+
   // Handler para quando o item é adicionado ao carrinho com sucesso
   const handleCartSuccess = () => {
     if (onAddToCart) {
@@ -110,22 +170,21 @@ const ProdutoCard = ({
   return (
     <>
       <Card className="overflow-hidden h-full flex flex-col">
-        <div className="relative h-40 bg-muted">
+        {/* Aumentando a altura da imagem de h-40 para h-56 */}
+        <div className="relative h-56 bg-muted">
           <img
             src={produto.imagem || "/placeholder.svg"}
             alt={produto.nome}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
           />
-          <div className="absolute top-2 right-2 flex flex-col gap-1">
-            {isLowStock && (
-              <Badge variant="destructive">Estoque Baixo</Badge>
-            )}
+          {/* Movido o botão de informações para o canto superior direito */}
+          <div className="absolute top-2 right-2">
             <Dialog>
               <DialogTrigger asChild>
                 <Button 
                   variant="outline" 
                   size="icon"
-                  className="h-10 w-10 rounded-full dbg-black/90 hover:bg-black/90 dark:bg-black/20"
+                  className="h-10 w-10 rounded-full bg-black/10 hover:bg-black/20 dark:bg-black/20"
                 >
                   <Info className="h-4 w-4" />
                 </Button>
@@ -151,16 +210,20 @@ const ProdutoCard = ({
                     <div>
                       <h4 className="font-semibold text-sm text-gray-500">Quantidade</h4>
                       <p className={isLowStock ? "text-destructive font-semibold" : ""}>
-                        {quantidade} {unidade}
+                        {formatQuantidade(quantidade, unidade_de_medida)}
                       </p>
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm text-gray-500">Quantidade Mínima</h4>
-                      <p>{quantidadeMinima} {unidade}</p>
+                      <p>{formatQuantidade(quantidadeMinima, unidade_de_medida)}</p>
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm text-gray-500">Valor Unitário</h4>
                       <p>{formatCurrency(valorUnitario)}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm text-gray-500">Unidade de Medida</h4>
+                      <p>{unidade_de_medida || "Não informado"}</p>
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm text-gray-500">Unidade</h4>
@@ -222,12 +285,19 @@ const ProdutoCard = ({
               </DialogContent>
             </Dialog>
           </div>
+          
+          {/* Badge de estoque baixo movido para a parte inferior direita da imagem */}
+          {isLowStock && (
+            <div className="absolute bottom-2 right-2">
+              <Badge variant="destructive">Estoque Baixo</Badge>
+            </div>
+          )}
         </div>
         <CardContent className="pt-4 flex-grow">
-          <h3 className="font-semibold text-base line-clamp-1 mb-2">{produto.nome}</h3>
+          <h3 className="font-semibold text-base line-clamp-2 mb-2">{produto.nome}</h3>
 
-          {/* Informações básicas sempre visíveis */}
-          <div className="space-y-1 text-sm mb-2">
+          {/* Informações básicas sempre visíveis - modificado para mostrar quantidade com unidade de medida */}
+          <div className="space-y-2 text-sm mb-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Cód. Material:</span>
               <span className="font-medium">{codigo}</span>
@@ -235,7 +305,7 @@ const ProdutoCard = ({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Qtd:</span>
               <span className={isLowStock ? "text-destructive font-semibold" : "font-medium"}>
-                {quantidade} {unidade}
+                {formatQuantidade(quantidade, unidade_de_medida)}
               </span>
             </div>
             <div className="flex justify-between">

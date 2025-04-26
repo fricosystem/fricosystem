@@ -371,7 +371,7 @@ const AppSidebar = () => {
   };
 
   return (
-    <Sidebar className={`${firebaseClasses.sidebar} border-r border-[#3e4a5e]`}>
+    <Sidebar className="border-r border-[#2b3341]">
       <SidebarContent>
       <style>
         {`

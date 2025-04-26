@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -183,7 +183,7 @@ const Produtos = () => {
           Adicionar Produto
         </Button>
       </div>
-
+  
       <div className="mb-4 flex items-center space-x-2">
         <div className="relative flex-1">
           <Input
@@ -196,7 +196,7 @@ const Produtos = () => {
           <SearchIcon className="h-5 w-5 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
         </div>
       </div>
-
+  
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 mb-4 rounded-md">
           <h3 className="font-medium">Erro ao carregar dados</h3>
@@ -206,18 +206,20 @@ const Produtos = () => {
           </p>
         </div>
       )}
-
+  
       {produtosEmBaixoEstoque.length > 0 && (
-        <AlertaBaixoEstoque produtos={produtosEmBaixoEstoque} />
+        <div className="mb-8">
+          <AlertaBaixoEstoque produtos={produtosEmBaixoEstoque} />
+        </div>
       )}
-
+  
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {Array(8)
             .fill(0)
             .map((_, index) => (
               <Card key={index} className="overflow-hidden">
-                <div className="h-48 bg-muted">
+                <div className="h-56 bg-muted">
                   <Skeleton className="h-full w-full" />
                 </div>
                 <div className="p-4 space-y-2">
@@ -240,7 +242,7 @@ const Produtos = () => {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {produtosFiltrados.map((produto) => (
             <ProdutoCard
               key={produto.id}
@@ -252,7 +254,7 @@ const Produtos = () => {
           ))}
         </div>
       )}
-
+  
       <AddProdutoModal
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}

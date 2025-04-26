@@ -2,12 +2,31 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Minus, Plus, Trash2, Loader2 } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Trash2, Loader2, Search, User, ChevronDown, AlertTriangle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, query, where, getDocs, updateDoc, doc, deleteDoc, serverTimestamp, addDoc, orderBy, limit } from "firebase/firestore";
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  updateDoc, 
+  doc, 
+  deleteDoc, 
+  serverTimestamp, 
+  addDoc, 
+  orderBy, 
+  limit 
+} from "firebase/firestore";
 import { db } from "@/firebase/firebase";
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ProdutoCarrinho {
   id: string;
@@ -27,12 +46,27 @@ interface ProdutoCarrinho {
   timestamp?: number;
 }
 
+interface Usuario {
+  id: string;
+  nome: string;
+  cargo: string;
+  email?: string;
+}
+
 const Carrinho = () => {
   const navigate = useNavigate();
   const [carrinho, setCarrinho] = useState<ProdutoCarrinho[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  
+  // Estados para o dropdown de solicitantes
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [solicitanteSelecionado, setSolicitanteSelecionado] = useState<Usuario | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoadingUsuarios, setIsLoadingUsuarios] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [tentouEnviarSemSolicitante, setTentouEnviarSemSolicitante] = useState(false);
 
   // Carregar itens do carrinho do Firebase
   useEffect(() => {
@@ -72,6 +106,46 @@ const Carrinho = () => {
     };
 
     carregarCarrinho();
+  }, [user]);
+
+  // Carregar lista de usuários do Firestore
+  useEffect(() => {
+    const carregarUsuarios = async () => {
+      try {
+        setIsLoadingUsuarios(true);
+        const usuariosRef = collection(db, "usuarios");
+        const usuariosSnapshot = await getDocs(usuariosRef);
+        
+        const listaUsuarios: Usuario[] = usuariosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data() as Omit<Usuario, 'id'>
+        }));
+        
+        // Ordenar usuários por nome
+        listaUsuarios.sort((a, b) => a.nome.localeCompare(b.nome));
+        
+        setUsuarios(listaUsuarios);
+        
+        // Se o usuário atual estiver na lista, selecioná-lo automaticamente
+        if (user && user.email) {
+          const usuarioAtual = listaUsuarios.find(u => u.email === user.email);
+          if (usuarioAtual) {
+            setSolicitanteSelecionado(usuarioAtual);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao carregar usuários:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar a lista de solicitantes",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingUsuarios(false);
+      }
+    };
+
+    carregarUsuarios();
   }, [user]);
 
   // Função para remover um produto do carrinho
@@ -141,6 +215,22 @@ const Carrinho = () => {
     }
   };
 
+  // Função para filtrar usuários com base no termo de pesquisa
+  const usuariosFiltrados = usuarios.filter(usuario => 
+    usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    usuario.cargo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Função para selecionar um solicitante
+  const handleSelecionarSolicitante = (usuario: Usuario) => {
+    setSolicitanteSelecionado(usuario);
+    setIsDropdownOpen(false);
+    // Resetar alerta de erro quando um solicitante é selecionado
+    if (tentouEnviarSemSolicitante) {
+      setTentouEnviarSemSolicitante(false);
+    }
+  };
+
   // Função para gerar o próximo ID sequencial
   const getNextRequestId = async () => {
     try {
@@ -172,8 +262,8 @@ const Carrinho = () => {
     }
   };
 
-  // Função para finalizar o pedido enviando para a coleção "requisicoes"
-  const handleFinalizarPedido = async () => {
+  // Função para verificar os requisitos antes de enviar o pedido
+  const handlePreFinalizarPedido = () => {
     if (carrinho.length === 0) {
       toast({
         title: "Carrinho vazio",
@@ -183,6 +273,28 @@ const Carrinho = () => {
       return;
     }
 
+    if (!solicitanteSelecionado) {
+      // Marcar que tentou enviar sem selecionar solicitante para exibir o alerta
+      setTentouEnviarSemSolicitante(true);
+      
+      // Focar no dropdown de solicitante abrindo-o
+      setIsDropdownOpen(true);
+      
+      toast({
+        title: "Solicitante obrigatório",
+        description: "É necessário selecionar um solicitante para finalizar o pedido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Se passar nas validações, prosseguir com o envio
+    handleFinalizarPedido();
+  };
+
+  // Função para finalizar o pedido enviando para a coleção "requisicoes"
+  const handleFinalizarPedido = async () => {
+    // Esta função só será chamada se houver um solicitante selecionado
     try {
       setIsSubmitting(true);
       
@@ -211,6 +323,13 @@ const Carrinho = () => {
         usuario: {
           email: user?.email,
           nome: userName
+        },
+        // Adicionar informações do solicitante (garantido não ser null neste ponto)
+        solicitante: {
+          id: solicitanteSelecionado!.id,
+          nome: solicitanteSelecionado!.nome,
+          cargo: solicitanteSelecionado!.cargo,
+          email: solicitanteSelecionado!.email || ""
         },
         data_criacao: serverTimestamp(),
         valor_total: valorTotal
@@ -266,7 +385,7 @@ const Carrinho = () => {
           <ShoppingCart className="text-primary" />
           <h1 className="text-2xl font-bold">Carrinho de Compras</h1>
         </div>
-
+  
         {isLoading ? (
           <div className="text-center py-12 bg-muted/30 rounded-lg border">
             <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
@@ -282,6 +401,94 @@ const Carrinho = () => {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Seletor de Solicitante */}
+            <div className={`bg-card rounded-lg shadow p-4 ${tentouEnviarSemSolicitante && !solicitanteSelecionado ? 'border-2 border-destructive' : ''}`}>
+              <h2 className="text-lg font-medium mb-3 flex items-center">
+                Solicitante
+                <span className="text-destructive ml-1">*</span>
+              </h2>
+              
+              {tentouEnviarSemSolicitante && !solicitanteSelecionado && (
+                <Alert variant="destructive" className="mb-3">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    É necessário selecionar um solicitante para finalizar o pedido.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <Popover open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant={tentouEnviarSemSolicitante && !solicitanteSelecionado ? "destructive" : "outline"}
+                    className="w-full justify-between"
+                    disabled={isLoadingUsuarios}
+                  >
+                    {isLoadingUsuarios ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <span>Carregando solicitantes...</span>
+                        <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                      </>
+                    ) : solicitanteSelecionado ? (
+                      <>
+                        <div className="flex items-center">
+                          <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <div className="text-left">
+                            <p className="font-medium">{solicitanteSelecionado.nome}</p>
+                            <p className="text-xs text-muted-foreground">{solicitanteSelecionado.cargo}</p>
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                      </>
+                    ) : (
+                      <>
+                        <span>Selecione um solicitante</span>
+                        <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                      </>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="start">
+                  <div className="p-3 border-b">
+                    <div className="flex items-center gap-2">
+                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar solicitante..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="h-8"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {usuariosFiltrados.length === 0 ? (
+                      <div className="p-3 text-center text-sm text-muted-foreground">
+                        Nenhum solicitante encontrado
+                      </div>
+                    ) : (
+                      usuariosFiltrados.map((usuario) => (
+                        <div
+                          key={usuario.id}
+                          className={`flex flex-col p-3 cursor-pointer hover:bg-muted/50 ${
+                            solicitanteSelecionado?.id === usuario.id ? "bg-muted" : ""
+                          }`}
+                          onClick={() => handleSelecionarSolicitante(usuario)}
+                        >
+                          <span className="font-medium">{usuario.nome}</span>
+                          <span className="text-xs text-muted-foreground">{usuario.cargo}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground mt-2">
+                * Campo obrigatório
+              </p>
+            </div>
+  
             <div className="bg-card rounded-lg shadow">
               {/* Cabeçalho da tabela com responsividade melhorada */}
               <div className="grid grid-cols-[0.5fr,2fr,1fr,1fr,1fr] md:grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 font-medium border-b">
@@ -291,7 +498,7 @@ const Carrinho = () => {
                 <div className="text-right">Preço Unit.</div>
                 <div className="text-right">Subtotal</div>
               </div>
-
+  
               {/* Itens do carrinho com responsividade melhorada */}
               {carrinho.map((produto) => (
                 <div key={produto.id} className="grid grid-cols-[0.5fr,2fr,1fr,1fr,1fr] md:grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 items-center border-b">
@@ -354,7 +561,7 @@ const Carrinho = () => {
                   </div>
                 </div>
               ))}
-
+  
               {/* Rodapé do carrinho com total */}
               <div className="p-4 bg-muted/20">
                 <div className="flex justify-between items-center">
@@ -363,14 +570,14 @@ const Carrinho = () => {
                 </div>
               </div>
             </div>
-
+  
             {/* Botões de ação */}
             <div className="flex flex-col sm:flex-row justify-between gap-4">
               <Button variant="outline" onClick={() => navigate("/produtos")}>
                 Continuar Comprando
               </Button>
               <Button 
-                onClick={handleFinalizarPedido}
+                onClick={handlePreFinalizarPedido}
                 disabled={isSubmitting || carrinho.length === 0}
                 className="sm:ml-auto"
               >

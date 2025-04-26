@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { collection, query, getDocs, Timestamp, orderBy, doc, updateDoc } from "firebase/firestore";
-import { db } from "../firebase/firebase";
+import { db } from "@/firebase/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { format } from "date-fns";
 import {
   Table,
@@ -36,15 +37,56 @@ interface OrdemServico {
     outro: boolean;
   };
   responsavelManutencao: string;
+  tipoManutencao: string;
+  solucaoAplicada: string;
+  criadoPor: string;
   criadoEm: Timestamp;
   status: string;
 }
 
+interface Usuario {
+  id: string;
+  nome: string;
+  cargo: string;
+  email: string;
+  ativo: string;
+}
+
 const ListaOrdensServico = () => {
+  const { user } = useAuth();
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrdem, setSelectedOrdem] = useState<OrdemServico | null>(null);
+
+  // Carregar usuários para exibir o nome do responsável
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      try {
+        const usuariosRef = collection(db, "usuarios");
+        const querySnapshot = await getDocs(usuariosRef);
+        
+        const usuariosData: Usuario[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          usuariosData.push({
+            id: doc.id,
+            nome: data.nome || "",
+            cargo: data.cargo || "",
+            email: data.email || "",
+            ativo: data.ativo || "",
+          });
+        });
+        
+        setUsuarios(usuariosData);
+      } catch (error) {
+        console.error("Erro ao buscar usuários:", error);
+      }
+    };
+
+    fetchUsuarios();
+  }, []);
 
   const fetchOrdens = async () => {
     setLoading(true);
@@ -80,10 +122,11 @@ const ListaOrdensServico = () => {
   const filteredOrdens = ordens.filter((ordem) => {
     const searchValue = searchTerm.toLowerCase();
     return (
-      ordem.setor.toLowerCase().includes(searchValue) ||
-      ordem.equipamento.toLowerCase().includes(searchValue) ||
-      ordem.descricaoMotivo.toLowerCase().includes(searchValue) ||
-      ordem.responsavelManutencao.toLowerCase().includes(searchValue)
+      ordem.setor?.toLowerCase().includes(searchValue) ||
+      ordem.equipamento?.toLowerCase().includes(searchValue) ||
+      ordem.descricaoMotivo?.toLowerCase().includes(searchValue) ||
+      getResponsavelNome(ordem.responsavelManutencao)?.toLowerCase().includes(searchValue) ||
+      ordem.tipoManutencao?.toLowerCase().includes(searchValue)
     );
   });
 
@@ -120,16 +163,32 @@ const ListaOrdensServico = () => {
     }
   };
 
+  const getResponsavelNome = (responsavelId: string) => {
+    const usuario = usuarios.find(u => u.id === responsavelId);
+    return usuario ? `${usuario.nome} (${usuario.cargo})` : responsavelId || "Não informado";
+  };
+
+  const getOrigensParada = (origens: { automatizacao: boolean; terceiros: boolean; eletrica: boolean; mecanica: boolean; outro: boolean; }) => {
+    const tipos = [];
+    if (origens.automatizacao) tipos.push("Automatização");
+    if (origens.terceiros) tipos.push("Terceiros");
+    if (origens.eletrica) tipos.push("Elétrica");
+    if (origens.mecanica) tipos.push("Mecânica");
+    if (origens.outro) tipos.push("Outro");
+    return tipos;
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center">Lista de Ordens de Serviço</CardTitle>
-        <div className="mt-4">
+        <div className="mt-4 relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por setor, equipamento, descrição..."
+            placeholder="Buscar por setor, equipamento, responsável..."
             value={searchTerm}
             onChange={handleSearch}
-            className="max-w-md mx-auto"
+            className="pl-9 max-w-md mx-auto"
           />
         </div>
       </CardHeader>
@@ -150,6 +209,7 @@ const ListaOrdensServico = () => {
                 <TableRow>
                   <TableHead>Setor</TableHead>
                   <TableHead>Equipamento</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
@@ -160,12 +220,13 @@ const ListaOrdensServico = () => {
                   <TableRow key={ordem.id}>
                     <TableCell>{ordem.setor}</TableCell>
                     <TableCell>{ordem.equipamento}</TableCell>
+                    <TableCell>{ordem.tipoManutencao}</TableCell>
                     <TableCell>
                       {ordem.criadoEm && format(ordem.criadoEm.toDate(), "dd/MM/yyyy HH:mm")}
                     </TableCell>
                     <TableCell>{getStatusBadge(ordem.status)}</TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
+                      <div className="flex flex-wrap gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button 
@@ -192,6 +253,14 @@ const ListaOrdensServico = () => {
                                   <p>{selectedOrdem.equipamento}</p>
                                 </div>
                                 <div>
+                                  <h4 className="font-semibold text-sm text-gray-500">Tipo de Manutenção</h4>
+                                  <p>{selectedOrdem.tipoManutencao || "Não informado"}</p>
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-sm text-gray-500">Linha Parada</h4>
+                                  <p>{selectedOrdem.linhaParada || "Não informado"}</p>
+                                </div>
+                                <div>
                                   <h4 className="font-semibold text-sm text-gray-500">Hora Inicial</h4>
                                   <p>{selectedOrdem.hrInicial || "Não informado"}</p>
                                 </div>
@@ -204,26 +273,31 @@ const ListaOrdensServico = () => {
                                   <p>{selectedOrdem.tempoParada || "Não informado"}</p>
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-500">Linha Parada</h4>
-                                  <p>{selectedOrdem.linhaParada || "Não informado"}</p>
+                                  <h4 className="font-semibold text-sm text-gray-500">Criado Em</h4>
+                                  <p>{selectedOrdem.criadoEm && format(selectedOrdem.criadoEm.toDate(), "dd/MM/yyyy HH:mm")}</p>
+                                </div>
+                                <div className="md:col-span-2">
+                                  <h4 className="font-semibold text-sm text-gray-500">Responsável pela Manutenção</h4>
+                                  <p>{getResponsavelNome(selectedOrdem.responsavelManutencao)}</p>
                                 </div>
                                 <div className="md:col-span-2">
                                   <h4 className="font-semibold text-sm text-gray-500">Descrição do Motivo</h4>
                                   <p>{selectedOrdem.descricaoMotivo}</p>
                                 </div>
                                 <div className="md:col-span-2">
-                                  <h4 className="font-semibold text-sm text-gray-500">Origem da Parada</h4>
-                                  <div className="flex flex-wrap gap-2 mt-1">
-                                    {selectedOrdem.origemParada.automatizacao && <Badge>Automatização</Badge>}
-                                    {selectedOrdem.origemParada.terceiros && <Badge>Terceiros</Badge>}
-                                    {selectedOrdem.origemParada.eletrica && <Badge>Elétrica</Badge>}
-                                    {selectedOrdem.origemParada.mecanica && <Badge>Mecânica</Badge>}
-                                    {selectedOrdem.origemParada.outro && <Badge>Outro</Badge>}
-                                  </div>
+                                  <h4 className="font-semibold text-sm text-gray-500">Solução Aplicada</h4>
+                                  <p>{selectedOrdem.solucaoAplicada || "Não informado"}</p>
                                 </div>
                                 <div className="md:col-span-2">
-                                  <h4 className="font-semibold text-sm text-gray-500">Responsável pela Manutenção</h4>
-                                  <p>{selectedOrdem.responsavelManutencao || "Não informado"}</p>
+                                  <h4 className="font-semibold text-sm text-gray-500">Origem da Parada</h4>
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {selectedOrdem.origemParada && getOrigensParada(selectedOrdem.origemParada).map((origem, index) => (
+                                      <Badge key={index}>{origem}</Badge>
+                                    ))}
+                                    {(!selectedOrdem.origemParada || getOrigensParada(selectedOrdem.origemParada).length === 0) && 
+                                      <span className="text-gray-500">Não informado</span>
+                                    }
+                                  </div>
                                 </div>
                                 <div className="md:col-span-2">
                                   <h4 className="font-semibold text-sm text-gray-500">Observação</h4>
@@ -309,4 +383,3 @@ const ListaOrdensServico = () => {
 };
 
 export default ListaOrdensServico;
-
