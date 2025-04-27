@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import { db } from "@/firebade/firebase";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/Layouts/AppLayout";
 
 interface Fornecedor {
   id: string;
