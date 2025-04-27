@@ -19,7 +19,6 @@ import Carrinho from "./pages/Carrinho";
 import Requisicoes from "./pages/Requisicoes";
 import Enderecamento from "./pages/Enderecamento";
 import OrdensServico from "./pages/OrdensServico";
-import Fornecedores from "./pages/Fornecedores";
 
 // Páginas de Produção
 import DashboardProducao from "@/pages/Producao/DashboardProducao";
@@ -88,7 +87,6 @@ const AppContent = () => {
           <Route path="/requisicoes" element={<AuthGuard><Requisicoes /></AuthGuard>} />
           <Route path="/enderecamento" element={<AuthGuard><Enderecamento /></AuthGuard>} />
           <Route path="/ordensServico" element={<AuthGuard><OrdensServico /></AuthGuard>} />
-<Route path="/fornecedores" element={<AuthGuard><Fornecedores/></AuthGuard>} />
           
           {/* Rotas de Produção */}
           <Route path="/producao" element={<AuthGuard><DashboardProducao /></AuthGuard>} />
