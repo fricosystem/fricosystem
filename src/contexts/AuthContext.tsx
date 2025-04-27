@@ -1,3 +1,4 @@
+// AuthContext.tsx
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { 
   getAuth, 
@@ -36,6 +37,7 @@ interface UserData {
 interface AuthContextType {
   user: User | null;
   userData: UserData | null;
+  loading: boolean; // Added loading property
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (email: string, password: string, displayName: string, cpf: string, cargo: string, imagemPerfil?: string, centroDeCusto?: string) => Promise<User>;
   logout: () => Promise<void>;
@@ -45,6 +47,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userData: null,
+  loading: true, // Added loading property with default value
   signIn: async () => { throw new Error('Function not implemented'); },
   signUp: async () => { throw new Error('Function not implemented'); },
   logout: async () => { throw new Error('Function not implemented'); }
@@ -150,6 +153,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextType = {
     user,
     userData,
+    loading, // Include loading in the context value
     signIn,
     signUp,
     logout
