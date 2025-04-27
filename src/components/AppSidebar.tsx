@@ -599,7 +599,7 @@ const AppSidebar = () => {
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
-  );
+  ); 
 };
 
 export default AppSidebar;
