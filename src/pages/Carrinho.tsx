@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import AppLayout from "@/layouts/AppLayout";
-import { Button } from "@/components/ui/button";
-import { ShoppingCart, Minus, Plus, Trash2, Loader2, Search, User, ChevronDown, AlertTriangle } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { toast } from "@/components/ui/use-toast";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AppLayout from '@/layouts/AppLayout';
+import { Button } from '@/components/ui/button';
+import { ShoppingCart, Minus, Plus, Trash2, Loader2, Search, User, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   collection, 
@@ -13,11 +13,11 @@ import {
   getDocs, 
   updateDoc, 
   doc, 
-  deleteDoc, 
-  serverTimestamp, 
-  addDoc, 
-  orderBy, 
-  limit 
+  deleteDoc,
+  serverTimestamp,
+  addDoc,
+  orderBy,
+  limit
 } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { 
@@ -25,8 +25,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+interface Produto {
+  id: string;
+  nome: string;
+  codigo_material: string;
+  quantidade: number;
+  quantidade_minima?: number;
+  valor_unitario: number;
+  deposito?: string;
+}
 
 interface ProdutoCarrinho {
   id: string;
@@ -44,6 +54,7 @@ interface ProdutoCarrinho {
   prateleira?: string;
   email?: string;
   timestamp?: number;
+  produtoEstoque?: Produto; // Referência ao produto no estoque
 }
 
 interface Usuario {
@@ -59,6 +70,7 @@ const Carrinho = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  const [produtos, setProdutos] = useState<Record<string, Produto>>({});
   
   // Estados para o dropdown de solicitantes
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -68,7 +80,36 @@ const Carrinho = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [tentouEnviarSemSolicitante, setTentouEnviarSemSolicitante] = useState(false);
 
-  // Carregar itens do carrinho do Firebase
+  // Carregar todos os produtos para referência
+  const carregarProdutos = async () => {
+    try {
+      const produtosRef = collection(db, "produtos");
+      const snapshot = await getDocs(produtosRef);
+      const produtosMap: Record<string, Produto> = {};
+      
+      snapshot.docs.forEach(doc => {
+        const produto = doc.data() as Produto;
+        if (produto.codigo_material) {
+          produtosMap[produto.codigo_material] = {
+            id: doc.id,
+            ...produto
+          };
+        }
+      });
+      
+      setProdutos(produtosMap);
+      return produtosMap;
+    } catch (error) {
+      console.error("Erro ao carregar produtos:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os produtos",
+        variant: "destructive",
+      });
+      return {};
+    }
+  };
+
   useEffect(() => {
     const carregarCarrinho = async () => {
       if (!user || !user.email) {
@@ -79,17 +120,26 @@ const Carrinho = () => {
       try {
         setIsLoading(true);
         
-        // Consultar itens no carrinho do usuário atual
+        // Primeiro carregamos todos os produtos para referência
+        const produtosMap = await carregarProdutos();
+        
+        // Depois carregamos o carrinho
         const carrinhoRef = collection(db, "carrinho");
         const q = query(carrinhoRef, where("email", "==", user.email));
         const querySnapshot = await getDocs(q);
         
-        const itensCarrinho: ProdutoCarrinho[] = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as ProdutoCarrinho[];
+        const itensCarrinho: ProdutoCarrinho[] = querySnapshot.docs.map(doc => {
+          const item = doc.data() as ProdutoCarrinho;
+          item.id = doc.id;
+          
+          // Vincular com o produto correspondente do estoque usando código_material
+          if (item.codigo_material && produtosMap[item.codigo_material]) {
+            item.produtoEstoque = produtosMap[item.codigo_material];
+          }
+          
+          return item;
+        });
         
-        // Ordenar por timestamp, do mais recente para o mais antigo
         itensCarrinho.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         
         setCarrinho(itensCarrinho);
@@ -148,13 +198,10 @@ const Carrinho = () => {
     carregarUsuarios();
   }, [user]);
 
-  // Função para remover um produto do carrinho
   const handleRemover = async (id: string) => {
     try {
-      // Remover do Firebase
       await deleteDoc(doc(db, "carrinho", id));
       
-      // Atualizar estado local
       setCarrinho((prevCarrinho) => prevCarrinho.filter((item) => item.id !== id));
       
       toast({
@@ -171,24 +218,37 @@ const Carrinho = () => {
     }
   };
 
-  // Função para atualizar a quantidade de um produto
   const handleQuantidadeChange = async (id: string, novaQuantidade: number) => {
     if (novaQuantidade < 1) return;
     
     try {
-      // Atualizar no Firebase
+      const produto = carrinho.find(item => item.id === id);
+      if (!produto || !produto.codigo_material) return;
+      
+      // Verificar quantidade disponível no produto vinculado
+      const quantidadeDisponivel = produto.produtoEstoque?.quantidade || 0;
+      
+      if (novaQuantidade > quantidadeDisponivel) {
+        toast({
+          title: "Quantidade indisponível",
+          description: `Só existem ${quantidadeDisponivel} unidades disponíveis deste produto.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const docRef = doc(db, "carrinho", id);
       await updateDoc(docRef, {
         quantidade: novaQuantidade,
         timestamp: new Date().getTime()
       });
       
-      // Atualizar estado local
       setCarrinho((prevCarrinho) =>
-        prevCarrinho.map((produto) =>
-          produto.id === id ? { ...produto, quantidade: novaQuantidade } : produto
+        prevCarrinho.map((item) =>
+          item.id === id ? { ...item, quantidade: novaQuantidade } : item
         )
       );
+      
     } catch (error) {
       console.error("Erro ao atualizar quantidade:", error);
       toast({
@@ -199,20 +259,30 @@ const Carrinho = () => {
     }
   };
 
-  // Função para aumentar a quantidade
-  const handleIncrease = (id: string) => {
+  const handleIncrease = async (id: string) => {
     const produto = carrinho.find(item => item.id === id);
-    if (produto) {
-      handleQuantidadeChange(id, produto.quantidade + 1);
+    if (!produto) return;
+    
+    // Usar a quantidade do produto no estoque
+    const quantidadeDisponivel = produto.produtoEstoque?.quantidade || 0;
+    
+    if (produto.quantidade >= quantidadeDisponivel) {
+      toast({
+        title: "Quantidade máxima",
+        description: `Só existem ${quantidadeDisponivel} unidades disponíveis deste produto.`,
+        variant: "destructive",
+      });
+      return;
     }
+    
+    await handleQuantidadeChange(id, produto.quantidade + 1);
   };
 
-  // Função para diminuir a quantidade
   const handleDecrease = (id: string) => {
     const produto = carrinho.find(item => item.id === id);
-    if (produto && produto.quantidade > 1) {
-      handleQuantidadeChange(id, produto.quantidade - 1);
-    }
+    if (!produto || produto.quantidade <= 1) return;
+    
+    handleQuantidadeChange(id, produto.quantidade - 1);
   };
 
   // Função para filtrar usuários com base no termo de pesquisa
@@ -299,7 +369,7 @@ const Carrinho = () => {
       setIsSubmitting(true);
       
       // Obter nome do usuário logado
-      const userName = user?.user_metadata?.nome || user?.email || "Usuário não identificado";
+      const userName = user?.displayName || user?.email || "Usuário não identificado";
       
       // Gerar o próximo ID sequencial
       const nextId = await getNextRequestId();
@@ -363,13 +433,11 @@ const Carrinho = () => {
     }
   };
 
-  // Calcular o valor total do carrinho
   const valorTotal = carrinho.reduce(
     (total, produto) => total + produto.valor_unitario * produto.quantidade,
     0
   );
 
-  // Formatar valor para o padrão brasileiro (R$ 0.000,00)
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -378,25 +446,24 @@ const Carrinho = () => {
   };
 
   return (
-    <AppLayout title="Carrinho de Compras">
-      {/* Removida a limitação de largura máxima e adicionado padding horizontal */}
-      <div className="w-full h-full px-4 md:px-6">
-        <div className="flex items-center gap-2 mb-6">
-          <ShoppingCart className="text-primary" />
-          <h1 className="text-2xl font-bold">Carrinho de Compras</h1>
+    <AppLayout title="Carrinho">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center gap-4 mb-6">
+          <ShoppingCart className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold">Seu Carrinho</h1>
         </div>
-  
+        
         {isLoading ? (
           <div className="text-center py-12 bg-muted/30 rounded-lg border">
-            <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
-            <p className="mt-4 text-lg text-muted-foreground">Carregando seu carrinho...</p>
+            <Loader2 className="mx-auto h-12 w-12 text-muted-foreground animate-spin mb-4" />
+            <p className="text-lg text-muted-foreground">Carregando seu carrinho...</p>
           </div>
         ) : carrinho.length === 0 ? (
           <div className="text-center py-12 bg-muted/30 rounded-lg border">
-            <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground" />
-            <p className="mt-4 text-lg text-muted-foreground">Seu carrinho está vazio</p>
-            <Button className="mt-4" onClick={() => navigate("/produtos")}>
-              Ver produtos
+            <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg text-muted-foreground mb-4">Seu carrinho está vazio</p>
+            <Button onClick={() => navigate('/produtos')}>
+              Continuar Comprando
             </Button>
           </div>
         ) : (
@@ -488,9 +555,8 @@ const Carrinho = () => {
                 * Campo obrigatório
               </p>
             </div>
-  
+            
             <div className="bg-card rounded-lg shadow">
-              {/* Cabeçalho da tabela com responsividade melhorada */}
               <div className="grid grid-cols-[0.5fr,2fr,1fr,1fr,1fr] md:grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 font-medium border-b">
                 <div>Imagem</div>
                 <div>Produto</div>
@@ -499,70 +565,80 @@ const Carrinho = () => {
                 <div className="text-right">Subtotal</div>
               </div>
   
-              {/* Itens do carrinho com responsividade melhorada */}
-              {carrinho.map((produto) => (
-                <div key={produto.id} className="grid grid-cols-[0.5fr,2fr,1fr,1fr,1fr] md:grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 items-center border-b">
-                  <div>
-                    <img
-                      src={produto.imagem || "/placeholder.svg"}
-                      alt={produto.nome}
-                      className="w-12 h-12 md:w-16 md:h-16 object-cover rounded"
-                    />
-                  </div>
-                  <div>
-                    <div className="font-medium">{produto.nome}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Código: {produto.codigo_material || "N/A"} | Depósito: {produto.deposito || "N/A"}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 h-8 text-destructive hover:text-destructive-foreground hover:bg-destructive/20"
-                      onClick={() => handleRemover(produto.id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" /> Remover
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <div className="flex items-center border rounded-md">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 p-0 rounded-none"
-                        onClick={() => handleDecrease(produto.id)}
-                        disabled={produto.quantidade <= 1}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={produto.quantidade}
-                        onChange={(e) => handleQuantidadeChange(produto.id, parseInt(e.target.value, 10) || 1)}
-                        className="w-10 text-center border-none focus:ring-0 bg-transparent"
+              {carrinho.map((produto) => {
+                // Obter valores do produto no estoque
+                const quantidadeDisponivel = produto.produtoEstoque?.quantidade || 0;
+                const quantidadeMinima = produto.produtoEstoque?.quantidade_minima;
+                
+                return (
+                  <div key={produto.id} className="grid grid-cols-[0.5fr,2fr,1fr,1fr,1fr] md:grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 items-center border-b">
+                    <div>
+                      <img
+                        src={produto.imagem || "/placeholder.svg"}
+                        alt={produto.nome}
+                        className="w-12 h-12 md:w-16 md:h-16 object-cover rounded"
                       />
+                    </div>
+                    <div>
+                      <div className="font-medium">{produto.nome}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        <p>Código: {produto.codigo_material || "N/A"} | Depósito: {produto.deposito || "N/A"}</p>
+                        <p className="mt-1">
+                          Disponível: {quantidadeDisponivel} un. 
+                          {quantidadeMinima !== undefined && ` | Mínimo: ${quantidadeMinima} un.`}
+                        </p>
+                      </div>
                       <Button
-                        type="button"
                         variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 p-0 rounded-none"
-                        onClick={() => handleIncrease(produto.id)}
+                        size="sm"
+                        className="mt-2 h-8 text-destructive hover:text-destructive-foreground hover:bg-destructive/20"
+                        onClick={() => handleRemover(produto.id)}
                       >
-                        <Plus className="h-3 w-3" />
+                        <Trash2 className="h-4 w-4 mr-1" /> Remover
                       </Button>
                     </div>
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center border rounded-md">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 p-0 rounded-none"
+                          onClick={() => handleDecrease(produto.id)}
+                          disabled={produto.quantidade <= 1}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <input
+                          type="number"
+                          min="1"
+                          max={quantidadeDisponivel}
+                          value={produto.quantidade}
+                          onChange={(e) => handleQuantidadeChange(produto.id, parseInt(e.target.value, 10) || 1)}
+                          className="w-10 text-center border-none focus:ring-0 bg-transparent"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 p-0 rounded-none"
+                          onClick={() => handleIncrease(produto.id)}
+                          disabled={produto.quantidade >= quantidadeDisponivel}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {formatCurrency(produto.valor_unitario)}
+                    </div>
+                    <div className="text-right font-medium">
+                      {formatCurrency(produto.valor_unitario * produto.quantidade)}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    {formatCurrency(produto.valor_unitario)}
-                  </div>
-                  <div className="text-right font-medium">
-                    {formatCurrency(produto.valor_unitario * produto.quantidade)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
   
-              {/* Rodapé do carrinho com total */}
               <div className="p-4 bg-muted/20">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total</span>
@@ -571,7 +647,6 @@ const Carrinho = () => {
               </div>
             </div>
   
-            {/* Botões de ação */}
             <div className="flex flex-col sm:flex-row justify-between gap-4">
               <Button variant="outline" onClick={() => navigate("/produtos")}>
                 Continuar Comprando

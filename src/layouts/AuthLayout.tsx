@@ -13,7 +13,7 @@ const AuthLayout = ({
     <div 
       className="min-h-screen flex flex-col items-center justify-center bg-cover bg-center p-4 sm:p-6 md:p-8" 
       style={{ 
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3)), url('/lovable-uploads/9556e8ba-3eae-423e-9275-c8a58e182a55.png')`,
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3)), url('/Uploads/9556e8ba-3eae-423e-9275-c8a58e182a55.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center'
       }}
@@ -30,7 +30,7 @@ const AuthLayout = ({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5 }}
-              src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" 
+              src="/Uploads/IconeFrico3D.png" 
               alt="Fricó Alimentos Logo" 
               className="h-24 w-auto mb-2 rounded-lg shadow-xl" 
             />

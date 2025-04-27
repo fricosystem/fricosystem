@@ -81,7 +81,8 @@ const AdicionarAoCarrinho = ({
           imagem: produto.imagem || "",
           unidade: produto.unidade || produto.unidade_de_medida || "",
           deposito: produto.deposito || "",
-          prateleira: produto.prateleira || ""
+          prateleira: produto.prateleira || "",
+          quantidade_minima: produto.quantidadeMinima || ""
         };
         
         await addDoc(carrinhoCollection, itemCarrinho);

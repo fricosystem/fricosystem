@@ -45,6 +45,7 @@ import {
   BadgePercent,
   Monitor,
   HardHat,
+  Briefcase
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useEffect, useState } from "react";
@@ -77,7 +78,7 @@ interface SidebarCategory {
 const AppSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, userData, logout } = useAuth(); // Corrigido para usar 'logout' do AuthContext
   const { totalItens } = useCarrinho();
   const [theme, setTheme] = useState<"light" | "dark">("dark"); // Firebase usa tema escuro por padrão
   const { toast } = useToast();
@@ -299,15 +300,33 @@ const AppSidebar = () => {
     },
   ];
 
+  // Função de logout corrigida
   const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
+    try {
+      await logout(); // Corrigido para usar a função logout do AuthContext
+      // Redirecionar para a página de login após o logout
+      navigate("/");
+      // Adicionar feedback de sucesso
+      toast({
+        description: "Logout realizado com sucesso!",
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error("Erro ao realizar logout:", error);
+      toast({
+        description: "Erro ao sair do sistema. Tente novamente.",
+        variant: "destructive",
+        duration: 3000, // Corrigido o erro I3000 para 3000
+      });
+    }
   };
 
   // Obter a primeira letra do nome do usuário ou do email
   const getUserInitial = () => {
-    if (user?.user_metadata?.nome) {
-      return user.user_metadata.nome.charAt(0).toUpperCase();
+    if (userData?.nome) {
+      return userData.nome.charAt(0).toUpperCase();
+    } else if (user?.displayName) {
+      return user.displayName.charAt(0).toUpperCase();
     } else if (user?.email) {
       return user.email.charAt(0).toUpperCase();
     }
@@ -316,12 +335,22 @@ const AppSidebar = () => {
 
   // Obter o nome de exibição
   const getDisplayName = () => {
-    if (user?.user_metadata?.nome) {
-      return user.user_metadata.nome;
+    if (userData?.nome) {
+      return userData.nome;
+    } else if (user?.displayName) {
+      return user.displayName;
     } else if (user?.email) {
       return user.email.split('@')[0];
     }
     return "Usuário";
+  };
+
+  // Obter o cargo do usuário
+  const getUserCargo = () => {
+    if (userData?.cargo) {
+      return userData.cargo;
+    }
+    return "";
   };
 
   // Variantes para animação de expansão
@@ -375,30 +404,30 @@ const AppSidebar = () => {
       <SidebarContent>
       <style>
         {`
-          @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
           
           /* Aplicar Roboto em todos os elementos dentro do sidebar */
-          .font-roboto, .font-roboto * {
-            font-family: 'Roboto', sans-serif;
+          .font-poppins, .font-poppins * {
+            font-family: 'Poppins', sans-serif;
             letter-spacing: 0.02em;
             font-size: 0.9rem;
           }
           
           /* Ajustes para pesos de fonte específicos do Firebase */
-          .font-roboto .text-sm {
+          .font-poppins .text-sm {
             font-weight: 600;
           }
           
-          .font-roboto .text-xs {
+          .font-poppins .text-xs {
             font-weight: 600;
           }
           
-          .font-roboto .font-medium {
+          .font-poppins .font-medium {
             font-weight: 600;
           }
           
           /* Ajustes para melhorar a visibilidade no tema claro */
-          :root:not(.dark) .font-roboto {
+          :root:not(.dark) .font-poppins {
             color: #333333; /* Cor escura para texto em tema claro */
           }
           
@@ -433,85 +462,88 @@ const AppSidebar = () => {
         `}
       </style>
         <SidebarGroup>
-          <div className="flex items-center px-4 py-4">
-            <img
-              src="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png"
-              alt="Logo"
-              className="h-6 w-auto mr-2"
+          {/* Novo cabeçalho com a estrutura solicitada */}
+          <div className="flex flex-col items-center justify-center px-1 py-2">
+            <img 
+              src="/Uploads/IconeFrico3D.png" 
+              alt="Fricó Alimentos Logo" 
+              className="w-16 h-16 rounded-lg object-scale-down" 
             />
-            <span className="text-[#ff7a59] font-medium text-xl">Fricó</span>
           </div>
           {/* Categorias do Firebase que estão na imagem */}
-          <div className="px-4 py-2">
-            <div className={`text-gray-400 ${firebaseClasses.text.small}`}>Categorias dos produtos</div>
-          </div>
+          
           
           {/* Renderizar cada categoria do sidebar */}
-          {sidebarCategories.map((category, index) => (
-            <SidebarGroup key={index}>
-              {/* Categoria com ícone e botão para expandir/colapsar */}
-              <div 
-                className={`${categoryBtnClasses} ${
-                  expandedCategories[category.label] 
-                    ? firebaseClasses.categoryBtn.active
-                    : firebaseClasses.categoryBtn.hover
-                } ${firebaseClasses.text.normal}`}
-                onClick={() => toggleCategoryExpansion(category.label)}
-              >
-                <div className="flex items-center gap-2">
-                  <category.icon className="h-5 w-5" />
-                  <SidebarGroupLabel className={`flex-1 ${firebaseClasses.text.normal}`}>{category.label}</SidebarGroupLabel>
-                </div>
-                <motion.div
-                  animate={{ rotate: expandedCategories[category.label] ? 180 : 0 }}
-                  transition={{ duration: 0.3 }}
+          <div className="overflow-y-auto flex-grow" style={{ maxHeight: "calc(100vh - 180px)" }}>
+            {sidebarCategories.map((category, index) => (
+              <SidebarGroup key={index}>
+                {/* Categoria com ícone e botão para expandir/colapsar */}
+                <div 
+                  className={`${categoryBtnClasses} ${
+                    expandedCategories[category.label] 
+                      ? firebaseClasses.categoryBtn.active
+                      : firebaseClasses.categoryBtn.hover
+                  } ${firebaseClasses.text.normal}`}
+                  onClick={() => toggleCategoryExpansion(category.label)}
                 >
-                  <ChevronDown className="h-4 w-4" />
-                </motion.div>
-              </div>
-              
-              {/* Conteúdo da categoria com animação */}
-              <AnimatePresence>
-                {expandedCategories[category.label] && (
+                  <div className="flex items-center gap-1">
+                    <category.icon className="h-5 w-5" />
+                    {/* Aumentado o tamanho do texto das categorias */}
+                    <SidebarGroupLabel className="flex-1 text-1xl font-bold">{category.label}</SidebarGroupLabel>
+                  </div>
                   <motion.div
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    variants={contentVariants}
-                    className="overflow-hidden"
+                    animate={{ rotate: expandedCategories[category.label] ? 180 : 0 }}
+                    transition={{ duration: 0.3 }}
                   >
-                    <SidebarGroupContent className="pl-8 pr-1">
-                      <SidebarMenu>
-                        {category.items.map((item) => (
-                          <SidebarMenuItem key={item.to}>
-                            <SidebarMenuButton
-                              isActive={location.pathname === item.to}
-                              onClick={() => navigate(item.to)}
-                              className={`flex items-center h-10 transition-all duration-200 rounded-md ${
-                                location.pathname === item.to 
-                                  ? firebaseClasses.menuItem.active 
-                                  : firebaseClasses.menuItem.hover
-                              } ${firebaseClasses.text.normal}`}
-                            >
-                              <item.icon className="mr-2 h-5 w-5" />
-                              <span>{item.label}</span>
-                              {item.to === "/carrinho" && totalItens > 0 && (
-                                <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
-                                  {totalItens}
-                                </span>
-                              )}
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
-                    </SidebarGroupContent>
+                    <ChevronDown className="h-4 w-4" />
                   </motion.div>
-                )}
-              </AnimatePresence>
-            </SidebarGroup>
-          ))}
+                </div>
+                
+                {/* Conteúdo da categoria com animação */}
+                <AnimatePresence>
+                  {expandedCategories[category.label] && (
+                    <motion.div
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
+                      variants={contentVariants}
+                      className="overflow-hidden"
+                    >
+                      <SidebarGroupContent className="pl-8 pr-1 mt-0.4">
+                        <SidebarMenu>
+                          {category.items.map((item) => (
+                            <SidebarMenuItem key={item.to}>
+                              <SidebarMenuButton
+                                isActive={location.pathname === item.to}
+                                onClick={() => navigate(item.to)}
+                                className={`flex items-center h-10 transition-all duration-200 rounded-md ${
+                                  location.pathname === item.to 
+                                    ? firebaseClasses.menuItem.active 
+                                    : firebaseClasses.menuItem.hover
+                                }`}
+                              >
+                                <item.icon className="mr-2 h-6 w-6" />
+                                {/* Reduzido o tamanho do texto das subcategorias */}
+                                <span className="flex-1 text-1xl font-bold">{item.label}</span>
+                                {item.to === "/carrinho" && totalItens > 0 && (
+                                  <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                                    {totalItens}
+                                  </span>
+                                )}
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          ))}
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </SidebarGroup>
+            ))}
+          </div>
         </SidebarGroup>
         
+        {/* Perfil fixado na parte inferior */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <SidebarMenu>
@@ -519,23 +551,30 @@ const AppSidebar = () => {
               <SidebarMenuItem>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton className={`flex items-center justify-between w-full h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-1 my-0.5`}>
-                      <div className="flex items-center">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ff7a59] text-white mr-2">
+                  <SidebarMenuButton className={`flex items-center justify-between w-full p-4 h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-1 my-1`}>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ff7a59] text-white shrink-0">
                           {getUserInitial()}
                         </div>
-                        <div className="flex flex-col items-start">
-                          <span className={`font-medium text-sm text-gray-300 ${firebaseClasses.text.small}`}>{getDisplayName()}</span>
-                          <span className={`text-xs text-gray-500 truncate max-w-[140px] ${firebaseClasses.text.tiny}`}>
-                            {user?.email || ""}
-                          </span>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className={`font-medium text-xs text-gray-300 truncate w-full ${firebaseClasses.text.small}`}>{getDisplayName()}</span>
                         </div>
                       </div>
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-4 w-4 shrink-0 ml-1" />
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className={`w-56 bg-[#2c384a] border-[#3e4a5e] text-gray-300 ${firebaseClasses.text.normal}`}>
-                    <DropdownMenuItem onClick={toggleTheme} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e]">
+                  <DropdownMenuContent align="end" className={`w-64 bg-[#2c384a] border-[#3e4a5e] text-gray-300 ${firebaseClasses.text.normal}`}>
+                    <div className="p-2 border-b border-[#3e4a5e]">
+                      <p className="font-bold text-sm">{getDisplayName()}</p>
+                      <p className="text-xs text-gray-400">{user?.email || ""}</p>
+                      {getUserCargo() && (
+                        <p className="text-xs text-gray-400 flex items-center mt-1">
+                          <Briefcase className="h-3 w-3 mr-1" />
+                          {getUserCargo()}
+                        </p>
+                      )}
+                    </div>
+                    <DropdownMenuItem onClick={toggleTheme} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       {theme === "light" ? (
                         <Moon className="mr-2 h-4 w-4" />
                       ) : (
@@ -543,12 +582,12 @@ const AppSidebar = () => {
                       )}
                       <span>Mudar para tema {theme === "light" ? "escuro" : "claro"}</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/configuracoes")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e]">
+                    <DropdownMenuItem onClick={() => navigate("/configuracoes")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Configurações</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-[#3e4a5e]" />
-                    <DropdownMenuItem onClick={handleSignOut} className="text-[#ff7a59] hover:bg-[#3e4a5e] focus:bg-[#3e4a5e]">
+                    <DropdownMenuItem onClick={handleSignOut} className="text-[#ff7a59] hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Sair</span>
                     </DropdownMenuItem>

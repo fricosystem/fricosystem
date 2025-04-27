@@ -1,14 +1,14 @@
 Crie uma página de apresentação corporativo para uma empresa chamada Fricó Alimentos ( Bem vindo a Nexus Hub, Fricó Alimentos ). A página conterá o fundo preto, terá informações como imagens e mensagens motivacionais profissionais de Gestão de estoque, Financeiro, Recursos Humanos e demais gestões corporativas. A página conterá também as seguintes informações no header:
 Botões para login e cadastro para modal 80% transparente para autenticação.
 
-Fundo do site:
+Informações no fundo (final) do site:
 Fale conosco
 +55 (62) 3510-0100
 
 Whatsapp
 https://wa.me/556235100100?text=%20
 
-Desenvolvido por: Bruno Moreira 
+Desenvolvido por: Bruno Moreira de Assis
 https://wa.me/5562993046419?text=%20%20
 
 Os dados para autenticação do firebase.ts:
@@ -18,13 +18,13 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC-OL3yyv2OXWnCueDMClXPChr5SE3d2ME",
-  authDomain: "fricoalimentos-83200.firebaseapp.com",
-  projectId: "fricoalimentos-83200",
-  storageBucket: "fricoalimentos-83200.firebasestorage.app",
-  messagingSenderId: "1094840381104",
-  appId: "1:1094840381104:web:ca9ab3c1ed2f773109d575",
-  measurementId: "G-T7F349Q7MP"
+  apiKey: "AIzaSyBQNeSL_KyO2JjomiZLph5OaqtnhH8ahTk",
+  authDomain: "fricoalimentossystem-60cf5.firebaseapp.com",
+  projectId: "fricoalimentossystem-60cf5",
+  storageBucket: "fricoalimentossystem-60cf5.firebasestorage.app",
+  messagingSenderId: "6036191545",
+  appId: "1:6036191545:web:ec7236737432ea9165d0e8",
+  measurementId: "G-D4YSPJX34M"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -35,30 +35,82 @@ a coleção é de nome: usuarios
 
 Os campos são:
 
-ativo (string)
+ativo
+Padrão = sim
+(string)
 
 
-cargo (string)
+cargo
+(string)
 
 
-createdAt (timestamp)
+centro_de_custo
+(string)
 
 
-email (string)
+cpf
+(string)
 
 
-id (string)
+data_registro
+(timestamp)
 
 
-nome (string)
+email
+(string)
 
 
-perfil (string)
+imagem_perfil
+(string)
 
 
-senha (string)
+nome
+(string)
 
 
-tema (string)
+tema
+Padrão = dark
+(string)
 
 
+ultimo_login
+(timestamp)
+
+Atribuir os seguintes cargos em dropdown no cadastro:
+
+const CARGOS = [
+  "AUX. DE ESTOQUE",
+  "AUX. DE MANUTENÇÃO",
+  "AUX. ADMINISTRATIVO",
+  "AUX. DE PRODUÇÃO",
+  "AUX. DE LIMPEZA",
+  "GERENTE",
+  "AGENTE FINANCEIRO",
+  "T.I.",
+  "ENCARREGADO DE PRODUÇÃO",
+  "ENCARREGADO DE MANUTENÇÃO",
+  "ENCARREGADO DE LIMPEZA",
+  "GESTOR",
+  "ANALISTA",
+  "OPERADOR",
+  "ASSISTENTE",
+  "COORDENADOR",
+  "OUTRO"
+];
+
+e centros de custos em dropdown no cadastro:
+
+const CENTROS_DE_CUSTO = [
+  "ESTOQUE",
+  "MANUTENÇÃO",
+  "ADMINISTRATIVO",
+  "FINANCEIRO",
+  "PRODUÇÃO",
+  "LIMPEZA",
+  "GERÊNCIA",
+  "T.I.",
+  "DIRETORIA",
+  "VENDAS",
+  "LOGÍSTICA",
+  "OUTRO"
+];

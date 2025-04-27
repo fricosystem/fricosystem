@@ -7,25 +7,50 @@
     <meta name="description" content="Sistema de gestão de estoque Fricó Alimentos" />
     <meta name="author" content="Fricó Alimentos" />
 
-    <meta property="og:title" content="Fricó Alimentos ADM - Sistema de Gestão de Estoque" />
+    <meta property="og:title" content="Nexus Hub - Sistema de Gerenciamento Fricó Alimentos" />
     <meta property="og:description" content="Sistema completo de gestão de estoque" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" />
+    <meta property="og:image" content="/Uploads/IconeFrico3D.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@frico_alimentos" />
-    <meta name="twitter:image" content="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" />
+    <meta name="twitter:image" content="/Uploads/IconeFrico3D.png" />
     
-    <link rel="icon" href="/lovable-uploads/8c700a7c-8b6b-44bd-ba7c-d2a31d435fb1.png" type="image/png">
+    <link rel="icon" href="/Uploads/IconeFrico3D.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-      /* Aplicar Roboto em todos os elementos dentro do sidebar */
+      /* Aplicar Poppins como fonte principal em todo o site */
+      body, html {
+        font-family: 'Poppins', sans-serif;
+      }
+      
+      /* Forçar o zoom de 75% em componentes específicos */
+      .login-container,
+      .dashboard-container,
+      .sidebar,
+      .auth-container,
+      [data-component="login"],
+      [data-component="dashboard"],
+      [data-component="sidebar"] {
+        transform: scale(0.75);
+        transform-origin: top left;
+        width: 133.33%; /* Compensar a redução da escala */
+      }
+      
+      /* Ajustar contêineres pai para lidar com o redimensionamento */
+      .login-wrapper,
+      .dashboard-wrapper,
+      .sidebar-wrapper,
+      .auth-wrapper {
+        overflow: hidden;
+      }
+      
+      /* Manter a classe font-roboto para compatibilidade, mas usar Poppins */
       .font-roboto, .font-roboto * {
-        font-family: 'Roboto', sans-serif;
+        font-family: 'Poppins', sans-serif;
         letter-spacing: 0.02em;
         font-size: 0.9rem;
       }

@@ -8,6 +8,7 @@ import {
   Timestamp,
   doc,
   updateDoc,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,12 +29,30 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { CalendarIcon, FileTextIcon, SearchIcon, RefreshCw, Download } from "lucide-react";
+import { 
+  CalendarIcon, 
+  FileTextIcon, 
+  SearchIcon, 
+  RefreshCw, 
+  Download, 
+  User, 
+  AlertTriangle 
+} from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import AppLayout from "@/layouts/AppLayout";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -51,6 +70,7 @@ interface Requisicao {
   data_criacao: any;
   itens: Item[];
   usuario: Usuario;
+  solicitante?: Solicitante;
   valor_total: number;
 }
 
@@ -60,23 +80,47 @@ interface RequisicaoFirestore {
   data_criacao: any;
   itens?: Item[];
   usuario?: Usuario;
+  solicitante?: Solicitante;
   valor_total?: number;
 }
 
 interface Item {
   nome: string;
   quantidade: number;
-  preco: number;
+  preco?: number;
   valor_unitario?: number;
+  codigo_material?: string;
+  codigo_estoque?: string;
+  unidade?: string;
+  deposito?: string;
+  prateleira?: string;
+  detalhes?: string;
+  imagem?: string;
 }
 
 interface Usuario {
   email: string;
   nome: string;
+  cargo?: string;
+}
+
+interface Solicitante {
+  id?: string;
+  email?: string;
+  nome: string;
+  cargo?: string;
+}
+
+interface Produto {
+  id: string;
+  nome: string;
+  quantidade: number;
+  codigo_material?: string;
+  // outros campos
 }
 
 const Requisicoes = () => {
-  const { user } = useAuth(); // Changed from currentUser to user to match AuthContext
+  const { user } = useAuth();
   const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
   const [filteredRequisicoes, setFilteredRequisicoes] = useState<Requisicao[]>([]);
   const [selectedRequisicao, setSelectedRequisicao] = useState<Requisicao | null>(null);
@@ -86,6 +130,8 @@ const Requisicoes = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isFinalizarDialogOpen, setIsFinalizarDialogOpen] = useState(false);
+  const [errosEstoque, setErrosEstoque] = useState<string[]>([]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -104,7 +150,7 @@ const Requisicoes = () => {
   }, []);
 
   const fetchRequisicoes = async () => {
-    if (!user?.email) { // Changed from currentUser to user
+    if (!user?.email) {
       setIsLoading(false);
       return;
     }
@@ -115,15 +161,17 @@ const Requisicoes = () => {
       
       let q;
       
-      const isAdmin = user.email?.includes("admin"); // Changed from currentUser to user
+      const isAdmin = user.email?.includes("admin");
       
       if (isAdmin) {
+        // Para admin, manter o orderBy
         q = query(requisicaoRef, orderBy("data_criacao", "desc"));
       } else {
+        // SOLUÇÃO 1: Para usuários normais, recuperar todos os documentos do usuário e ordenar manualmente
+        // Isso evita a necessidade do índice composto
         q = query(
           requisicaoRef,
-          where("usuario.email", "==", user.email), // Changed from currentUser to user
-          orderBy("data_criacao", "desc")
+          where("usuario.email", "==", user.email)
         );
       }
       
@@ -145,14 +193,25 @@ const Requisicoes = () => {
             preco: item.valor_unitario || item.preco || 0,
           })) || [],
           usuario: data.usuario || { 
-            email: user?.email || "Email não informado", // Changed from currentUser to user
+            email: user?.email || "Email não informado",
             nome: "Usuário"
           },
+          solicitante: data.solicitante,
           valor_total: data.valor_total || 0
         };
         
         requisicoesList.push(requisicao);
       });
+      
+      // Ordenar manualmente os resultados se não for admin (já que não usamos orderBy na consulta)
+      if (!isAdmin) {
+        requisicoesList.sort((a, b) => {
+          // Converter strings de data em objetos Date para comparação correta
+          const dateA = new Date(a.data_criacao.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$2/$1/$3'));
+          const dateB = new Date(b.data_criacao.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$2/$1/$3'));
+          return dateB.getTime() - dateA.getTime(); // Ordem decrescente
+        });
+      }
       
       setRequisicoes(requisicoesList);
       applyFilters(requisicoesList, searchTerm, statusFilter);
@@ -176,7 +235,7 @@ const Requisicoes = () => {
 
   useEffect(() => {
     fetchRequisicoes();
-  }, [user]); // Changed from currentUser to user
+  }, [user]);
 
   const applyFilters = (reqs = requisicoes, search = searchTerm, status = statusFilter) => {
     let filtered = [...reqs];
@@ -186,7 +245,8 @@ const Requisicoes = () => {
       filtered = filtered.filter(req => 
         req.requisicao_id.toLowerCase().includes(search.toLowerCase()) ||
         req.usuario.nome.toLowerCase().includes(search.toLowerCase()) ||
-        req.usuario.email.toLowerCase().includes(search.toLowerCase())
+        req.usuario.email.toLowerCase().includes(search.toLowerCase()) ||
+        (req.solicitante && req.solicitante.nome.toLowerCase().includes(search.toLowerCase()))
       );
     }
     
@@ -278,12 +338,126 @@ const Requisicoes = () => {
     }
   };
 
+  // Função para verificar se há estoque suficiente
+  const verificarEstoque = async () => {
+    if (!selectedRequisicao) return false;
+    
+    try {
+      const erros: string[] = [];
+      const produtosRef = collection(db, "produtos");
+      
+      // Para cada item na requisição
+      for (const item of selectedRequisicao.itens) {
+        // Buscar o produto pelo código de material
+        if (!item.codigo_material) {
+          erros.push(`O item "${item.nome}" não possui código de material.`);
+          continue;
+        }
+        
+        const q = query(produtosRef, where("codigo_material", "==", item.codigo_material));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          erros.push(`Produto "${item.nome}" (código: ${item.codigo_material}) não encontrado no estoque.`);
+          continue;
+        }
+        
+        const produtoDoc = querySnapshot.docs[0];
+        const produtoData = produtoDoc.data() as Produto;
+        
+        // Verificar quantidade
+        if (produtoData.quantidade < item.quantidade) {
+          erros.push(`Quantidade insuficiente do produto "${item.nome}" (código: ${item.codigo_material}). Disponível: ${produtoData.quantidade}, Necessário: ${item.quantidade}`);
+        }
+      }
+      
+      setErrosEstoque(erros);
+      return erros.length === 0;
+    } catch (error) {
+      console.error("Erro ao verificar estoque:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível verificar o estoque dos produtos",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // Função para baixar do estoque
+  const baixarEstoque = async () => {
+    if (!selectedRequisicao) return false;
+    
+    try {
+      const produtosRef = collection(db, "produtos");
+      
+      // Para cada item na requisição
+      for (const item of selectedRequisicao.itens) {
+        if (!item.codigo_material) continue;
+        
+        const q = query(produtosRef, where("codigo_material", "==", item.codigo_material));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const produtoDoc = querySnapshot.docs[0];
+          const produtoData = produtoDoc.data() as Produto;
+          
+          // Atualizar quantidade (subtrair)
+          const novaQuantidade = produtoData.quantidade - item.quantidade;
+          await updateDoc(produtoDoc.ref, {
+            quantidade: novaQuantidade
+          });
+          
+          console.log(`Produto ${item.nome} atualizado. Nova quantidade: ${novaQuantidade}`);
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao baixar estoque:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o estoque dos produtos",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // Função para abrir diálogo de finalização
+  const openFinalizarDialog = async () => {
+    if (!selectedRequisicao) return;
+    
+    // Verificar estoque antes de abrir o diálogo
+    const estoqueOk = await verificarEstoque();
+    
+    if (estoqueOk) {
+      setIsFinalizarDialogOpen(true);
+    } else {
+      // Mostrar erros encontrados
+      toast({
+        title: "Problemas de estoque detectados",
+        description: "Não é possível finalizar a requisição devido a problemas de estoque.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleFinalizar = async () => {
     if (!selectedRequisicao) return;
     
     try {
       setIsUpdating(true);
       
+      // Baixar estoque
+      const baixaOk = await baixarEstoque();
+      
+      if (!baixaOk) {
+        setIsUpdating(false);
+        return;
+      }
+      
+      // Atualizar status da requisição
       const requisicaoRef = doc(db, "requisicoes", selectedRequisicao.id);
       await updateDoc(requisicaoRef, {
         status: "concluida"
@@ -317,6 +491,7 @@ const Requisicoes = () => {
       });
     } finally {
       setIsUpdating(false);
+      setIsFinalizarDialogOpen(false);
     }
   };
 
@@ -334,19 +509,25 @@ const Requisicoes = () => {
       doc.setFontSize(12);
       doc.text(`Status: ${selectedRequisicao.status.toUpperCase()}`, 15, 30);
       doc.text(`Data: ${selectedRequisicao.data_criacao}`, 15, 40);
-      doc.text(`Solicitante: ${selectedRequisicao.usuario.nome}`, 15, 50);
-      doc.text(`Email: ${selectedRequisicao.usuario.email}`, 15, 60);
+      
+      // Informações do usuário solicitante
+      doc.text(`Solicitante: ${selectedRequisicao.solicitante?.nome || selectedRequisicao.usuario.nome}`, 15, 50);
+      doc.text(`Email: ${selectedRequisicao.solicitante?.email || selectedRequisicao.usuario.email}`, 15, 60);
+      if (selectedRequisicao.solicitante?.cargo || selectedRequisicao.usuario.cargo) {
+        doc.text(`Cargo: ${selectedRequisicao.solicitante?.cargo || selectedRequisicao.usuario.cargo}`, 15, 70);
+      }
       
       // Adicionar tabela de itens
-      const tableColumn = ["Item", "Quantidade", "Preço Unit.", "Total"];
+      const tableColumn = ["Item", "Código", "Quantidade", "Preço Unit.", "Total"];
       const tableRows = [];
       
       selectedRequisicao.itens.forEach(item => {
         const itemData = [
           item.nome,
+          item.codigo_material || "N/A",
           item.quantidade,
-          formatCurrency(item.preco),
-          formatCurrency(item.quantidade * item.preco)
+          formatCurrency(item.valor_unitario || item.preco || 0),
+          formatCurrency((item.valor_unitario || item.preco || 0) * item.quantidade)
         ];
         tableRows.push(itemData);
       });
@@ -355,7 +536,7 @@ const Requisicoes = () => {
       doc.autoTable({
         head: [tableColumn],
         body: tableRows,
-        startY: 70,
+        startY: 80,
         theme: 'striped',
         styles: { fontSize: 10 }
       });
@@ -478,7 +659,9 @@ const Requisicoes = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">{requisicao.requisicao_id}</p>
-                        <p className="text-sm text-muted-foreground">{requisicao.usuario.nome}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {requisicao.solicitante?.nome || requisicao.usuario.nome}
+                        </p>
                       </div>
                       <Badge className={getStatusColor(requisicao.status)}>
                         {requisicao.status}
@@ -547,14 +730,40 @@ const Requisicoes = () => {
                   <div>
                     <h3 className="text-lg font-medium mb-4">Informações</h3>
                     <div className="space-y-4 text-sm">
-                      <div>
-                        <Label className="text-muted-foreground">Solicitante</Label>
-                        <p className="font-medium">{selectedRequisicao.usuario.nome}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Email</Label>
-                        <p className="font-medium">{selectedRequisicao.usuario.email}</p>
-                      </div>
+                      {/* Informações do solicitante */}
+                      {selectedRequisicao.solicitante ? (
+                        <div className="bg-muted/30 p-3 rounded-md">
+                          <div className="flex items-center gap-2 mb-2">
+                            <User className="h-4 w-4 text-primary" />
+                            <Label className="text-primary font-medium">Solicitante</Label>
+                          </div>
+                          <p className="font-medium">{selectedRequisicao.solicitante.nome}</p>
+                          {selectedRequisicao.solicitante.cargo && (
+                            <p className="text-xs text-muted-foreground mt-1">{selectedRequisicao.solicitante.cargo}</p>
+                          )}
+                          {selectedRequisicao.solicitante.email && (
+                            <p className="text-xs mt-1">{selectedRequisicao.solicitante.email}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <Label className="text-muted-foreground">Solicitante</Label>
+                          <p className="font-medium">{selectedRequisicao.usuario.nome}</p>
+                        </div>
+                      )}
+                      
+                      {/* Informações do registrante (se diferente do solicitante) */}
+                      {selectedRequisicao.solicitante && (
+                        <div>
+                          <Label className="text-muted-foreground">Registrado por</Label>
+                          <p className="font-medium">{selectedRequisicao.usuario.nome}</p>
+                          {selectedRequisicao.usuario.cargo && (
+                            <p className="text-xs text-muted-foreground">{selectedRequisicao.usuario.cargo}</p>
+                          )}
+                          <p className="text-xs">{selectedRequisicao.usuario.email}</p>
+                        </div>
+                      )}
+                      
                       <div>
                         <Label className="text-muted-foreground">Data de Criação</Label>
                         <p className="font-medium">{selectedRequisicao.data_criacao}</p>
@@ -587,9 +796,21 @@ const Requisicoes = () => {
                           <TableBody>
                             {selectedRequisicao.itens.map((item, index) => (
                               <TableRow key={`${item.nome}-${index}`}>
-                                <TableCell className="font-medium">{item.nome}</TableCell>
-                                <TableCell className="text-right">{item.quantidade}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.preco)}</TableCell>
+                                <TableCell className="font-medium">
+                                  {item.nome}
+                                  {item.codigo_material && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Código: {item.codigo_material}
+                                    </p>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {item.quantidade}
+                                  {item.unidade && <span> {item.unidade}</span>}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {formatCurrency(item.valor_unitario || item.preco || 0)}
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -630,7 +851,7 @@ const Requisicoes = () => {
                       </Button>
                       <Button 
                         variant="default" 
-                        onClick={handleFinalizar}
+                        onClick={openFinalizarDialog}
                         disabled={isUpdating}
                       >
                         {isUpdating ? "Processando..." : "Finalizar"}
@@ -643,6 +864,59 @@ const Requisicoes = () => {
           )}
         </div>
       </div>
+
+      {/* Diálogo de confirmação para finalizar requisição */}
+      <AlertDialog open={isFinalizarDialogOpen} onOpenChange={setIsFinalizarDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalizar requisição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá baixar automaticamente as quantidades dos produtos no estoque.{' '}
+              <span className="font-medium">Esta ação não pode ser desfeita.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {errosEstoque.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 my-2 dark:bg-red-950 dark:border-red-900">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <span className="font-medium text-red-600 dark:text-red-400">Problemas encontrados:</span>
+              </div>
+              <ul className="text-sm list-disc pl-5 text-red-600 dark:text-red-400">
+                {errosEstoque.map((erro, index) => (
+                  <li key={index}>{erro}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 my-2 dark:bg-amber-950 dark:border-amber-900">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <span className="font-medium text-amber-600 dark:text-amber-400">Itens que serão baixados do estoque:</span>
+            </div>
+            <ul className="text-sm mt-2 space-y-1">
+              {selectedRequisicao?.itens.map((item, index) => (
+                <li key={index} className="flex justify-between">
+                  <span>
+                    {item.nome} ({item.codigo_material || "Sem código"})
+                  </span>
+                  <span className="font-medium">
+                    {item.quantidade} {item.unidade || "un"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleFinalizar} disabled={isUpdating || errosEstoque.length > 0}>
+              {isUpdating ? "Processando..." : "Confirmar e baixar estoque"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
