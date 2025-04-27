@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs } from "firebase/firestore";
-import { db } from "@/services/firebase";
+import { db } from "@/firebade/firebase";
 import { AppLayout } from "@/components/AppLayout";
 
 interface Fornecedor {
