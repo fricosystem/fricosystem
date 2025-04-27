@@ -1,17 +1,223 @@
-Crie uma página de apresentação corporativo para uma empresa chamada Fricó Alimentos ( Bem vindo a Nexus Hub, Fricó Alimentos ). A página conterá o fundo preto, terá informações como imagens e mensagens motivacionais profissionais de Gestão de estoque, Financeiro, Recursos Humanos e demais gestões corporativas. A página conterá também as seguintes informações no header:
-Botões para login e cadastro para modal 80% transparente para autenticação.
+Claude, preciso de um sistema de lançamento manual de notas fiscais com linguagem de exemplo em anexo utilizando o Firebase como banco de dados. O sistema deve ter:
 
-Informações no fundo (final) do site:
-Fale conosco
-+55 (62) 3510-0100
+Autenticação
 
-Whatsapp
-https://wa.me/556235100100?text=%20
+Página de login utilizando o Firebase Authentication
+Integração com o AuthContext fornecido
+Coleção "usuarios" no Firestore com campos: nome, email, senha
 
-Desenvolvido por: Bruno Moreira de Assis
-https://wa.me/5562993046419?text=%20%20
+Funcionalidades principais
 
-Os dados para autenticação do firebase.ts:
+Página de lançamento de NFe contendo:
+
+Campo para chave da NFe
+Campos para dados do fornecedor
+Campos para data de emissão e valor total
+Seção para cadastro dos produtos da nota
+Botão para finalizar lançamento
+
+
+Página de visualização de NFes lançadas:
+
+Tabela com todas as notas fiscais
+Filtros por data, fornecedor e valor
+Opção para visualizar detalhes de cada nota
+Possibilidade de editar ou excluir notas
+
+
+Página de listagem de produtos:
+
+Tabela com produtos da coleção "produtos"
+Campos conforme documentação: codigo_estoque, codigo_material, data_criacao, data_vencimento, deposito, fornecedor_atual, imagem, nome, prateleira, quantidade, quantidade_minima, unidade, unidade_de_medida, valor_unitario
+Se o produto existir, apenas atualizar quantidade
+Sempre atualizar fornecedor_atual se não existir/for nulo ou se for o mesmo
+
+
+
+Regras de negócio
+
+Ao lançar uma NFe, produtos devem ser atualizados no estoque
+Se produto já existe, somar quantidade
+Se não existe, criar novo registro
+Validação de dados em todos os formulários
+Permissões baseadas no usuário logado
+
+Design
+
+Interface limpa e responsiva
+Tema claro/escuro conforme preferência do usuário
+Tabelas com paginação e ordenação
+Modal de confirmação para ações importantes
+
+Use a configuração do Firebase fornecida e o AuthContext existente. A aplicação deve seguir boas práticas de desenvolvimento React e garantir segurança nos dados.
+
+AuthContext:
+
+import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  onAuthStateChanged, 
+  signOut,
+  updateProfile,
+  User 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  serverTimestamp, 
+  getDoc,
+  Timestamp 
+} from 'firebase/firestore';
+
+// Defina o tipo para os dados do usuário
+interface UserData {
+  nome: string;
+  email: string;
+  cpf: string;
+  cargo: string;
+  tema: string;
+  data_registro: Timestamp;
+  ultimo_login: Timestamp;
+  imagem_perfil: string;
+  ativo: string;
+  centro_de_custo: string;
+}
+
+// Defina a interface para o contexto
+interface AuthContextType {
+  user: User | null;
+  userData: UserData | null;
+  signIn: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string, displayName: string, cpf: string, cargo: string, imagemPerfil?: string, centroDeCusto?: string) => Promise<User>;
+  logout: () => Promise<void>;
+}
+
+// Crie o contexto com um valor padrão
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  userData: null,
+  signIn: async () => { throw new Error('Function not implemented'); },
+  signUp: async () => { throw new Error('Function not implemented'); },
+  logout: async () => { throw new Error('Function not implemented'); }
+});
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  const auth = getAuth();
+  const db = getFirestore();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      
+      if (currentUser) {
+        // Buscar dados adicionais do usuário no Firestore
+        try {
+          const userDocRef = doc(db, "usuarios", currentUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            setUserData(userDoc.data() as UserData);
+          }
+        } catch (error) {
+          console.error("Erro ao buscar dados do usuário:", error);
+        }
+      } else {
+        setUserData(null);
+      }
+      
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [auth, db]);
+
+  // Função para criar um novo usuário
+  async function signUp(email: string, password: string, displayName: string, cpf: string, cargo: string, imagemPerfil: string = "", centroDeCusto: string = ""): Promise<User> {
+    try {
+      // Criar usuário no Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Atualizar o nome de exibição no Auth
+      await updateProfile(userCredential.user, {
+        displayName: displayName
+      });
+      
+      // Criar documento do usuário no Firestore
+      const userDocRef = doc(db, "usuarios", userCredential.user.uid);
+      
+      await setDoc(userDocRef, {
+        nome: displayName,
+        email: email,
+        cpf: cpf,
+        cargo: cargo,
+        tema: "dark",
+        data_registro: serverTimestamp(),
+        ultimo_login: serverTimestamp(),
+        imagem_perfil: imagemPerfil,
+        ativo: "sim",
+        centro_de_custo: centroDeCusto
+      });
+      
+      return userCredential.user;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Função para login
+  async function signIn(email: string, password: string): Promise<User> {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Atualizar o último login no Firestore
+      const userDocRef = doc(db, "usuarios", userCredential.user.uid);
+      await updateDoc(userDocRef, {
+        ultimo_login: serverTimestamp()
+      });
+      
+      return userCredential.user;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Função para logout
+  async function logout(): Promise<void> {
+    return signOut(auth);
+  }
+
+  const value: AuthContextType = {
+    user,
+    userData,
+    signIn,
+    signUp,
+    logout
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+}
+
+firebase.ts:
 
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
@@ -30,87 +236,3 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
-
-a coleção é de nome: usuarios
-
-Os campos são:
-
-ativo
-Padrão = sim
-(string)
-
-
-cargo
-(string)
-
-
-centro_de_custo
-(string)
-
-
-cpf
-(string)
-
-
-data_registro
-(timestamp)
-
-
-email
-(string)
-
-
-imagem_perfil
-(string)
-
-
-nome
-(string)
-
-
-tema
-Padrão = dark
-(string)
-
-
-ultimo_login
-(timestamp)
-
-Atribuir os seguintes cargos em dropdown no cadastro:
-
-const CARGOS = [
-  "AUX. DE ESTOQUE",
-  "AUX. DE MANUTENÇÃO",
-  "AUX. ADMINISTRATIVO",
-  "AUX. DE PRODUÇÃO",
-  "AUX. DE LIMPEZA",
-  "GERENTE",
-  "AGENTE FINANCEIRO",
-  "T.I.",
-  "ENCARREGADO DE PRODUÇÃO",
-  "ENCARREGADO DE MANUTENÇÃO",
-  "ENCARREGADO DE LIMPEZA",
-  "GESTOR",
-  "ANALISTA",
-  "OPERADOR",
-  "ASSISTENTE",
-  "COORDENADOR",
-  "OUTRO"
-];
-
-e centros de custos em dropdown no cadastro:
-
-const CENTROS_DE_CUSTO = [
-  "ESTOQUE",
-  "MANUTENÇÃO",
-  "ADMINISTRATIVO",
-  "FINANCEIRO",
-  "PRODUÇÃO",
-  "LIMPEZA",
-  "GERÊNCIA",
-  "T.I.",
-  "DIRETORIA",
-  "VENDAS",
-  "LOGÍSTICA",
-  "OUTRO"
-];

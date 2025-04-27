@@ -213,7 +213,7 @@ const AddParadaModal = ({ open, onOpenChange, onSuccess }: AddParadaModalProps) 
       };
 
       // Add the record to Firestore
-      await addDoc(collection(db, "paradas"), paradaData);
+      await addDoc(collection(db, "ordens_de_servicos"), paradaData);
 
       // Show success message
       toast({

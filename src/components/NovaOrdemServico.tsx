@@ -217,7 +217,7 @@ const NovaOrdemServico = () => {
         responsavelManutencao: formData.responsavelManutencao,
         tipoManutencao: formData.tipoManutencao,
         solucaoAplicada: formData.solucaoAplicada,
-        criadoPor: user?.id || "",
+        criadoPor: user?.uid || "",
         criadoEm: Timestamp.now(),
         status: "pendente"
       };
