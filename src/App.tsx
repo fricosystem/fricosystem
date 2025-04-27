@@ -19,7 +19,6 @@ import Carrinho from "./pages/Carrinho";
 import Requisicoes from "./pages/Requisicoes";
 import Enderecamento from "./pages/Enderecamento";
 import OrdensServico from "./pages/OrdensServico";
-import Fornecedores from "./pages/Fornecedores";
 
 // Páginas de Produção
 import DashboardProducao from "@/pages/Producao/DashboardProducao";
