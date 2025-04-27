@@ -13,10 +13,11 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import AppLayout from '@/layouts/AppLayout';
 
 const CORES = ['#22c55e', '#3b82f6', '#f97316', '#ef4444'];
 
-const Dashboard = () => {
+const DashboardContent = () => {
   const [producaoData, setProducaoData] = useState([
     { name: 'Seg', producao: 65 },
     { name: 'Ter', producao: 59 },
@@ -55,10 +56,6 @@ const Dashboard = () => {
   
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Visão geral da produção da Fricó Alimentos</p>
-      </div>
       
       {/* Cards de indicadores */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -153,6 +150,14 @@ const Dashboard = () => {
         </CardContent>
       </Card>
     </div>
+  );
+};
+
+const Dashboard = () => {
+  return (
+    <AppLayout title="Dashboard">
+      <DashboardContent />
+    </AppLayout>
   );
 };
 

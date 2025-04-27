@@ -10,8 +10,9 @@ import { useProdutos } from "@/hooks/useProdutos";
 import { useMateriais, gerarMateriaisNecessarios } from "@/hooks/useMateriais";
 import { usePlanejamento, DiaPlanejamento, Produto } from "@/hooks/usePlanejamento";
 import DiaPlanejamentoComponent from "@/components/Planejamento/DiaPlanejamento";
+import AppLayout from '@/layouts/AppLayout';
 
-const PlanejamentoProducao = () => {
+const PlanejamentoProducaoContent = () => {
   const { toast } = useToast();
   const hoje = new Date();
   const inicioSemana = startOfWeek(hoje, { weekStartsOn: 1 });
@@ -148,10 +149,6 @@ const PlanejamentoProducao = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Planejamento de Produção</h1>
-          <p className="text-muted-foreground">Organize a produção para os próximos 7 dias</p>
-        </div>
         <Button onClick={handleSalvarPlanejamento} disabled={isSaving}>
           {isSaving ? (
             <>Salvando...</>
@@ -207,6 +204,14 @@ const PlanejamentoProducao = () => {
         )}
       </Tabs>
     </div>
+  );
+};
+
+const PlanejamentoProducao = () => {
+  return (
+    <AppLayout title="Planejamento de Produção">
+      <PlanejamentoProducaoContent />
+    </AppLayout>
   );
 };
 
