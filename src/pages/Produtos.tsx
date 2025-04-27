@@ -166,9 +166,20 @@ const Produtos = () => {
 
   return (
     <AppLayout title="Produtos">
+      <div className="mb-4 flex items-center space-x-2">
+        <div className="relative flex-1">
+          <Input
+            type="text"
+            placeholder="Buscar produto por nome ou código..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+          <SearchIcon className="h-5 w-5 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
+        </div>
+      </div>
       <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
         <div className="flex items-center">
-          <h1 className="text-2xl font-semibold">Lista de Produtos</h1>
           <Button
             variant="outline"
             size="icon"
@@ -182,19 +193,6 @@ const Produtos = () => {
         <Button onClick={() => setIsAddModalOpen(true)}>
           Adicionar Produto
         </Button>
-      </div>
-  
-      <div className="mb-4 flex items-center space-x-2">
-        <div className="relative flex-1">
-          <Input
-            type="text"
-            placeholder="Buscar produto por nome ou código..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-          <SearchIcon className="h-5 w-5 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
-        </div>
       </div>
   
       {error && (
