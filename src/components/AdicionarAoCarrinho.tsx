@@ -79,7 +79,8 @@ const AdicionarAoCarrinho = ({
           timestamp: new Date().getTime(),
           // Opcional: adicionar mais campos do produto se necessário
           imagem: produto.imagem || "",
-          unidade: produto.unidade || produto.unidade_de_medida || "",
+          unidade: produto.unidade || produto.unidade || "",
+          unidade_de_medida: produto.unidade_de_medida || produto.unidade_de_medida || "",
           deposito: produto.deposito || "",
           prateleira: produto.prateleira || "",
           quantidade_minima: produto.quantidadeMinima || ""

@@ -384,7 +384,8 @@ const Carrinho = () => {
           codigo_estoque: item.codigo_estoque || "",
           quantidade: item.quantidade,
           valor_unitario: item.valor_unitario,
-          unidade: item.unidade || item.unidade_de_medida || "",
+          unidade: item.unidade,
+          unidade_de_medida: item.unidade_de_medida,
           deposito: item.deposito || "",
           prateleira: item.prateleira || "",
           detalhes: item.detalhes || "",
@@ -404,6 +405,7 @@ const Carrinho = () => {
         data_criacao: serverTimestamp(),
         valor_total: valorTotal
       };
+      // Depois de criar a requisição e antes de limpar o carrinho:
       
       // Adicionar à coleção de requisições
       await addDoc(collection(db, "requisicoes"), requisicaoData);
@@ -411,6 +413,18 @@ const Carrinho = () => {
       // Remover todos os itens do carrinho após a criação da requisição
       for (const item of carrinho) {
         await deleteDoc(doc(db, "carrinho", item.id));
+      }
+      // Atualizar a quantidade dos produtos no estoque
+      for (const item of carrinho) {
+        if (item.produtoEstoque && item.codigo_material) {
+          const produtoRef = doc(db, "produtos", item.produtoEstoque.id);
+          const novaQuantidade = item.produtoEstoque.quantidade - item.quantidade;
+          
+          // Atualizar quantidade no Firestore
+          await updateDoc(produtoRef, {
+            quantidade: novaQuantidade
+          });
+        }
       }
 
       toast({

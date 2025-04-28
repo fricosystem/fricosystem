@@ -551,16 +551,16 @@ const AppSidebar = () => {
               <SidebarMenuItem>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton className={`flex items-center justify-between w-full p-4 h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-1 my-1`}>
-                      <div className="flex items-center space-x-2">
+                    <SidebarMenuButton className={`flex items-center justify-center w-full p-4 h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-auto my-1`}>
+                      <div className="flex items-center justify-center space-x-2 w-full">
                         <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ff7a59] text-white shrink-0">
                           {getUserInitial()}
                         </div>
                         <div className="flex flex-col items-start min-w-0">
                           <span className={`font-medium text-xs text-gray-300 truncate w-full ${firebaseClasses.text.small}`}>{getDisplayName()}</span>
                         </div>
+                        <ChevronUp className="h-4 w-4 shrink-0" />
                       </div>
-                      <ChevronUp className="h-4 w-4 shrink-0 ml-1" />
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className={`w-64 bg-[#2c384a] border-[#3e4a5e] text-gray-300 ${firebaseClasses.text.normal}`}>

@@ -21,6 +21,7 @@ interface Produto {
   codigoEstoque: string;
   nome: string;
   unidade: string;
+  unidade_de_medida: string;
   deposito: string;
   quantidadeAtual: number;
   quantidadeMinima: number;
@@ -64,6 +65,7 @@ const Produtos = () => {
             codigoEstoque: data.codigo_estoque || "",
             nome: data.nome || "",
             unidade: data.unidade || "UN",
+            unidade_de_medida: data.unidade_de_medida || "",
             deposito: data.deposito || "",
             quantidadeAtual: data.quantidade || 0,
             quantidadeMinima: data.quantidade_minima || 0,
@@ -126,6 +128,7 @@ const Produtos = () => {
       detalhes: produto.detalhes || "",
       dataHora: produto.dataHora || new Date().toISOString(),
       imagem: produto.imagem || "/placeholder.svg",
+      unidade_de_medida: produto.unidade_de_medida || "",
     };
 
     adicionarAoCarrinho(produtoCompleto);

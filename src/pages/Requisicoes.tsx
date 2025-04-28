@@ -92,6 +92,7 @@ interface Item {
   codigo_material?: string;
   codigo_estoque?: string;
   unidade?: string;
+  unidade_de_medida?: string;
   deposito?: string;
   prateleira?: string;
   detalhes?: string;
@@ -806,7 +807,7 @@ const Requisicoes = () => {
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {item.quantidade}
-                                  {item.unidade && <span> {item.unidade}</span>}
+                                  {item.unidade && <span> {item.unidade_de_medida}</span>}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {formatCurrency(item.valor_unitario || item.preco || 0)}
