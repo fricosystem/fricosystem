@@ -5,13 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DiaPlanejamento as DiaPlanejamentoType, Produto } from '@/hooks/usePlanejamento';
 import ProdutoCard from '@/components/Planejamento/ProdutoCardPlanejamento';
 import ProdutoForm from '@/components/Planejamento/ProdutoFormPlanejamento';
-import { Produto as ProdutoEstoque } from '@/hooks/useProdutos';
+import { Produto as ProdutoEstoque, ProdutoComReceita } from '@/pages/Producao/Componentes/useProdutosPlanejamento';
 import { useToast } from '@/hooks/use-toast';
 
 interface DiaPlanejamentoProps {
   dia: DiaPlanejamentoType;
   diaIndex: number;
-  produtos: ProdutoEstoque[] | undefined;
+  produtos: ProdutoEstoque[] | ProdutoComReceita[] | undefined;
   carregandoProdutos: boolean;
   handleAddProduto: (diaIndex: number, produtoId: string, quantidade: number) => void;
   handleRemoveProduto: (diaIndex: number, produtoId: string) => void;
@@ -33,6 +33,9 @@ export const DiaPlanejamento: React.FC<DiaPlanejamentoProps> = ({
     handleAddProduto(diaIndex, produtoId, quantidade);
   };
 
+  // Force type assertion para resolver a incompatibilidade de tipo
+  const produtosCompatible = produtos as any;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -45,7 +48,7 @@ export const DiaPlanejamento: React.FC<DiaPlanejamentoProps> = ({
       </CardHeader>
       <CardContent>
         <ProdutoForm 
-          produtos={produtos}
+          produtos={produtosCompatible}
           carregandoProdutos={carregandoProdutos}
           onAddProduto={onAddProduto}
         />

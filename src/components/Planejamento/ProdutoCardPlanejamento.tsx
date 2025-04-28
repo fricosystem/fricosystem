@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Produto, Material } from '@/hooks/usePlanejamento';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface ProdutoCardPlanejamentoProps {
   produto: Produto;
@@ -22,6 +24,15 @@ const STATUS_MAP = {
 };
 
 export const ProdutoCardPlanejamento: React.FC<ProdutoCardPlanejamentoProps> = ({ produto, onRemove, onStatusChange }) => {
+  // Formatar datas se existirem
+  const dataCriacaoFormatada = produto.dataCriacao 
+    ? format(produto.dataCriacao.toDate(), "dd/MM/yyyy HH:mm", { locale: ptBR }) 
+    : null;
+    
+  const dataAtualizacaoFormatada = produto.dataAtualizacao 
+    ? format(produto.dataAtualizacao.toDate(), "dd/MM/yyyy HH:mm", { locale: ptBR }) 
+    : null;
+
   return (
     <Card className="overflow-hidden">
       <div className={`h-1 ${STATUS_MAP[produto.status].color}`} />
@@ -62,35 +73,51 @@ export const ProdutoCardPlanejamento: React.FC<ProdutoCardPlanejamentoProps> = (
         <CardDescription>
           Quantidade: {produto.quantidade} {produto.unidade}
         </CardDescription>
+        {dataCriacaoFormatada && (
+          <CardDescription className="text-xs mt-1">
+            Criado em: {dataCriacaoFormatada}
+          </CardDescription>
+        )}
+        {dataAtualizacaoFormatada && (
+          <CardDescription className="text-xs">
+            Atualizado em: {dataAtualizacaoFormatada}
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent>
         <div>
           <h4 className="font-medium mb-2">Materiais necessários:</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {produto.materiais && produto.materiais.map((material: Material) => (
-              <div 
-                key={material.id} 
-                className={`flex items-center justify-between p-2 rounded-md ${
-                  material.disponivel 
-                    ? 'bg-green-50 dark:bg-green-900/20' 
-                    : 'bg-red-50 dark:bg-red-900/20'
-                }`}
-              >
-                <span>{material.nome}</span>
-                <div className="flex items-center gap-2">
-                  <span>
-                    {material.quantidade} {material.unidade}
-                  </span>
-                  <Badge 
-                    variant={material.disponivel ? "outline" : "destructive"}
-                    className="ml-2"
-                  >
-                    {material.disponivel ? 'Disponível' : 'Indisponível'}
-                  </Badge>
+          {produto.materiais && produto.materiais.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {produto.materiais.map((material: Material) => (
+                <div 
+                  key={material.id} 
+                  className={`flex items-center justify-between p-2 rounded-md ${
+                    material.disponivel 
+                      ? 'bg-green-50 dark:bg-green-900/20' 
+                      : 'bg-red-50 dark:bg-red-900/20'
+                  }`}
+                >
+                  <span>{material.nome}</span>
+                  <div className="flex items-center gap-2">
+                    <span>
+                      {material.quantidade} {material.unidade}
+                    </span>
+                    <Badge 
+                      variant={material.disponivel ? "outline" : "destructive"}
+                      className="ml-2"
+                    >
+                      {material.disponivel ? 'Disponível' : 'Indisponível'}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-muted-foreground text-sm">
+              Nenhum material registrado para este produto
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

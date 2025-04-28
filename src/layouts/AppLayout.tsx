@@ -1,9 +1,9 @@
-
 import { ReactNode } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import AppHeader from "@/components/AppHeader";
 import { useLocation } from "react-router-dom";
+import FloatingActionBar from "@/components/meuFlutuante";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -23,6 +23,8 @@ const AppLayout = ({ children, title }: AppLayoutProps) => {
             {children}
           </main>
         </div>
+        {/* Adicionamos o componente FloatingActionBar aqui */}
+        <FloatingActionBar />
       </div>
     </SidebarProvider>
   );

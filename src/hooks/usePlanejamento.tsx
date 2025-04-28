@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
-import { db } from "@/firebase/firebase";
-import { format, addDays } from "date-fns";
+import { useState, useEffect } from 'react';
+import { db } from '@/firebase/firebase';
+import { collection, query, where, getDocs, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { format, addDays, startOfWeek } from 'date-fns';
 
 export interface Material {
   id: string;
@@ -13,126 +13,131 @@ export interface Material {
 
 export interface Produto {
   id: string;
+  produtoId: string;
   nome: string;
   quantidade: number;
   unidade: string;
   status: 'pendente' | 'em_producao' | 'concluido' | 'problema';
-  materiais: Material[];
+  materiais?: Material[];
+  dataCriacao?: any; // Timestamp
+  dataAtualizacao?: any; // Timestamp
 }
 
 export interface DiaPlanejamento {
-  id?: string;
+  id: string;
   data: Date;
   produtos: Produto[];
 }
 
-// Type for Firestore document
-interface FirestorePlanejamentoDoc {
-  id: string;
-  data: string; // ISO date string format
-  produtos: Produto[];
-  timestamp?: Date;
-}
-
 export const usePlanejamento = (inicioSemana: Date) => {
-  const queryClient = useQueryClient();
+  const [planejamento, setPlanejamento] = useState<DiaPlanejamento[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Função para obter o planejamento da semana
-  const obterPlanejamentoSemana = async (): Promise<DiaPlanejamento[]> => {
-    try {
-      const dias = Array.from({ length: 7 }, (_, i) =>
-        format(addDays(inicioSemana, i), "yyyy-MM-dd")
-      );
+  useEffect(() => {
+    const carregarPlanejamento = async () => {
+      setIsLoading(true);
+      setError(null);
       
-      const col = collection(db, "planejamento");
-      const q = query(col, where("data", ">=", dias[0]), where("data", "<=", dias[6]));
-      const snap = await getDocs(q);
-      const docs = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as FirestorePlanejamentoDoc));
-      
-      console.log("Documentos encontrados:", docs.length);
-      
-      return dias.map(dataStr => {
-        const docDia = docs.find(d => d.data === dataStr);
-        return {
-          id: docDia?.id || `temp-${dataStr}`,
-          data: new Date(dataStr),
-          produtos: docDia?.produtos || []
-        };
-      });
-    } catch (error) {
-      console.error("Erro ao buscar planejamento:", error);
-      throw error;
-    }
-  };
-
-  // Função para salvar o planejamento no Firestore
-  const salvarPlanejamentoFirestore = async (diasPlanejamento: DiaPlanejamento[]): Promise<boolean> => {
-    console.log("Iniciando salvamento:", diasPlanejamento);
-    try {
-      // Primeiro, deletamos todos os registros da semana atual para evitar duplicatas
-      const col = collection(db, "planejamento");
-      const dataInicio = format(diasPlanejamento[0].data, "yyyy-MM-dd");
-      const dataFim = format(diasPlanejamento[diasPlanejamento.length - 1].data, "yyyy-MM-dd");
-      
-      const registrosAtuais = query(col, where("data", ">=", dataInicio), where("data", "<=", dataFim));
-      const snapshot = await getDocs(registrosAtuais);
-      
-      // Excluir registros existentes
-      const exclusoes = snapshot.docs.map(documento => deleteDoc(doc(db, "planejamento", documento.id)));
-      await Promise.all(exclusoes);
-      
-      // Agora adicionar os novos registros
-      const promises = diasPlanejamento.map(async (dia) => {
-        if (!dia.data) {
-          console.error("Dia sem data:", dia);
-          return;
-        }
-
-        const dataStr = format(dia.data, "yyyy-MM-dd");
-        console.log(`Salvando dia ${dataStr} com ${dia.produtos.length} produtos`);
-
-        // Garantir que temos produtos válidos antes de salvar
-        const produtosValidos = dia.produtos.filter(p => p && p.id && p.nome);
+      try {
+        const inicioSemanaStr = format(inicioSemana, "yyyy-MM-dd");
+        const fimSemana = addDays(inicioSemana, 6);
+        const fimSemanaStr = format(fimSemana, "yyyy-MM-dd");
         
-        await addDoc(col, {
-          data: dataStr,
-          produtos: produtosValidos,
-          timestamp: new Date() // Adicionar timestamp para ordenação
+        // Criar array inicial com os 7 dias da semana
+        const diasIniciais = Array.from({ length: 7 }, (_, i) => {
+          const data = addDays(inicioSemana, i);
+          return {
+            id: format(data, "yyyy-MM-dd"),
+            data,
+            produtos: [] as Produto[]
+          };
         });
+        
+        // Buscar planejamento no Firestore
+        const planejamentoRef = collection(db, 'planejamento');
+        const q = query(
+          planejamentoRef,
+          where('dataStr', '>=', inicioSemanaStr),
+          where('dataStr', '<=', fimSemanaStr)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          setPlanejamento(diasIniciais);
+        } else {
+          const planejamentoDias: DiaPlanejamento[] = [...diasIniciais];
+          
+          querySnapshot.forEach(doc => {
+            const dia = doc.data() as any;
+            const dataStr = dia.dataStr;
+            const index = planejamentoDias.findIndex(d => 
+              format(d.data, "yyyy-MM-dd") === dataStr
+            );
+            
+            if (index !== -1) {
+              // Se encontrou o dia, substitui os dados
+              planejamentoDias[index] = {
+                ...planejamentoDias[index],
+                id: doc.id,
+                produtos: dia.produtos || []
+              };
+            }
+          });
+          
+          setPlanejamento(planejamentoDias);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar planejamento:", err);
+        setError("Falha ao carregar o planejamento");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    carregarPlanejamento();
+  }, [inicioSemana]);
+
+  const salvar = async (dias: DiaPlanejamento[]) => {
+    setIsSaving(true);
+    setSaveError(null);
+    
+    try {
+      // Salvar cada dia separadamente
+      const promises = dias.map(async (dia) => {
+        const dataStr = format(dia.data, "yyyy-MM-dd");
+        const diaRef = doc(db, 'planejamento', dia.id || dataStr);
+        
+        // Preparar dados para salvar no Firestore
+        const diaData = {
+          id: dia.id || dataStr,
+          dataStr,
+          dataTimestamp: Timestamp.fromDate(dia.data),
+          produtos: dia.produtos.map(produto => ({
+            ...produto,
+            // Garantir que timestamps estejam corretos
+            dataCriacao: produto.dataCriacao || Timestamp.now(),
+            dataAtualizacao: produto.status !== 'pendente' ? (produto.dataAtualizacao || Timestamp.now()) : null
+          })),
+          ultimaAtualizacao: Timestamp.now()
+        };
+        
+        await setDoc(diaRef, diaData);
       });
       
       await Promise.all(promises);
-      console.log("Salvamento concluído com sucesso");
-      return true;
-    } catch (error) {
-      console.error("Erro ao salvar planejamento:", error);
-      throw error;
+      setPlanejamento(dias);
+    } catch (err) {
+      console.error("Erro ao salvar planejamento:", err);
+      setSaveError("Erro ao salvar planejamento");
+      throw err;
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // Query para obter dados
-  const planejamentoQuery = useQuery({
-    queryKey: ["planejamento", format(inicioSemana, "yyyy-MM-dd")],
-    queryFn: obterPlanejamentoSemana,
-  });
-
-  // Mutation para salvar dados
-  const mutation = useMutation({
-    mutationFn: salvarPlanejamentoFirestore,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["planejamento"] });
-    }
-  });
-
-  return {
-    planejamento: planejamentoQuery.data,
-    isLoading: planejamentoQuery.isLoading,
-    error: planejamentoQuery.error,
-    salvar: mutation.mutate,
-    isSaving: mutation.isPending,
-    saveError: mutation.error
-  };
+  return { planejamento, isLoading, error, salvar, isSaving, saveError };
 };
