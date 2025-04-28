@@ -50,7 +50,7 @@ import { Check } from "lucide-react";
 
 interface Fornecedor {
   id: string;
-  pessoaContato: string;
+  razaoSocial: string;
   cnpj: string;
 }
 
@@ -122,7 +122,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
           const data = doc.data();
           fornecedoresData.push({
             id: doc.id,
-            pessoaContato: data.pessoaContato || "",
+            razaoSocial: data.razaoSocial || "",
             cnpj: data.cnpj || "",
           });
         });
@@ -173,7 +173,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
     if (!selectedId) return null;
     
     const selectedFornecedor = fornecedores.find(f => f.id === selectedId);
-    return selectedFornecedor ? `${selectedFornecedor.pessoaContato} - ${selectedFornecedor.cnpj}` : null;
+    return selectedFornecedor ? `${selectedFornecedor.razaoSocial} - ${selectedFornecedor.cnpj}` : null;
   };
 
   const handleSubmit = async (formData: FormData) => {
@@ -373,7 +373,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                               {fornecedores.map((fornecedor) => (
                                 <CommandItem
                                   key={fornecedor.id}
-                                  value={`${fornecedor.pessoaContato} ${fornecedor.cnpj}`}
+                                  value={`${fornecedor.razaoSocial} ${fornecedor.cnpj}`}
                                   onSelect={() => {
                                     form.setValue("fornecedorAtual", fornecedor.id);
                                     setFornecedorPopoverOpen(false);
@@ -388,7 +388,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                                     )}
                                   />
                                   <div className="flex flex-col">
-                                    <span>{fornecedor.pessoaContato}</span>
+                                    <span>{fornecedor.razaoSocial}</span>
                                     <span className="text-xs text-muted-foreground">
                                       CNPJ: {fornecedor.cnpj}
                                     </span>
