@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Save, X, Calculator, Percent, Search } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { Loader2, Save, X, Calculator, Percent, Search, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -41,12 +40,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { addDoc, collection, getDocs } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
+import { useForm } from "react-hook-form";
 
 interface Fornecedor {
   id: string;
@@ -76,6 +76,8 @@ interface FormData {
   valorUnitario: string;
   dataVencimento: string;
   fornecedorAtual: string;
+  fornecedorNome: string;
+  fornecedorCNPJ: string;
   prateleira: string;
 }
 
@@ -85,6 +87,8 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loadingFornecedores, setLoadingFornecedores] = useState(false);
   const [fornecedorPopoverOpen, setFornecedorPopoverOpen] = useState(false);
+  const [ultimoCodigoEstoque, setUltimoCodigoEstoque] = useState<number | null>(null);
+  const [loadingCodigoEstoque, setLoadingCodigoEstoque] = useState(false);
   const { toast } = useToast();
 
   // Initialize react-hook-form
@@ -105,11 +109,13 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       valorUnitario: "",
       dataVencimento: "",
       fornecedorAtual: "",
+      fornecedorNome: "",
+      fornecedorCNPJ: "",
       prateleira: "",
     },
   });
 
-  // Carregar fornecedores do Firebase
+  // Carregar fornecedores e último código estoque do Firebase
   useEffect(() => {
     const fetchFornecedores = async () => {
       try {
@@ -140,10 +146,46 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       }
     };
 
+    const fetchUltimoCodigoEstoque = async () => {
+      try {
+        setLoadingCodigoEstoque(true);
+        
+        // Ordenar pela propriedade codigo_estoque em ordem decrescente e limitar a 1 resultado
+        const produtosRef = collection(db, "produtos");
+        const q = query(produtosRef, orderBy("codigo_estoque", "desc"), limit(1));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const ultimoProduto = querySnapshot.docs[0].data();
+          const ultimoCodigo = ultimoProduto.codigo_estoque;
+          
+          // Converter para número se for string
+          let ultimoCodigoNum = typeof ultimoCodigo === 'string' 
+            ? parseInt(ultimoCodigo, 10) 
+            : ultimoCodigo;
+            
+          if (!isNaN(ultimoCodigoNum)) {
+            setUltimoCodigoEstoque(ultimoCodigoNum);
+            // Sugerir o próximo código
+            form.setValue("codigoEstoque", String(ultimoCodigoNum + 1));
+          }
+        } else {
+          // Se não houver produtos, sugerir 1 como primeiro código
+          setUltimoCodigoEstoque(0);
+          form.setValue("codigoEstoque", "1");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar último código de estoque:", error);
+      } finally {
+        setLoadingCodigoEstoque(false);
+      }
+    };
+
     if (open) {
       fetchFornecedores();
+      fetchUltimoCodigoEstoque();
     }
-  }, [open, toast]);
+  }, [open, toast, form]);
 
   // Observar mudanças na quantidade, percentual e no switch de cálculo automático
   const quantidade = form.watch("quantidade");
@@ -167,6 +209,44 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
     }
   };
 
+  // Formatação do valor unitário ao digitar
+  const formatarValorUnitario = (valor: string) => {
+    // Remove todos os caracteres não-numéricos exceto vírgula e ponto
+    let valorLimpo = valor.replace(/[^\d.,]/g, '');
+    
+    // Substituir vírgula por ponto se existir
+    valorLimpo = valorLimpo.replace(',', '.');
+    
+    // Se houver mais de um ponto, mantém apenas o último (para casos de entrada incorreta)
+    if ((valorLimpo.match(/\./g) || []).length > 1) {
+      const partes = valorLimpo.split('.');
+      const ultimaParte = partes.pop();
+      valorLimpo = partes.join('') + '.' + ultimaParte;
+    }
+    
+    return valorLimpo;
+  };
+
+  // Normalizar valor unitário para formato numérico com ponto decimal
+  const normalizarValorUnitario = (valor: string) => {
+    // Remove todos os caracteres não-numéricos exceto vírgula e ponto
+    let valorLimpo = valor.replace(/[^\d.,]/g, '');
+    
+    // Substituir vírgula por ponto
+    valorLimpo = valorLimpo.replace(',', '.');
+    
+    // Garantir que exista apenas um ponto decimal
+    if ((valorLimpo.match(/\./g) || []).length > 1) {
+      const partes = valorLimpo.split('.');
+      const ultimaParte = partes.pop();
+      valorLimpo = partes.join('') + '.' + ultimaParte;
+    }
+    
+    // Se não for um número válido, retorna 0
+    const valorNumerico = parseFloat(valorLimpo);
+    return isNaN(valorNumerico) ? 0 : valorNumerico;
+  };
+
   // Get selected fornecedor name for display
   const getSelectedFornecedorName = () => {
     const selectedId = form.watch("fornecedorAtual");
@@ -179,10 +259,25 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
     try {
+      // Get fornecedor details if ID is provided
+      let fornecedorNome = formData.fornecedorNome;
+      let fornecedorCNPJ = formData.fornecedorCNPJ;
+
+      if (formData.fornecedorAtual) {
+        const selectedFornecedor = fornecedores.find(f => f.id === formData.fornecedorAtual);
+        if (selectedFornecedor) {
+          fornecedorNome = selectedFornecedor.razaoSocial;
+          fornecedorCNPJ = selectedFornecedor.cnpj;
+        }
+      }
+
+      // Normaliza o valor unitário para formato com ponto decimal
+      const valorUnitarioNormalizado = normalizarValorUnitario(formData.valorUnitario);
+
       // Convert numeric fields to numbers
       const produtoData = {
         codigo_material: formData.codigo,
-        codigo_estoque: formData.codigoEstoque,
+        codigo_estoque: parseInt(formData.codigoEstoque, 10) || 0,
         nome: formData.nome,
         unidade: formData.unidade,
         deposito: formData.deposito,
@@ -190,10 +285,12 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         quantidade_minima: parseFloat(formData.quantidadeMinima),
         detalhes: formData.detalhes,
         imagem: formData.imagem || "/placeholder.svg",
-        valor_unitario: parseFloat(formData.valorUnitario),
+        valor_unitario: valorUnitarioNormalizado,
         data_criacao: new Date().toISOString(),
         data_vencimento: formData.dataVencimento,
-        fornecedor_atual: formData.fornecedorAtual,
+        fornecedor_id: formData.fornecedorAtual || null,
+        fornecedor_nome: fornecedorNome || null,
+        fornecedor_cnpj: fornecedorCNPJ || null,
         prateleira: formData.prateleira || "Não endereçado",
         unidade_de_medida: formData.unidadeMedida,
       };
@@ -255,8 +352,67 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                   <FormItem>
                     <FormLabel>Código Estoque*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: 1" {...field} required />
+                      <div className="flex">
+                        <Input 
+                          placeholder={loadingCodigoEstoque ? "Carregando..." : "Ex: 1"} 
+                          {...field} 
+                          required 
+                          disabled={loadingCodigoEstoque}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="ml-2 px-3" 
+                          onClick={async () => {
+                            setLoadingCodigoEstoque(true);
+                            try {
+                              const produtosRef = collection(db, "produtos");
+                              const q = query(produtosRef, orderBy("codigo_estoque", "desc"), limit(1));
+                              const querySnapshot = await getDocs(q);
+                              
+                              if (!querySnapshot.empty) {
+                                const ultimoProduto = querySnapshot.docs[0].data();
+                                const ultimoCodigo = ultimoProduto.codigo_estoque;
+                                
+                                let ultimoCodigoNum = typeof ultimoCodigo === 'string' 
+                                  ? parseInt(ultimoCodigo, 10) 
+                                  : ultimoCodigo;
+                                  
+                                if (!isNaN(ultimoCodigoNum)) {
+                                  setUltimoCodigoEstoque(ultimoCodigoNum);
+                                  form.setValue("codigoEstoque", String(ultimoCodigoNum + 1));
+                                }
+                              } else {
+                                setUltimoCodigoEstoque(0);
+                                form.setValue("codigoEstoque", "1");
+                              }
+                            } catch (error) {
+                              console.error("Erro ao atualizar código de estoque:", error);
+                              toast({
+                                title: "Erro",
+                                description: "Não foi possível atualizar o código de estoque.",
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setLoadingCodigoEstoque(false);
+                            }
+                          }}
+                          disabled={loadingCodigoEstoque}
+                          title="Buscar próximo código disponível"
+                        >
+                          {loadingCodigoEstoque ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
+                    {ultimoCodigoEstoque !== null && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Último código registrado: {ultimoCodigoEstoque}
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -371,14 +527,17 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                             <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
                             <CommandGroup>
                               {fornecedores.map((fornecedor) => (
-                                <CommandItem
-                                  key={fornecedor.id}
-                                  value={`${fornecedor.razaoSocial} ${fornecedor.cnpj}`}
-                                  onSelect={() => {
-                                    form.setValue("fornecedorAtual", fornecedor.id);
-                                    setFornecedorPopoverOpen(false);
-                                  }}
-                                >
+                                    <CommandItem
+                                    key={fornecedor.id}
+                                    value={`${fornecedor.razaoSocial} ${fornecedor.cnpj}`}
+                                    onSelect={() => {
+                                      form.setValue("fornecedorAtual", fornecedor.id);
+                                      // Salvar também o nome e CNPJ do fornecedor
+                                      form.setValue("fornecedorNome", fornecedor.razaoSocial);
+                                      form.setValue("fornecedorCNPJ", fornecedor.cnpj);
+                                      setFornecedorPopoverOpen(false);
+                                    }}
+                                  >
                                   <Check
                                     className={cn(
                                       "mr-2 h-4 w-4",
@@ -591,8 +750,22 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 <FormItem>
                   <FormLabel>Valor Unitário*</FormLabel>
                   <FormControl>
-                    <Input type="text" placeholder="Ex: 15,75" {...field} required />
+                    <Input 
+                      type="text" 
+                      placeholder="Ex: 15,75" 
+                      {...field} 
+                      required 
+                      onChange={(e) => {
+                        // Formata o valor ao digitar para exibição amigável
+                        const valorFormatado = formatarValorUnitario(e.target.value);
+                        e.target.value = valorFormatado;
+                        field.onChange(e);
+                      }}
+                    />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Digite o valor usando ponto como separador decimal apenas antes dos centavos (ex: 1915.75 ou 15.75)
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

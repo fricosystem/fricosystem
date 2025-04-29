@@ -1,8 +1,8 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Edit, Trash2, Info } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Edit, Trash2, Info, Calendar, Tag, Package, BarChart, Home, MapPin, User, DollarSign, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import AdicionarAoCarrinho from "./AdicionarAoCarrinho";
 import { useState, useEffect } from "react";
@@ -26,7 +26,7 @@ export interface Produto {
   prateleira?: string;
   data_vencimento?: string | { seconds: number; nanoseconds: number };
   data_criacao?: string | { seconds: number; nanoseconds: number };
-  fornecedor_atual?: string;
+  fornecedor?: string;
   unidade_de_medida?: string;
   
   // Campos adicionais para compatibilidade com o componente Produtos
@@ -36,7 +36,8 @@ export interface Produto {
   quantidadeMinima?: number;
   dataVencimento?: string | { seconds: number; nanoseconds: number };
   dataHora?: string | { seconds: number; nanoseconds: number };
-  fornecedor?: string;
+  fornecedor_nome?: string;
+  fornecedor_cnpj?: string;
   valorUnitario?: number;
 }
 
@@ -92,7 +93,7 @@ const ProdutoCard = ({
 
   // Função para extrair unidade de medida do nome se estiver presente
   const extrairUnidadeMedidaDoNome = (nome: string): string => {
-    const unidadesPossiveis = ["KG", "G", "UN", "L", "ML", "CX", "PCT", "TN"];
+    const unidadesPossiveis = ["KG", "GR", "UN", "LT", "ML", "CX", "PCT", "TN"];
     const nomeUpper = nome.toUpperCase();
     
     for (const unidade of unidadesPossiveis) {
@@ -115,7 +116,8 @@ const ProdutoCard = ({
   // Usar o valor do estado ou o valor do produto se disponível
   const unidade_de_medida = produto.unidade_de_medida || unidadeMedida || extrairUnidadeMedidaDoNome(produto.nome);
   
-  const fornecedor = produto.fornecedor || produto.fornecedor_atual || "";
+  const fornecedorNome = produto.fornecedor_nome || produto.fornecedor || "";
+  const fornecedorCnpj = produto.fornecedor_cnpj || "";
   const dataVencimento = produto.dataVencimento || produto.data_vencimento;
   const dataCriacao = produto.dataHora || produto.data_criacao;
   
@@ -189,99 +191,195 @@ const ProdutoCard = ({
                   <Info className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle>Detalhes do Produto</DialogTitle>
-                </DialogHeader>
-                {produto && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Nome</h4>
-                      <p>{produto.nome}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Código Material</h4>
-                      <p>{codigo || "Não informado"}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Código Estoque</h4>
-                      <p>{codigoEstoque || "Não informado"}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Quantidade</h4>
-                      <p className={isLowStock ? "text-destructive font-semibold" : ""}>
-                        {formatQuantidade(quantidade, unidade_de_medida)}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Quantidade Mínima</h4>
-                      <p>{formatQuantidade(quantidadeMinima, unidade_de_medida)}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Valor Unitário</h4>
-                      <p>{formatCurrency(valorUnitario)}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Unidade de Medida</h4>
-                      <p>{unidade_de_medida || "Não informado"}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Unidade</h4>
-                      <p>{unidade || "Não informado"}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Depósito</h4>
-                      <p>{produto.deposito || "Não informado"}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Prateleira</h4>
-                      <p>{produto.prateleira || "Não informado"}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Fornecedor</h4>
-                      <p>{fornecedor || "Não informado"}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Data Vencimento</h4>
-                      <p>{formatDate(dataVencimento)}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-500">Data Cadastro</h4>
-                      <p>{formatDate(dataCriacao)}</p>
-                    </div>
-                    
-                    {produto.detalhes && (
-                      <div className="md:col-span-2">
-                        <h4 className="font-semibold text-sm text-gray-500">Detalhes</h4>
-                        <p>{produto.detalhes}</p>
+              <DialogContent className="max-w-4xl p-0 overflow-hidden">
+                <div className="flex flex-col md:flex-row">
+                  {/* Seção da imagem */}
+                  <div className="relative w-full md:w-2/5 bg-muted">
+                    <img
+                      src={produto.imagem || "/placeholder.svg"}
+                      alt={produto.nome}
+                      className="h-full w-full object-contain p-4"
+                    />
+                    {isLowStock && (
+                      <div className="absolute top-4 right-4">
+                        <Badge variant="destructive" className="text-sm font-medium">
+                          Estoque Baixo
+                        </Badge>
                       </div>
                     )}
-                    
-                    <div className="md:col-span-2 mt-4">
-                      <h4 className="font-semibold text-sm text-gray-500">Ações</h4>
-                      <div className="flex space-x-2 mt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800"
-                          onClick={() => produto.id && onEdit(produto.id)}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800"
-                          onClick={() => produto.id && onDelete(produto.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </Button>
+                  </div>
+                  
+                  {/* Seção de detalhes */}
+                  <div className="flex-1 p-6 overflow-y-auto max-h-[80vh]">
+                    <DialogHeader className="mb-6">
+                      <DialogTitle className="text-xl font-bold tracking-tight">
+                        {produto.nome}
+                      </DialogTitle>
+                      <DialogDescription className="text-sm text-muted-foreground">
+                        Detalhes completos do produto
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    {/* Principais informações destacadas */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="flex items-center gap-2 p-3 rounded-md bg-muted">
+                        <BarChart className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Estoque Atual</p>
+                          <p className={`text-lg font-medium ${isLowStock ? "text-destructive" : ""}`}>
+                            {formatQuantidade(quantidade, unidade_de_medida)}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 p-3 rounded-md bg-muted">
+                        <DollarSign className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Valor Unitário</p>
+                          <p className="text-lg font-medium">{formatCurrency(valorUnitario)}</p>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Informações detalhadas em seções */}
+                    <div className="space-y-6">
+                      {/* Seção Identificação */}
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-primary border-b pb-1">Identificação</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-start gap-2">
+                            <Tag className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Código Material</p>
+                              <p className="text-sm text-muted-foreground">{codigo || "Não informado"}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Tag className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Código Estoque</p>
+                              <p className="text-sm text-muted-foreground">{codigoEstoque || "Não informado"}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Package className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Unidade de Medida</p>
+                              <p className="text-sm text-muted-foreground">{unidade_de_medida || "Não informado"}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Home className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Unidade</p>
+                              <p className="text-sm text-muted-foreground">{unidade || "Não informado"}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Seção Estoque */}
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-primary border-b pb-1">Informações de Estoque</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-start gap-2">
+                            <BarChart className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Quantidade Mínima</p>
+                              <p className="text-sm text-muted-foreground">{formatQuantidade(quantidadeMinima, unidade_de_medida)}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Home className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Depósito</p>
+                              <p className="text-sm text-muted-foreground">{produto.deposito || "Não informado"}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Prateleira</p>
+                              <p className="text-sm text-muted-foreground">{produto.prateleira || "Não informado"}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                          <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">Fornecedor</p>
+                            <p className="text-sm text-muted-foreground">{fornecedorNome || "Não informado"}</p>
+                            {fornecedorCnpj && (
+                              <p className="text-xs text-muted-foreground">CNPJ: {fornecedorCnpj}</p>
+                            )}
+                          </div>
+                        </div>
+                        </div>
+                      </div>
+                      
+                      {/* Seção Datas */}
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-primary border-b pb-1">Informações de Datas</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-start gap-2">
+                            <Calendar className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Data de Vencimento</p>
+                              <p className="text-sm text-muted-foreground">{formatDate(dataVencimento)}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Data de Cadastro</p>
+                              <p className="text-sm text-muted-foreground">{formatDate(dataCriacao)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Detalhes do produto, se disponíveis */}
+                      {produto.detalhes && (
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-primary border-b pb-1">Descrição Detalhada</h3>
+                          <p className="text-sm text-muted-foreground whitespace-pre-line">{produto.detalhes}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Ações na parte inferior */}
+                    <div className="mt-8 pt-4 border-t flex flex-wrap gap-2 justify-end">
+                      <AdicionarAoCarrinho 
+                        produto={produto} 
+                        onSuccess={handleCartSuccess}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="flex items-center"
+                        onClick={() => produto.id && onEdit(produto.id)}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="flex items-center text-destructive hover:bg-destructive/10"
+                        onClick={() => produto.id && onDelete(produto.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
+                      </Button>
+                    </div>
                   </div>
-                )}
+                </div>
               </DialogContent>
             </Dialog>
           </div>
