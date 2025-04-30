@@ -32,6 +32,8 @@ interface Produto {
   dataVencimento: string;
   dataHora: string;
   fornecedor: string;
+  fornecedor_nome: string;
+  fornecedor_cnpj: string;
 }
 
 const Produtos = () => {
@@ -75,7 +77,10 @@ const Produtos = () => {
             prateleira: data.prateleira || "",
             dataVencimento: data.data_vencimento || "",
             dataHora: data.data_criacao || new Date().toISOString(),
-            fornecedor: data.fornecedor_atual || ""
+            fornecedor: data.fornecedor || "",
+            // Adicionando os novos campos de fornecedor
+            fornecedor_nome: data.fornecedor_nome || "",
+            fornecedor_cnpj: data.fornecedor_cnpj || ""
           };
         }) as Produto[];
         
@@ -129,6 +134,8 @@ const Produtos = () => {
       dataHora: produto.dataHora || new Date().toISOString(),
       imagem: produto.imagem || "/placeholder.svg",
       unidade_de_medida: produto.unidade_de_medida || "",
+      fornecedor_nome: produto.fornecedor_nome || "",
+      fornecedor_cnpj: produto.fornecedor_cnpj || "",
     };
 
     adicionarAoCarrinho(produtoCompleto);
@@ -163,6 +170,8 @@ const Produtos = () => {
         produto.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         produto.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         produto.codigoEstoque?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        produto.fornecedor_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        produto.fornecedor_cnpj?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (produto.detalhes && produto.detalhes.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     : [];
@@ -173,7 +182,7 @@ const Produtos = () => {
         <div className="relative flex-1">
           <Input
             type="text"
-            placeholder="Buscar produto por nome ou código..."
+            placeholder="Buscar produto por nome, código ou fornecedor..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"

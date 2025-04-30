@@ -150,32 +150,45 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       try {
         setLoadingCodigoEstoque(true);
         
-        // Ordenar pela propriedade codigo_estoque em ordem decrescente e limitar a 1 resultado
+        // Buscar todos os produtos ordenados pelo código de estoque
         const produtosRef = collection(db, "produtos");
-        const q = query(produtosRef, orderBy("codigo_estoque", "desc"), limit(1));
+        const q = query(produtosRef, orderBy("codigo_estoque", "asc"));
         const querySnapshot = await getDocs(q);
         
-        if (!querySnapshot.empty) {
-          const ultimoProduto = querySnapshot.docs[0].data();
-          const ultimoCodigo = ultimoProduto.codigo_estoque;
-          
-          // Converter para número se for string
-          let ultimoCodigoNum = typeof ultimoCodigo === 'string' 
-            ? parseInt(ultimoCodigo, 10) 
-            : ultimoCodigo;
-            
-          if (!isNaN(ultimoCodigoNum)) {
-            setUltimoCodigoEstoque(ultimoCodigoNum);
-            // Sugerir o próximo código
-            form.setValue("codigoEstoque", String(ultimoCodigoNum + 1));
-          }
-        } else {
-          // Se não houver produtos, sugerir 1 como primeiro código
+        // Se não houver produtos, use 1
+        if (querySnapshot.empty) {
           setUltimoCodigoEstoque(0);
           form.setValue("codigoEstoque", "1");
+          return;
         }
+        
+        // Extrair todos os códigos de estoque como números
+        const codigosExistentes = querySnapshot.docs.map(doc => {
+          const codigo = doc.data().codigo_estoque;
+          return typeof codigo === 'string' ? parseInt(codigo, 10) : codigo;
+        }).filter(codigo => !isNaN(codigo)); // Filtra códigos inválidos
+        
+        // Encontrar o primeiro número disponível
+        let proximoCodigo = 1;
+        for (let i = 0; i < codigosExistentes.length; i++) {
+          if (codigosExistentes[i] === proximoCodigo) {
+            proximoCodigo++;
+          } else if (codigosExistentes[i] > proximoCodigo) {
+            // Se encontrarmos um código maior que o próximo esperado, há um gap
+            break;
+          }
+        }
+        
+        // Definir o último código encontrado (para referência)
+        const ultimoCodigo = codigosExistentes.length > 0 ? 
+          Math.max(...codigosExistentes) : 0;
+        setUltimoCodigoEstoque(ultimoCodigo);
+        
+        // Definir o próximo código disponível
+        form.setValue("codigoEstoque", String(proximoCodigo));
+        
       } catch (error) {
-        console.error("Erro ao buscar último código de estoque:", error);
+        console.error("Erro ao buscar próximo código de estoque disponível:", error);
       } finally {
         setLoadingCodigoEstoque(false);
       }
@@ -337,9 +350,9 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 name="codigo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Código*</FormLabel>
+                    <FormLabel>Código do poduto ( fornecedor )*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: 04-000.001" {...field} required />
+                      <Input placeholder="Presente no item da Nota Fiscal" {...field} required />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -350,7 +363,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 name="codigoEstoque"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Código Estoque*</FormLabel>
+                    <FormLabel>Código Estoque ( Automático )*</FormLabel>
                     <FormControl>
                       <div className="flex">
                         <Input 
@@ -437,7 +450,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 name="unidade"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Unidade*</FormLabel>
+                    <FormLabel>Unidade da empresa*</FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: FR01" {...field} required />
                     </FormControl>
@@ -589,12 +602,12 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 name="quantidade"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quantidade Atual*</FormLabel>
+                    <FormLabel>Quantidade*</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
                         min="0" 
-                        placeholder="Ex: 100" 
+                        placeholder="NF/Físico" 
                         {...field} 
                         required 
                         onChange={(e) => {
@@ -733,7 +746,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 name="prateleira"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Prateleira</FormLabel>
+                    <FormLabel>Prateleira ( Opcional )</FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: A3" {...field} />
                     </FormControl>
@@ -778,7 +791,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                   <FormLabel>Detalhes</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Descrição ou detalhes do produto"
+                      placeholder="Descrição, detalhes do produto, onde ele será utilizado, etc. Será usado para facilidade de pesquisa e localização do produto"
                       className="resize-none"
                       {...field}
                     />
@@ -793,9 +806,24 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>URL da Imagem</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://exemplo.com/imagem.jpg" {...field} />
-                  </FormControl>
+                  <div className="flex space-x-2">
+                    <FormControl className="flex-grow">
+                      <Input placeholder="https://exemplo.com/imagem.jpg" {...field} />
+                    </FormControl>
+                    <button 
+                      type="button"
+                      onClick={() => window.open('https://images.google.com', '_blank')}
+                      className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center"
+                      title="Pesquisar no Google Imagens"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        <line x1="11" y1="8" x2="11" y2="14"></line>
+                        <line x1="8" y1="11" x2="14" y2="11"></line>
+                      </svg>
+                    </button>
+                  </div>
                   {field.value && (
                     <div className="mt-2 border rounded-md p-2 w-32 h-32 flex items-center justify-center overflow-hidden">
                       <img

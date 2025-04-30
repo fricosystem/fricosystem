@@ -45,6 +45,8 @@ import {
   BadgePercent,
   Monitor,
   HardHat,
+  ArrowLeftRight,
+  ArchiveRestore,
   Briefcase
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
@@ -249,7 +251,8 @@ const AppSidebar = () => {
         { to: "/produtos", icon: Box, label: "Produtos" },
         { to: "/inventory", icon: PackageSearch, label: "Inventário" },
         { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
-        { to: "/transfer", icon: FileText, label: "Entrada/Transferência" },
+        { to: "/transfer", icon: ArchiveRestore, label: "Entrada Manual" },
+        { to: "/transfer", icon: ArrowLeftRight, label: "Transferência" },
       ],
     },
     {
@@ -375,27 +378,27 @@ const AppSidebar = () => {
 
   // Classes para o estilo Firebase com a fonte Roboto
   const firebaseClasses = {
-    sidebar: "bg-[#1c2834] border-none font-roboto",
+    sidebar: "bg-[#111827] border-none",
     categoryBtn: {
-      active: 'bg-[#2c384a] text-white',
-      hover: 'hover:bg-[#2c384a] text-gray-300 hover:text-white'
+      active: 'bg-[#0e7490] text-white',
+      hover: 'hover:bg-[#0e7490] text-gray-300 hover:text-white'
     },
     menuItem: {
-      active: 'bg-[#2c384a] text-white',
-      hover: 'hover:bg-[#2c384a] text-gray-300 hover:text-white'
+      active: 'bg-[#0e7490] text-white',
+      hover: 'hover:bg-[#0e7490] text-gray-300 hover:text-white'
     },
     userProfile: {
-      bg: "bg-[#2c384a]",
+      bg: "bg-[#0e7490]",
       text: "text-white",
       mutedText: "text-gray-400"
     },
-    dropdownMenu: "bg-[#2c384a] border-[#3e4a5e]",
-    // Classes específicas para a fonte Roboto
+    dropdownMenu: "bg-[#0e7490] border-[#0891b2]",
+    // Classes específicas para a fonte Inter
     text: {
-      heading: "font-roboto font-medium",
-      normal: "font-roboto font-normal",
-      small: "font-roboto text-sm",
-      tiny: "font-roboto text-xs"
+      heading: "font-medium",
+      normal: "font-normal",
+      small: "text-sm font-medium",
+      tiny: "text-xs font-medium"
     }
   };
 
