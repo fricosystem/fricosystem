@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import AppHeader from "@/components/AppHeader";
@@ -12,6 +12,25 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children, title }: AppLayoutProps) => {
   const location = useLocation();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detectar se é um dispositivo móvel com base na largura da tela
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768); // 768px é o breakpoint para md no Tailwind
+    };
+
+    // Verificar inicialmente
+    checkIfMobile();
+
+    // Adicionar um listener para quando a janela for redimensionada
+    window.addEventListener("resize", checkIfMobile);
+
+    // Cleanup do listener quando o componente for desmontado
+    return () => {
+      window.removeEventListener("resize", checkIfMobile);
+    };
+  }, []);
   
   return (
     <SidebarProvider>
@@ -23,8 +42,9 @@ const AppLayout = ({ children, title }: AppLayoutProps) => {
             {children}
           </main>
         </div>
-        {/* Adicionamos o componente FloatingActionBar aqui */}
-        <FloatingActionBar />
+        
+        {/* Renderiza o FloatingActionBar apenas em dispositivos móveis */}
+        {isMobile && <FloatingActionBar />}
       </div>
     </SidebarProvider>
   );

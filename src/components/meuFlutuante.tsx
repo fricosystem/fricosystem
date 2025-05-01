@@ -10,7 +10,10 @@ import {
   User, Calendar, Bookmark, HelpCircle, Box, ClipboardList, 
   ShoppingCart, Factory, UserRound, Wallet, LayoutDashboard,
   PackageSearch, Warehouse, Truck, Receipt, BarChart, LogOut,
-  FileText, Sun, Moon, Layers, Briefcase
+  FileText, Sun, Moon, Layers, Briefcase, Boxes, Network,
+  ArrowLeftRight, ArchiveRestore, Clipboard, ClipboardCheck,
+  Package, CheckSquare, HardHat, GraduationCap, BarChart3,
+  Users, Monitor
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -210,13 +213,25 @@ const FuturisticFloatingMenu = () => {
     },
     {
       id: "estoque",
-      icon: <Box size={24} />,
+      icon: <Boxes size={24} />,
       label: "Estoque",
       items: [
         { id: "produtos", icon: <Box size={20} />, label: "Produtos", path: "/produtos" },
         { id: "inventario", icon: <PackageSearch size={20} />, label: "Inventário", path: "/inventory" },
         { id: "enderecamento", icon: <Warehouse size={20} />, label: "Endereçamento", path: "/enderecamento" },
-        { id: "transferencia", icon: <FileText size={20} />, label: "Transferência", path: "/transfer" }
+        { id: "entradamanual", icon: <ArchiveRestore size={20} />, label: "Entrada Manual", path: "/entradamanual" },
+        { id: "transferencia", icon: <ArrowLeftRight size={20} />, label: "Transferência", path: "/transferencia" }
+      ]
+    },
+    {
+      id: "operacional",
+      icon: <Network size={24} />,
+      label: "Operacional",
+      items: [
+        { id: "ordensServico", icon: <Clipboard size={20} />, label: "Ordens de Serviço", path: "/ordensServico" },
+        { id: "compras", icon: <Truck size={20} />, label: "Compras", path: "/compras" },
+        { id: "pedidos", icon: <Truck size={20} />, label: "Pedidos", path: "/pedidos" },
+        { id: "notas-fiscais", icon: <Receipt size={20} />, label: "Notas Fiscais", path: "/notas-fiscais" }
       ]
     },
     {
@@ -225,19 +240,20 @@ const FuturisticFloatingMenu = () => {
       label: "Produção",
       items: [
         { id: "producao-dash", icon: <BarChart size={20} />, label: "Dashboard Prod", path: "/producao" },
-        { id: "planejamento", icon: <Calendar size={20} />, label: "Planejamento", path: "/producao/planejamento" },
-        { id: "funcionarios-prod", icon: <Factory size={20} />, label: "Funcionários", path: "/producao/funcionarios" },
-        { id: "linhas", icon: <BarChart size={20} />, label: "Linhas de Produção", path: "/linhas-producao" }
+        { id: "planejamento", icon: <ClipboardCheck size={20} />, label: "Planejamento", path: "/producao/planejamento" },
+        { id: "planejamentoDiario", icon: <Calendar size={20} />, label: "Planejamento Diário", path: "/producao/planejamentoDiarioProducao" },
+        { id: "produtosProducao", icon: <Package size={20} />, label: "Produtos Produção", path: "/producao/produtosProducao" },
+        { id: "produtosFinais", icon: <CheckSquare size={20} />, label: "Produtos Finais", path: "/producao/produtosFinaisProducao" }
       ]
     },
     {
       id: "rh",
-      icon: <UserRound size={24} />,
-      label: "RH",
+      icon: <HardHat size={24} />,
+      label: "Recursos Humanos",
       items: [
         { id: "funcionarios", icon: <UserRound size={20} />, label: "Funcionários", path: "/rh/funcionarios" },
         { id: "ponto", icon: <Calendar size={20} />, label: "Ponto Eletrônico", path: "/rh/ponto" },
-        { id: "treinamentos", icon: <HelpCircle size={20} />, label: "Treinamentos", path: "/rh/treinamentos" }
+        { id: "treinamentos", icon: <GraduationCap size={20} />, label: "Treinamentos", path: "/rh/treinamentos" }
       ]
     },
     {
@@ -246,17 +262,18 @@ const FuturisticFloatingMenu = () => {
       label: "Financeiro",
       items: [
         { id: "financeiro-dash", icon: <Wallet size={20} />, label: "Financeiro", path: "/financial" },
-        { id: "centros-custo", icon: <BarChart size={20} />, label: "Centros de Custo", path: "/cost-centers" },
-        { id: "fornecedores", icon: <User size={20} />, label: "Fornecedores", path: "/fornecedores" },
+        { id: "centros-custo", icon: <BarChart3 size={20} />, label: "Centros de Custo", path: "/cost-centers" },
+        { id: "fornecedores", icon: <Users size={20} />, label: "Fornecedores", path: "/fornecedores" },
         { id: "relatorios", icon: <FileText size={20} />, label: "Relatórios", path: "/relatorios" }
       ]
     },
     {
-      id: "profile",
-      icon: <User size={24} />,
-      label: "Perfil",
+      id: "sistema",
+      icon: <Monitor size={24} />,
+      label: "Sistema",
       items: [
-        { id: "config", icon: <Settings size={20} />, label: "Configurações", onClick: () => navigateTo("/configuracoes") },
+        { id: "administrativo", icon: <Settings size={20} />, label: "Administrativo", path: "/administrativo" },
+        { id: "config", icon: <Settings size={20} />, label: "Configurações", path: "/configuracoes" },
         { id: "theme", icon: theme === "light" ? <Moon size={20} /> : <Sun size={20} />, label: `Tema ${theme === "light" ? "Escuro" : "Claro"}`, onClick: toggleTheme },
         { id: "logout", icon: <LogOut size={20} />, label: "Sair", className: "text-red-500", onClick: handleSignOut }
       ]
@@ -331,8 +348,8 @@ const FuturisticFloatingMenu = () => {
       {/* Submenu Flutuante */}
       {activeMenu && (
         <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 overflow-hidden transition-all duration-300 ease-in-out animate-fadeIn">
-          {/* Se for o menu de perfil, mostrar componente de perfil */}
-          {activeMenu === "profile" && <UserProfileSection />}
+          {/* Se for o menu de sistema, mostrar componente de perfil */}
+          {activeMenu === "sistema" && <UserProfileSection />}
           
           {/* Conteúdo do submenu baseado na categoria selecionada */}
           <div className="p-2 max-h-96 overflow-y-auto">

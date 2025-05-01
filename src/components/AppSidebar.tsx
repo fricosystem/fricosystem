@@ -47,7 +47,9 @@ import {
   HardHat,
   ArrowLeftRight,
   ArchiveRestore,
-  Briefcase
+  Briefcase,
+  Package,
+  CheckSquare
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useEffect, useState } from "react";
@@ -251,8 +253,8 @@ const AppSidebar = () => {
         { to: "/produtos", icon: Box, label: "Produtos" },
         { to: "/inventory", icon: PackageSearch, label: "Inventário" },
         { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
-        { to: "/transfer", icon: ArchiveRestore, label: "Entrada Manual" },
-        { to: "/transfer", icon: ArrowLeftRight, label: "Transferência" },
+        { to: "/entradamanual", icon: ArchiveRestore, label: "Entrada Manual" },
+        { to: "/transferencia", icon: ArrowLeftRight, label: "Transferência" },
       ],
     },
     {
@@ -260,7 +262,8 @@ const AppSidebar = () => {
       icon: Network,
       items: [
         { to: "/ordensServico", icon: Clipboard, label: "Ordens de Serviço" },
-        { to: "/orders", icon: Truck, label: "Compras/Pedidos" },
+        { to: "/compras", icon: Truck, label: "Compras" },
+        { to: "/pedidos", icon: Truck, label: "Pedidos" },
         { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
       ],
     },
@@ -270,10 +273,12 @@ const AppSidebar = () => {
       items: [
         { to: "/producao", icon: BarChart, label: "Dashboard Prod" },
         { to: "/producao/planejamento", icon: ClipboardCheck, label: "Planejamento" },
-        { to: "/producao/funcionarios", icon: Factory, label: "Funcionários" },
-        { to: "/linhas-producao", icon: LineChart, label: "Linhas de Produção" },
+        { to: "/producao/planejamentoDiarioProducao", icon: Calendar, label: "Planejamento Diário" },
+        { to: "/producao/produtosProducao", icon: Package, label: "Produtos Produção" },
+        { to: "/producao/produtosFinaisProducao", icon: CheckSquare, label: "Produtos Finais" },
       ],
     },
+
     {
       label: "Recursos Humanos",
       icon: HardHat,

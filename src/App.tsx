@@ -22,9 +22,11 @@ import OrdensServico from "./pages/OrdensServico";
 import Fornecedores from "./pages/Fornecedores";
 
 // Páginas de Produção
-import DashboardProducao from "@/pages/Producao/DashboardProducao";
-import PlanejamentoProducao from "@/pages/Producao/PlanejamentoProducao";
-import FuncionariosProducao from "@/pages/Producao/FuncionariosProducao";
+import DashboardProducao from "./pages/Producao/DashboardProducao";
+import PlanejamentoProducao from "./pages/Producao/PlanejamentoProducao";
+import PlanejamentoDiarioProducao from "./pages/Producao/PlanejamentoDiarioProducao";
+import ProdutosProducao from "./pages/Producao/ProdutosProducao";
+import ProdutosFinaisProducao from "./pages/Producao/ProdutosFinaisProducao";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -93,7 +95,9 @@ const AppContent = () => {
           {/* Rotas de Produção */}
           <Route path="/producao" element={<AuthGuard><DashboardProducao /></AuthGuard>} />
           <Route path="/producao/planejamento" element={<AuthGuard><PlanejamentoProducao /></AuthGuard>} />
-          <Route path="/producao/funcionarios" element={<AuthGuard><FuncionariosProducao /></AuthGuard>} />
+          <Route path="/producao/planejamentoDiarioProducao" element={<AuthGuard><PlanejamentoDiarioProducao /></AuthGuard>} />
+          <Route path="/producao/produtosProducao" element={<AuthGuard><ProdutosProducao /></AuthGuard>} />
+          <Route path="/producao/produtosFinaisProducao" element={<AuthGuard><ProdutosFinaisProducao /></AuthGuard>} />
           
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />
