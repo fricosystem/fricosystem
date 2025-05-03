@@ -27,7 +27,6 @@ export function useProdutos() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("Iniciando busca de produtos no Firestore...");
     setLoading(true);
     
     try {
@@ -36,11 +35,9 @@ export function useProdutos() {
         produtosRef,
         (snapshot) => {
           try {
-            console.log(`Recebidos ${snapshot.docs.length} documentos do Firestore`);
             
             const produtosData = snapshot.docs.map((doc) => {
               const data = doc.data();
-              console.log(`Processando produto: ${doc.id}`, data);
               
               // Convert timestamp to string if it exists
               let dataCriacao = new Date().toISOString();
@@ -79,7 +76,6 @@ export function useProdutos() {
               } as Produto;
             });
 
-            console.log("Produtos processados:", produtosData);
             setProdutos(produtosData);
             setLoading(false);
             setError(null);
@@ -97,7 +93,6 @@ export function useProdutos() {
       );
 
       return () => {
-        console.log("Cancelando assinatura do Firestore");
         unsubscribe();
       };
     } catch (error) {
@@ -110,11 +105,9 @@ export function useProdutos() {
 
   const updatePrateleira = async (produtoId: string, novaPrateleira: string) => {
     try {
-      console.log(`Atualizando prateleira do produto ${produtoId} para ${novaPrateleira}`);
       await updateDoc(doc(db, 'produtos', produtoId), {
         prateleira: novaPrateleira,
       });
-      console.log("Prateleira atualizada com sucesso");
       return true;
     } catch (error) {
       console.error('Erro ao atualizar prateleira:', error);

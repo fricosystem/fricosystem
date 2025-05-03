@@ -19,7 +19,13 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
     // Verificar se o produto já está na posição
     if (product) {
       setTimeout(() => {
-        toast.warning(`Já existe um produto na posição ${positionLabel}`);
+        toast.warning(`Já existe um produto na posição ${positionLabel}`, {
+          style: {
+            background: '#1f2937',
+            color: '#fbbf24',
+            border: '1px solid #374151'
+          }
+        });
       }, 0);
       return;
     }
@@ -30,7 +36,13 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
     // Se a operação foi bem-sucedida, mostrar toast de sucesso
     if (result !== false) {
       setTimeout(() => {
-        toast.success(`Produto ${item.nome} movido para ${positionLabel}`);
+        toast.success(`Produto ${item.nome} movido para ${positionLabel}`, {
+          style: {
+            background: '#1f2937',
+            color: '#10b981',
+            border: '1px solid #374151'
+          }
+        });
       }, 0);
     }
   }, [positionLabel, product, onProductDrop]);
@@ -64,65 +76,75 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
 
   // Determinar classes com base no estado de drop
   const getBgClass = () => {
-    if (isOver && canDrop) return 'bg-blue-50 dark:bg-blue-900/30';
-    if (canDrop) return 'bg-gray-50 dark:bg-gray-800';
-    return 'bg-white dark:bg-gray-800';
+    if (isOver && canDrop) return 'bg-gray-700';
+    if (canDrop) return 'bg-gray-800';
+    return 'bg-gray-800';
   };
 
   const getBorderClass = () => {
-    if (isOver && canDrop) return 'border-blue-400 dark:border-blue-500';
-    return 'border-gray-200 dark:border-gray-700';
+    if (isOver && canDrop) return 'border-amber-400 shadow-amber-400/30';
+    return 'border-gray-700';
   };
 
   return (
     <motion.div
       ref={drop}
-      className={`p-2 border rounded-md transition-all duration-200 h-28 
+      className={`p-2 border-2 rounded-lg transition-all duration-200 h-28 
         ${getBgClass()} 
         ${getBorderClass()}
-        ${isOver ? 'shadow-md' : ''}
-        flex flex-col items-center justify-center`}
+        ${isOver ? 'shadow-lg' : ''}
+        flex flex-col items-center justify-center relative`}
       animate={{
         scale: isOver && canDrop ? 1.05 : 1,
-        boxShadow: isOver && canDrop ? '0 4px 12px rgba(0, 0, 255, 0.15)' : '0 0 0 rgba(0, 0, 0, 0)'
+        boxShadow: isOver && canDrop ? '0 4px 12px rgba(251, 191, 36, 0.25)' : '0 0 0 rgba(0, 0, 0, 0)'
       }}
       transition={{ duration: 0.2 }}
     >
+      {/* Efeito de destaque quando pode receber drop */}
+      {isOver && canDrop && (
+        <motion.div 
+          className="absolute inset-0 rounded-md border-2 border-dashed border-amber-400 pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        />
+      )}
+
       {!product && (
         <motion.div 
-          className="text-center text-gray-400 dark:text-gray-500 flex flex-col items-center justify-center"
+          className="text-center text-gray-500 flex flex-col items-center justify-center h-full w-full"
           animate={{ opacity: isOver && canDrop ? 0.5 : 1 }}
         >
-          <Package size={18} className="mb-1" />
-          <span className="text-xs font-medium">{positionLabel}</span>
+          <Package size={20} className="mb-2 text-gray-600" />
+          <span className="text-xs font-bold text-gray-400">{positionLabel}</span>
         </motion.div>
       )}
 
       {product && (
         <motion.div 
           ref={drag}
-          className={`w-full h-full flex flex-col items-center justify-between p-1 cursor-grab`}
+          className={`w-full h-full flex flex-col items-center justify-between p-1 cursor-grab active:cursor-grabbing`}
           animate={{ 
-            opacity: isDragging ? 0.5 : 1,
+            opacity: isDragging ? 0.7 : 1,
             scale: isDragging ? 0.95 : 1
           }}
-          whileHover={{ scale: 1.02 }}
+          whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
           transition={{ type: "spring", stiffness: 400, damping: 17 }}
         >
-          <div className="w-full h-12 flex justify-center overflow-hidden rounded bg-gray-50 dark:bg-gray-700">
+          <div className="w-full h-12 flex justify-center overflow-hidden rounded-md">
             <img
               src={product.imagem || '/placeholder.svg'}
               alt={product.nome}
-              className="h-full object-contain"
+              className="h-full object-contain rounded-md"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = '/placeholder.svg';
               }}
             />
           </div>
-          <div className="text-center mt-1">
-            <p className="text-xs font-medium line-clamp-1 text-gray-800 dark:text-gray-200">{product.nome}</p>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400">{product.codigo_material}</p>
+          <div className="text-center mt-1 w-full">
+            <p className="text-xs font-bold line-clamp-1 text-gray-100">{product.nome}</p>
+            <p className="text-[10px] text-amber-400 font-mono">{product.codigo_material}</p>
           </div>
         </motion.div>
       )}

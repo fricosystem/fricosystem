@@ -221,7 +221,6 @@ const Requisicoes = () => {
         setSelectedRequisicao(requisicoesList[0]);
       }
       
-      console.log("Requisições carregadas:", requisicoesList.length);
     } catch (error) {
       console.error("Erro ao carregar requisições:", error);
       toast({
@@ -409,7 +408,6 @@ const Requisicoes = () => {
             quantidade: novaQuantidade
           });
           
-          console.log(`Produto ${item.nome} atualizado. Nova quantidade: ${novaQuantidade}`);
         }
       }
       

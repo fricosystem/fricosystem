@@ -76,9 +76,7 @@ const NovaOrdemServico = () => {
         
         // Se não houver erro, a coleção existe ou foi criada automaticamente
         setCollectionChecked(true);
-        console.log("Coleção ordens_servicos verificada ou criada automaticamente");
       } catch (error) {
-        console.error("Erro ao verificar coleção:", error);
         toast.error("Erro ao verificar estrutura do banco de dados");
       }
     };

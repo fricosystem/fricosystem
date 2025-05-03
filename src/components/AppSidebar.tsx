@@ -205,7 +205,6 @@ const AppSidebar = () => {
           email: userEmail, 
           tema: newTheme 
         });
-        console.log(`Novo documento criado com tema ${newTheme} para o usuário ${userEmail}`);
       }
       
       // Notifica o usuário sobre a mudança de tema
@@ -235,7 +234,7 @@ const AppSidebar = () => {
     }));
   };
   
-  // Categorias do sidebar com seus respectivos ícones e itens
+  // Categorias do sidebar com seus respectivos ícones e itens (corrigido)
   const sidebarCategories: SidebarCategory[] = [
     {
       label: "Principal",
@@ -253,8 +252,8 @@ const AppSidebar = () => {
         { to: "/produtos", icon: Box, label: "Produtos" },
         { to: "/inventory", icon: PackageSearch, label: "Inventário" },
         { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
-        { to: "/entradamanual", icon: ArchiveRestore, label: "Entrada Manual" },
-        { to: "/transferencia", icon: ArrowLeftRight, label: "Transferência" },
+        { to: "/entradaProdutosET", icon: ArchiveRestore, label: "Entrada Manual" },
+        { to: "/transferenciasET", icon: ArrowLeftRight, label: "Transferência" },
       ],
     },
     {
@@ -278,7 +277,6 @@ const AppSidebar = () => {
         { to: "/producao/produtosFinaisProducao", icon: CheckSquare, label: "Produtos Finais" },
       ],
     },
-
     {
       label: "Recursos Humanos",
       icon: HardHat,

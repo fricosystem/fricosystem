@@ -122,8 +122,6 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
         throw new Error("Produto não encontrado");
       }
   
-      console.log("Atualizando localização do produto:", productToUpdate.codigo, "para", location);
-  
       // Atualizar o produto localmente primeiro (para UI responsiva)
       setProducts(prevProducts => 
         prevProducts.map(product => 
@@ -139,8 +137,6 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
       url.searchParams.append('codigo', productToUpdate.codigo);
       url.searchParams.append('location', location);
   
-      console.log("Enviando requisição para:", url.toString());
-  
       // Usar fetch com CORS habilitado
       const response = await fetch(url.toString(), {
         method: 'GET', // Mudar para GET que funciona melhor com Apps Script
@@ -150,13 +146,11 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
       // Tentar processar a resposta
       try {
         const responseData = await response.json();
-        console.log("Resposta recebida:", responseData);
         
         if (!responseData.success) {
           throw new Error(responseData.message || "Erro desconhecido");
         }
       } catch (e) {
-        console.log("Não foi possível analisar a resposta JSON, mas a requisição foi enviada");
       }
   
       toast({
@@ -186,8 +180,6 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
         throw new Error("Produto não encontrado");
       }
 
-      console.log("Atualizando produto:", productToUpdate.codigo, "com dados:", updatedData);
-
       // Atualizar o produto localmente primeiro
       setProducts(prevProducts => 
         prevProducts.map(product => 
@@ -211,8 +203,6 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
           formData.append(key, String(value));
         }
       });
-
-      console.log("Enviando requisição para:", APPS_SCRIPT_URL);
 
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',

@@ -21,6 +21,14 @@ import Enderecamento from "./pages/Enderecamento";
 import OrdensServico from "./pages/OrdensServico";
 import Fornecedores from "./pages/Fornecedores";
 
+// Páginas de Transferência e entrada manual
+import EntradaProdutosET from "./pages/EntradaProdutosET";
+import TransferenciasET from "./pages/TransferenciasET";
+
+// Páginas de Compras e Pedidos
+import Compras from "./pages/Compras";
+import Pedidos from "./pages/Pedidos";
+
 // Páginas de Produção
 import DashboardProducao from "./pages/Producao/DashboardProducao";
 import PlanejamentoProducao from "./pages/Producao/PlanejamentoProducao";
@@ -91,7 +99,15 @@ const AppContent = () => {
           <Route path="/enderecamento" element={<AuthGuard><Enderecamento /></AuthGuard>} />
           <Route path="/ordensServico" element={<AuthGuard><OrdensServico /></AuthGuard>} />
           <Route path="/fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
-          
+
+          {/* Rotas de Entrada Manual e Transferência */}
+          <Route path="/entradaProdutosET" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />
+          <Route path="/transferenciasET" element={<AuthGuard><TransferenciasET /></AuthGuard>} />
+
+          {/* Rotas de Compras e Pedidos */}
+          <Route path="/compras" element={<AuthGuard><Compras /></AuthGuard>} />
+          <Route path="/pedidos" element={<AuthGuard><Pedidos /></AuthGuard>} />
+
           {/* Rotas de Produção */}
           <Route path="/producao" element={<AuthGuard><DashboardProducao /></AuthGuard>} />
           <Route path="/producao/planejamento" element={<AuthGuard><PlanejamentoProducao /></AuthGuard>} />

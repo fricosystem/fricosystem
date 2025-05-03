@@ -7,7 +7,7 @@ import { Product } from '../types/Product';
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, LayoutDashboard } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import AppLayout from '@/layouts/AppLayout';
 
 const Enderecamento = () => {
@@ -33,7 +33,6 @@ const Enderecamento = () => {
   // Debug para verificar carregamento dos produtos
   useEffect(() => {
     if (produtos && produtos.length > 0) {
-      console.log(`Produtos carregados: ${produtos.length}`);
       setDebugInfo({
         count: produtos.length,
         firstProduct: produtos[0]
@@ -76,7 +75,7 @@ const Enderecamento = () => {
             <AlertTitle>Erro ao carregar produtos</AlertTitle>
             <AlertDescription>
               {error}
-              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-950 rounded text-sm">
                 Verifique se a conexão com o Firebase está configurada corretamente.
               </div>
             </AlertDescription>
@@ -93,7 +92,7 @@ const Enderecamento = () => {
             <AlertTitle>Nenhum produto encontrado</AlertTitle>
             <AlertDescription>
               Não foram encontrados produtos na coleção. Verifique se existem documentos na coleção "produtos" do Firebase.
-              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-950 rounded text-sm">
                 Debug: {JSON.stringify(debugInfo)}
               </div>
             </AlertDescription>
@@ -121,9 +120,9 @@ const Enderecamento = () => {
               defaultValue="estoque1" 
               value={activeStock}
               onValueChange={setActiveStock} 
-              className="flex flex-col bg-gray-50 dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+              className="flex flex-col bg-gray-50 dark:bg-gray-950 rounded-lg shadow overflow-hidden"
             >
-              <TabsList className="grid grid-cols-5 w-full bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+              <TabsList className="grid grid-cols-5 w-full bg-gray-100 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700">
                 <TabsTrigger value="estoque1">Estoque 1</TabsTrigger>
                 <TabsTrigger value="estoque2">Estoque 2</TabsTrigger>
                 <TabsTrigger value="estoque3">Estoque 3</TabsTrigger>
@@ -147,7 +146,7 @@ const Enderecamento = () => {
         </div>
         
         {/* Instruções de uso */}
-        <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
+        <div className="bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
           <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Como usar:</h3>
           <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
             <li>Arraste produtos da lista para a prateleira desejada</li>

@@ -29,11 +29,10 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
   const [filterOption, setFilterOption] = useState('all');
   const [isCompact, setIsCompact] = useState(false);
 
-  // Drop functionality para a lista
+  // Configuração completa do drop area
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: 'PRODUCT',
     drop: (item: Product) => {
-      // Se o produto já tem endereçamento, remova-o
       if (item.prateleira && onRemoveShelf) {
         onRemoveShelf(item).then(() => {
           toast.success(`Produto ${item.nome} removido do endereçamento`);
@@ -41,7 +40,6 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
       }
     },
     canDrop: (item: Product) => {
-      // Só podemos soltar produtos que têm endereçamento
       return !!item.prateleira;
     },
     collect: (monitor) => ({
@@ -51,10 +49,8 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
   }), [onRemoveShelf]);
 
   useEffect(() => {
-    console.log("ProductList recebeu products:", products?.length || 0);
     let filtered = products || [];
     
-    // Aplicar filtro de busca
     if (searchTerm.trim()) {
       const lowercasedSearch = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -65,7 +61,6 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
       );
     }
     
-    // Aplicar filtro de endereçamento
     if (filterOption === 'with-position') {
       filtered = filtered.filter(product => !!product.prateleira);
     } else if (filterOption === 'without-position') {
@@ -84,7 +79,6 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
     setSearchTerm('');
   };
 
-  // Contagens para o resumo
   const totalProducts = products?.length || 0;
   const withPositionCount = products?.filter(p => !!p.prateleira)?.length || 0;
   const withoutPositionCount = totalProducts - withPositionCount;
@@ -92,7 +86,7 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
 
   const dropAreaClass = isOver && canDrop
     ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 shadow-md'
-    : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700';
+    : 'bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800';
 
   return (
     <motion.div 
@@ -104,7 +98,7 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
       transition={{ duration: 0.5 }}
     >
       {/* Cabeçalho */}
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent flex items-center">
             <List className="mr-2 text-blue-500 dark:text-blue-400" size={20} /> Produtos
@@ -120,25 +114,23 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
           </Button>
         </div>
         
-        {/* Resumo em badges */}
         <div className="flex flex-wrap gap-2 mb-3">
-          <Badge variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+          <Badge variant="outline" className="bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-200">
             Total: {totalProducts}
           </Badge>
-          <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300">
+          <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
             Endereçados: {withPositionCount}
           </Badge>
-          <Badge variant="outline" className="bg-orange-50 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300">
+          <Badge variant="outline" className="bg-orange-50 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">
             Não endereçados: {withoutPositionCount}
           </Badge>
         </div>
         
-        {/* Busca */}
         <div className="relative mb-3">
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
           <Input
             placeholder="Buscar produto..."
-            className="pl-8 pr-8 transition-all duration-300 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring focus:ring-blue-200 dark:focus:ring-blue-700/30"
+            className="pl-8 pr-8 transition-all duration-300 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring focus:ring-blue-200 dark:focus:ring-blue-700/30"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -152,16 +144,15 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
           )}
         </div>
         
-        {/* Filtros */}
         <div className="flex items-center gap-2">
           <Select
             value={filterOption}
             onValueChange={setFilterOption}
           >
-            <SelectTrigger className="w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <SelectTrigger className="w-full bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
               <SelectValue placeholder="Filtrar por endereçamento" />
             </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
               <SelectItem value="all">Todos os produtos</SelectItem>
               <SelectItem value="with-position">Com endereçamento</SelectItem>
               <SelectItem value="without-position">Sem endereçamento</SelectItem>
@@ -181,8 +172,7 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
         </div>
       </div>
       
-      {/* Área de resultado */}
-      <div className="p-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+      <div className="p-3 bg-gray-50 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
         <motion.div 
           className="text-sm text-gray-700 dark:text-gray-300 rounded-md flex items-center justify-between"
           initial={{ opacity: 0, x: -5 }}
@@ -202,15 +192,13 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
         </motion.div>
       </div>
       
-      {/* Área de drop */}
       {isOver && canDrop && (
-        <div className="mx-3 mt-3 text-center text-sm p-2 border border-dashed border-blue-400 dark:border-blue-500 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+        <div className="mx-3 mt-3 text-center text-sm p-2 border border-dashed border-blue-400 dark:border-blue-500 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
           Solte para remover endereçamento
         </div>
       )}
       
-      {/* Lista de produtos */}
-      <ScrollArea className="flex-1 px-3 pt-3">
+      <ScrollArea className="flex-1 px-3 pt-3 bg-white dark:bg-gray-950">
         <AnimatePresence>
           {filteredProducts.length === 0 ? (
             <motion.div 
@@ -238,7 +226,7 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ staggerChildren: 0.05 }}
-              className="pb-3"
+              className="pb-3 space-y-2"
             >
               {filteredProducts.map((product, index) => (
                 <motion.div
@@ -247,7 +235,7 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ delay: index * 0.03 }}
-                  className={isCompact ? "mb-1" : "mb-2"}
+                  className="px-2"
                 >
                   <ProductItem product={product} isCompact={isCompact} />
                 </motion.div>

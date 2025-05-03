@@ -171,14 +171,22 @@ const Carrinho = () => {
           ...doc.data() as Omit<Usuario, 'id'>
         }));
         
-        // Ordenar usuários por nome
-        listaUsuarios.sort((a, b) => a.nome.localeCompare(b.nome));
+        // Filtrar usuários que não possuem a propriedade nome
+        const usuariosValidos = listaUsuarios.filter(u => u.nome);
         
-        setUsuarios(listaUsuarios);
+        // Ordenar usuários por nome (apenas os que têm nome)
+        usuariosValidos.sort((a, b) => {
+          if (a.nome && b.nome) {
+            return a.nome.localeCompare(b.nome);
+          }
+          return 0;
+        });
+        
+        setUsuarios(usuariosValidos);
         
         // Se o usuário atual estiver na lista, selecioná-lo automaticamente
         if (user && user.email) {
-          const usuarioAtual = listaUsuarios.find(u => u.email === user.email);
+          const usuarioAtual = usuariosValidos.find(u => u.email === user.email);
           if (usuarioAtual) {
             setSolicitanteSelecionado(usuarioAtual);
           }
@@ -287,8 +295,8 @@ const Carrinho = () => {
 
   // Função para filtrar usuários com base no termo de pesquisa
   const usuariosFiltrados = usuarios.filter(usuario => 
-    usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    usuario.cargo.toLowerCase().includes(searchTerm.toLowerCase())
+    usuario.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    usuario.cargo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Função para selecionar um solicitante

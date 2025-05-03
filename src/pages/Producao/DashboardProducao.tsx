@@ -394,9 +394,6 @@ const DashboardProducao = () => {
 
   return (
     <AppLayout title="Dashboard de Produção">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Dashboard de Produção</h1>
-      </div>
 
       {/* Filtro de período */}
       <div className="mb-6">

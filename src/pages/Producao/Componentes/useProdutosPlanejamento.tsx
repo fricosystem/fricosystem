@@ -74,14 +74,11 @@ export const useProdutosPlanejamento = () => {
   useEffect(() => {
     const carregarPlanejamento = async () => {
       setIsLoading(true);
-      console.log("Iniciando carregamento do planejamento");
       
       try {
         const inicioSemanaStr = format(inicioSemana, "yyyy-MM-dd");
         const fimSemana = addDays(inicioSemana, 6);
         const fimSemanaStr = format(fimSemana, "yyyy-MM-dd");
-        
-        console.log("Período de consulta:", inicioSemanaStr, "até", fimSemanaStr);
         
         const planejamentoRef = collection(db, 'planejamento');
         const q = query(
@@ -91,10 +88,8 @@ export const useProdutosPlanejamento = () => {
         );
         
         const querySnapshot = await getDocs(q);
-        console.log(`Recebidos ${querySnapshot.size} documentos do planejamento`);
         
         if (querySnapshot.empty) {
-          console.log("Nenhum planejamento encontrado, usando dias iniciais");
           setDias(diasIniciais);
         } else {
           const planejamentoDias: DiaPlanejamento[] = [...diasIniciais];
@@ -102,7 +97,6 @@ export const useProdutosPlanejamento = () => {
           querySnapshot.forEach(doc => {
             const dia = doc.data() as any;
             const dataStr = dia.dataStr;
-            console.log("Processando dia:", dataStr);
             
             const index = planejamentoDias.findIndex(d => 
               format(d.data, "yyyy-MM-dd") === dataStr
@@ -117,7 +111,6 @@ export const useProdutosPlanejamento = () => {
             }
           });
           
-          console.log("Dias processados:", planejamentoDias);
           setDias(planejamentoDias);
         }
       } catch (error) {
@@ -130,7 +123,6 @@ export const useProdutosPlanejamento = () => {
         // Em caso de erro, definir dias iniciais
         setDias(diasIniciais);
       } finally {
-        console.log("Finalizando carregamento do planejamento");
         setIsLoading(false);
       }
     };

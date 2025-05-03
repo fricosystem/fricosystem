@@ -172,7 +172,6 @@ const AppSidebar = () => {
           email: userEmail, 
           tema: newTheme 
         });
-        console.log(`Novo documento criado com tema ${newTheme} para o usuário ${userEmail}`);
       }
       
       // Notifica o usuário sobre a mudança de tema
