@@ -199,7 +199,7 @@ const FuturisticFloatingMenu = () => {
     return "Usuário";
   };
 
-  // Categorias do menu principal organizadas por seções do sidebar
+  // Categorias do menu principal menu flutuante (atualizado para corresponder ao sidebar)
   const menuCategories = [
     {
       id: "principal",
@@ -219,8 +219,8 @@ const FuturisticFloatingMenu = () => {
         { id: "produtos", icon: <Box size={20} />, label: "Produtos", path: "/produtos" },
         { id: "inventario", icon: <PackageSearch size={20} />, label: "Inventário", path: "/inventory" },
         { id: "enderecamento", icon: <Warehouse size={20} />, label: "Endereçamento", path: "/enderecamento" },
-        { id: "entradamanual", icon: <ArchiveRestore size={20} />, label: "Entrada Manual", path: "/entradamanual" },
-        { id: "transferencia", icon: <ArrowLeftRight size={20} />, label: "Transferência", path: "/transferencia" }
+        { id: "entradaManual", icon: <ArchiveRestore size={20} />, label: "Entrada Manual", path: "/entradaProdutosET" },
+        { id: "transferencia", icon: <ArrowLeftRight size={20} />, label: "Transferência", path: "/transferenciasET" }
       ]
     },
     {
