@@ -6,14 +6,13 @@ import { db } from "@/firebase/firebase";
 import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { 
-  Home, Search, Bell, Menu, Settings, ChevronUp, PlusCircle, 
-  User, Calendar, Bookmark, HelpCircle, Box, ClipboardList, 
+  Calendar, Settings, Box, ClipboardList, 
   ShoppingCart, Factory, UserRound, Wallet, LayoutDashboard,
   PackageSearch, Warehouse, Truck, Receipt, BarChart, LogOut,
   FileText, Sun, Moon, Layers, Briefcase, Boxes, Network,
   ArrowLeftRight, ArchiveRestore, Clipboard, ClipboardCheck,
   Package, CheckSquare, HardHat, GraduationCap, BarChart3,
-  Users, Monitor, X, Circle
+  Users, Monitor, ArrowLeftFromLine, ArrowDownFromLine
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -357,6 +356,7 @@ const FuturisticFloatingMenu = () => {
   };
 
   // Botão minimizado
+  // Botão minimizado
   const MinimizedButton = () => {
     return (
       <button
@@ -370,16 +370,21 @@ const FuturisticFloatingMenu = () => {
         }`}
       >
         {minimized ? (
-          <div className="relative">
-            {selectedCategory?.icon || <Circle size={24} className="text-green-500" />}
-            {selectedCategory?.id === "principal" && totalItens > 0 && (
-              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
-                {totalItens}
-              </span>
+          <div className="relative flex items-center">
+            <ArrowLeftFromLine size={24} className="text-green-500" />
+            {selectedCategory?.icon && (
+              <div className="ml-2">
+                {selectedCategory.icon}
+                {selectedCategory?.id === "principal" && totalItens > 0 && (
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
+                    {totalItens}
+                  </span>
+                )}
+              </div>
             )}
           </div>
         ) : (
-          <X size={24} className="text-green-600 dark:text-green-400" />
+          <ArrowDownFromLine size={24} className="text-green-600 dark:text-green-400" />
         )}
       </button>
     );
