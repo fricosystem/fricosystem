@@ -101,28 +101,7 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
   };
   
   return (
-    <Card className="h-[calc(100vh-50px)] border-r flex flex-col"> {/* Altura total com pequeno espaçamento */}
-      <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Contatos</h2>
-        <div className="flex space-x-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="h-8 w-8 rounded-full"
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={logout}
-            className="h-8 w-8 rounded-full"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+    <Card className="h-[calc(100vh-150px)] border-r flex flex-col">
       <div className="p-4">
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -135,8 +114,8 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
           />
         </div>
       </div>
-      <CardContent className="p-0 flex-1"> {/* Flex-1 para ocupar o espaço restante */}
-        <ScrollArea className="h-full">
+      <CardContent className="p-0 flex-1">
+          <ScrollArea className="h-[500px]"> {/* Adicionada altura fixa */}
           {filteredContacts.length > 0 ? (
             <div className="space-y-1 p-2">
               {filteredContacts.map((contact) => (

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate, useLocation } from "react-router-dom";
 import { db } from "@/firebase/firebase";
 import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
-import { useAuth } from "@/contexts/AuthContext"; // Assumindo que você tem um contexto de autenticação
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { subscribeToUserUnreadMessages, getUnreadMessagesCount } from "@/services/chatService";
 
 interface AppHeaderProps {
   title: string;
@@ -24,8 +25,9 @@ interface AppHeaderProps {
 const AppHeader = ({ title, className }: AppHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth(); // Obtém o usuário atual
+  const { user } = useAuth();
   const [cartItemsCount, setCartItemsCount] = useState(0);
+  const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
   
   const [notifications, setNotifications] = useState([
     { 
@@ -45,11 +47,38 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
     }
   ]);
 
+  // Buscar e monitorar mensagens não lidas do usuário atual
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const updateUnreadCount = (unreadMessages: Record<string, number>) => {
+      // Soma todas as mensagens não lidas de todos os contatos
+      const total = Object.values(unreadMessages).reduce((sum, count) => sum + count, 0);
+      setTotalUnreadMessages(total);
+    };
+
+    // Carregar contagem inicial
+    const loadInitialCount = async () => {
+      try {
+        const unreadMessages = await getUnreadMessagesCount(user.uid);
+        updateUnreadCount(unreadMessages);
+      } catch (error) {
+        console.error("Erro ao carregar mensagens não lidas:", error);
+      }
+    };
+
+    loadInitialCount();
+
+    // Configurar listener para atualizações em tempo real
+    const unsubscribe = subscribeToUserUnreadMessages(user.uid, updateUnreadCount);
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
   // Buscar a contagem de itens no carrinho do Firestore
   useEffect(() => {
     if (!user || !user.email) return;
 
-    // Função para carregar a contagem inicial
     const loadCartCount = async () => {
       try {
         const carrinhoRef = collection(db, "carrinho");
@@ -61,10 +90,8 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
       }
     };
 
-    // Carregar a contagem inicial
     loadCartCount();
 
-    // Configurar um listener para mudanças na coleção "carrinho"
     const carrinhoRef = collection(db, "carrinho");
     const q = query(carrinhoRef, where("email", "==", user.email));
     
@@ -74,7 +101,6 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
       console.error("Erro no listener do carrinho:", error);
     });
 
-    // Limpar o listener quando o componente for desmontado
     return () => unsubscribe();
   }, [user]);
 
@@ -84,13 +110,22 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
         <h1 className="text-2xl font-bold">{title}</h1>
       </div>
       <div className="flex items-center space-x-4">
-        {/* Ícone de Chat */}
+        {/* Ícone de Chat com badge de mensagens não lidas */}
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={() => navigate("/chat")}
+          className="relative"
         >
           <MessageSquare size={20} />
+          {totalUnreadMessages > 0 && (
+            <Badge 
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              variant="destructive"
+            >
+              {totalUnreadMessages}
+            </Badge>
+          )}
         </Button>
 
         {/* Carrinho button */}

@@ -9,7 +9,7 @@ const ChatPage = () => {
   return (
     <ThemeProvider>
       <div className="h-screen">
-        {user ? <Chat /> : <Login />}
+          {user ? <Chat /> : <Login />}
       </div>
     </ThemeProvider>
   );

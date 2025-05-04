@@ -127,76 +127,76 @@ const ChatWindow = ({ selectedContact }: ChatWindowProps) => {
   }
   
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="border-b p-4">
+    <Card className="h-[calc(100vh-150px)] border-r flex flex-col">
+      {/* Cabeçalho fixo */}
+      <CardHeader className="border-b p-4 flex-none">
         <div className="flex items-center">
           <div className="relative">
             <Avatar className="h-10 w-10 mr-3">
               <AvatarFallback>{getInitials(selectedContact.nome)}</AvatarFallback>
             </Avatar>
-            <span
-              className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ${
-                contactStatus === "online" ? "bg-green-500" : "bg-gray-400"
-              }`}
-            />
+            <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ${
+              contactStatus === "online" ? "bg-green-500" : "bg-gray-400"
+            }`} />
           </div>
           <div>
             <h2 className="font-semibold">{selectedContact.nome}</h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground px-[5px]">
               {contactStatus === "online" ? "Online" : "Offline"}
             </p>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-4 overflow-y-auto flex-grow">
-        <ScrollArea className="h-full pr-4">
-          <div className="space-y-4">
-            {messages.length > 0 ? (
-              messages.map((message) => {
-                const isSentByMe = user && message.sender === user.uid;
-                
-                return (
+  
+      {/* Área de mensagens com scroll */}
+      <CardContent className="p-4 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-4 h-full">
+          {messages.length > 0 ? (
+            messages.map((message) => {
+              const isSentByMe = user && message.sender === user.uid;
+              
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
+                >
                   <div
-                    key={message.id}
-                    className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
+                    className={`max-w-[70%] ${
+                      isSentByMe
+                        ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm"
+                        : "bg-secondary text-secondary-foreground rounded-2xl rounded-bl-sm"
+                    } px-4 py-2 relative`}
                   >
-                    <div
-                      className={`max-w-[70%] ${
-                        isSentByMe
-                          ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm"
-                          : "bg-secondary text-secondary-foreground rounded-2xl rounded-bl-sm"
-                      } px-4 py-2 relative`}
-                    >
-                      <p>{message.text}</p>
-                      <div className={`flex items-center gap-1 mt-1 text-xs ${isSentByMe ? "justify-end" : "justify-start"}`}>
-                        <span className="opacity-70">
-                          {formatMessageTime(message.timestamp)}
+                    <p>{message.text}</p>
+                    <div className={`flex items-center gap-1 mt-1 text-xs ${isSentByMe ? "justify-end" : "justify-start"}`}>
+                      <span className="opacity-70">
+                        {formatMessageTime(message.timestamp)}
+                      </span>
+                      {isSentByMe && (
+                        <span className="ml-1">
+                          {message.read ? (
+                            <CheckCheck className="h-3 w-3" />
+                          ) : (
+                            <Check className="h-3 w-3" />
+                          )}
                         </span>
-                        {isSentByMe && (
-                          <span className="ml-1">
-                            {message.read ? (
-                              <CheckCheck className="h-3 w-3" />
-                            ) : (
-                              <Check className="h-3 w-3" />
-                            )}
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
-                );
-              })
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">Nenhuma mensagem ainda. Diga olá!</p>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+                </div>
+              );
+            })
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground">Nenhuma mensagem ainda. Diga olá!</p>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
       </CardContent>
-      <Separator />
-      <CardFooter className="p-4">
+  
+      {/* Rodapé fixo */}
+      <CardFooter className="p-4 flex-none border-t">
         <form onSubmit={handleSendMessage} className="flex w-full gap-2">
           <Input
             placeholder="Digite sua mensagem..."

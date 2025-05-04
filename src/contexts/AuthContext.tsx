@@ -32,23 +32,23 @@ interface UserData {
   imagem_perfil: string;
   ativo: string;
   centro_de_custo: string;
+  online: string; // Adicionado campo online
 }
 
 // Defina a interface para o contexto
 interface AuthContextType {
   user: User | null;
   userData: UserData | null;
-  loading: boolean; // Added loading property
+  loading: boolean;
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (email: string, password: string, displayName: string, cpf: string, cargo: string, imagemPerfil?: string, centroDeCusto?: string) => Promise<User>;
   logout: () => Promise<void>;
 }
 
-// Crie o contexto com um valor padrão
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userData: null,
-  loading: true, // Added loading property with default value
+  loading: true,
   signIn: async () => { throw new Error('Function not implemented'); },
   signUp: async () => { throw new Error('Function not implemented'); },
   logout: async () => { throw new Error('Function not implemented'); }
@@ -70,44 +70,72 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const auth = getAuth();
   const db = getFirestore();
 
+  // Função para atualizar o status online
+  const updateOnlineStatus = async (status: string) => {
+    if (user) {
+      try {
+        const userDocRef = doc(db, "usuarios", user.uid);
+        await updateDoc(userDocRef, {
+          online: status
+        });
+      } catch (error) {
+        console.error("Erro ao atualizar status online:", error);
+      }
+    }
+  };
+
   useEffect(() => {
+    const handleBeforeUnload = () => {
+      updateOnlineStatus('offline');
+    };
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      
       if (currentUser) {
+        // Adiciona event listener para detectar fechamento do navegador
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        
         // Buscar dados adicionais do usuário no Firestore
         try {
           const userDocRef = doc(db, "usuarios", currentUser.uid);
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            setUserData(userDoc.data() as UserData);
+            const userData = userDoc.data() as UserData;
+            setUserData(userData);
+            
+            // Atualiza para online ao fazer login
+            await updateDoc(userDocRef, {
+              online: 'online',
+              ultimo_login: serverTimestamp()
+            });
           }
         } catch (error) {
           console.error("Erro ao buscar dados do usuário:", error);
         }
       } else {
+        // Remove event listener se não houver usuário logado
+        window.removeEventListener('beforeunload', handleBeforeUnload);
         setUserData(null);
       }
       
+      setUser(currentUser);
       setLoading(false);
     });
 
-    return unsubscribe;
-  }, [auth, db]);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [auth, db, user]);
 
-  // Função para criar um novo usuário
   async function signUp(email: string, password: string, displayName: string, cpf: string, cargo: string, imagemPerfil: string = "", centroDeCusto: string = ""): Promise<User> {
     try {
-      // Criar usuário no Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Atualizar o nome de exibição no Auth
       await updateProfile(userCredential.user, {
         displayName: displayName
       });
       
-      // Criar documento do usuário no Firestore
       const userDocRef = doc(db, "usuarios", userCredential.user.uid);
       
       await setDoc(userDocRef, {
@@ -120,7 +148,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ultimo_login: serverTimestamp(),
         imagem_perfil: imagemPerfil,
         ativo: "sim",
-        centro_de_custo: centroDeCusto
+        centro_de_custo: centroDeCusto,
+        online: "online" // Define como online ao criar conta
       });
       
       return userCredential.user;
@@ -129,15 +158,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  // Função para login
   async function signIn(email: string, password: string): Promise<User> {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // Atualizar o último login no Firestore
       const userDocRef = doc(db, "usuarios", userCredential.user.uid);
       await updateDoc(userDocRef, {
-        ultimo_login: serverTimestamp()
+        ultimo_login: serverTimestamp(),
+        online: 'online' // Atualiza para online ao fazer login
       });
       
       return userCredential.user;
@@ -146,15 +174,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  // Função para logout
   async function logout(): Promise<void> {
-    return signOut(auth);
+    try {
+      if (user) {
+        await updateOnlineStatus('offline'); // Atualiza para offline antes de fazer logout
+      }
+      await signOut(auth);
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+      throw error;
+    }
   }
 
   const value: AuthContextType = {
     user,
     userData,
-    loading, // Include loading in the context value
+    loading,
     signIn,
     signUp,
     logout
