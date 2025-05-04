@@ -21,6 +21,7 @@ import {
 
 // Defina o tipo para os dados do usuário
 interface UserData {
+  id: string;
   nome: string;
   email: string;
   cpf: string;

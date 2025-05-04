@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Search, ShoppingCart } from "lucide-react";
+import { Bell, Search, ShoppingCart, Mail, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const AppHeader = ({ title }: { title: string }) => {
+interface AppHeaderProps {
+  title: string;
+  className?: string;
+}
+
+const AppHeader = ({ title, className }: AppHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth(); // Obtém o usuário atual
@@ -74,11 +79,20 @@ const AppHeader = ({ title }: { title: string }) => {
   }, [user]);
 
   return (
-    <header className="flex items-center justify-between py-4 px-6 bg-background border-b">
+    <header className={`flex items-center justify-between py-4 px-6 bg-background border-b ${className}`}>
       <div>
         <h1 className="text-2xl font-bold">{title}</h1>
       </div>
       <div className="flex items-center space-x-4">
+        {/* Ícone de Chat */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate("/chat")}
+        >
+          <MessageSquare size={20} />
+        </Button>
+
         {/* Carrinho button */}
         <Button 
           variant="ghost" 

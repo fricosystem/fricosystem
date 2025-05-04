@@ -36,6 +36,9 @@ import PlanejamentoDiarioProducao from "./pages/Producao/PlanejamentoDiarioProdu
 import ProdutosProducao from "./pages/Producao/ProdutosProducao";
 import ProdutosFinaisProducao from "./pages/Producao/ProdutosFinaisProducao";
 
+// Páginas de comunicação
+import ChatPage from "./pages/ChatPage";
+
 // Create a client
 const queryClient = new QueryClient();
 
@@ -114,6 +117,9 @@ const AppContent = () => {
           <Route path="/producao/planejamentoDiarioProducao" element={<AuthGuard><PlanejamentoDiarioProducao /></AuthGuard>} />
           <Route path="/producao/produtosProducao" element={<AuthGuard><ProdutosProducao /></AuthGuard>} />
           <Route path="/producao/produtosFinaisProducao" element={<AuthGuard><ProdutosFinaisProducao /></AuthGuard>} />
+
+          {/* Rotas de Comunicação */}
+          <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />
           
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />

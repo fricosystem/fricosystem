@@ -352,7 +352,7 @@ const Pedidos = () => {
   return (
     <AppLayout title="Pedidos">
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
           <Button onClick={() => {
             resetarFormulario();
             setFormAberto(true);

@@ -34,16 +34,15 @@ const AppLayout = ({ children, title }: AppLayoutProps) => {
   
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="flex h-screen w-full overflow-hidden"> {/* Adicione overflow-hidden */}
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <AppHeader title={title} />
-          <main className="flex-1 p-6 overflow-auto">
+        <div className="flex-1 flex flex-col h-full">
+          <AppHeader title={title} className="sticky top-0 z-50 bg-background" /> {/* Adicione sticky e z-index */}
+          <main className="flex-1 overflow-auto p-6"> {/* Mantenha overflow-auto apenas no main */}
             {children}
           </main>
         </div>
         
-        {/* Renderiza o FloatingActionBar apenas em dispositivos móveis */}
         {isMobile && <FloatingActionBar />}
       </div>
     </SidebarProvider>
