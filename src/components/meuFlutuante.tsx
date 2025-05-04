@@ -13,7 +13,7 @@ import {
   FileText, Sun, Moon, Layers, Briefcase, Boxes, Network,
   ArrowLeftRight, ArchiveRestore, Clipboard, ClipboardCheck,
   Package, CheckSquare, HardHat, GraduationCap, BarChart3,
-  Users, Monitor
+  Users, Monitor, X, Circle
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -25,6 +25,8 @@ const FuturisticFloatingMenu = () => {
   
   const [activeMenu, setActiveMenu] = useState(null);
   const [theme, setTheme] = useState("dark");
+  const [minimized, setMinimized] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   
   // Efeito para fechar o menu quando clicar fora dele
   useEffect(() => {
@@ -138,6 +140,7 @@ const FuturisticFloatingMenu = () => {
   const navigateTo = (path) => {
     navigate(path);
     setActiveMenu(null); // Fecha o menu após navegar
+    setMinimized(true); // Minimiza o menu após selecionar uma opção
   };
   
   // Função para fazer logout
@@ -164,6 +167,15 @@ const FuturisticFloatingMenu = () => {
       setActiveMenu(null);
     } else {
       setActiveMenu(menuId);
+      setSelectedCategory(menuCategories.find(cat => cat.id === menuId));
+    }
+    setMinimized(false);
+  };
+
+  const toggleMinimize = () => {
+    setMinimized(!minimized);
+    if (!minimized) {
+      setActiveMenu(null);
     }
   };
 
@@ -343,70 +355,107 @@ const FuturisticFloatingMenu = () => {
     );
   };
 
+  // Botão minimizado
+  const MinimizedButton = () => {
+    return (
+      <button
+        onClick={toggleMinimize}
+        className={`fixed z-50 flex items-center justify-center rounded-full p-3 shadow-lg transition-all duration-300 ${
+          minimized ? "bottom-4 right-4" : "bottom-8 left-1/2 transform -translate-x-1/2"
+        } ${
+          selectedCategory?.id === "principal" && totalItens > 0 
+            ? "bg-blue-600 text-white" 
+            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+        }`}
+      >
+        {minimized ? (
+          <div className="relative">
+            {selectedCategory?.icon || <Circle size={24} />}
+            {selectedCategory?.id === "principal" && totalItens > 0 && (
+              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
+                {totalItens}
+              </span>
+            )}
+          </div>
+        ) : (
+          <X size={24} />
+        )}
+      </button>
+    );
+  };
+
   return (
-    <div id="floating-menu-container" className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 ${theme === "dark" ? "dark" : ""}`}>
-      {/* Submenu Flutuante */}
-      {activeMenu && (
-        <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 overflow-hidden transition-all duration-300 ease-in-out animate-fadeIn">
-          {/* Se for o menu de sistema, mostrar componente de perfil */}
-          {activeMenu === "sistema" && <UserProfileSection />}
-          
-          {/* Conteúdo do submenu baseado na categoria selecionada */}
-          <div className="p-2 max-h-96 overflow-y-auto">
-            {menuCategories.find(cat => cat.id === activeMenu)?.items.map((item, idx) => (
-              <SubMenuItem 
-                key={idx}
-                icon={item.icon}
-                label={item.label}
-                badge={item.badge}
-                className={item.className}
-                onClick={item.onClick}
-                path={item.path}
-              />
-            ))}
+    <>
+      {/* Menu principal (mostrado quando não está minimizado) */}
+      {!minimized && (
+        <div id="floating-menu-container" className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 ${theme === "dark" ? "dark" : ""}`}>
+          {/* Submenu Flutuante */}
+          {activeMenu && (
+            <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 overflow-hidden transition-all duration-300 ease-in-out animate-fadeIn">
+              {/* Se for o menu de sistema, mostrar componente de perfil */}
+              {activeMenu === "sistema" && <UserProfileSection />}
+              
+              {/* Conteúdo do submenu baseado na categoria selecionada */}
+              <div className="p-2 max-h-96 overflow-y-auto">
+                {menuCategories.find(cat => cat.id === activeMenu)?.items.map((item, idx) => (
+                  <SubMenuItem 
+                    key={idx}
+                    icon={item.icon}
+                    label={item.label}
+                    badge={item.badge}
+                    className={item.className}
+                    onClick={item.onClick}
+                    path={item.path}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Barra Principal Futurista */}
+          <div className="relative">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-sm opacity-75"></div>
+            <div className="relative bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-full shadow-lg px-2 py-2 flex items-center justify-center space-x-1">
+              {menuCategories.map((category, idx) => {
+                // Verifica se alguma das páginas nesta categoria está ativa
+                const isCategoryActive = category.items?.some(item => 
+                  item.path && location.pathname === item.path
+                );
+                
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => toggleSubmenu(category.id)}
+                    className={`p-3 rounded-full transition-all duration-300 relative group ${
+                      activeMenu === category.id || isCategoryActive
+                        ? "bg-blue-600 text-white" 
+                        : "text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                    }`}
+                    aria-label={category.label}
+                  >
+                    {/* Badge para carrinho se for categoria principal */}
+                    {category.id === "principal" && totalItens > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
+                        {totalItens}
+                      </span>
+                    )}
+                    {category.icon}
+                    
+                    {/* Tooltip com o nome da seção */}
+                    <span className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                      {category.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Barra Principal Futurista */}
-      <div className="relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-sm opacity-75"></div>
-        <div className="relative bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-full shadow-lg px-2 py-2 flex items-center justify-center space-x-1">
-          {menuCategories.map((category, idx) => {
-            // Verifica se alguma das páginas nesta categoria está ativa
-            const isCategoryActive = category.items?.some(item => 
-              item.path && location.pathname === item.path
-            );
-            
-            return (
-              <button
-                key={idx}
-                onClick={() => toggleSubmenu(category.id)}
-                className={`p-3 rounded-full transition-all duration-300 relative group ${
-                  activeMenu === category.id || isCategoryActive
-                    ? "bg-blue-600 text-white" 
-                    : "text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
-                }`}
-                aria-label={category.label}
-              >
-                {/* Badge para carrinho se for categoria principal */}
-                {category.id === "principal" && totalItens > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
-                    {totalItens}
-                  </span>
-                )}
-                {category.icon}
-                
-                {/* Tooltip com o nome da seção */}
-                <span className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                  {category.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+      {/* Botão minimizado (sempre visível) */}
+      <MinimizedButton />
+    </>
   );
 };
 
