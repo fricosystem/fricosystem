@@ -293,6 +293,7 @@ const FuturisticFloatingMenu = () => {
   ];
 
   // Renderiza um item do submenu
+  // Renderiza um item do submenu
   const SubMenuItem = ({ icon, label, badge, className, onClick, path }) => {
     const handleClick = () => {
       if (onClick) {
@@ -309,22 +310,22 @@ const FuturisticFloatingMenu = () => {
         onClick={handleClick}
         className={`flex items-center w-full px-4 py-3 text-left transition-all duration-200 ${
           isActive 
-            ? "bg-blue-600/30 dark:bg-blue-600/30 text-blue-700 dark:text-blue-300" 
-            : "hover:bg-blue-600/20 dark:hover:bg-blue-500/20"
+            ? "bg-green-600/30 dark:bg-green-600/30 text-green-700 dark:text-green-300" 
+            : "hover:bg-green-600/20 dark:hover:bg-green-500/20"
         } rounded-lg ${className || ""}`}
       >
         <span className={`mr-3 ${
           isActive 
-            ? "text-blue-600 dark:text-blue-400" 
-            : "text-blue-500 dark:text-blue-400"
+            ? "text-green-600 dark:text-green-400" 
+            : "text-green-500 dark:text-green-400"
         }`}>{icon}</span>
         <span className={`${
           isActive 
-            ? "text-blue-700 dark:text-blue-300" 
+            ? "text-green-700 dark:text-green-300" 
             : "text-gray-700 dark:text-gray-200"
         }`}>{label}</span>
         {badge && (
-          <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 dark:bg-blue-500 rounded-full">
+          <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 dark:bg-green-500 rounded-full">
             {badge}
           </span>
         )}
@@ -364,21 +365,21 @@ const FuturisticFloatingMenu = () => {
           minimized ? "bottom-4 right-4" : "bottom-8 left-1/2 transform -translate-x-1/2"
         } ${
           selectedCategory?.id === "principal" && totalItens > 0 
-            ? "bg-blue-600 text-white" 
-            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+            ? "bg-green-600 text-white" 
+            : "bg-white dark:bg-gray-800 text-green-600 dark:text-green-400"
         }`}
       >
         {minimized ? (
           <div className="relative">
-            {selectedCategory?.icon || <Circle size={24} />}
+            {selectedCategory?.icon || <Circle size={24} className="text-green-500" />}
             {selectedCategory?.id === "principal" && totalItens > 0 && (
-              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
+              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
                 {totalItens}
               </span>
             )}
           </div>
         ) : (
-          <X size={24} />
+          <X size={24} className="text-green-600 dark:text-green-400" />
         )}
       </button>
     );
