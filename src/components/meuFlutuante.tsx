@@ -198,85 +198,163 @@ const FuturisticFloatingMenu = () => {
   // Categorias do menu principal (incluindo administrativo condicional)
   const menuCategories = [
     {
-          label: "Principal",
-          icon: Layers,
-          items: [
-            { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-          ],
+      id: "principal",
+      icon: <Layers size={24} />,
+      label: "Principal",
+      items: [
+        { id: "dashboard", icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/dashboard" },
+        { id: "requisicoes", icon: <ClipboardList size={20} />, label: "Requisições", path: "/requisicoes" },
+        { 
+          id: "carrinho", 
+          icon: <ShoppingCart size={20} />, 
+          label: "Carrinho", 
+          path: "/carrinho", 
+          badge: totalItens > 0 ? totalItens : null 
+        }
+      ]
+    },
+    {
+      id: "estoque",
+      icon: <Boxes size={24} />,
+      label: "Estoque",
+      items: [
+        { id: "produtos", icon: <Box size={20} />, label: "Produtos", path: "/produtos" },
+        { id: "inventario", icon: <PackageSearch size={20} />, label: "Inventário", path: "/inventory" },
+        { id: "enderecamento", icon: <Warehouse size={20} />, label: "Endereçamento", path: "/enderecamento" },
+        { id: "entradaManual", icon: <ArchiveRestore size={20} />, label: "Entrada Manual", path: "/entradaProdutosET" },
+        { id: "transferencia", icon: <ArrowLeftRight size={20} />, label: "Transferência", path: "/transferenciasET" },
+        { id: "compras", icon: <Truck size={20} />, label: "Compras", path: "/compras" },
+        { id: "pedidos", icon: <Truck size={20} />, label: "Pedidos", path: "/pedidos" }
+      ]
+    },
+    {
+      id: "operacional",
+      icon: <Network size={24} />,
+      label: "Operacional",
+      items: [
+        { id: "ordensServico", icon: <Clipboard size={20} />, label: "Ordens de Serviço", path: "/ordensServico" },
+        { id: "notas-fiscais", icon: <Receipt size={20} />, label: "Notas Fiscais", path: "/notas-fiscais" }
+      ]
+    },
+    {
+      id: "producao",
+      icon: <Factory size={24} />,
+      label: "Produção",
+      items: [
+        { id: "producao-dash", icon: <BarChart size={20} />, label: "Dashboard Prod", path: "/producao" },
+        { id: "planejamento", icon: <ClipboardCheck size={20} />, label: "Planejamento", path: "/producao/planejamento" },
+        { 
+          id: "planejamentoDiario", 
+          icon: <Calendar size={20} />, 
+          label: "Planejamento Diário", 
+          path: "/producao/planejamentoDiarioProducao" 
         },
-        {
-          label: "Estoque",
-          icon: Boxes,
-          items: [
-            { to: "/produtos", icon: Box, label: "Produtos" },
-            { to: "/requisicoes", icon: ClipboardList, label: "Requisições" },
-            { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
-            { to: "/inventory", icon: PackageSearch, label: "Inventário" },
-            { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
-            { to: "/entradaProdutosET", icon: ArchiveRestore, label: "Entrada Manual" },
-            { to: "/transferenciasET", icon: ArrowLeftRight, label: "Transferência" },
-            { to: "/compras", icon: Truck, label: "Compras" },
-            { to: "/pedidos", icon: Truck, label: "Pedidos" },
-          ],
+        { 
+          id: "produtosProducao", 
+          icon: <Package size={20} />, 
+          label: "Produtos Produção", 
+          path: "/producao/produtosProducao" 
         },
-        {
-          label: "Operacional",
-          icon: Network,
-          items: [
-            { to: "/ordensServico", icon: Clipboard, label: "Ordens de Serviço" },
-            { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
-          ],
+        { 
+          id: "produtosFinais", 
+          icon: <CheckSquare size={20} />, 
+          label: "Produtos Finais", 
+          path: "/producao/produtosFinaisProducao" 
+        }
+      ]
+    },
+    {
+      id: "rh",
+      icon: <HardHat size={24} />,
+      label: "Recursos Humanos",
+      items: [
+        { id: "funcionarios", icon: <UserRound size={20} />, label: "Funcionários", path: "/rh/funcionarios" },
+        { id: "ponto", icon: <Calendar size={20} />, label: "Ponto Eletrônico", path: "/rh/ponto" },
+        { id: "treinamentos", icon: <GraduationCap size={20} />, label: "Treinamentos", path: "/rh/treinamentos" }
+      ]
+    },
+    {
+      id: "financeiro",
+      icon: <Wallet size={24} />,
+      label: "Financeiro",
+      items: [
+        { id: "financeiro-dash", icon: <Wallet size={20} />, label: "Financeiro", path: "/financial" },
+        { id: "centros-custo", icon: <BarChart3 size={20} />, label: "Centros de Custo", path: "/cost-centers" },
+        { id: "fornecedores", icon: <Users size={20} />, label: "Fornecedores", path: "/fornecedores" },
+        { id: "relatorios", icon: <FileText size={20} />, label: "Relatórios", path: "/relatorios" }
+      ]
+    },
+    // Categoria administrativa condicional
+    ...(isAdmin ? [{
+      id: "administrativo",
+      icon: <Settings size={24} />,
+      label: "Administrativo",
+      items: [
+        { 
+          id: "admin-dashboard", 
+          icon: <LayoutDashboard size={20} />, 
+          label: "Dashboard", 
+          path: "/administrativo/dashboard" 
         },
-        {
-          label: "Produção",
-          icon: Factory,
-          items: [
-            { to: "/producao", icon: BarChart, label: "Dashboard Prod" },
-            { to: "/producao/planejamento", icon: ClipboardCheck, label: "Planejamento" },
-            { to: "/producao/planejamentoDiarioProducao", icon: Calendar, label: "Planejamento Diário" },
-            { to: "/producao/produtosProducao", icon: Package, label: "Produtos Produção" },
-            { to: "/producao/produtosFinaisProducao", icon: CheckSquare, label: "Produtos Finais" },
-          ],
+        { 
+          id: "admin-usuarios", 
+          icon: <UserRound size={20} />, 
+          label: "Usuários", 
+          path: "/administrativo/usuarios" 
         },
-        {
-          label: "Recursos Humanos",
-          icon: HardHat,
-          items: [
-            { to: "/rh/funcionarios", icon: UserRound, label: "Funcionários" },
-            { to: "/rh/ponto", icon: Calendar, label: "Ponto Eletrônico" },
-            { to: "/rh/treinamentos", icon: GraduationCap, label: "Treinamentos" },
-          ],
+        { 
+          id: "admin-produtos", 
+          icon: <Box size={20} />, 
+          label: "Produtos", 
+          path: "/administrativo/produtos" 
         },
-        {
-          label: "Financeiro",
-          icon: Wallet,
-          items: [
-            { to: "/financial", icon: Wallet, label: "Financeiro" },
-            { to: "/cost-centers", icon: BarChart3, label: "Centros de Custo" },
-            { to: "/fornecedores", icon: Users, label: "Fornecedores" },
-            { to: "/relatorios", icon: Home, label: "Relatórios" },
-          ],
+        { 
+          id: "admin-fornecedores", 
+          icon: <Users size={20} />, 
+          label: "Fornecedores", 
+          path: "/administrativo/fornecedores" 
         },
-        ...(isAdmin ? [{
-          label: "Administrativo",
-          icon: Settings,
-          items: [
-            { to: "/administrativo/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-            { to: "/administrativo/usuarios", icon: UserRound, label: "Usuários" },
-            { to: "/administrativo/produtos", icon: Box, label: "Produtos" },
-            { to: "/administrativo/fornecedores", icon: Users, label: "Fornecedores" },
-            { to: "/administrativo/depositos", icon: Warehouse, label: "Depósitos" },
-            { to: "/administrativo/unidades", icon: Building2, label: "Unidades" },
-          ],
-        }] : []),
-        {
-          label: "Sistema",
-          icon: Monitor,
-          items: [
-            { to: "/configuracoes", icon: Settings, label: "Configurações" },
-          ],
+        { 
+          id: "admin-depositos", 
+          icon: <Warehouse size={20} />, 
+          label: "Depósitos", 
+          path: "/administrativo/depositos" 
         },
-      ];
+        { 
+          id: "admin-unidades", 
+          icon: <Building2 size={20} />, 
+          label: "Unidades", 
+          path: "/administrativo/unidades" 
+        }
+      ]
+    }] : []),
+    {
+      id: "sistema",
+      icon: <Monitor size={24} />,
+      label: "Sistema",
+      items: [
+        { 
+          id: "config", 
+          icon: <Settings size={20} />, 
+          label: "Configurações", 
+          path: "/configuracoes" 
+        },
+        { 
+          id: "theme", 
+          icon: theme === "light" ? <Moon size={20} /> : <Sun size={20} />, 
+          label: `Tema ${theme === "light" ? "Escuro" : "Claro"}`, 
+          onClick: toggleTheme 
+        },
+        { 
+          id: "logout", 
+          icon: <LogOut size={20} />, 
+          label: "Sair", 
+          className: "text-red-500", 
+          onClick: handleSignOut 
+        }
+      ]
+    }
+  ];
 
   const SubMenuItem = ({ icon, label, badge, className, onClick, path }) => {
     const handleClick = () => {
