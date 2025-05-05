@@ -188,7 +188,7 @@ const ChatWindow = ({ selectedContact }: ChatWindowProps) => {
             })
           ) : (
             <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">Nenhuma mensagem ainda. Diga olá!</p>
+              <p className="text-muted-foreground">Nenhuma mensagem ainda. Inicie uma conversa!</p>
             </div>
           )}
           <div ref={messagesEndRef} />

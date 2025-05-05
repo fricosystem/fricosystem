@@ -12,7 +12,8 @@ import {
   FileText, Sun, Moon, Layers, Briefcase, Boxes, Network,
   ArrowLeftRight, ArchiveRestore, Clipboard, ClipboardCheck,
   Package, CheckSquare, HardHat, GraduationCap, BarChart3,
-  Users, Monitor, ArrowLeftFromLine, ArrowDownFromLine
+  Users, Monitor, ArrowLeftFromLine, ArrowDownFromLine, Home,
+  Building2
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -27,6 +28,9 @@ const FuturisticFloatingMenu = () => {
   const [minimized, setMinimized] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   
+  // Verifica se o usuário é admin
+  const isAdmin = userData?.cargo === "admin";
+
   // Efeito para fechar o menu quando clicar fora dele
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -47,29 +51,23 @@ const FuturisticFloatingMenu = () => {
       if (!userEmail) return;
       
       try {
-        // Busca o documento do usuário baseado no email
         const usuariosRef = collection(db, "usuarios");
         const q = query(usuariosRef, where("email", "==", userEmail));
         const querySnapshot = await getDocs(q);
         
         if (!querySnapshot.empty) {
-          // Usuário encontrado pelo email
           const userDoc = querySnapshot.docs[0];
           if (userDoc.data().tema) {
             const savedTheme = userDoc.data().tema;
             setTheme(savedTheme);
             document.documentElement.classList.toggle("dark", savedTheme === "dark");
           } else {
-            // Documento existe mas não tem tema definido
             const defaultTheme = "dark";
             setTheme(defaultTheme);
             document.documentElement.classList.toggle("dark", defaultTheme === "dark");
-            
-            // Atualiza o documento existente com o tema padrão
             await setDoc(doc(db, "usuarios", userDoc.id), { tema: defaultTheme }, { merge: true });
           }
         } else {
-          // Define tema padrão se usuário não encontrado
           setTheme("dark");
         }
       } catch (error) {
@@ -81,13 +79,11 @@ const FuturisticFloatingMenu = () => {
     loadTheme();
   }, [user]);
 
-  // Função auxiliar para obter o email do usuário de forma segura
   const getUserEmail = () => {
     if (!user) return null;
     return user.email || null;
   };
 
-  // Função para alternar o tema
   const toggleTheme = async () => {
     const userEmail = getUserEmail();
     if (!userEmail) return;
@@ -95,21 +91,17 @@ const FuturisticFloatingMenu = () => {
     const newTheme = theme === "light" ? "dark" : "light";
     
     try {
-      // Atualiza o tema na interface primeiro (para resposta imediata)
       setTheme(newTheme);
       document.documentElement.classList.toggle("dark", newTheme === "dark");
       
-      // Busca o documento do usuário baseado no email
       const usuariosRef = collection(db, "usuarios");
       const q = query(usuariosRef, where("email", "==", userEmail));
       const querySnapshot = await getDocs(q);
       
       if (!querySnapshot.empty) {
-        // Atualiza o documento existente
         const userDoc = querySnapshot.docs[0];
         await setDoc(doc(db, "usuarios", userDoc.id), { tema: newTheme }, { merge: true });
       } else {
-        // Cria um novo documento se por algum motivo não existir
         const newUserDocRef = doc(collection(db, "usuarios"));
         await setDoc(newUserDocRef, { 
           email: userEmail, 
@@ -117,13 +109,11 @@ const FuturisticFloatingMenu = () => {
         });
       }
       
-      // Notifica o usuário sobre a mudança de tema
       toast({
         description: `Tema alterado para ${newTheme === "light" ? "claro" : "escuro"}`,
         duration: 2000,
       });
     } catch (error) {
-      // Em caso de erro, reverte para o tema anterior
       setTheme(theme);
       document.documentElement.classList.toggle("dark", theme === "dark");
       
@@ -135,14 +125,12 @@ const FuturisticFloatingMenu = () => {
     }
   };
 
-  // Função para navegar para uma página
   const navigateTo = (path) => {
     navigate(path);
-    setActiveMenu(null); // Fecha o menu após navegar
-    setMinimized(true); // Minimiza o menu após selecionar uma opção
+    setActiveMenu(null);
+    setMinimized(true);
   };
   
-  // Função para fazer logout
   const handleSignOut = async () => {
     try {
       await logout();
@@ -178,7 +166,6 @@ const FuturisticFloatingMenu = () => {
     }
   };
 
-  // Obter a primeira letra do nome do usuário ou do email
   const getUserInitial = () => {
     if (userData?.nome) {
       return userData.nome.charAt(0).toUpperCase();
@@ -190,7 +177,6 @@ const FuturisticFloatingMenu = () => {
     return "U";
   };
 
-  // Obter o nome de exibição
   const getDisplayName = () => {
     if (userData?.nome) {
       return userData.nome;
@@ -202,7 +188,6 @@ const FuturisticFloatingMenu = () => {
     return "Usuário";
   };
 
-  // Obter o cargo do usuário
   const getUserCargo = () => {
     if (userData?.cargo) {
       return userData.cargo;
@@ -210,7 +195,7 @@ const FuturisticFloatingMenu = () => {
     return "Usuário";
   };
 
-  // Categorias do menu principal menu flutuante (atualizado para corresponder ao sidebar)
+  // Categorias do menu principal (incluindo administrativo condicional)
   const menuCategories = [
     {
       id: "principal",
@@ -278,12 +263,25 @@ const FuturisticFloatingMenu = () => {
         { id: "relatorios", icon: <FileText size={20} />, label: "Relatórios", path: "/relatorios" }
       ]
     },
+    // Categoria administrativa condicional
+    ...(isAdmin ? [{
+      id: "administrativo",
+      icon: <Settings size={24} />,
+      label: "Administrativo",
+      items: [
+        { id: "admin-dashboard", icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/administrativo/dashboard" },
+        { id: "admin-usuarios", icon: <UserRound size={20} />, label: "Usuários", path: "/administrativo/usuarios" },
+        { id: "admin-produtos", icon: <Box size={20} />, label: "Produtos", path: "/administrativo/produtos" },
+        { id: "admin-fornecedores", icon: <Users size={20} />, label: "Fornecedores", path: "/administrativo/fornecedores" },
+        { id: "admin-depositos", icon: <Warehouse size={20} />, label: "Depósitos", path: "/administrativo/depositos" },
+        { id: "admin-unidades", icon: <Building2 size={20} />, label: "Unidades", path: "/administrativo/unidades" }
+      ]
+    }] : []),
     {
       id: "sistema",
       icon: <Monitor size={24} />,
       label: "Sistema",
       items: [
-        { id: "administrativo", icon: <Settings size={20} />, label: "Administrativo", path: "/administrativo" },
         { id: "config", icon: <Settings size={20} />, label: "Configurações", path: "/configuracoes" },
         { id: "theme", icon: theme === "light" ? <Moon size={20} /> : <Sun size={20} />, label: `Tema ${theme === "light" ? "Escuro" : "Claro"}`, onClick: toggleTheme },
         { id: "logout", icon: <LogOut size={20} />, label: "Sair", className: "text-red-500", onClick: handleSignOut }
@@ -291,8 +289,6 @@ const FuturisticFloatingMenu = () => {
     }
   ];
 
-  // Renderiza um item do submenu
-  // Renderiza um item do submenu
   const SubMenuItem = ({ icon, label, badge, className, onClick, path }) => {
     const handleClick = () => {
       if (onClick) {
@@ -332,7 +328,6 @@ const FuturisticFloatingMenu = () => {
     );
   };
 
-  // Componente para o perfil do usuário
   const UserProfileSection = () => {
     return (
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -355,8 +350,6 @@ const FuturisticFloatingMenu = () => {
     );
   };
 
-  // Botão minimizado
-  // Botão minimizado
   const MinimizedButton = () => {
     return (
       <button
@@ -392,16 +385,12 @@ const FuturisticFloatingMenu = () => {
 
   return (
     <>
-      {/* Menu principal (mostrado quando não está minimizado) */}
       {!minimized && (
         <div id="floating-menu-container" className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 ${theme === "dark" ? "dark" : ""}`}>
-          {/* Submenu Flutuante */}
           {activeMenu && (
             <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 overflow-hidden transition-all duration-300 ease-in-out animate-fadeIn">
-              {/* Se for o menu de sistema, mostrar componente de perfil */}
               {activeMenu === "sistema" && <UserProfileSection />}
               
-              {/* Conteúdo do submenu baseado na categoria selecionada */}
               <div className="p-2 max-h-96 overflow-y-auto">
                 {menuCategories.find(cat => cat.id === activeMenu)?.items.map((item, idx) => (
                   <SubMenuItem 
@@ -418,12 +407,10 @@ const FuturisticFloatingMenu = () => {
             </div>
           )}
 
-          {/* Barra Principal Futurista */}
           <div className="relative">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-sm opacity-75"></div>
             <div className="relative bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-full shadow-lg px-2 py-2 flex items-center justify-center space-x-1">
               {menuCategories.map((category, idx) => {
-                // Verifica se alguma das páginas nesta categoria está ativa
                 const isCategoryActive = category.items?.some(item => 
                   item.path && location.pathname === item.path
                 );
@@ -439,7 +426,6 @@ const FuturisticFloatingMenu = () => {
                     }`}
                     aria-label={category.label}
                   >
-                    {/* Badge para carrinho se for categoria principal */}
                     {category.id === "principal" && totalItens > 0 && (
                       <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
                         {totalItens}
@@ -447,7 +433,6 @@ const FuturisticFloatingMenu = () => {
                     )}
                     {category.icon}
                     
-                    {/* Tooltip com o nome da seção */}
                     <span className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
                       {category.label}
                     </span>
@@ -459,7 +444,6 @@ const FuturisticFloatingMenu = () => {
         </div>
       )}
 
-      {/* Botão minimizado (sempre visível) */}
       <MinimizedButton />
     </>
   );

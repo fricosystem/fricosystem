@@ -85,6 +85,8 @@ const AppSidebar = () => {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const { toast } = useToast();
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+  const isAdmin = userData?.cargo === "admin";
   
   const getUserEmail = () => {
     if (!user) return null;
@@ -209,8 +211,6 @@ const AppSidebar = () => {
       icon: Layers,
       items: [
         { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-        { to: "/requisicoes", icon: ClipboardList, label: "Requisições" },
-        { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
       ],
     },
     {
@@ -218,10 +218,14 @@ const AppSidebar = () => {
       icon: Boxes,
       items: [
         { to: "/produtos", icon: Box, label: "Produtos" },
+        { to: "/requisicoes", icon: ClipboardList, label: "Requisições" },
+        { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
         { to: "/inventory", icon: PackageSearch, label: "Inventário" },
         { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
         { to: "/entradaProdutosET", icon: ArchiveRestore, label: "Entrada Manual" },
         { to: "/transferenciasET", icon: ArrowLeftRight, label: "Transferência" },
+        { to: "/compras", icon: Truck, label: "Compras" },
+        { to: "/pedidos", icon: Truck, label: "Pedidos" },
       ],
     },
     {
@@ -229,8 +233,6 @@ const AppSidebar = () => {
       icon: Network,
       items: [
         { to: "/ordensServico", icon: Clipboard, label: "Ordens de Serviço" },
-        { to: "/compras", icon: Truck, label: "Compras" },
-        { to: "/pedidos", icon: Truck, label: "Pedidos" },
         { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
       ],
     },
@@ -264,6 +266,18 @@ const AppSidebar = () => {
         { to: "/relatorios", icon: Home, label: "Relatórios" },
       ],
     },
+    ...(isAdmin ? [{
+      label: "Administrativo",
+      icon: Settings,
+      items: [
+        { to: "/administrativo/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+        { to: "/administrativo/usuarios", icon: UserRound, label: "Usuários" },
+        { to: "/administrativo/produtos", icon: Box, label: "Produtos" },
+        { to: "/administrativo/fornecedores", icon: Users, label: "Fornecedores" },
+        { to: "/administrativo/depositos", icon: Warehouse, label: "Depósitos" },
+        { to: "/administrativo/unidades", icon: Building2, label: "Unidades" },
+      ],
+    }] : []),
     {
       label: "Sistema",
       icon: Monitor,
@@ -272,19 +286,6 @@ const AppSidebar = () => {
       ],
     },
   ];
-
-  const adminCategory: SidebarCategory = {
-    label: "Administrativo",
-    icon: Settings,
-    items: [
-      { to: "/administrativo/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-      { to: "/administrativo/produtos", icon: Box, label: "Produtos" },
-      { to: "/administrativo/fornecedores", icon: Users, label: "Fornecedores" },
-      { to: "/administrativo/depositos", icon: Warehouse, label: "Depósitos" },
-      { to: "/administrativo/unidades", icon: Building2, label: "Unidades" },
-      { to: "/administrativo/usuarios", icon: UserRound, label: "Usuários" },
-    ],
-  };
 
   const handleSignOut = async () => {
     try {
@@ -374,8 +375,6 @@ const AppSidebar = () => {
       tiny: "text-xs font-medium"
     }
   };
-
-  const isAdmin = userData?.cargo === "ADMINISTRATIVO";
 
   return (
     <Sidebar className="border-r border-[#2b3341]">
@@ -506,64 +505,6 @@ const AppSidebar = () => {
                 </AnimatePresence>
               </SidebarGroup>
             ))}
-
-            {/* Renderiza a categoria Administrativo apenas para admins */}
-            {isAdmin && (
-              <SidebarGroup key="admin">
-                <div 
-                  className={`${categoryBtnClasses} ${
-                    expandedCategories[adminCategory.label] 
-                      ? firebaseClasses.categoryBtn.active
-                      : firebaseClasses.categoryBtn.hover
-                  } ${firebaseClasses.text.normal}`}
-                  onClick={() => toggleCategoryExpansion(adminCategory.label)}
-                >
-                  <div className="flex items-center gap-1">
-                    <adminCategory.icon className="h-5 w-5" />
-                    <SidebarGroupLabel className="flex-1 text-1xl font-bold">{adminCategory.label}</SidebarGroupLabel>
-                  </div>
-                  <motion.div
-                    animate={{ rotate: expandedCategories[adminCategory.label] ? 180 : 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </motion.div>
-                </div>
-                
-                <AnimatePresence>
-                  {expandedCategories[adminCategory.label] && (
-                    <motion.div
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      variants={contentVariants}
-                      className="overflow-hidden"
-                    >
-                      <SidebarGroupContent className="pl-8 pr-1 mt-0.4">
-                        <SidebarMenu>
-                          {adminCategory.items.map((item) => (
-                            <SidebarMenuItem key={item.to}>
-                              <SidebarMenuButton
-                                isActive={location.pathname === item.to}
-                                onClick={() => navigate(item.to)}
-                                className={`flex items-center h-10 transition-all duration-200 rounded-md ${
-                                  location.pathname === item.to 
-                                    ? firebaseClasses.menuItem.active 
-                                    : firebaseClasses.menuItem.hover
-                                }`}
-                              >
-                                <item.icon className="mr-2 h-6 w-6" />
-                                <span className="flex-1 text-1xl font-bold">{item.label}</span>
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          ))}
-                        </SidebarMenu>
-                      </SidebarGroupContent>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </SidebarGroup>
-            )}
           </div>
         </SidebarGroup>
         

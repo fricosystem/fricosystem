@@ -375,22 +375,12 @@ const Dashboard = () => {
               title="Valor Total em Estoque"
               value={formatCurrency(valorEstoque)}
               icon={<DollarSign size={18} />}
-              trend={{
-                value: 0,
-                positive: true,
-                label: "valor total calculado"
-              }}
               className="shadow-sm"
             />
             <StatsCard
               title="Unidades Cadastradas"
               value={unidades.length.toString()}
               icon={<Warehouse size={18} />}
-              trend={{
-                value: 0,
-                positive: true,
-                label: "unidades diferentes"
-              }}
               className="shadow-sm"
             />
           </div>
@@ -466,7 +456,7 @@ const Dashboard = () => {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg text-gray-800">Produtos por Fornecedor</CardTitle>
-                <CardDescription className="text-gray-600">Top 5 fornecedores com mais produtos</CardDescription>
+                <CardDescription className="text-gray-600">Top 5 fornecedores com mais produtos fornecidos</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[250px]">
@@ -570,9 +560,9 @@ const Dashboard = () => {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2 text-gray-800">
-                  <Warehouse size={18} /> Unidades Cadastradas
+                  <Warehouse size={18} /> Unidades com mais produtos
                 </CardTitle>
-                <CardDescription className="text-gray-600">Todas as unidades disponíveis no sistema</CardDescription>
+                <CardDescription className="text-gray-600">Veja quais unidades tem mais produtos cadastrados</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
