@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Table } from "@/components/ui/table";
+import { toPng } from 'html-to-image';
 import {
   TableBody,
   TableCaption,
@@ -386,42 +387,41 @@ const Requisicoes = () => {
 
   // Função para baixar do estoque
   const baixarEstoque = async () => {
-    if (!selectedRequisicao) return false;
+  if (!selectedRequisicao) return false;
+  
+  try {
+    const produtosRef = collection(db, "produtos");
     
-    try {
-      const produtosRef = collection(db, "produtos");
+    // Para cada item na requisição
+    for (const item of selectedRequisicao.itens) {
+      if (!item.codigo_material) continue;
       
-      // Para cada item na requisição
-      for (const item of selectedRequisicao.itens) {
-        if (!item.codigo_material) continue;
+      const q = query(produtosRef, where("codigo_material", "==", item.codigo_material));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const produtoDoc = querySnapshot.docs[0];
+        const produtoData = produtoDoc.data() as Produto;
         
-        const q = query(produtosRef, where("codigo_material", "==", item.codigo_material));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          const produtoDoc = querySnapshot.docs[0];
-          const produtoData = produtoDoc.data() as Produto;
-          
-          // Atualizar quantidade (subtrair)
-          const novaQuantidade = produtoData.quantidade - item.quantidade;
-          await updateDoc(produtoDoc.ref, {
-            quantidade: novaQuantidade
-          });
-          
-        }
+        // Atualizar quantidade (subtrair)
+        const novaQuantidade = produtoData.quantidade - item.quantidade;
+        await updateDoc(produtoDoc.ref, {
+          quantidade: novaQuantidade
+        });
       }
-      
-      return true;
-    } catch (error) {
-      console.error("Erro ao baixar estoque:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o estoque dos produtos",
-        variant: "destructive",
-      });
-      return false;
     }
-  };
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao baixar estoque:", error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível atualizar o estoque dos produtos",
+      variant: "destructive",
+    });
+    return false;
+  }
+};
 
   // Função para abrir diálogo de finalização
   const openFinalizarDialog = async () => {
@@ -443,119 +443,220 @@ const Requisicoes = () => {
   };
 
   const handleFinalizar = async () => {
-    if (!selectedRequisicao) return;
+  if (!selectedRequisicao) return;
+  
+  try {
+    setIsUpdating(true);
     
+    // Baixar estoque
+    const baixaOk = await baixarEstoque();
+    
+    if (!baixaOk) {
+      setIsUpdating(false);
+      return;
+    }
+    
+    // Atualizar status da requisição
+    const requisicaoRef = doc(db, "requisicoes", selectedRequisicao.id);
+    await updateDoc(requisicaoRef, {
+      status: "concluida"
+    });
+    
+    // Atualizar o estado local
+    const updatedRequisicao = {
+      ...selectedRequisicao,
+      status: "concluida"
+    };
+    
+    setSelectedRequisicao(updatedRequisicao);
+    
+    // Atualizar a lista de requisições
+    const updatedRequisicoes = requisicoes.map(req => 
+      req.id === selectedRequisicao.id ? updatedRequisicao : req
+    );
+    
+    setRequisicoes(updatedRequisicoes);
+    
+    toast({
+      title: "Requisição concluída",
+      description: `A requisição ${selectedRequisicao.requisicao_id} foi concluída com sucesso.`,
+    });
+  } catch (error) {
+    console.error("Erro ao finalizar requisição:", error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível finalizar a requisição",
+      variant: "destructive",
+    });
+  } finally {
+    setIsUpdating(false);
+    setIsFinalizarDialogOpen(false);
+  }
+};
+
+  const handleExportImage = async () => {
+    if (!selectedRequisicao) return;
+
     try {
-      setIsUpdating(true);
-      
-      // Baixar estoque
-      const baixaOk = await baixarEstoque();
-      
-      if (!baixaOk) {
-        setIsUpdating(false);
-        return;
-      }
-      
-      // Atualizar status da requisição
-      const requisicaoRef = doc(db, "requisicoes", selectedRequisicao.id);
-      await updateDoc(requisicaoRef, {
-        status: "concluida"
-      });
-      
-      // Atualizar o estado local
-      const updatedRequisicao = {
-        ...selectedRequisicao,
-        status: "concluida"
+      // Criar um elemento HTML para o comprovante
+      const comprovanteElement = document.createElement('div');
+      comprovanteElement.style.width = '800px';
+      comprovanteElement.style.padding = '20px';
+      comprovanteElement.style.backgroundColor = 'white';
+      comprovanteElement.style.color = 'black';
+      comprovanteElement.style.fontFamily = 'Arial, sans-serif'; // Usando fonte segura
+      comprovanteElement.style.boxSizing = 'border-box';
+
+      // Formatar a data
+      const dataFormatada = selectedRequisicao.data_criacao;
+
+      // Construir o HTML do comprovante
+      comprovanteElement.innerHTML = `
+        <div style="margin-bottom: 20px;">
+          <h1 style="font-size: 24px; margin-bottom: 5px; font-weight: bold;">Requisição ${selectedRequisicao.requisicao_id}</h1>
+          <p style="font-size: 14px; color: #666;">Criada em ${dataFormatada}</p>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+          <h2 style="font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 15px;">Informações</h2>
+          
+          ${selectedRequisicao.solicitante ? `
+            <div style="margin-bottom: 15px;">
+              <h3 style="font-size: 16px; margin-bottom: 5px;">Solicitante</h3>
+              <p style="margin: 0; font-weight: bold;">${selectedRequisicao.solicitante.nome}</p>
+              ${selectedRequisicao.solicitante.cargo ? `<p style="margin: 0; font-size: 14px; color: #666;">${selectedRequisicao.solicitante.cargo}</p>` : ''}
+              ${selectedRequisicao.solicitante.email ? `<p style="margin: 0; font-size: 14px;">${selectedRequisicao.solicitante.email}</p>` : ''}
+            </div>
+          ` : ''}
+          
+          <div style="margin-bottom: 15px;">
+            <h3 style="font-size: 16px; margin-bottom: 5px;">Registrado por</h3>
+            <p style="margin: 0; font-weight: bold;">${selectedRequisicao.usuario.nome}</p>
+            ${selectedRequisicao.usuario.email ? `<p style="margin: 0; font-size: 14px;">${selectedRequisicao.usuario.email}</p>` : ''}
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <h3 style="font-size: 16px; margin-bottom: 5px;">Data de Criação</h3>
+            <p style="margin: 0;">${dataFormatada}</p>
+          </div>
+          
+          <div>
+            <h3 style="font-size: 16px; margin-bottom: 5px;">Valor Total</h3>
+            <p style="margin: 0; font-size: 18px; font-weight: bold;">${formatCurrency(selectedRequisicao.valor_total)}</p>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 15px;">Itens da Requisição</h2>
+          
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+              <tr style="border-bottom: 1px solid #eee;">
+                <th style="text-align: left; padding: 8px 0; font-weight: bold;">Nome</th>
+                <th style="text-align: right; padding: 8px 0; font-weight: bold;">Qtd.</th>
+                <th style="text-align: right; padding: 8px 0; font-weight: bold;">Preço</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${selectedRequisicao.itens.map(item => `
+                <tr style="border-bottom: 1px solid #eee;">
+                  <td style="padding: 8px 0;">
+                    ${item.nome}
+                    ${item.codigo_material ? `<p style="margin: 0; font-size: 12px; color: #666;">Código: ${item.codigo_material}</p>` : ''}
+                  </td>
+                  <td style="text-align: right; padding: 8px 0;">
+                    ${item.quantidade} ${item.unidade_de_medida || 'un'}
+                  </td>
+                  <td style="text-align: right; padding: 8px 0;">
+                    ${formatCurrency(item.valor_unitario || item.preco || 0)}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2" style="text-align: right; padding: 8px 0; font-weight: bold;">Total</td>
+                <td style="text-align: right; padding: 8px 0; font-weight: bold;">${formatCurrency(selectedRequisicao.valor_total)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      `;
+
+      // Adicionar ao DOM temporariamente
+      document.body.appendChild(comprovanteElement);
+
+      // Configurações para ignorar erros
+      const options = {
+        skipFonts: true, // Ignorar fontes externas
+        filter: (node: Node) => {
+          // Ignorar tags de estilo que podem causar problemas
+          if (node instanceof HTMLLinkElement && node.rel === 'stylesheet') {
+            return false;
+          }
+          return true;
+        },
+        backgroundColor: 'white', // Garantir fundo branco
+        cacheBust: true // Evitar cache
       };
-      
-      setSelectedRequisicao(updatedRequisicao);
-      
-      // Atualizar a lista de requisições
-      const updatedRequisicoes = requisicoes.map(req => 
-        req.id === selectedRequisicao.id ? updatedRequisicao : req
-      );
-      
-      setRequisicoes(updatedRequisicoes);
-      
+
+      // Converter para PNG ignorando erros
+      const dataUrl = await toPng(comprovanteElement, options);
+
+      // Remover o elemento temporário
+      document.body.removeChild(comprovanteElement);
+
+      // Criar link de download
+      const link = document.createElement('a');
+      link.download = `requisicao-${selectedRequisicao.requisicao_id}.png`;
+      link.href = dataUrl;
+      link.click();
+
       toast({
-        title: "Requisição concluída",
-        description: `A requisição ${selectedRequisicao.requisicao_id} foi concluída com sucesso.`,
+        title: "Comprovante exportado",
+        description: `O comprovante da requisição ${selectedRequisicao.requisicao_id} foi gerado com sucesso.`,
       });
     } catch (error) {
-      console.error("Erro ao finalizar requisição:", error);
+      console.error("Erro ao exportar comprovante:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível finalizar a requisição",
+        description: "Não foi possível exportar o comprovante",
         variant: "destructive",
       });
-    } finally {
-      setIsUpdating(false);
-      setIsFinalizarDialogOpen(false);
     }
   };
 
-  const handleExportPDF = () => {
+  const handleShareImage = async () => {
     if (!selectedRequisicao) return;
     
     try {
-      // Criar nova instância do jsPDF
-      const doc = new jsPDF();
+      // Mesmo código de criação do elemento e conversão para PNG
+      const comprovanteElement = document.createElement('div');
+      // ... (mesmo código da função handleExportImage)
       
-      // Adicionar cabeçalho
-      doc.setFontSize(18);
-      doc.text(`Requisição: ${selectedRequisicao.requisicao_id}`, 15, 20);
+      const dataUrl = await toPng(comprovanteElement);
+      document.body.removeChild(comprovanteElement);
       
-      doc.setFontSize(12);
-      doc.text(`Status: ${selectedRequisicao.status.toUpperCase()}`, 15, 30);
-      doc.text(`Data: ${selectedRequisicao.data_criacao}`, 15, 40);
-      
-      // Informações do usuário solicitante
-      doc.text(`Solicitante: ${selectedRequisicao.solicitante?.nome || selectedRequisicao.usuario.nome}`, 15, 50);
-      doc.text(`Email: ${selectedRequisicao.solicitante?.email || selectedRequisicao.usuario.email}`, 15, 60);
-      if (selectedRequisicao.solicitante?.cargo || selectedRequisicao.usuario.cargo) {
-        doc.text(`Cargo: ${selectedRequisicao.solicitante?.cargo || selectedRequisicao.usuario.cargo}`, 15, 70);
+      // Verificar se a API de compartilhamento está disponível
+      if (navigator.share) {
+        // Converter data URL para blob
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], `requisicao-${selectedRequisicao.requisicao_id}.png`, { type: 'image/png' });
+        
+        await navigator.share({
+          title: `Requisição ${selectedRequisicao.requisicao_id}`,
+          text: `Comprovante da requisição ${selectedRequisicao.requisicao_id}`,
+          files: [file],
+        });
+      } else {
+        // Fallback para download se a API de compartilhamento não estiver disponível
+        handleExportImage();
       }
-      
-      // Adicionar tabela de itens
-      const tableColumn = ["Item", "Código", "Quantidade", "Preço Unit.", "Total"];
-      const tableRows = [];
-      
-      selectedRequisicao.itens.forEach(item => {
-        const itemData = [
-          item.nome,
-          item.codigo_material || "N/A",
-          item.quantidade,
-          formatCurrency(item.valor_unitario || item.preco || 0),
-          formatCurrency((item.valor_unitario || item.preco || 0) * item.quantidade)
-        ];
-        tableRows.push(itemData);
-      });
-      
-      // Adicionar a tabela ao PDF
-      doc.autoTable({
-        head: [tableColumn],
-        body: tableRows,
-        startY: 80,
-        theme: 'striped',
-        styles: { fontSize: 10 }
-      });
-      
-      // Adicionar valor total
-      const finalY = (doc as any).lastAutoTable.finalY + 10;
-      doc.text(`Valor Total: ${formatCurrency(selectedRequisicao.valor_total)}`, 15, finalY);
-      
-      // Gerar e baixar o PDF
-      doc.save(`requisicao-${selectedRequisicao.requisicao_id}.pdf`);
-      
-      toast({
-        title: "PDF exportado",
-        description: `O PDF da requisição ${selectedRequisicao.requisicao_id} foi gerado com sucesso.`,
-      });
     } catch (error) {
-      console.error("Erro ao exportar PDF:", error);
+      console.error("Erro ao compartilhar comprovante:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível exportar o PDF",
+        description: "Não foi possível compartilhar o comprovante",
         variant: "destructive",
       });
     }
@@ -832,12 +933,12 @@ const Requisicoes = () => {
                 <div className="flex justify-end gap-2">
                   <Button 
                     variant="outline" 
-                    onClick={handleExportPDF}
+                    onClick={handleExportImage}
                     className="flex items-center gap-2"
                     disabled={isUpdating}
                   >
                     <Download className="h-4 w-4" />
-                    Exportar PDF
+                    Exportar Comprovante
                   </Button>
                   {selectedRequisicao.status === "pendente" && (
                     <>
@@ -866,56 +967,56 @@ const Requisicoes = () => {
 
       {/* Diálogo de confirmação para finalizar requisição */}
       <AlertDialog open={isFinalizarDialogOpen} onOpenChange={setIsFinalizarDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Finalizar requisição</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá baixar automaticamente as quantidades dos produtos no estoque.{' '}
-              <span className="font-medium">Esta ação não pode ser desfeita.</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          {errosEstoque.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3 my-2 dark:bg-red-950 dark:border-red-900">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                <span className="font-medium text-red-600 dark:text-red-400">Problemas encontrados:</span>
-              </div>
-              <ul className="text-sm list-disc pl-5 text-red-600 dark:text-red-400">
-                {errosEstoque.map((erro, index) => (
-                  <li key={index}>{erro}</li>
-                ))}
-              </ul>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Finalizar requisição</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta ação irá baixar automaticamente as quantidades dos produtos no estoque.{' '}
+            <span className="font-medium">Esta ação não pode ser desfeita.</span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        
+        {errosEstoque.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 my-2 dark:bg-red-950 dark:border-red-900">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <span className="font-medium text-red-600 dark:text-red-400">Problemas encontrados:</span>
             </div>
-          )}
-          
-          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 my-2 dark:bg-amber-950 dark:border-amber-900">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <span className="font-medium text-amber-600 dark:text-amber-400">Itens que serão baixados do estoque:</span>
-            </div>
-            <ul className="text-sm mt-2 space-y-1">
-              {selectedRequisicao?.itens.map((item, index) => (
-                <li key={index} className="flex justify-between">
-                  <span>
-                    {item.nome} ({item.codigo_material || "Sem código"})
-                  </span>
-                  <span className="font-medium">
-                    {item.quantidade} {item.unidade || "un"}
-                  </span>
-                </li>
+            <ul className="text-sm list-disc pl-5 text-red-600 dark:text-red-400">
+              {errosEstoque.map((erro, index) => (
+                <li key={index}>{erro}</li>
               ))}
             </ul>
           </div>
-          
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdating}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleFinalizar} disabled={isUpdating || errosEstoque.length > 0}>
-              {isUpdating ? "Processando..." : "Confirmar e baixar estoque"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        )}
+        
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-3 my-2 dark:bg-amber-950 dark:border-amber-900">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <span className="font-medium text-amber-600 dark:text-amber-400">Itens que serão baixados do estoque:</span>
+          </div>
+          <ul className="text-sm mt-2 space-y-1">
+            {selectedRequisicao?.itens.map((item, index) => (
+              <li key={index} className="flex justify-between">
+                <span>
+                  {item.nome} ({item.codigo_material || "Sem código"})
+                </span>
+                <span className="font-medium">
+                  {item.quantidade} {item.unidade || "un"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isUpdating}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleFinalizar} disabled={isUpdating || errosEstoque.length > 0}>
+            {isUpdating ? "Processando..." : "Confirmar e baixar estoque"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </AppLayout>
   );
 };

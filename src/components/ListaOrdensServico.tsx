@@ -19,6 +19,14 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
+interface ProdutoUtilizado {
+  produtoId: string;
+  nome: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+}
+
 interface OrdemServico {
   id: string;
   setor: string;
@@ -39,6 +47,8 @@ interface OrdemServico {
   responsavelManutencao: string;
   tipoManutencao: string;
   solucaoAplicada: string;
+  produtosUtilizados?: ProdutoUtilizado[];
+  valorTotalProdutos?: number;
   criadoPor: string;
   criadoEm: Timestamp;
   status: string;
@@ -178,6 +188,10 @@ const ListaOrdensServico = () => {
     return tipos;
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -238,7 +252,7 @@ const ListaOrdensServico = () => {
                               Detalhes
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-3xl">
+                          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Detalhes da Ordem de Serviço</DialogTitle>
                             </DialogHeader>
@@ -303,6 +317,29 @@ const ListaOrdensServico = () => {
                                   <h4 className="font-semibold text-sm text-gray-500">Observação</h4>
                                   <p>{selectedOrdem.observacao || "Não informado"}</p>
                                 </div>
+
+                                {/* Seção de Produtos Utilizados */}
+                                {selectedOrdem.produtosUtilizados && selectedOrdem.produtosUtilizados.length > 0 && (
+                                  <div className="md:col-span-2">
+                                    <h4 className="font-semibold text-sm text-gray-500">Produtos Utilizados</h4>
+                                    <div className="mt-2 border rounded-lg divide-y">
+                                      {selectedOrdem.produtosUtilizados.map((produto, index) => (
+                                        <div key={index} className="p-3 flex justify-between items-center">
+                                          <div>
+                                            <p className="font-medium">{produto.nome}</p>
+                                            <p className="text-sm text-gray-500">
+                                              {produto.quantidade} x {formatCurrency(produto.valorUnitario)} = {formatCurrency(produto.valorTotal)}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="mt-2 text-right font-semibold">
+                                      Total: {selectedOrdem.valorTotalProdutos ? formatCurrency(selectedOrdem.valorTotalProdutos) : "R$ 0,00"}
+                                    </div>
+                                  </div>
+                                )}
+
                                 <div className="md:col-span-2 mt-4">
                                   <h4 className="font-semibold text-sm text-gray-500">Alterar Status</h4>
                                   <div className="flex space-x-2 mt-2">
@@ -341,9 +378,7 @@ const ListaOrdensServico = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            className={`
-                              ${ordem.status === "pendente" ? "dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}
-                            `}
+                            className={`${ordem.status === "pendente" ? "dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
                             onClick={() => handleStatusChange(ordem.id, "pendente")}
                           >
                             Pendente
@@ -351,9 +386,7 @@ const ListaOrdensServico = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            className={`
-                              ${ordem.status === "em_andamento" ? "dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}
-                            `}
+                            className={`${ordem.status === "em_andamento" ? "dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
                             onClick={() => handleStatusChange(ordem.id, "em_andamento")}
                           >
                             Em Andamento
@@ -361,9 +394,7 @@ const ListaOrdensServico = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            className={`
-                              ${ordem.status === "concluido" ? "dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}
-                            `}
+                            className={`${ordem.status === "concluido" ? "dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
                             onClick={() => handleStatusChange(ordem.id, "concluido")}
                           >
                             Concluído

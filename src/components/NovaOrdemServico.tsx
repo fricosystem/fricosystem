@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, Timestamp, getDocs, getFirestore, query, limit } from "firebase/firestore";
+import { collection, addDoc, Timestamp, getDocs, getFirestore, query, limit, updateDoc, doc, writeBatch } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Calculator, Search, Save } from "lucide-react";
+import { Loader2, Calculator, Search, Save, Plus, Minus, X } from "lucide-react";
 import { Check } from "lucide-react";
 import {
   Command,
@@ -35,6 +35,27 @@ interface Usuario {
   ativo: string;
 }
 
+interface Produto {
+  id: string;
+  codigo: string;
+  codigo_estoque: string;
+  codigo_material: string;
+  data_vencimento: string;
+  deposito: string;
+  detalhes: string;
+  imagem: string;
+  nome: string;
+  quantidade: number;
+  quantidade_minima: number;
+  unidade: string;
+  unidade_de_medida: string;
+  valor_unitario: number;
+}
+
+interface ProdutoSelecionado extends Produto {
+  quantidadeSelecionada: number;
+}
+
 const NovaOrdemServico = () => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,6 +63,10 @@ const NovaOrdemServico = () => {
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   const [responsavelPopoverOpen, setResponsavelPopoverOpen] = useState(false);
   const [collectionChecked, setCollectionChecked] = useState(false);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtosSelecionados, setProdutosSelecionados] = useState<ProdutoSelecionado[]>([]);
+  const [produtosPopoverOpen, setProdutosPopoverOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   
   const [formData, setFormData] = useState({
     setor: "",
@@ -120,6 +145,44 @@ const NovaOrdemServico = () => {
     fetchUsuarios();
   }, []);
 
+  // Carregar produtos do Firebase
+  useEffect(() => {
+    const fetchProdutos = async () => {
+      try {
+        const produtosRef = collection(db, "produtos");
+        const querySnapshot = await getDocs(produtosRef);
+        
+        const produtosData: Produto[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          produtosData.push({
+            id: doc.id,
+            codigo: data.codigo || "",
+            codigo_estoque: data.codigo_estoque || "",
+            codigo_material: data.codigo_material || "",
+            data_vencimento: data.data_vencimento || "",
+            deposito: data.deposito || "",
+            detalhes: data.detalhes || "",
+            imagem: data.imagem || "",
+            nome: data.nome || "",
+            quantidade: data.quantidade || 0,
+            quantidade_minima: data.quantidade_minima || 0,
+            unidade: data.unidade || "",
+            unidade_de_medida: data.unidade_de_medida || "",
+            valor_unitario: data.valor_unitario || 0,
+          });
+        });
+        
+        setProdutos(produtosData);
+      } catch (error) {
+        console.error("Erro ao buscar produtos:", error);
+        toast.error("Não foi possível carregar a lista de produtos.");
+      }
+    };
+
+    fetchProdutos();
+  }, []);
+
   // Função para lidar com mudanças nos campos de formulário
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -189,6 +252,66 @@ const NovaOrdemServico = () => {
     return selectedUsuario ? `${selectedUsuario.nome} (${selectedUsuario.cargo})` : null;
   };
 
+  // Adicionar produto à lista de selecionados
+  const adicionarProduto = (produto: Produto) => {
+    setProdutosSelecionados(prev => {
+      const existe = prev.find(p => p.id === produto.id);
+      if (existe) {
+        return prev.map(p => 
+          p.id === produto.id 
+            ? { ...p, quantidadeSelecionada: Math.min(p.quantidadeSelecionada + 1, p.quantidade) }
+            : p
+        );
+      }
+      return [...prev, { ...produto, quantidadeSelecionada: 1 }];
+    });
+    setProdutosPopoverOpen(false);
+    setSearchTerm("");
+  };
+
+  // Remover produto da lista de selecionados
+  const removerProduto = (produtoId: string) => {
+    setProdutosSelecionados(prev => prev.filter(p => p.id !== produtoId));
+  };
+
+  // Aumentar quantidade de um produto selecionado
+  const aumentarQuantidade = (produtoId: string) => {
+    setProdutosSelecionados(prev =>
+      prev.map(p =>
+        p.id === produtoId
+          ? { ...p, quantidadeSelecionada: Math.min(p.quantidadeSelecionada + 1, p.quantidade) }
+          : p
+      )
+    );
+  };
+
+  // Diminuir quantidade de um produto selecionado
+  const diminuirQuantidade = (produtoId: string) => {
+    setProdutosSelecionados(prev =>
+      prev.map(p =>
+        p.id === produtoId
+          ? { ...p, quantidadeSelecionada: Math.max(1, p.quantidadeSelecionada - 1) }
+          : p
+      )
+    );
+  };
+
+  // Calcular valor total dos produtos selecionados
+  const calcularValorTotal = () => {
+    return produtosSelecionados.reduce(
+      (total, produto) => total + (produto.valor_unitario * produto.quantidadeSelecionada),
+      0
+    ).toFixed(2);
+  };
+
+  // Filtrar produtos disponíveis (não selecionados e com quantidade > 0)
+  const produtosDisponiveis = produtos.filter(
+    produto =>
+      produto.quantidade > 0 &&
+      !produtosSelecionados.some(p => p.id === produto.id) &&
+      produto.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -200,6 +323,9 @@ const NovaOrdemServico = () => {
         setIsSubmitting(false);
         return;
       }
+      
+      // Criar batch para atualizar estoque e criar ordem de serviço
+      const batch = writeBatch(db);
       
       // Dados da ordem de serviço em formato consistente com o componente de listagem
       const ordemData = {
@@ -215,13 +341,33 @@ const NovaOrdemServico = () => {
         responsavelManutencao: formData.responsavelManutencao,
         tipoManutencao: formData.tipoManutencao,
         solucaoAplicada: formData.solucaoAplicada,
+        produtosUtilizados: produtosSelecionados.map(p => ({
+          produtoId: p.id,
+          nome: p.nome,
+          quantidade: p.quantidadeSelecionada,
+          valorUnitario: p.valor_unitario,
+          valorTotal: p.valor_unitario * p.quantidadeSelecionada
+        })),
+        valorTotalProdutos: parseFloat(calcularValorTotal()),
         criadoPor: user?.uid || "",
         criadoEm: Timestamp.now(),
         status: "pendente"
       };
       
-      // Salvar no Firebase
-      await addDoc(collection(db, "ordens_servicos"), ordemData);
+      // Adicionar ordem de serviço ao batch
+      const ordemRef = doc(collection(db, "ordens_servicos"));
+      batch.set(ordemRef, ordemData);
+      
+      // Atualizar estoque dos produtos utilizados
+      produtosSelecionados.forEach(produto => {
+        const produtoRef = doc(db, "produtos", produto.id);
+        batch.update(produtoRef, {
+          quantidade: produto.quantidade - produto.quantidadeSelecionada
+        });
+      });
+      
+      // Executar batch
+      await batch.commit();
       
       toast.success("Ordem de serviço criada com sucesso!");
       
@@ -247,6 +393,8 @@ const NovaOrdemServico = () => {
         mecanica: false,
         outro: false
       });
+      
+      setProdutosSelecionados([]);
       
     } catch (error) {
       console.error("Erro ao criar ordem de serviço:", error);
@@ -382,6 +530,115 @@ const NovaOrdemServico = () => {
                 </Button>
               </div>
             </div>
+          </div>
+          
+          {/* Produtos Utilizados */}
+          <div className="space-y-2">
+            <Label>Produtos Utilizados</Label>
+            <Popover 
+              open={produtosPopoverOpen} 
+              onOpenChange={setProdutosPopoverOpen}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar Produto
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full md:w-[400px] p-0">
+                <Command>
+                  <CommandInput 
+                    placeholder="Buscar produto..." 
+                    className="h-9" 
+                    value={searchTerm}
+                    onValueChange={setSearchTerm}
+                  />
+                  <CommandList className="max-h-[300px]">
+                    <CommandEmpty>Nenhum produto encontrado ou todos já foram selecionados.</CommandEmpty>
+                    <CommandGroup>
+                      {produtosDisponiveis.map((produto) => (
+                        <CommandItem
+                          key={produto.id}
+                          value={`${produto.nome} ${produto.codigo}`}
+                          onSelect={() => adicionarProduto(produto)}
+                        >
+                          <div className="flex flex-col">
+                            <span>{produto.nome}</span>
+                            <span className="text-xs text-muted-foreground">
+                              Código: {produto.codigo} • Estoque: {produto.quantidade} {produto.unidade}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            
+            {/* Lista de produtos selecionados */}
+            {produtosSelecionados.length > 0 && (
+              <div className="mt-4 space-y-3">
+                {produtosSelecionados.map((produto) => (
+                  <div key={produto.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="font-medium">{produto.nome}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {produto.valor_unitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} / {produto.unidade}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => diminuirQuantidade(produto.id)}
+                        disabled={produto.quantidadeSelecionada <= 1}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      
+                      <div className="text-center min-w-[40px]">
+                        {produto.quantidadeSelecionada}
+                      </div>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => aumentarQuantidade(produto.id)}
+                        disabled={produto.quantidadeSelecionada >= produto.quantidade}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-500"
+                        onClick={() => removerProduto(produto.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Valor total */}
+                <div className="flex justify-end pt-2 border-t">
+                  <div className="text-lg font-semibold">
+                    Total: {new Number(calcularValorTotal()).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Responsável pela Manutenção com busca */}

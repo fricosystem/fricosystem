@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Loader2, Save, X, Calculator, Percent, Search, RefreshCw } from "lucide-react";
+import ProductImageUpload from '@/components/ProdutosUploadCloudinary';
 import {
   Dialog,
   DialogContent,
@@ -89,6 +90,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
   const [fornecedorPopoverOpen, setFornecedorPopoverOpen] = useState(false);
   const [ultimoCodigoEstoque, setUltimoCodigoEstoque] = useState<number | null>(null);
   const [loadingCodigoEstoque, setLoadingCodigoEstoque] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string>("");
   const { toast } = useToast();
 
   // Initialize react-hook-form
@@ -297,7 +299,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         quantidade: parseFloat(formData.quantidade),
         quantidade_minima: parseFloat(formData.quantidadeMinima),
         detalhes: formData.detalhes,
-        imagem: formData.imagem || "/placeholder.svg",
+        imagem: form.getValues("imagem") || imageUrl || "/placeholder.svg",
         valor_unitario: valorUnitarioNormalizado,
         data_criacao: new Date().toISOString(),
         data_vencimento: formData.dataVencimento,
@@ -804,40 +806,25 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
               control={form.control}
               name="imagem"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL da Imagem</FormLabel>
-                  <div className="flex space-x-2">
-                    <FormControl className="flex-grow">
-                      <Input placeholder="https://exemplo.com/imagem.jpg" {...field} />
-                    </FormControl>
-                    <button 
-                      type="button"
-                      onClick={() => window.open('https://images.google.com', '_blank')}
-                      className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center"
-                      title="Pesquisar no Google Imagens"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        <line x1="11" y1="8" x2="11" y2="14"></line>
-                        <line x1="8" y1="11" x2="14" y2="11"></line>
-                      </svg>
-                    </button>
-                  </div>
-                  {field.value && (
-                    <div className="mt-2 border rounded-md p-2 w-32 h-32 flex items-center justify-center overflow-hidden">
-                      <img
-                        src={field.value}
-                        alt="Preview"
-                        className="max-w-full max-h-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/placeholder.svg";
-                        }}
-                      />
-                    </div>
+                <FormField
+                  control={form.control}
+                  name="imagem"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Imagem do Produto</FormLabel>
+                      <FormControl>
+                        <ProductImageUpload
+                          currentImageUrl={field.value}
+                          onImageUploaded={(url) => {
+                            setImageUrl(url);
+                            field.onChange(url);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  <FormMessage />
-                </FormItem>
+                />
               )}
             />
             <DialogFooter>

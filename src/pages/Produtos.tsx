@@ -165,15 +165,24 @@ const Produtos = () => {
     }
   };
 
+  // Função auxiliar para garantir que valores são strings ao fazer toLowerCase
+  const safeToLowerCase = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    return String(value).toLowerCase();
+  };
+
   const produtosFiltrados = produtos
-    ? produtos.filter((produto) =>
-        produto.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        produto.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        produto.codigoEstoque?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        produto.fornecedor_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        produto.fornecedor_cnpj?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (produto.detalhes && produto.detalhes.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
+    ? produtos.filter((produto) => {
+        const termoBusca = searchTerm.toLowerCase();
+        return (
+          safeToLowerCase(produto.nome).includes(termoBusca) ||
+          safeToLowerCase(produto.codigo).includes(termoBusca) ||
+          safeToLowerCase(produto.codigoEstoque).includes(termoBusca) ||
+          safeToLowerCase(produto.fornecedor_nome).includes(termoBusca) ||
+          safeToLowerCase(produto.fornecedor_cnpj).includes(termoBusca) ||
+          safeToLowerCase(produto.detalhes).includes(termoBusca)
+        );
+      })
     : [];
 
   return (

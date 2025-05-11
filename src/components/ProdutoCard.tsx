@@ -222,17 +222,17 @@ const ProdutoCard = ({
 
                     {/* Principais informações destacadas */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="flex items-center gap-2 p-3 rounded-md bg-muted">
+                      <div className={`flex items-center gap-2 p-3 rounded-md ${isLowStock ? "bg-destructive/10" : "bg-muted"}`}>
                         <BarChart className="h-5 w-5 text-primary" />
                         <div>
                           <p className="text-sm text-muted-foreground">Estoque Atual</p>
-                          <p className={`text-lg font-medium ${isLowStock ? "text-destructive" : ""}`}>
+                          <p className={`text-lg font-bold ${isLowStock ? "text-destructive" : ""}`}>
                             {formatQuantidade(quantidade, unidade_de_medida)}
                           </p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2 p-3 rounded-md bg-muted">
+                      <div className={`flex items-center gap-2 p-3 rounded-md ${isLowStock ? "bg-destructive/10" : "bg-muted"}`}>
                         <DollarSign className="h-5 w-5 text-primary" />
                         <div>
                           <p className="text-sm text-muted-foreground">Valor Unitário</p>
@@ -240,7 +240,6 @@ const ProdutoCard = ({
                         </div>
                       </div>
                     </div>
-
                     {/* Informações detalhadas em seções */}
                     <div className="space-y-6">
                       {/* Seção Identificação */}

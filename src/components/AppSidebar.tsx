@@ -220,20 +220,20 @@ const AppSidebar = () => {
         { to: "/produtos", icon: Box, label: "Produtos" },
         { to: "/requisicoes", icon: ClipboardList, label: "Requisições" },
         { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
-        { to: "/inventory", icon: PackageSearch, label: "Inventário" },
         { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
-        { to: "/entradaProdutosET", icon: ArchiveRestore, label: "Entrada Manual" },
-        { to: "/transferenciasET", icon: ArrowLeftRight, label: "Transferência" },
-        { to: "/compras", icon: Truck, label: "Compras" },
-        { to: "/pedidos", icon: Truck, label: "Pedidos" },
       ],
     },
     {
       label: "Operacional",
       icon: Network,
       items: [
+        { to: "/entradaProdutosET", icon: ArchiveRestore, label: "Entrada Manual" },
+        { to: "/transferenciasET", icon: ArrowLeftRight, label: "Transferência" },
+        { to: "/compras", icon: Truck, label: "Compras" },
+        { to: "/pedidos", icon: Truck, label: "Pedidos" },
         { to: "/ordensServico", icon: Clipboard, label: "Ordens de Serviço" },
         { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
+        { to: "/inventario", icon: PackageSearch, label: "Inventário" },
       ],
     },
     {
@@ -245,15 +245,6 @@ const AppSidebar = () => {
         { to: "/producao/planejamentoDiarioProducao", icon: Calendar, label: "Planejamento Diário" },
         { to: "/producao/produtosProducao", icon: Package, label: "Produtos Produção" },
         { to: "/producao/produtosFinaisProducao", icon: CheckSquare, label: "Produtos Finais" },
-      ],
-    },
-    {
-      label: "Recursos Humanos",
-      icon: HardHat,
-      items: [
-        { to: "/rh/funcionarios", icon: UserRound, label: "Funcionários" },
-        { to: "/rh/ponto", icon: Calendar, label: "Ponto Eletrônico" },
-        { to: "/rh/treinamentos", icon: GraduationCap, label: "Treinamentos" },
       ],
     },
     {
@@ -516,11 +507,26 @@ const AppSidebar = () => {
                   <DropdownMenuTrigger asChild>
                     <SidebarMenuButton className={`flex items-center justify-center w-full p-4 h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-auto my-1`}>
                       <div className="flex items-center justify-center space-x-2 w-full">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ff7a59] text-white shrink-0">
-                          {getUserInitial()}
-                        </div>
+                        {userData?.imagem_perfil ? (
+                          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
+                            <img 
+                              src={userData.imagem_perfil} 
+                              alt="Profile" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ff7a59] text-white shrink-0">
+                            {getUserInitial()}
+                          </div>
+                        )}
                         <div className="flex flex-col items-start min-w-0">
                           <span className={`font-medium text-xs text-gray-300 truncate w-full ${firebaseClasses.text.small}`}>{getDisplayName()}</span>
+                          {getUserCargo() && (
+                            <span className={`text-xs text-gray-400 truncate w-full ${firebaseClasses.text.tiny}`}>
+                              {getUserCargo()}
+                            </span>
+                          )}
                         </div>
                         <ChevronUp className="h-4 w-4 shrink-0" />
                       </div>
@@ -528,14 +534,31 @@ const AppSidebar = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className={`w-64 bg-[#2c384a] border-[#3e4a5e] text-gray-300 ${firebaseClasses.text.normal}`}>
                     <div className="p-2 border-b border-[#3e4a5e]">
-                      <p className="font-bold text-sm">{getDisplayName()}</p>
-                      <p className="text-xs text-gray-400">{user?.email || ""}</p>
-                      {getUserCargo() && (
-                        <p className="text-xs text-gray-400 flex items-center mt-1">
-                          <Briefcase className="h-3 w-3 mr-1" />
-                          {getUserCargo()}
-                        </p>
-                      )}
+                      <div className="flex items-center space-x-3">
+                        {userData?.imagem_perfil ? (
+                          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
+                            <img 
+                              src={userData.imagem_perfil} 
+                              alt="Profile" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ff7a59] text-white">
+                            {getUserInitial()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-bold text-sm">{getDisplayName()}</p>
+                          <p className="text-xs text-gray-400">{user?.email || ""}</p>
+                          {getUserCargo() && (
+                            <p className="text-xs text-gray-400 flex items-center mt-1">
+                              <Briefcase className="h-3 w-3 mr-1" />
+                              {getUserCargo()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <DropdownMenuItem onClick={toggleTheme} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       {theme === "light" ? (

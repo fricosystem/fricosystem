@@ -28,10 +28,8 @@ const FuturisticFloatingMenu = () => {
   const [minimized, setMinimized] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   
-  // Verifica se o usuário é admin
   const isAdmin = userData?.cargo === "admin";
 
-  // Efeito para fechar o menu quando clicar fora dele
   useEffect(() => {
     const handleClickOutside = (event) => {
       const menuContainer = document.getElementById("floating-menu-container");
@@ -44,7 +42,6 @@ const FuturisticFloatingMenu = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Carrega o tema do Firestore quando o componente montar
   useEffect(() => {
     const loadTheme = async () => {
       const userEmail = getUserEmail();
@@ -195,7 +192,6 @@ const FuturisticFloatingMenu = () => {
     return "Usuário";
   };
 
-  // Categorias do menu principal (incluindo administrativo condicional)
   const menuCategories = [
     {
       id: "principal",
@@ -203,14 +199,6 @@ const FuturisticFloatingMenu = () => {
       label: "Principal",
       items: [
         { id: "dashboard", icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/dashboard" },
-        { id: "requisicoes", icon: <ClipboardList size={20} />, label: "Requisições", path: "/requisicoes" },
-        { 
-          id: "carrinho", 
-          icon: <ShoppingCart size={20} />, 
-          label: "Carrinho", 
-          path: "/carrinho", 
-          badge: totalItens > 0 ? totalItens : null 
-        }
       ]
     },
     {
@@ -219,12 +207,15 @@ const FuturisticFloatingMenu = () => {
       label: "Estoque",
       items: [
         { id: "produtos", icon: <Box size={20} />, label: "Produtos", path: "/produtos" },
-        { id: "inventario", icon: <PackageSearch size={20} />, label: "Inventário", path: "/inventory" },
-        { id: "enderecamento", icon: <Warehouse size={20} />, label: "Endereçamento", path: "/enderecamento" },
-        { id: "entradaManual", icon: <ArchiveRestore size={20} />, label: "Entrada Manual", path: "/entradaProdutosET" },
-        { id: "transferencia", icon: <ArrowLeftRight size={20} />, label: "Transferência", path: "/transferenciasET" },
-        { id: "compras", icon: <Truck size={20} />, label: "Compras", path: "/compras" },
-        { id: "pedidos", icon: <Truck size={20} />, label: "Pedidos", path: "/pedidos" }
+        { id: "requisicoes", icon: <ClipboardList size={20} />, label: "Requisições", path: "/requisicoes" },
+        { 
+          id: "carrinho", 
+          icon: <ShoppingCart size={20} />, 
+          label: "Carrinho", 
+          path: "/carrinho", 
+          badge: totalItens > 0 ? totalItens : null 
+        },
+        { id: "enderecamento", icon: <Warehouse size={20} />, label: "Endereçamento", path: "/enderecamento" }
       ]
     },
     {
@@ -232,8 +223,13 @@ const FuturisticFloatingMenu = () => {
       icon: <Network size={24} />,
       label: "Operacional",
       items: [
+        { id: "entradaManual", icon: <ArchiveRestore size={20} />, label: "Entrada Manual", path: "/entradaProdutosET" },
+        { id: "transferencia", icon: <ArrowLeftRight size={20} />, label: "Transferência", path: "/transferenciasET" },
+        { id: "compras", icon: <Truck size={20} />, label: "Compras", path: "/compras" },
+        { id: "pedidos", icon: <Truck size={20} />, label: "Pedidos", path: "/pedidos" },
         { id: "ordensServico", icon: <Clipboard size={20} />, label: "Ordens de Serviço", path: "/ordensServico" },
-        { id: "notas-fiscais", icon: <Receipt size={20} />, label: "Notas Fiscais", path: "/notas-fiscais" }
+        { id: "notas-fiscais", icon: <Receipt size={20} />, label: "Notas Fiscais", path: "/notas-fiscais" },
+        { id: "inventario", icon: <PackageSearch size={20} />, label: "Inventário", path: "/inventario" }
       ]
     },
     {
@@ -264,16 +260,6 @@ const FuturisticFloatingMenu = () => {
       ]
     },
     {
-      id: "rh",
-      icon: <HardHat size={24} />,
-      label: "Recursos Humanos",
-      items: [
-        { id: "funcionarios", icon: <UserRound size={20} />, label: "Funcionários", path: "/rh/funcionarios" },
-        { id: "ponto", icon: <Calendar size={20} />, label: "Ponto Eletrônico", path: "/rh/ponto" },
-        { id: "treinamentos", icon: <GraduationCap size={20} />, label: "Treinamentos", path: "/rh/treinamentos" }
-      ]
-    },
-    {
       id: "financeiro",
       icon: <Wallet size={24} />,
       label: "Financeiro",
@@ -281,10 +267,9 @@ const FuturisticFloatingMenu = () => {
         { id: "financeiro-dash", icon: <Wallet size={20} />, label: "Financeiro", path: "/financial" },
         { id: "centros-custo", icon: <BarChart3 size={20} />, label: "Centros de Custo", path: "/cost-centers" },
         { id: "fornecedores", icon: <Users size={20} />, label: "Fornecedores", path: "/fornecedores" },
-        { id: "relatorios", icon: <FileText size={20} />, label: "Relatórios", path: "/relatorios" }
+        { id: "relatorios", icon: <Home size={20} />, label: "Relatórios", path: "/relatorios" }
       ]
     },
-    // Categoria administrativa condicional
     ...(isAdmin ? [{
       id: "administrativo",
       icon: <Settings size={24} />,
@@ -395,68 +380,41 @@ const FuturisticFloatingMenu = () => {
     );
   };
 
-  const UserProfileSection = () => {
-    return (
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-xl font-bold">
-            {getUserInitial()}
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-gray-800 dark:text-gray-100">{getDisplayName()}</span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ""}</span>
-            {getUserCargo() && (
-              <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
-                <Briefcase className="h-3 w-3 mr-1" />
-                {getUserCargo()}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const MinimizedButton = () => {
-    return (
-      <button
-        onClick={toggleMinimize}
-        className={`fixed z-50 flex items-center justify-center rounded-full p-3 shadow-lg transition-all duration-300 ${
-          minimized ? "bottom-4 right-4" : "bottom-8 left-1/2 transform -translate-x-1/2"
-        } ${
-          selectedCategory?.id === "principal" && totalItens > 0 
-            ? "bg-green-600 text-white" 
-            : "bg-white dark:bg-gray-800 text-green-600 dark:text-green-400"
-        }`}
-      >
-        {minimized ? (
-          <div className="relative flex items-center">
-            <ArrowLeftFromLine size={24} className="text-green-500" />
-            {selectedCategory?.icon && (
-              <div className="ml-2">
-                {selectedCategory.icon}
-                {selectedCategory?.id === "principal" && totalItens > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
-                    {totalItens}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <ArrowDownFromLine size={24} className="text-green-600 dark:text-green-400" />
-        )}
-      </button>
-    );
-  };
-
   return (
     <>
       {!minimized && (
         <div id="floating-menu-container" className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 ${theme === "dark" ? "dark" : ""}`}>
           {activeMenu && (
             <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 overflow-hidden transition-all duration-300 ease-in-out animate-fadeIn">
-              {activeMenu === "sistema" && <UserProfileSection />}
+              {activeMenu === "sistema" && (
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center space-x-3">
+                    {userData?.imagem_perfil ? (
+                      <div className="w-12 h-12 rounded-full overflow-hidden">
+                        <img 
+                          src={userData.imagem_perfil} 
+                          alt="Profile" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-xl font-bold">
+                        {getUserInitial()}
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="font-bold text-gray-800 dark:text-gray-100">{getDisplayName()}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ""}</span>
+                      {getUserCargo() && (
+                        <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          <Briefcase className="h-3 w-3 mr-1" />
+                          {getUserCargo()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div className="p-2 max-h-96 overflow-y-auto">
                 {menuCategories.find(cat => cat.id === activeMenu)?.items.map((item, idx) => (
@@ -511,7 +469,46 @@ const FuturisticFloatingMenu = () => {
         </div>
       )}
 
-      <MinimizedButton />
+      <button
+        onClick={toggleMinimize}
+        className={`fixed z-50 flex items-center justify-center rounded-full p-3 shadow-lg transition-all duration-300 ${
+          minimized ? "bottom-4 right-4" : "bottom-8 left-1/2 transform -translate-x-1/2"
+        } ${
+          selectedCategory?.id === "principal" && totalItens > 0 
+            ? "bg-green-600 text-white" 
+            : "bg-white dark:bg-gray-800 text-green-600 dark:text-green-400"
+        }`}
+      >
+        {minimized ? (
+          <div className="relative flex items-center">
+            {userData?.imagem_perfil ? (
+              <div className="w-10 h-10 rounded-full overflow-hidden">
+                <img 
+                  src={userData.imagem_perfil} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <>
+                <ArrowLeftFromLine size={24} className="text-green-500" />
+                {selectedCategory?.icon && (
+                  <div className="ml-2">
+                    {selectedCategory.icon}
+                    {selectedCategory?.id === "principal" && totalItens > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
+                        {totalItens}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <ArrowDownFromLine size={24} className="text-green-600 dark:text-green-400" />
+        )}
+      </button>
     </>
   );
 };

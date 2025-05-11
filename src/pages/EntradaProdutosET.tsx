@@ -127,6 +127,12 @@ const EntradaProdutosETContent = () => {
     id: string;
     deposito: string;
     unidade: string;
+    cnpj?: string;
+    endereco?: string;
+    razao_social?: string;
+    responsavel?: string;
+    telefone?: string;
+    criado_em?: Date;
   }
 
   const carregarDepositos = async () => {
@@ -136,24 +142,24 @@ const EntradaProdutosETContent = () => {
       const depositosQuery = query(depositosRef, orderBy("deposito"));
       const snapshot = await getDocs(depositosQuery);
       
-      const depositosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        deposito: doc.data().deposito,
-        unidade: doc.data().unidade
-      }));
+      const depositosData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          deposito: data.deposito,
+          unidade: data.unidade,
+          cnpj: data.cnpj,
+          endereco: data.endereco,
+          razao_social: data.razao_social,
+          responsavel: data.responsavel,
+          telefone: data.telefone,
+          criado_em: data.criado_em?.toDate()
+        };
+      });
       
       setDepositos(depositosData);
-      
-      const unidadesUnicas = [...new Set(depositosData.map(item => item.unidade))];
-      setUnidades(unidadesUnicas);
     } catch (error) {
       console.error("Erro ao carregar depósitos:", error);
-      setAlertInfo({
-        isOpen: true,
-        title: "Erro",
-        message: "Falha ao carregar lista de depósitos.",
-        type: "error",
-      });
     } finally {
       setLoadingDepositos(false);
     }
@@ -619,7 +625,7 @@ const EntradaProdutosETContent = () => {
           <CardHeader>
             <CardTitle>Informações do Produto</CardTitle>
             <CardDescription>
-              Preencha os dados do produto para cadastro realizar entrada de produtos
+              Preencha os dados de cada produto da NF-e para cadastro ou realizar entrada manual de produtos existentes
             </CardDescription>
           </CardHeader>
           <CardContent>

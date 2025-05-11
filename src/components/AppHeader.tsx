@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Bell, Search, ShoppingCart, Mail, MessageSquare } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Bell, ShoppingCart, MessageSquare, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { db } from "@/firebase/firebase";
 import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +15,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { subscribeToUserUnreadMessages, getUnreadMessagesCount } from "@/services/chatService";
+import QrScanner from "@/components/QRScanner";
+import ProductDetails, { Product } from "@/components/ProductDetails";
+import { useToast } from "@/hooks/use-toast";
 
 interface AppHeaderProps {
   title: string;
@@ -24,10 +26,13 @@ interface AppHeaderProps {
 
 const AppHeader = ({ title, className }: AppHeaderProps) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [cartItemsCount, setCartItemsCount] = useState(0);
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+  const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
   const [notifications, setNotifications] = useState([
     { 
@@ -52,12 +57,10 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
     if (!user?.uid) return;
 
     const updateUnreadCount = (unreadMessages: Record<string, number>) => {
-      // Soma todas as mensagens não lidas de todos os contatos
       const total = Object.values(unreadMessages).reduce((sum, count) => sum + count, 0);
       setTotalUnreadMessages(total);
     };
 
-    // Carregar contagem inicial
     const loadInitialCount = async () => {
       try {
         const unreadMessages = await getUnreadMessagesCount(user.uid);
@@ -69,9 +72,7 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
 
     loadInitialCount();
 
-    // Configurar listener para atualizações em tempo real
     const unsubscribe = subscribeToUserUnreadMessages(user.uid, updateUnreadCount);
-
     return () => unsubscribe();
   }, [user?.uid]);
 
@@ -104,76 +105,145 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
     return () => unsubscribe();
   }, [user]);
 
+  const handleCodeScanned = async (code: string) => {
+    try {
+      setIsQrScannerOpen(false);
+      
+      const productQuery = query(
+        collection(db, "produtos"),
+        where("codigo_estoque", "==", code)
+      );
+      
+      const querySnapshot = await getDocs(productQuery);
+      
+      if (querySnapshot.empty) {
+        toast({
+          title: "Produto não encontrado",
+          description: `Não foi possível encontrar o produto com o código ${code}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const productData = querySnapshot.docs[0].data() as Product;
+      setScannedProduct(productData);
+      setIsDetailsModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      toast({
+        title: "Erro ao buscar produto",
+        description: "Ocorreu um erro ao buscar as informações do produto",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditProduct = () => {
+    setIsDetailsModalOpen(false);
+    // You can implement edit functionality here if needed
+    // For now, we'll just close the details modal
+  };
+
   return (
-    <header className={`flex items-center justify-between py-4 px-6 bg-background border-b ${className}`}>
-      <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
-      </div>
-      <div className="flex items-center space-x-4">
-        {/* Ícone de Chat com badge de mensagens não lidas */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => navigate("/chat")}
-          className="relative"
-        >
-          <MessageSquare size={20} />
-          {totalUnreadMessages > 0 && (
-            <Badge 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-              variant="destructive"
-            >
-              {totalUnreadMessages}
-            </Badge>
-          )}
-        </Button>
+    <>
+      <header className={`flex items-center justify-between py-4 px-6 bg-background border-b ${className}`}>
+        <div>
+          <h1 className="text-2xl font-bold">{title}</h1>
+        </div>
+        <div className="flex items-center space-x-4">
+          {/* QR Code Scanner Button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setIsQrScannerOpen(true)}
+            title="Escanear QR Code"
+          >
+            <QrCode size={20} />
+          </Button>
 
-        {/* Carrinho button */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="relative"
-          onClick={() => navigate("/carrinho")}
-        >
-          <ShoppingCart size={20} />
-          {cartItemsCount > 0 && (
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
-              {cartItemsCount}
-            </Badge>
-          )}
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell size={20} />
-              {notifications.length > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                  {notifications.length}
-                </Badge>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notificações</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {notifications.map((notification) => (
-              <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3 cursor-pointer">
-                <div className="font-medium">{notification.message}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {notification.time}
-                </div>
-              </DropdownMenuItem>
-            ))}
-            {notifications.length === 0 && (
-              <div className="text-center py-4 text-muted-foreground">
-                Nenhuma notificação no momento
-              </div>
+          {/* Chat Button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate("/chat")}
+            className="relative"
+          >
+            <MessageSquare size={20} />
+            {totalUnreadMessages > 0 && (
+              <Badge 
+                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                variant="destructive"
+              >
+                {totalUnreadMessages}
+              </Badge>
             )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </header>
+          </Button>
+
+          {/* Cart Button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative"
+            onClick={() => navigate("/carrinho")}
+          >
+            <ShoppingCart size={20} />
+            {cartItemsCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                {cartItemsCount}
+              </Badge>
+            )}
+          </Button>
+
+          {/* Notifications Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell size={20} />
+                {notifications.length > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    {notifications.length}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel>Notificações</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {notifications.map((notification) => (
+                <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3 cursor-pointer">
+                  <div className="font-medium">{notification.message}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {notification.time}
+                  </div>
+                </DropdownMenuItem>
+              ))}
+              {notifications.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">
+                  Nenhuma notificação no momento
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      {/* QR Scanner Modal */}
+      <QrScanner 
+        isOpen={isQrScannerOpen}
+        onClose={() => setIsQrScannerOpen(false)}
+        onCodeScanned={handleCodeScanned}
+      />
+
+      {/* Product Details Modal */}
+      {scannedProduct && (
+        <ProductDetails 
+          product={scannedProduct}
+          isOpen={isDetailsModalOpen}
+          onClose={() => setIsDetailsModalOpen(false)}
+          onEdit={handleEditProduct}
+        />
+      )}
+    </>
   );
 };
 

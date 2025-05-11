@@ -12,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
+import { Check, Eye } from "lucide-react";
 import { User } from "firebase/auth";
+import ModalFornecedor from "@/components/modalFornecedores";
 
 interface Supplier {
   razaoSocial: string;
@@ -108,6 +109,8 @@ const SupplierPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [fornecedorSelecionado, setFornecedorSelecionado] = useState<Supplier | null>(null);
   
   const [formData, setFormData] = useState({
     razaoSocial: "",
@@ -153,6 +156,16 @@ const SupplierPage = () => {
     }
   };
   
+  const abrirModal = (fornecedor: Supplier) => {
+    setFornecedorSelecionado(fornecedor);
+    setModalAberto(true);
+  };
+
+  const fecharModal = () => {
+    setModalAberto(false);
+    setFornecedorSelecionado(null);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
@@ -301,7 +314,7 @@ const SupplierPage = () => {
           <Card className="shadow-md">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl text-blue-700">Cadastro de Fornecedor</CardTitle>
-              <CardDescription>Preencha todos os dados obrigatórios</CardDescription>
+              <CardDescription>Preencha os dados do fornecedor</CardDescription>
             </CardHeader>
             
             <CardContent>
@@ -319,7 +332,7 @@ const SupplierPage = () => {
                     <h3 className="text-sm font-medium text-gray-700">Dados Principais</h3>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="razaoSocial" className="text-xs">Razão Social *</Label>
+                      <Label htmlFor="razaoSocial" className="text-xs">Razão Social</Label>
                       <Input
                         id="razaoSocial"
                         name="razaoSocial"
@@ -327,12 +340,11 @@ const SupplierPage = () => {
                         onChange={handleChange}
                         placeholder="Nome da empresa"
                         className="text-sm"
-                        required
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="cnpj" className="text-xs">CNPJ *</Label>
+                      <Label htmlFor="cnpj" className="text-xs">CNPJ</Label>
                       <Input
                         id="cnpj"
                         name="cnpj"
@@ -341,7 +353,6 @@ const SupplierPage = () => {
                         placeholder="00.000.000/0000-00"
                         maxLength={18}
                         className="text-sm"
-                        required
                       />
                     </div>
                     
@@ -349,7 +360,7 @@ const SupplierPage = () => {
                     
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-2">
-                        <Label htmlFor="rua" className="text-xs">Rua *</Label>
+                        <Label htmlFor="rua" className="text-xs">Rua</Label>
                         <Input
                           id="rua"
                           name="endereco.rua"
@@ -357,12 +368,11 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="Nome da rua"
                           className="text-sm"
-                          required
                         />
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="numero" className="text-xs">Número *</Label>
+                        <Label htmlFor="numero" className="text-xs">Número</Label>
                         <Input
                           id="numero"
                           name="endereco.numero"
@@ -370,14 +380,13 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="123"
                           className="text-sm"
-                          required
                         />
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-2">
-                        <Label htmlFor="bairro" className="text-xs">Bairro *</Label>
+                        <Label htmlFor="bairro" className="text-xs">Bairro</Label>
                         <Input
                           id="bairro"
                           name="endereco.bairro"
@@ -385,12 +394,11 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="Nome do bairro"
                           className="text-sm"
-                          required
                         />
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="cep" className="text-xs">CEP *</Label>
+                        <Label htmlFor="cep" className="text-xs">CEP</Label>
                         <Input
                           id="cep"
                           name="endereco.cep"
@@ -398,14 +406,13 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="00000-000"
                           className="text-sm"
-                          required
                         />
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-2">
-                        <Label htmlFor="cidade" className="text-xs">Cidade *</Label>
+                        <Label htmlFor="cidade" className="text-xs">Cidade</Label>
                         <Input
                           id="cidade"
                           name="endereco.cidade"
@@ -413,12 +420,11 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="Nome da cidade"
                           className="text-sm"
-                          required
                         />
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="estado" className="text-xs">Estado *</Label>
+                        <Label htmlFor="estado" className="text-xs">Estado</Label>
                         <Select 
                           onValueChange={(value) => handleSelectChange(value, "estado")}
                           value={formData.endereco.estado}
@@ -475,7 +481,7 @@ const SupplierPage = () => {
                     
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-2">
-                        <Label htmlFor="telefone" className="text-xs">Telefone *</Label>
+                        <Label htmlFor="telefone" className="text-xs">Telefone</Label>
                         <Input
                           id="telefone"
                           name="telefone"
@@ -484,12 +490,11 @@ const SupplierPage = () => {
                           placeholder="(00) 00000-0000"
                           maxLength={15}
                           className="text-sm"
-                          required
                         />
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-xs">Email *</Label>
+                        <Label htmlFor="email" className="text-xs">Email</Label>
                         <Input
                           id="email"
                           name="email"
@@ -498,13 +503,12 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="exemplo@empresa.com"
                           className="text-sm"
-                          required
                         />
                       </div>
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="pessoaContato" className="text-xs">Pessoa de Contato *</Label>
+                      <Label htmlFor="pessoaContato" className="text-xs">Pessoa de Contato</Label>
                       <Input
                         id="pessoaContato"
                         name="pessoaContato"
@@ -512,7 +516,6 @@ const SupplierPage = () => {
                         onChange={handleChange}
                         placeholder="Nome completo"
                         className="text-sm"
-                        required
                       />
                     </div>
                     
@@ -520,7 +523,7 @@ const SupplierPage = () => {
                     
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-2">
-                        <Label htmlFor="condicoesPagamento" className="text-xs">Condições de Pagamento *</Label>
+                        <Label htmlFor="condicoesPagamento" className="text-xs">Condições de Pagamento</Label>
                         <Select 
                           onValueChange={handlePaymentChange}
                           value={formData.condicoesPagamento}
@@ -542,7 +545,7 @@ const SupplierPage = () => {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="prazoEntrega" className="text-xs">Prazo de Entrega (dias) *</Label>
+                        <Label htmlFor="prazoEntrega" className="text-xs">Prazo de Entrega (dias)</Label>
                         <Input
                           id="prazoEntrega"
                           name="prazoEntrega"
@@ -552,7 +555,6 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="Dias"
                           className="text-sm"
-                          required
                         />
                       </div>
                     </div>
@@ -600,6 +602,7 @@ const SupplierPage = () => {
                       <TableHead>Email</TableHead>
                       <TableHead>Cond. Pagamento</TableHead>
                       <TableHead>Prazo Entrega</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -613,11 +616,21 @@ const SupplierPage = () => {
                           <TableCell>{supplier.email}</TableCell>
                           <TableCell>{supplier.condicoesPagamento}</TableCell>
                           <TableCell>{supplier.prazoEntrega} dias</TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => abrirModal(supplier)}
+                              className="text-gray-500 hover:text-blue-600"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-4 text-gray-500">
+                        <TableCell colSpan={8} className="text-center py-4 text-gray-500">
                           Nenhum fornecedor cadastrado
                         </TableCell>
                       </TableRow>
@@ -629,6 +642,14 @@ const SupplierPage = () => {
           </Card>
         </div>
       </div>
+
+      {/* Modal de Detalhes do Fornecedor */}
+      {modalAberto && fornecedorSelecionado && (
+        <ModalFornecedor 
+          fornecedor={fornecedorSelecionado} 
+          onClose={fecharModal} 
+        />
+      )}
     </AppLayout>
   );
 };

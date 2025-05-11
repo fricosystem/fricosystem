@@ -445,7 +445,7 @@ const Pedidos = () => {
                           <TableCell>{pedido.criadoPor}</TableCell>
                           <TableCell className="flex justify-end gap-2">
                             {pedido.status === "pendente" && (
-                              <Button variant="outline" size="sm" onClick={() => handleStatusChange(pedido.id, "realizado")} title="Marcar como realizado">
+                              <Button variant="outline" size="sm" onClick={() => handleStatusChange(pedido.id, "realizado")} title="Marcar como já realizado">
                                 <Check className="h-4 w-4" />
                               </Button>
                             )}

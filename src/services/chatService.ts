@@ -57,8 +57,6 @@ export const updateUserOnlineStatus = async (userId: string, status: 'online' | 
       online: status,
       lastSeen: status === 'offline' ? serverTimestamp() : null
     };
-
-    console.log(`Updating user ${userId} status to ${status}`);
     
     await setDoc(userRef, updateData, { merge: true });
   } catch (error) {
@@ -86,14 +84,11 @@ export const setupUserStatusListeners = (userId: string) => {
     if (status === lastKnownStatus && Date.now() - lastSuccessfulUpdate < 10000) {
       return;
     }
-    
-    console.log(`Attempting to set ${userId} status to ${status}`);
 
     try {
       await updateUserOnlineStatus(userId, status);
       lastKnownStatus = status;
       lastSuccessfulUpdate = Date.now();
-      console.log(`Successfully updated ${userId} status to ${status}`);
     } catch (error) {
       console.error(`Failed to update ${userId} status:`, error);
     }
@@ -142,11 +137,9 @@ export const setupUserStatusListeners = (userId: string) => {
 
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'hidden') {
-      console.log("Page visibility changed to hidden - setting offline");
       clearInterval(heartbeatInterval);
       updateStatus('offline');
     } else {
-      console.log("Page visibility changed to visible - setting online");
       updateStatus('online');
       startHeartbeat();
     }
@@ -173,13 +166,11 @@ export const setupUserStatusListeners = (userId: string) => {
   };
 
   const handleOnline = () => {
-    console.log("Network online - updating status");
     updateStatus('online');
     startHeartbeat();
   };
   
   const handleOffline = () => {
-    console.log("Network offline - pausing heartbeat");
     clearInterval(heartbeatInterval);
   };
 
@@ -200,7 +191,6 @@ export const setupUserStatusListeners = (userId: string) => {
     window.removeEventListener('online', handleOnline);
     window.removeEventListener('offline', handleOffline);
     updateStatus('offline').catch(e => console.error("Cleanup status update failed:", e));
-    console.log(`Cleanup complete for user ${userId} status listeners`);
   };
 };
 
@@ -211,13 +201,11 @@ export const initializeUserStatus = async (userId: string) => {
   }
 
   try {
-    console.log(`Initializing user status for ${userId}`);
     await updateUserOnlineStatus(userId, 'online');
     
     const cleanupListeners = setupUserStatusListeners(userId);
     
     return async () => {
-      console.log(`Cleaning up user status for ${userId}`);
       cleanupListeners();
       try {
         await updateUserOnlineStatus(userId, 'offline');

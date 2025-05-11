@@ -372,88 +372,75 @@ const Carrinho = () => {
 
   // Função para finalizar o pedido enviando para a coleção "requisicoes"
   const handleFinalizarPedido = async () => {
-    // Esta função só será chamada se houver um solicitante selecionado
-    try {
-      setIsSubmitting(true);
-      
-      // Obter nome do usuário logado
-      const userName = user?.displayName || user?.email || "Usuário não identificado";
-      
-      // Gerar o próximo ID sequencial
-      const nextId = await getNextRequestId();
-      
-      // Criar um único documento de requisição com todos os itens
-      const requisicaoData = {
-        requisicao_id: nextId, // Campo com ID sequencial
-        status: "pendente", // Status padrão
-        itens: carrinho.map(item => ({
-          nome: item.nome,
-          codigo_material: item.codigo_material || "",
-          codigo_estoque: item.codigo_estoque || "",
-          quantidade: item.quantidade,
-          valor_unitario: item.valor_unitario,
-          unidade: item.unidade,
-          unidade_de_medida: item.unidade_de_medida,
-          deposito: item.deposito || "",
-          prateleira: item.prateleira || "",
-          detalhes: item.detalhes || "",
-          imagem: item.imagem || ""
-        })),
-        usuario: {
-          email: user?.email,
-          nome: userName
-        },
-        // Adicionar informações do solicitante (garantido não ser null neste ponto)
-        solicitante: {
-          id: solicitanteSelecionado!.id,
-          nome: solicitanteSelecionado!.nome,
-          cargo: solicitanteSelecionado!.cargo,
-          email: solicitanteSelecionado!.email || ""
-        },
-        data_criacao: serverTimestamp(),
-        valor_total: valorTotal
-      };
-      // Depois de criar a requisição e antes de limpar o carrinho:
-      
-      // Adicionar à coleção de requisições
-      await addDoc(collection(db, "requisicoes"), requisicaoData);
-      
-      // Remover todos os itens do carrinho após a criação da requisição
-      for (const item of carrinho) {
-        await deleteDoc(doc(db, "carrinho", item.id));
-      }
-      // Atualizar a quantidade dos produtos no estoque
-      for (const item of carrinho) {
-        if (item.produtoEstoque && item.codigo_material) {
-          const produtoRef = doc(db, "produtos", item.produtoEstoque.id);
-          const novaQuantidade = item.produtoEstoque.quantidade - item.quantidade;
-          
-          // Atualizar quantidade no Firestore
-          await updateDoc(produtoRef, {
-            quantidade: novaQuantidade
-          });
-        }
-      }
-
-      toast({
-        title: "Sucesso!",
-        description: `Requisição ${nextId} enviada com sucesso!`,
-      });
-      
-      // Limpar o carrinho após o envio
-      setCarrinho([]);
-      
-    } catch (error) {
-      console.error("Erro ao finalizar pedido:", error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao enviar a requisição. Tente novamente mais tarde.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+  // Esta função só será chamada se houver um solicitante selecionado
+  try {
+    setIsSubmitting(true);
+    
+    // Obter nome do usuário logado
+    const userName = user?.displayName || user?.email || "Usuário não identificado";
+    
+    // Gerar o próximo ID sequencial
+    const nextId = await getNextRequestId();
+    
+    // Criar um único documento de requisição com todos os itens
+    const requisicaoData = {
+      requisicao_id: nextId, // Campo com ID sequencial
+      status: "pendente", // Status padrão
+      itens: carrinho.map(item => ({
+        nome: item.nome,
+        codigo_material: item.codigo_material || "",
+        codigo_estoque: item.codigo_estoque || "",
+        quantidade: item.quantidade,
+        valor_unitario: item.valor_unitario,
+        unidade: item.unidade,
+        unidade_de_medida: item.unidade_de_medida,
+        deposito: item.deposito || "",
+        prateleira: item.prateleira || "",
+        detalhes: item.detalhes || "",
+        imagem: item.imagem || ""
+      })),
+      usuario: {
+        email: user?.email,
+        nome: userName
+      },
+      // Adicionar informações do solicitante (garantido não ser null neste ponto)
+      solicitante: {
+        id: solicitanteSelecionado!.id,
+        nome: solicitanteSelecionado!.nome,
+        cargo: solicitanteSelecionado!.cargo,
+        email: solicitanteSelecionado!.email || ""
+      },
+      data_criacao: serverTimestamp(),
+      valor_total: valorTotal
+    };
+    
+    // Adicionar à coleção de requisições
+    await addDoc(collection(db, "requisicoes"), requisicaoData);
+    
+    // Remover todos os itens do carrinho após a criação da requisição
+    for (const item of carrinho) {
+      await deleteDoc(doc(db, "carrinho", item.id));
     }
-  };
+
+    toast({
+      title: "Sucesso!",
+      description: `Requisição ${nextId} enviada com sucesso!`,
+    });
+    
+    // Limpar o carrinho após o envio
+    setCarrinho([]);
+    
+  } catch (error) {
+    console.error("Erro ao finalizar pedido:", error);
+    toast({
+      title: "Erro",
+      description: "Ocorreu um erro ao enviar a requisição. Tente novamente mais tarde.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const valorTotal = carrinho.reduce(
     (total, produto) => total + produto.valor_unitario * produto.quantidade,
