@@ -337,7 +337,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] w-[95%] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Produto</DialogTitle>
           <DialogDescription>
@@ -345,14 +345,15 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 sm:py-4">
+            {/* Grid adaptativo para código e código estoque */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="codigo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Código do poduto ( fornecedor )*</FormLabel>
+                    <FormLabel>Código do poduto*</FormLabel>
                     <FormControl>
                       <Input placeholder="Presente no item da Nota Fiscal" {...field} required />
                     </FormControl>
@@ -365,7 +366,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 name="codigoEstoque"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Código Estoque ( Automático )*</FormLabel>
+                    <FormLabel>Código Estoque*</FormLabel>
                     <FormControl>
                       <div className="flex">
                         <Input 
@@ -377,7 +378,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                         <Button
                           type="button"
                           variant="outline"
-                          className="ml-2 px-3" 
+                          className="ml-2 px-2 sm:px-3" 
                           onClick={async () => {
                             setLoadingCodigoEstoque(true);
                             try {
@@ -425,7 +426,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                     </FormControl>
                     {ultimoCodigoEstoque !== null && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Último código registrado: {ultimoCodigoEstoque}
+                        Último código: {ultimoCodigoEstoque}
                       </p>
                     )}
                     <FormMessage />
@@ -446,7 +447,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="unidade"
@@ -506,7 +507,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
             </div>
 
             {/* Fornecedor com pesquisa e Data de Vencimento */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="fornecedorAtual"
@@ -520,39 +521,41 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                             variant="outline"
                             role="combobox"
                             className={cn(
-                              "w-full justify-between",
+                              "w-full justify-between text-left",
                               !field.value && "text-muted-foreground"
                             )}
                             style={{ height: '40px' }}
                             disabled={loadingFornecedores}
                           >
-                            {loadingFornecedores
-                              ? "Carregando..."
-                              : field.value
-                                ? getSelectedFornecedorName()
-                                : "Selecione o fornecedor"}
+                            <span className="truncate">
+                              {loadingFornecedores
+                                ? "Carregando..."
+                                : field.value
+                                  ? getSelectedFornecedorName()
+                                  : "Selecione o fornecedor"}
+                            </span>
                             <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[400px] p-0">
+                      <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                         <Command>
                           <CommandInput placeholder="Buscar fornecedor..." className="h-9" />
-                          <CommandList className="max-h-[300px]">
+                          <CommandList className="max-h-[50vh] sm:max-h-[300px]">
                             <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
                             <CommandGroup>
                               {fornecedores.map((fornecedor) => (
-                                    <CommandItem
-                                    key={fornecedor.id}
-                                    value={`${fornecedor.razaoSocial} ${fornecedor.cnpj}`}
-                                    onSelect={() => {
-                                      form.setValue("fornecedorAtual", fornecedor.id);
-                                      // Salvar também o nome e CNPJ do fornecedor
-                                      form.setValue("fornecedorNome", fornecedor.razaoSocial);
-                                      form.setValue("fornecedorCNPJ", fornecedor.cnpj);
-                                      setFornecedorPopoverOpen(false);
-                                    }}
-                                  >
+                                <CommandItem
+                                  key={fornecedor.id}
+                                  value={`${fornecedor.razaoSocial} ${fornecedor.cnpj}`}
+                                  onSelect={() => {
+                                    form.setValue("fornecedorAtual", fornecedor.id);
+                                    // Salvar também o nome e CNPJ do fornecedor
+                                    form.setValue("fornecedorNome", fornecedor.razaoSocial);
+                                    form.setValue("fornecedorCNPJ", fornecedor.cnpj);
+                                    setFornecedorPopoverOpen(false);
+                                  }}
+                                >
                                   <Check
                                     className={cn(
                                       "mr-2 h-4 w-4",
@@ -562,8 +565,8 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                                     )}
                                   />
                                   <div className="flex flex-col">
-                                    <span>{fornecedor.razaoSocial}</span>
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="truncate">{fornecedor.razaoSocial}</span>
+                                    <span className="text-xs text-muted-foreground truncate">
                                       CNPJ: {fornecedor.cnpj}
                                     </span>
                                   </div>
@@ -626,9 +629,9 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
               />
               
               {/* Opções de cálculo de quantidade mínima */}
-              <div className="mt-4 border rounded-md p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-medium">Cálculo de Quantidade Mínima</h4>
+              <div className="mt-4 border rounded-md p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                  <h4 className="text-sm font-medium mb-2 sm:mb-0">Cálculo de Quantidade Mínima</h4>
                   <FormField
                     control={form.control}
                     name="calcularMinimo"
@@ -649,7 +652,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                   />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="percentualMinimo"
@@ -720,7 +723,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
             </div>
 
             {/* Deposito e Prateleira */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="deposito"
@@ -748,7 +751,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 name="prateleira"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Prateleira ( Opcional )</FormLabel>
+                    <FormLabel>Prateleira (Opcional)</FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: A3" {...field} />
                     </FormControl>
@@ -779,7 +782,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Digite o valor usando ponto como separador decimal apenas antes dos centavos (ex: 1915.75 ou 15.75)
+                    Digite usando ponto como separador decimal (ex: 15.75)
                   </p>
                   <FormMessage />
                 </FormItem>
@@ -793,7 +796,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                   <FormLabel>Detalhes</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Descrição, detalhes do produto, onde ele será utilizado, etc. Será usado para facilidade de pesquisa e localização do produto"
+                      placeholder="Descrição, detalhes do produto, onde será utilizado, etc."
                       className="resize-none"
                       {...field}
                     />
@@ -806,38 +809,37 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
               control={form.control}
               name="imagem"
               render={({ field }) => (
-                <FormField
-                  control={form.control}
-                  name="imagem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Imagem do Produto</FormLabel>
-                      <FormControl>
-                        <ProductImageUpload
-                          currentImageUrl={field.value}
-                          onImageUploaded={(url) => {
-                            setImageUrl(url);
-                            field.onChange(url);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormItem>
+                  <FormLabel>Imagem do Produto</FormLabel>
+                  <FormControl>
+                    <ProductImageUpload
+                      currentImageUrl={field.value}
+                      onImageUploaded={(url) => {
+                        setImageUrl(url);
+                        field.onChange(url);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
             />
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 mt-6">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={loading}
+                className="w-full sm:w-auto"
               >
                 <X className="mr-2 h-4 w-4" />
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="w-full sm:w-auto"
+              >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

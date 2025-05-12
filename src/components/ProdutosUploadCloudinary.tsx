@@ -53,7 +53,7 @@ const ProductImageUpload = ({ onImageUploaded, currentImageUrl, className }: Pro
       
       // Request camera access
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: true 
+        video: { facingMode: "environment" } 
       });
       
       setStream(mediaStream);
