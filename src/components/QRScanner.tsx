@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Smartphone, QrCode } from 'lucide-react'; // Added mobile-specific icons
 
 interface QrScannerProps {
   isOpen: boolean;
@@ -17,24 +18,25 @@ interface QrScannerProps {
 
 const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned }) => {
   const [isScanning, setIsScanning] = useState(false);
+  const [isMobile, setIsMobile] = useState(false); // Added mobile detection
   const qrScannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivId = 'qr-reader';
   const { toast } = useToast();
 
-  // Initialize scanner only when the dialog is open and the element exists
+  // Check if mobile device on mount
+  useEffect(() => {
+    setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+  }, []);
+
+  // Initialize scanner
   useEffect(() => {
     if (isOpen) {
-      // Small delay to ensure DOM is ready
       const timeoutId = setTimeout(() => {
         const scannerElement = document.getElementById(scannerDivId);
         if (scannerElement && !qrScannerRef.current) {
           try {
             qrScannerRef.current = new Html5Qrcode(scannerDivId);
-            
-            // Auto-start scanner when opened
-            if (qrScannerRef.current) {
-              startScannerInternal();
-            }
+            startScannerInternal();
           } catch (error) {
             toast({
               title: "Erro ao inicializar scanner",
@@ -43,9 +45,8 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
             });
           }
         }
-      }, 300); // Small delay for DOM to be ready
+      }, 300);
 
-      // Clean up
       return () => {
         clearTimeout(timeoutId);
         stopScannerSafely();
@@ -53,70 +54,54 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
     }
   }, [isOpen]);
 
-  // Safe scanner stop function that checks state before stopping
   const stopScannerSafely = () => {
     if (qrScannerRef.current) {
       try {
-        // Only attempt to stop if currently scanning
         if (isScanning) {
           qrScannerRef.current.stop()
-            .then(() => {
-              setIsScanning(false);
-            })
-            .catch(error => {
-              // Still update the state even if there was an error
-              setIsScanning(false);
-            });
+            .then(() => setIsScanning(false))
+            .catch(() => setIsScanning(false));
         }
-        
-        // Clear the reference when dialog closes
-        if (!isOpen) {
-          qrScannerRef.current = null;
-        }
+        if (!isOpen) qrScannerRef.current = null;
       } catch (err) {
         setIsScanning(false);
       }
     }
   };
 
-  // Internal function to start scanner (for auto-start)
   const startScannerInternal = () => {
-    if (!qrScannerRef.current || isScanning) {
-      return;
-    }
+    if (!qrScannerRef.current || isScanning) return;
 
     const qrCodeSuccessCallback = (decodedText: string) => {
-      // Stop scanning after successfully finding a QR code
       stopScannerSafely();
       onCodeScanned(decodedText);
+      onClose();
     };
 
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    const config = { 
+      fps: 10, 
+      qrbox: isMobile ? { width: 200, height: 200 } : { width: 250, height: 250 } // Adjusted for mobile
+    };
 
-    qrScannerRef.current
-      .start(
-        { facingMode: "environment" },
-        config,
-        qrCodeSuccessCallback,
-        undefined
-      )
-      .then(() => {
-        setIsScanning(true);
-      })
-      .catch((err) => {
-        console.error('Error starting scanner:', err);
-        toast({
-          title: "Erro ao iniciar câmera",
-          description: "Verifique se você permitiu o acesso à câmera.",
-          variant: "destructive"
-        });
+    qrScannerRef.current.start(
+      { facingMode: "environment" },
+      config,
+      qrCodeSuccessCallback,
+      undefined
+    )
+    .then(() => setIsScanning(true))
+    .catch((err) => {
+      console.error('Error starting scanner:', err);
+      toast({
+        title: "Erro ao iniciar câmera",
+        description: "Verifique se você permitiu o acesso à câmera.",
+        variant: "destructive"
       });
+    });
   };
 
-  // Public function to start scanner (for button)
   const startScanner = () => {
     if (!qrScannerRef.current) {
-      console.error("QR Scanner not initialized");
       toast({
         title: "Erro",
         description: "Scanner não inicializado corretamente.",
@@ -131,33 +116,44 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
     stopScannerSafely();
   };
 
-  // Handle closing the dialog
   const handleClose = () => {
     stopScannerSafely();
     onClose();
   };
 
   return (
-    <Dialog 
-      open={isOpen} 
-      onOpenChange={(open) => {
-        if (!open) handleClose();
-      }}
-    >
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Escanear QR Code</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {isMobile ? <Smartphone className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
+            Escanear QR Code
+          </DialogTitle>
         </DialogHeader>
         
         <div className="flex flex-col items-center gap-4 py-4">
-          {/* The scanner div must exist when initializing the scanner */}
-          <div id={scannerDivId} className="w-full h-64 bg-muted rounded-md overflow-hidden"></div>
+          <div 
+            id={scannerDivId} 
+            className={`w-full ${isMobile ? 'h-[60vh]' : 'h-64'} bg-muted rounded-md overflow-hidden`}
+          ></div>
           
           <div className="flex space-x-2 w-full justify-center">
             {!isScanning ? (
-              <Button onClick={startScanner}>Iniciar Scanner</Button>
+              <Button 
+                onClick={startScanner}
+                className="flex items-center gap-2"
+              >
+                {isMobile ? <Smartphone className="h-4 w-4" /> : <QrCode className="h-4 w-4" />}
+                Iniciar Scanner
+              </Button>
             ) : (
-              <Button variant="outline" onClick={stopScanner}>Parar Scanner</Button>
+              <Button 
+                variant="outline" 
+                onClick={stopScanner}
+                className="flex items-center gap-2"
+              >
+                Parar Scanner
+              </Button>
             )}
           </div>
         </div>
