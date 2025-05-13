@@ -292,7 +292,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       // Convert numeric fields to numbers
       const produtoData = {
         codigo_material: formData.codigo,
-        codigo_estoque: parseInt(formData.codigoEstoque, 10) || 0,
+        codigo_estoque: formData.codigoEstoque || "0",
         nome: formData.nome,
         unidade: formData.unidade,
         deposito: formData.deposito,

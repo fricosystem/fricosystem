@@ -49,16 +49,21 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
   const [quantity, setQuantity] = useState(1);
   const { user } = useAuth();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!product) return null;
 
   const handleAddToCart = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     if (!user?.email) {
       toast({
         title: "Erro",
         description: "Você precisa estar logado para adicionar itens ao carrinho",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -94,6 +99,8 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
           description: "Não foi possível adicionar o item ao carrinho",
           variant: "destructive",
         });
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -199,8 +206,11 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
           <Button variant="outline" onClick={onEdit}>
             Editar Produto
           </Button>
-          <Button onClick={handleAddToCart} disabled={product.quantidade <= 0}>
-            Adicionar ao Carrinho
+          <Button 
+            onClick={handleAddToCart} 
+            disabled={product.quantidade <= 0 || isSubmitting}
+          >
+            {isSubmitting ? "Adicionando..." : "Adicionar ao Carrinho"}
           </Button>
         </DialogFooter>
       </DialogContent>
