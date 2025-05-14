@@ -238,19 +238,27 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
           >
             Editar Produto
           </Button>
+          
+          <Button 
+            variant="secondary"
+            onClick={handleClose}
+            disabled={isSubmitting}
+          >
+            Fechar
+          </Button>
+
           <Button 
             onClick={handleAddToCart} 
             disabled={product.quantidade <= 0 || isSubmitting}
           >
             {isSubmitting ? (
-              <>
-                <span className="animate-pulse">Adicionando...</span>
-              </>
+              <span className="animate-pulse">Adicionando...</span>
             ) : (
               "Adicionar ao Carrinho"
             )}
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );

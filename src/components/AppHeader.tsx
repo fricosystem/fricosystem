@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { db } from "@/firebase/firebase";
 import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
+import ProductEditModal from "@/components/ProductEditModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,8 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
 
   const [notifications, setNotifications] = useState([
     { id: 1, message: "Produto Arroz abaixo do estoque mínimo", time: "Agora mesmo" },
@@ -51,6 +54,14 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
       const total = Object.values(unreadMessages).reduce((sum, count) => sum + count, 0);
       setTotalUnreadMessages(total);
     };
+
+    const handleEditProduct = () => {
+      setIsDetailsModalOpen(false);
+      setTimeout(() => {
+        setIsEditModalOpen(true);
+      }, 300); // tempo para o modal de detalhes fechar suavemente
+    };
+
 
     const loadInitialCount = async () => {
       try {
@@ -221,11 +232,10 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
 
       {/* Product Details Modal */}
       {scannedProduct && (
-        <ProductDetails 
+        <ProductEditModal 
           product={scannedProduct}
-          isOpen={isDetailsModalOpen}
-          onClose={() => setIsDetailsModalOpen(false)}
-          onEdit={handleEditProduct}
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
         />
       )}
     </>
