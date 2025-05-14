@@ -258,7 +258,6 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
             )}
           </Button>
         </DialogFooter>
-
       </DialogContent>
     </Dialog>
   );
