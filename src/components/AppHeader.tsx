@@ -1,3 +1,5 @@
+// AppHeader.tsx — ajustado para evitar reabertura e garantir fechamento correto dos modais
+
 import { useState, useEffect } from "react";
 import { Bell, ShoppingCart, MessageSquare, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,31 +30,20 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [cartItemsCount, setCartItemsCount] = useState(0);
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  
+
   const [notifications, setNotifications] = useState([
-    { 
-      id: 1, 
-      message: "Produto Arroz abaixo do estoque mínimo", 
-      time: "Agora mesmo" 
-    },
-    { 
-      id: 2, 
-      message: "3 novas Notas Fiscais para processar", 
-      time: "5 minutos atrás"
-    },
-    {
-      id: 3,
-      message: "Feijão preto atingiu o estoque mínimo",
-      time: "20 minutos atrás"
-    }
+    { id: 1, message: "Produto Arroz abaixo do estoque mínimo", time: "Agora mesmo" },
+    { id: 2, message: "3 novas Notas Fiscais para processar", time: "5 minutos atrás" },
+    { id: 3, message: "Feijão preto atingiu o estoque mínimo", time: "20 minutos atrás" }
   ]);
 
-  // Buscar e monitorar mensagens não lidas do usuário atual
+  // Mensagens não lidas
   useEffect(() => {
     if (!user?.uid) return;
 
@@ -71,14 +62,13 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
     };
 
     loadInitialCount();
-
     const unsubscribe = subscribeToUserUnreadMessages(user.uid, updateUnreadCount);
     return () => unsubscribe();
   }, [user?.uid]);
 
-  // Buscar a contagem de itens no carrinho do Firestore
+  // Carrinho
   useEffect(() => {
-    if (!user || !user.email) return;
+    if (!user?.email) return;
 
     const loadCartCount = async () => {
       try {
@@ -95,7 +85,7 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
 
     const carrinhoRef = collection(db, "carrinho");
     const q = query(carrinhoRef, where("email", "==", user.email));
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setCartItemsCount(snapshot.size);
     }, (error) => {
@@ -107,15 +97,16 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
 
   const handleCodeScanned = async (code: string) => {
     try {
+      // Scanner será fechado automaticamente via modal internamente, mas por segurança:
       setIsQrScannerOpen(false);
-      
+
       const productQuery = query(
         collection(db, "produtos"),
         where("codigo_estoque", "==", code)
       );
-      
+
       const querySnapshot = await getDocs(productQuery);
-      
+
       if (querySnapshot.empty) {
         toast({
           title: "Produto não encontrado",
@@ -124,10 +115,13 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
         });
         return;
       }
-      
+
       const productData = querySnapshot.docs[0].data() as Product;
+
+      // Garanta que o modal será aberto só depois que o estado for atualizado
       setScannedProduct(productData);
-      setIsDetailsModalOpen(true);
+      setTimeout(() => setIsDetailsModalOpen(true), 100); // evita conflito de modais
+
     } catch (error) {
       console.error("Error fetching product:", error);
       toast({
@@ -140,8 +134,7 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
 
   const handleEditProduct = () => {
     setIsDetailsModalOpen(false);
-    // You can implement edit functionality here if needed
-    // For now, we'll just close the details modal
+    // Aqui você pode acionar outro modal ou navegação para edição, se quiser
   };
 
   return (
@@ -150,8 +143,8 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
         <div>
           <h1 className="text-2xl font-bold">{title}</h1>
         </div>
+
         <div className="flex items-center space-x-4">
-          {/* QR Code Scanner Button */}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -161,7 +154,6 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
             <QrCode size={20} />
           </Button>
 
-          {/* Chat Button */}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -170,16 +162,12 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
           >
             <MessageSquare size={20} />
             {totalUnreadMessages > 0 && (
-              <Badge 
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                variant="destructive"
-              >
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs" variant="destructive">
                 {totalUnreadMessages}
               </Badge>
             )}
           </Button>
 
-          {/* Cart Button */}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -194,7 +182,6 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
             )}
           </Button>
 
-          {/* Notifications Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
@@ -209,12 +196,10 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
             <DropdownMenuContent align="end" className="w-80">
               <DropdownMenuLabel>Notificações</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {notifications.map((notification) => (
-                <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3 cursor-pointer">
-                  <div className="font-medium">{notification.message}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {notification.time}
-                  </div>
+              {notifications.map((n) => (
+                <DropdownMenuItem key={n.id} className="flex flex-col items-start p-3 cursor-pointer">
+                  <div className="font-medium">{n.message}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{n.time}</div>
                 </DropdownMenuItem>
               ))}
               {notifications.length === 0 && (
