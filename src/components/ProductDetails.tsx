@@ -100,6 +100,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
       });
       
       onClose();
+      setPendingClose(false);
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast({
@@ -118,7 +119,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
 
   const handleEditClick = () => {
     onEdit();
-    handleClose();
+    onClose();
   };
 
   const formatCurrency = (value: number) => {
@@ -135,7 +136,11 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        handleClose();
+      }
+    }}>
       <DialogContent 
         className="sm:max-w-md"
         onInteractOutside={(e) => {

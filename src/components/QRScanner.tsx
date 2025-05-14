@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Smartphone, QrCode } from 'lucide-react'; // Added mobile-specific icons
+import { Smartphone, QrCode } from 'lucide-react';
 
 interface QrScannerProps {
   isOpen: boolean;
@@ -18,17 +18,15 @@ interface QrScannerProps {
 
 const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned }) => {
   const [isScanning, setIsScanning] = useState(false);
-  const [isMobile, setIsMobile] = useState(false); // Added mobile detection
+  const [isMobile, setIsMobile] = useState(false);
   const qrScannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivId = 'qr-reader';
   const { toast } = useToast();
 
-  // Check if mobile device on mount
   useEffect(() => {
     setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
   }, []);
 
-  // Initialize scanner
   useEffect(() => {
     if (isOpen) {
       const timeoutId = setTimeout(() => {
@@ -80,7 +78,7 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
 
     const config = { 
       fps: 10, 
-      qrbox: isMobile ? { width: 200, height: 200 } : { width: 250, height: 250 } // Adjusted for mobile
+      qrbox: isMobile ? { width: 200, height: 200 } : { width: 250, height: 250 }
     };
 
     qrScannerRef.current.start(
@@ -122,7 +120,11 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        handleClose();
+      }
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
