@@ -210,7 +210,11 @@ const AppSidebar = () => {
       label: "Principal",
       icon: Layers,
       items: [
-        { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+        {
+          to: "/dashboard",
+          icon: LayoutDashboard,
+          label: "Dashboard",
+        },
       ],
     },
     {
@@ -236,6 +240,7 @@ const AppSidebar = () => {
         { to: "/inventario", icon: PackageSearch, label: "Inventário" },
       ],
     },
+    /*
     {
       label: "Produção",
       icon: Factory,
@@ -257,6 +262,7 @@ const AppSidebar = () => {
         { to: "/relatorios", icon: Home, label: "Relatórios" },
       ],
     },
+    */
     ...(isAdmin ? [{
       label: "Administrativo",
       icon: Settings,
