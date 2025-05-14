@@ -50,8 +50,17 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingClose, setPendingClose] = useState(false);
 
   if (!product) return null;
+
+  const handleClose = () => {
+    if (isSubmitting) {
+      setPendingClose(true);
+    } else {
+      onClose();
+    }
+  };
 
   const handleAddToCart = async () => {
     if (isSubmitting) return;
@@ -67,42 +76,49 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
       return;
     }
 
-    if (product && quantity > 0) {
-      try {
-        const cartItem = {
-          codigo_material: product.codigo_material,
-          deposito: product.deposito,
-          email: user.email,
-          imagem: product.imagem,
-          nome: product.nome,
-          prateleira: product.prateleira,
-          quantidade: quantity,
-          quantidade_minima: product.quantidade_minima,
-          timestamp: Date.now(),
-          unidade: product.unidade,
-          unidade_de_medida: product.unidade_de_medida,
-          valor_unitario: product.valor_unitario,
-        };
-        
-        await addDoc(collection(db, "carrinho"), cartItem);
-        
-        toast({
-          title: "Sucesso",
-          description: `${quantity} ${product.unidade_de_medida} de ${product.nome} adicionado(s) ao carrinho`,
-        });
-        
+    try {
+      const cartItem = {
+        codigo_material: product.codigo_material,
+        deposito: product.deposito,
+        email: user.email,
+        imagem: product.imagem,
+        nome: product.nome,
+        prateleira: product.prateleira,
+        quantidade: quantity,
+        quantidade_minima: product.quantidade_minima,
+        timestamp: Date.now(),
+        unidade: product.unidade,
+        unidade_de_medida: product.unidade_de_medida,
+        valor_unitario: product.valor_unitario,
+      };
+      
+      await addDoc(collection(db, "carrinho"), cartItem);
+      
+      toast({
+        title: "Sucesso",
+        description: `${quantity} ${product.unidade_de_medida} de ${product.nome} adicionado(s) ao carrinho`,
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o item ao carrinho",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      if (pendingClose) {
         onClose();
-      } catch (error) {
-        console.error("Error adding to cart:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível adicionar o item ao carrinho",
-          variant: "destructive",
-        });
-      } finally {
-        setIsSubmitting(false);
+        setPendingClose(false);
       }
     }
+  };
+
+  const handleEditClick = () => {
+    onEdit();
+    handleClose();
   };
 
   const formatCurrency = (value: number) => {
@@ -119,8 +135,15 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent 
+        className="sm:max-w-md"
+        onInteractOutside={(e) => {
+          if (isSubmitting) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Detalhes do Produto</DialogTitle>
         </DialogHeader>
@@ -203,14 +226,24 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
         </div>
           
         <DialogFooter className="flex justify-between w-full">
-          <Button variant="outline" onClick={onEdit}>
+          <Button 
+            variant="outline" 
+            onClick={handleEditClick}
+            disabled={isSubmitting}
+          >
             Editar Produto
           </Button>
           <Button 
             onClick={handleAddToCart} 
             disabled={product.quantidade <= 0 || isSubmitting}
           >
-            {isSubmitting ? "Adicionando..." : "Adicionar ao Carrinho"}
+            {isSubmitting ? (
+              <>
+                <span className="animate-pulse">Adicionando...</span>
+              </>
+            ) : (
+              "Adicionar ao Carrinho"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
