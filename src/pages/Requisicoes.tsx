@@ -626,47 +626,11 @@ const Requisicoes = () => {
     }
   };
 
-  const handleShareImage = async () => {
-    if (!selectedRequisicao) return;
-    
-    try {
-      // Mesmo código de criação do elemento e conversão para PNG
-      const comprovanteElement = document.createElement('div');
-      // ... (mesmo código da função handleExportImage)
-      
-      const dataUrl = await toPng(comprovanteElement);
-      document.body.removeChild(comprovanteElement);
-      
-      // Verificar se a API de compartilhamento está disponível
-      if (navigator.share) {
-        // Converter data URL para blob
-        const blob = await (await fetch(dataUrl)).blob();
-        const file = new File([blob], `requisicao-${selectedRequisicao.requisicao_id}.png`, { type: 'image/png' });
-        
-        await navigator.share({
-          title: `Requisição ${selectedRequisicao.requisicao_id}`,
-          text: `Comprovante da requisição ${selectedRequisicao.requisicao_id}`,
-          files: [file],
-        });
-      } else {
-        // Fallback para download se a API de compartilhamento não estiver disponível
-        handleExportImage();
-      }
-    } catch (error) {
-      console.error("Erro ao compartilhar comprovante:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível compartilhar o comprovante",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <AppLayout title="Requisições">
-      <div className="w-full h-full flex flex-col md:flex-row gap-6 p-4 md:p-6">
+      <div className="w-full h-full flex flex-col md:flex-row gap-6 p-4 md:p-6 flex-1">
         {/* Sidebar lateral da página (lista de requisições) */}
-        <div className="w-full md:w-[30%] lg:w-[25%] xl:w-96 space-y-4">
+        <div className="w-full md:w-[30%] lg:w-[25%] xl:w-96 space-y-4 flex flex-col h-full">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Requisições</h2>
             <Button 
@@ -678,7 +642,7 @@ const Requisicoes = () => {
               <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
-  
+
           <div className="relative">
             <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -724,13 +688,13 @@ const Requisicoes = () => {
               Cancelada
             </Button>
           </div>
-  
+
           <div className="text-sm text-muted-foreground flex justify-between">
             <span>Total: {requisicoes.length}</span>
             <span>Filtrados: {filteredRequisicoes.length}</span>
           </div>
-  
-          <ScrollArea className="h-[calc(100vh-200px)] border rounded-md p-2">
+
+          <ScrollArea className="h-full border rounded-md p-2 flex-1">
             {isLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
@@ -780,7 +744,7 @@ const Requisicoes = () => {
             )}
           </ScrollArea>
         </div>
-  
+
         {/* Conteúdo principal da requisição selecionada */}
         <div className="flex-1 h-full overflow-auto">
           {!selectedRequisicao && !isLoading ? (
@@ -876,7 +840,7 @@ const Requisicoes = () => {
                       </div>
                     </div>
                   </div>
-  
+
                   <div>
                     <h3 className="text-lg font-medium mb-4">Itens da Requisição</h3>
                     {selectedRequisicao.itens.length === 0 ? (
@@ -927,9 +891,9 @@ const Requisicoes = () => {
                     )}
                   </div>
                 </div>
-  
+
                 <Separator className="my-6" />
-  
+
                 <div className="flex justify-end gap-2">
                   <Button 
                     variant="outline" 
@@ -967,56 +931,56 @@ const Requisicoes = () => {
 
       {/* Diálogo de confirmação para finalizar requisição */}
       <AlertDialog open={isFinalizarDialogOpen} onOpenChange={setIsFinalizarDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Finalizar requisição</AlertDialogTitle>
-          <AlertDialogDescription>
-            Esta ação irá baixar automaticamente as quantidades dos produtos no estoque.{' '}
-            <span className="font-medium">Esta ação não pode ser desfeita.</span>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        
-        {errosEstoque.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3 my-2 dark:bg-red-950 dark:border-red-900">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
-              <span className="font-medium text-red-600 dark:text-red-400">Problemas encontrados:</span>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalizar requisição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá baixar automaticamente as quantidades dos produtos no estoque.{' '}
+              <span className="font-medium">Esta ação não pode ser desfeita.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {errosEstoque.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 my-2 dark:bg-red-950 dark:border-red-900">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <span className="font-medium text-red-600 dark:text-red-400">Problemas encontrados:</span>
+              </div>
+              <ul className="text-sm list-disc pl-5 text-red-600 dark:text-red-400">
+                {errosEstoque.map((erro, index) => (
+                  <li key={index}>{erro}</li>
+                ))}
+              </ul>
             </div>
-            <ul className="text-sm list-disc pl-5 text-red-600 dark:text-red-400">
-              {errosEstoque.map((erro, index) => (
-                <li key={index}>{erro}</li>
+          )}
+          
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 my-2 dark:bg-amber-950 dark:border-amber-900">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <span className="font-medium text-amber-600 dark:text-amber-400">Itens que serão baixados do estoque:</span>
+            </div>
+            <ul className="text-sm mt-2 space-y-1">
+              {selectedRequisicao?.itens.map((item, index) => (
+                <li key={index} className="flex justify-between">
+                  <span>
+                    {item.nome} ({item.codigo_material || "Sem código"})
+                  </span>
+                  <span className="font-medium">
+                    {item.quantidade} {item.unidade || "un"}
+                  </span>
+                </li>
               ))}
             </ul>
           </div>
-        )}
-        
-        <div className="bg-amber-50 border border-amber-200 rounded-md p-3 my-2 dark:bg-amber-950 dark:border-amber-900">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <span className="font-medium text-amber-600 dark:text-amber-400">Itens que serão baixados do estoque:</span>
-          </div>
-          <ul className="text-sm mt-2 space-y-1">
-            {selectedRequisicao?.itens.map((item, index) => (
-              <li key={index} className="flex justify-between">
-                <span>
-                  {item.nome} ({item.codigo_material || "Sem código"})
-                </span>
-                <span className="font-medium">
-                  {item.quantidade} {item.unidade || "un"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isUpdating}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleFinalizar} disabled={isUpdating || errosEstoque.length > 0}>
-            {isUpdating ? "Processando..." : "Confirmar e baixar estoque"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleFinalizar} disabled={isUpdating || errosEstoque.length > 0}>
+              {isUpdating ? "Processando..." : "Confirmar e baixar estoque"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };

@@ -197,6 +197,13 @@ const AppSidebar = () => {
       });
     }
   };
+
+  const getUserUnidade = () => {
+    if (userData?.unidade) {
+      return userData.unidade;
+    }
+    return "";
+  };
   
   const toggleCategoryExpansion = (categoryLabel: string) => {
     setExpandedCategories(prev => ({
@@ -251,7 +258,7 @@ const AppSidebar = () => {
         { to: "/producao/produtosProducao", icon: Package, label: "Produtos Produção" },
         { to: "/producao/produtosFinaisProducao", icon: CheckSquare, label: "Produtos Finais" },
       ],
-    },
+    },*/
     {
       label: "Financeiro",
       icon: Wallet,
@@ -262,7 +269,6 @@ const AppSidebar = () => {
         { to: "/relatorios", icon: Home, label: "Relatórios" },
       ],
     },
-    */
     ...(isAdmin ? [{
       label: "Administrativo",
       icon: Settings,
@@ -554,18 +560,32 @@ const AppSidebar = () => {
                             {getUserInitial()}
                           </div>
                         )}
-                        <div>
+                        <div className="space-y-1">
                           <p className="font-bold text-sm">{getDisplayName()}</p>
-                          <p className="text-xs text-gray-400">{user?.email || ""}</p>
-                          {getUserCargo() && (
-                            <p className="text-xs text-gray-400 flex items-center mt-1">
-                              <Briefcase className="h-3 w-3 mr-1" />
-                              {getUserCargo()}
-                            </p>
-                          )}
+                          <p className="text-xs text-gray-400 flex items-start">
+                            <UserRound className="h-3 w-3 mr-1.5 mt-0.5 flex-shrink-0" />
+                            <span className="truncate">{user?.email || ""}</span>
+                          </p>
+                          
+                          <div className="flex flex-wrap gap-y-1">
+                            {getUserCargo() && (
+                              <div className="flex items-center mr-3">
+                                <Briefcase className="h-3 w-3 mr-1 text-gray-400" />
+                                <span className="text-xs text-gray-400">{getUserCargo()}</span>
+                              </div>
+                            )}
+                            
+                            {getUserUnidade() && (
+                              <div className="flex items-center">
+                                <Building2 className="h-3 w-3 mr-1 text-gray-400" />
+                                <span className="text-xs text-gray-400">{getUserUnidade()}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
+
                     <DropdownMenuItem onClick={toggleTheme} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       {theme === "light" ? (
                         <Moon className="mr-2 h-4 w-4" />
@@ -574,11 +594,14 @@ const AppSidebar = () => {
                       )}
                       <span>Mudar para tema {theme === "light" ? "escuro" : "claro"}</span>
                     </DropdownMenuItem>
+                    
                     <DropdownMenuItem onClick={() => navigate("/configuracoes")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Configurações</span>
                     </DropdownMenuItem>
+                    
                     <DropdownMenuSeparator className="bg-[#3e4a5e]" />
+                    
                     <DropdownMenuItem onClick={handleSignOut} className="text-[#ff7a59] hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Sair</span>

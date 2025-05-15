@@ -26,7 +26,7 @@ interface ProdutoContextProps {
   adicionarProduto: (produto: Produto) => Promise<string>;
   atualizarProduto: (id: string, produto: Produto) => Promise<void>;
   excluirProduto: (id: string) => Promise<void>;
-  buscarProdutoPorCodigo: (codigo: number) => Promise<Produto | null>;
+  buscarProdutoPorCodigo: (codigo: string) => Promise<Produto | null>;
   buscarProdutoPorCodigoMaterial: (codigoMaterial: string) => Promise<Produto | null>;
   carregarProdutos: (filtros?: any, ordenacao?: string, direcao?: 'asc' | 'desc') => Promise<void>;
   carregarMaisProdutos: () => Promise<void>;
@@ -118,7 +118,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     }
   };
 
-  const buscarProdutoPorCodigo = async (codigo: number): Promise<Produto | null> => {
+  const buscarProdutoPorCodigo = async (codigo: string): Promise<Produto | null> => {
     try {
       const q = query(collection(db, 'produtos'), where('codigo_estoque', '==', codigo));
       const querySnapshot = await getDocs(q);
@@ -252,7 +252,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
     carregarProdutos();
   }, []);
 
-  const value = {
+  const value: ProdutoContextProps = {
     produtos,
     loading,
     lastDoc,

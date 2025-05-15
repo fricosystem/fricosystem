@@ -342,17 +342,21 @@ const ProdutoCard = ({
         <h3 className="font-semibold text-base line-clamp-2 mb-2">{produto.nome}</h3>
         <div className="space-y-2 text-sm mb-2">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Cód. Material:</span>
+            <span className="text-muted-foreground">Cód. Fornecedor:</span>
             <span className="font-medium">{codigo}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Qtd:</span>
+            <span className="text-muted-foreground">Cód. Estoque:</span>
+            <span className="font-medium">{codigoEstoque || "N/A"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Quantidade:</span>
             <span className={isLowStock ? "text-destructive font-semibold" : "font-medium"}>
               {formatQuantidade(quantidade, unidade_de_medida)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Valor:</span>
+            <span className="text-muted-foreground">Valor unitário:</span>
             <span className="font-medium">{formatCurrency(valorUnitario)}</span>
           </div>
         </div>

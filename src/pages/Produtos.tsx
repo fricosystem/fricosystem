@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchIcon, RefreshCw } from "lucide-react";
+import { SearchIcon, RefreshCw, ArrowUpDown } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import ProdutoCard from "@/components/ProdutoCard";
 import AddProdutoModal from "@/components/AddProdutoModal";
@@ -13,6 +13,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Interface para o produto
 interface Produto {
@@ -45,6 +52,7 @@ const Produtos = () => {
   const { adicionarAoCarrinho } = useCarrinho();
   const { toast } = useToast();
   const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<Produto[]>([]);
+  const [sortOption, setSortOption] = useState<string>("codigoEstoque-asc");
 
   const fetchProdutos = async () => {
     setLoading(true);
@@ -78,7 +86,6 @@ const Produtos = () => {
             dataVencimento: data.data_vencimento || "",
             dataHora: data.data_criacao || new Date().toISOString(),
             fornecedor: data.fornecedor || "",
-            // Adicionando os novos campos de fornecedor
             fornecedor_nome: data.fornecedor_nome || "",
             fornecedor_cnpj: data.fornecedor_cnpj || ""
           };
@@ -165,14 +172,46 @@ const Produtos = () => {
     }
   };
 
-  // Função auxiliar para garantir que valores são strings ao fazer toLowerCase
   const safeToLowerCase = (value: any): string => {
     if (value === null || value === undefined) return '';
     return String(value).toLowerCase();
   };
 
+  const sortProdutos = (produtos: Produto[]): Produto[] => {
+    const [field, order] = sortOption.split('-');
+    
+    return [...produtos].sort((a, b) => {
+      // Tratamento para campos que podem ser undefined
+      const valueA = a[field as keyof Produto] || '';
+      const valueB = b[field as keyof Produto] || '';
+      
+      // Ordenação especial para datas
+      if (field === 'dataVencimento') {
+        const dateA = new Date(valueA as string).getTime();
+        const dateB = new Date(valueB as string).getTime();
+        return order === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+      
+      // Ordenação numérica para valores
+      if (field === 'valorUnitario') {
+        return order === 'asc' 
+          ? (valueA as number) - (valueB as number)
+          : (valueB as number) - (valueA as number);
+      }
+      
+      // Ordenação padrão para strings
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        return order === 'asc'
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
+      }
+      
+      return 0;
+    });
+  };
+
   const produtosFiltrados = produtos
-    ? produtos.filter((produto) => {
+    ? sortProdutos(produtos.filter((produto) => {
         const termoBusca = searchTerm.toLowerCase();
         return (
           safeToLowerCase(produto.nome).includes(termoBusca) ||
@@ -182,12 +221,12 @@ const Produtos = () => {
           safeToLowerCase(produto.fornecedor_cnpj).includes(termoBusca) ||
           safeToLowerCase(produto.detalhes).includes(termoBusca)
         );
-      })
+      }))
     : [];
 
   return (
     <AppLayout title="Produtos">
-      <div className="mb-4 flex items-center space-x-2">
+      <div className="mb-4 flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Input
             type="text"
@@ -198,7 +237,29 @@ const Produtos = () => {
           />
           <SearchIcon className="h-5 w-5 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
         </div>
+        
+        <div className="w-full md:w-64">
+          <Select value={sortOption} onValueChange={setSortOption}>
+            <SelectTrigger className="w-full">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4" />
+                <SelectValue placeholder="Ordenar por" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="codigoEstoque-asc">Código Estoque (A-Z)</SelectItem>
+              <SelectItem value="codigoEstoque-desc">Código Estoque (Z-A)</SelectItem>
+              <SelectItem value="nome-asc">Nome (A-Z)</SelectItem>
+              <SelectItem value="nome-desc">Nome (Z-A)</SelectItem>
+              <SelectItem value="valorUnitario-desc">Maior Valor</SelectItem>
+              <SelectItem value="valorUnitario-asc">Menor Valor</SelectItem>
+              <SelectItem value="dataVencimento-asc">Vencimento (Próximos)</SelectItem>
+              <SelectItem value="dataVencimento-desc">Vencimento (Distantes)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
       <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
         <div className="flex items-center">
           <Button

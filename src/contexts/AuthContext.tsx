@@ -33,6 +33,7 @@ interface UserData {
   ativo: string;
   centro_de_custo: string;
   online: string; // Adicionado campo online
+  unidade: string;
 }
 
 // Defina a interface para o contexto

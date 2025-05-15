@@ -6,7 +6,7 @@ export interface Usuario {
 
 export interface Produto {
   id?: string;
-  codigo_estoque: number;
+  codigo_estoque: string;
   codigo_material: string;
   data_criacao: string;
   data_vencimento: string;
@@ -37,7 +37,7 @@ export interface Transferencia {
 
 export interface ProdutoTransferido {
   id: string;
-  codigo_estoque: number;
+  codigo_estoque: string;
   nome: string;
   quantidade: number;
   quantidadeAtual: number;

@@ -105,7 +105,7 @@ const EntradaProdutosETContent = () => {
   const navigate = useNavigate();
 
   const formSchema = z.object({
-    codigo_estoque: z.coerce.number().int().positive("Código deve ser um número positivo"),
+    codigo_estoque: z.string().min(1, "Código do estoque é obrigatório"),
     codigo_material: z.string().min(1, "Código do material é obrigatório"),
     nome: z.string().min(1, "Nome do produto é obrigatório"),
     fornecedor_nome: z.string().min(1, "Nome do fornecedor é obrigatório"),
@@ -206,9 +206,22 @@ const EntradaProdutosETContent = () => {
   type FormValues = z.infer<typeof formSchema>;
 
   const defaultValues: Partial<FormValues> = {
+    codigo_estoque: "",
+    codigo_material: "",
+    nome: "",
+    fornecedor_nome: "",
+    fornecedor_cnpj: "",
+    fornecedor_id: "",
+    data_vencimento: undefined,
+    quantidade: 0,
+    quantidade_minima: 0,
+    valor_unitario: 0,
     unidade: "",
     deposito: "",
+    prateleira: "",
     unidade_de_medida: unidades_medida[0],
+    detalhes: "",
+    imagem: "",
   };
 
   const verificarCodigoMaterialExistente = async () => {
@@ -220,7 +233,6 @@ const EntradaProdutosETContent = () => {
       const produtoExistente = await buscarProdutoPorCodigoMaterial(codigoMaterial);
       
       if (produtoExistente) {
-        // Produto encontrado - preenche TODOS os campos
         form.reset({
           codigo_estoque: produtoExistente.codigo_estoque,
           codigo_material: produtoExistente.codigo_material,
@@ -254,10 +266,9 @@ const EntradaProdutosETContent = () => {
           type: "info",
         });
       } else {
-        // Código disponível - mantém apenas o código do material
         form.reset({
-          codigo_estoque: 0,
-          codigo_material: codigoMaterial, // Mantém o código pesquisado
+          codigo_estoque: "",
+          codigo_material: codigoMaterial,
           nome: '',
           fornecedor_nome: '',
           fornecedor_cnpj: '',
@@ -317,7 +328,6 @@ const EntradaProdutosETContent = () => {
       const produtoExistente = await buscarProdutoPorCodigo(codigo);
       
       if (produtoExistente) {
-        // Produto encontrado - preenche TODOS os campos
         form.reset({
           codigo_estoque: produtoExistente.codigo_estoque,
           codigo_material: produtoExistente.codigo_material,
@@ -351,9 +361,8 @@ const EntradaProdutosETContent = () => {
           type: "info",
         });
       } else {
-        // Código disponível - mantém apenas o código do estoque
         form.reset({
-          codigo_estoque: codigo, // Mantém o código pesquisado
+          codigo_estoque: codigo,
           codigo_material: '',
           nome: '',
           fornecedor_nome: '',
@@ -436,9 +445,8 @@ const EntradaProdutosETContent = () => {
       setListaProdutos(prev => [...prev, novoProduto]);
     }
     
-    // Limpa TODOS os campos completamente
     form.reset({
-      codigo_estoque: 0,
+      codigo_estoque: "",
       codigo_material: '',
       nome: '',
       fornecedor_nome: '',
@@ -465,7 +473,7 @@ const EntradaProdutosETContent = () => {
     });
   };
   
-  const removerProdutoDaLista = (codigo: number) => {
+  const removerProdutoDaLista = (codigo: string) => {
     setListaProdutos(prev => prev.filter(p => p.codigo_estoque !== codigo));
   };
 
@@ -678,11 +686,8 @@ const EntradaProdutosETContent = () => {
                           <div className="flex gap-2 items-center">
                             <FormControl>
                               <Input
-                                placeholder="1,2,3.."
+                                placeholder="Código do estoque"
                                 {...field}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value ? parseInt(e.target.value) : "");
-                                }}
                               />
                             </FormControl>
                             <Button 
@@ -788,7 +793,7 @@ const EntradaProdutosETContent = () => {
                                     {fornecedores.map((fornecedor) => (
                                       <CommandItem
                                         key={fornecedor.id}
-                                        value={`${fornecedor.razaoSocial} ${fornecedor.cnpj}`} // Mantém CNPJ para busca
+                                        value={`${fornecedor.razaoSocial} ${fornecedor.cnpj}`}
                                         onSelect={() => {
                                           form.setValue("fornecedor_id", fornecedor.id);
                                           form.setValue("fornecedor_nome", fornecedor.razaoSocial);
@@ -1137,12 +1142,12 @@ const EntradaProdutosETContent = () => {
                           <FormLabel>Unidade de Medida*</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
-                            value={field.value} // Alterado de defaultValue para value
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Selecione a unidade de medida">
-                                  {field.value} {/* Exibe o valor atual */}
+                                  {field.value}
                                 </SelectValue>
                               </SelectTrigger>
                             </FormControl>

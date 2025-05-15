@@ -107,7 +107,7 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
 
   const handleCodeScanned = async (code: string) => {
     try {
-      setIsQrScannerOpen(false);
+      setIsQrScannerOpen(false); // Fecha o scanner imediatamente
       
       const productQuery = query(
         collection(db, "produtos"),
@@ -135,6 +135,9 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
         description: "Ocorreu um erro ao buscar as informações do produto",
         variant: "destructive"
       });
+    } finally {
+      // Garante que o scanner seja reiniciado completamente
+      setIsQrScannerOpen(false);
     }
   };
 
