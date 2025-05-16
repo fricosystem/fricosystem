@@ -49,7 +49,7 @@ import {
   ArchiveRestore,
   Briefcase,
   Package,
-  CheckSquare
+  FileSpreadsheet
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useEffect, useState } from "react";
@@ -86,7 +86,7 @@ const AppSidebar = () => {
   const { toast } = useToast();
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
-  const isAdmin = userData?.cargo === "admin";
+  const isAdmin = userData?.cargo === "ESTOQUISTA";
   
   const getUserEmail = () => {
     if (!user) return null;
@@ -279,6 +279,8 @@ const AppSidebar = () => {
         { to: "/administrativo/fornecedores", icon: Users, label: "Fornecedores" },
         { to: "/administrativo/depositos", icon: Warehouse, label: "Depósitos" },
         { to: "/administrativo/unidades", icon: Building2, label: "Unidades" },
+        { to: "/importarPlanilha", icon: FileSpreadsheet, label: "Importar Planilha XLSX" },
+        { to: "/medidalenha", icon: FileSpreadsheet, label: "Cubagem/Medida de lenha" },
       ],
     }] : []),
     {

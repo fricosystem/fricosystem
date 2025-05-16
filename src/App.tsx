@@ -20,6 +20,8 @@ import Requisicoes from "./pages/Requisicoes";
 import Enderecamento from "./pages/Enderecamento";
 import OrdensServico from "./pages/OrdensServico";
 import Fornecedores from "./pages/Fornecedores";
+import ImportarPlanilha from "./pages/ImportarPlanilha";
+import MedidaLenha from "./pages/MedidaLenha";
 
 // Páginas de Transferência e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
@@ -102,6 +104,8 @@ const AppContent = () => {
           <Route path="/enderecamento" element={<AuthGuard><Enderecamento /></AuthGuard>} />
           <Route path="/ordensServico" element={<AuthGuard><OrdensServico /></AuthGuard>} />
           <Route path="/fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
+          <Route path="/importarPlanilha" element={<AuthGuard><ImportarPlanilha /></AuthGuard>} />
+          <Route path="/medidalenha" element={<AuthGuard><MedidaLenha /></AuthGuard>} />
 
           {/* Rotas de Entrada Manual e Transferência */}
           <Route path="/entradaProdutosET" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />

@@ -13,7 +13,7 @@ import {
   ArrowLeftRight, ArchiveRestore, Clipboard, ClipboardCheck,
   Package, CheckSquare, HardHat, GraduationCap, BarChart3,
   Users, Monitor, ArrowLeftFromLine, ArrowDownFromLine, Home,
-  Building2
+  Building2, FileSpreadsheet
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -310,7 +310,9 @@ const FuturisticFloatingMenu = () => {
           icon: <Building2 size={20} />, 
           label: "Unidades", 
           path: "/administrativo/unidades" 
-        }
+        },
+        { id: "importarPlanilha", icon: <FileSpreadsheet size={20} />, label: "Importar Planilha XLSX", path: "/importarPlanilha" },
+        { id: "medidalenha", icon: <FileSpreadsheet size={20} />, label: "Cubagem/Medida de lenha", path: "/medidalenha" }
       ]
     }] : []),
     {
