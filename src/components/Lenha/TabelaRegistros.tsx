@@ -175,7 +175,7 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
               className="gap-2"
             >
               <Receipt className="h-4 w-4" />
-              Comprovante
+              Imprimir relatório geral
             </Button>
             <Button 
               onClick={onClickNovo}
@@ -203,13 +203,12 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
+                    <TableHead>Data do registro</TableHead>
                     <TableHead>Metros³</TableHead>
-                    <TableHead>Dimensões (C×L×A)</TableHead>
                     <TableHead>Fornecedor</TableHead>
                     <TableHead>NFe</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead>Responsável pelo registro</TableHead>
+                    <TableHead className="text-right">Valor Total NFe</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -222,11 +221,6 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
                     >
                       <TableCell>{formatarData(registro.data)}</TableCell>
                       <TableCell>{registro.metrosCubicos} m³</TableCell>
-                      <TableCell>
-                        {registro.comprimento && registro.largura 
-                          ? `${registro.comprimento}×${registro.largura}×${(registro.medidas.reduce((sum, value) => sum + value, 0) / 6).toFixed(2)}`
-                          : "Não disponível"}
-                      </TableCell>
                       <TableCell>{registro.fornecedor}</TableCell>
                       <TableCell>{registro.nfe || "-"}</TableCell>
                       <TableCell>{registro.responsavel}</TableCell>

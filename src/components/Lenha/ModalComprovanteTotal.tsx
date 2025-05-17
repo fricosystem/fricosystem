@@ -145,7 +145,7 @@ const ModalComprovanteTotal = ({
           <body>
             <div class="page">
               <div class="header">
-                <h1 class="title">Comprovante de Totais</h1>
+                <h1 class="title">Relatório dos totais</h1>
                 <div class="date">${dataFormatada}</div>
               </div>
               
@@ -221,12 +221,16 @@ const ModalComprovanteTotal = ({
     <Dialog open={isOpen} onOpenChange={isPrinting ? undefined : onClose}>
       <DialogContent className="sm:max-w-md print:hidden bg-gray-900 text-gray-100 border-gray-700">
         <DialogHeader>
-          <DialogTitle className="text-center text-xl text-white">Comprovante de Totais</DialogTitle>
+          <DialogTitle className="text-center text-xl text-white">Relatório dos Totais</DialogTitle>
         </DialogHeader>
+
+        <div className="flex justify-between">
+                <span className="text-gray-300">Modelo de impressão:</span>
+        </div>
         
         <div ref={comprovanteRef} className="p-6 bg-gray-800 rounded-lg border border-gray-700">
           <div className="text-center border-b border-gray-700 pb-4 mb-6">
-            <h2 className="text-xl font-bold text-white">Comprovante de Totais</h2>
+            <h2 className="text-xl font-bold text-white">Relatório dos Totais</h2>
             <p className="text-gray-400">{dataFormatada}</p>
           </div>
 
@@ -249,40 +253,33 @@ const ModalComprovanteTotal = ({
 
         <DialogFooter className="grid grid-cols-2 gap-2 print:hidden mt-4">
           <Button 
-            variant="outline" 
-            onClick={onClose} 
-            disabled={isPrinting}
-            className="bg-gray-800 text-white hover:bg-gray-700 border-gray-700"
-          >
-            <X className="mr-2 h-4 w-4" />
-            Fechar
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleImprimir} 
-            disabled={isPrinting}
-            className="bg-gray-800 text-white hover:bg-gray-700 border-gray-700"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Imprimir
-          </Button>
-          <Button 
             onClick={handleImprimir} 
             disabled={isPrinting}
             className="bg-blue-600 hover:bg-blue-700 col-span-2"
           >
             <Download className="mr-2 h-4 w-4" />
-            Baixar
+            Imprimir
           </Button>
           {'share' in navigator && (
-            <Button 
-              variant="secondary" 
-              disabled={isPrinting}
-              className="bg-gray-700 hover:bg-gray-600 col-span-2"
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Compartilhar
-            </Button>
+            <>
+              <Button 
+                variant="secondary" 
+                disabled={isPrinting}
+                className="bg-gray-700 hover:bg-gray-600"
+              >
+                <Share2 className="mr-2 h-4 w-4" />
+                Compartilhar
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={onClose} 
+                disabled={isPrinting}
+                className="bg-gray-800 text-white hover:bg-gray-700 border-gray-700"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Fechar
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>
