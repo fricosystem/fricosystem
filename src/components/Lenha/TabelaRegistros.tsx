@@ -3,11 +3,12 @@ import { collection, query, orderBy, onSnapshot, DocumentData, QueryDocumentSnap
 import { db } from "@/firebase/firebase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Printer, File, Edit, Trash2, AlertCircle } from "lucide-react";
+import { Printer, File, Edit, Trash2, AlertCircle, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import ModalRecibo from "./ModalRecibo";
 import ModalEditarRegistro from "@/components/Lenha/ModalEditarRegistro";
+import ModalComprovanteTotal from "./ModalComprovanteTotal";
 import { MedidaLenha } from "@/types/typesLenha";
 import { 
   Table,
@@ -40,9 +41,12 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
   const [medidaSelecionada, setMedidaSelecionada] = useState<MedidaLenha | null>(null);
   const [modalReciboAberto, setModalReciboAberto] = useState(false);
   const [modalEditarAberto, setModalEditarAberto] = useState(false);
+  const [modalComprovanteAberto, setModalComprovanteAberto] = useState(false);
   const [registroParaExcluir, setRegistroParaExcluir] = useState<string | null>(null);
   const [excluindoRegistro, setExcluindoRegistro] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalMetrosCubicos, setTotalMetrosCubicos] = useState(0);
+  const [totalValor, setTotalValor] = useState(0);
 
   // Carregar dados do Firestore
   useEffect(() => {
@@ -58,12 +62,21 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
       const unsubscribe = onSnapshot(q, 
         (querySnapshot) => {
           const docs: MedidaLenha[] = [];
+          let somaMetrosCubicos = 0;
+          let somaValor = 0;
+          
           querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
-            docs.push({
+            
+            const comprimento = data.comprimento || 0;
+            const largura = data.largura || 0;
+            
+            const registro: MedidaLenha = {
               id: doc.id,
               data: data.data.toDate(),
               medidas: data.medidas,
+              comprimento,
+              largura,
               metrosCubicos: data.metrosCubicos,
               fornecedor: data.fornecedor,
               nfe: data.nfe,
@@ -71,9 +84,17 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
               valorUnitario: data.valorUnitario,
               valorTotal: data.valorTotal,
               usuario: data.usuario
-            });
+            };
+            
+            docs.push(registro);
+            
+            somaMetrosCubicos += data.metrosCubicos;
+            somaValor += data.valorTotal;
           });
+          
           setRegistros(docs);
+          setTotalMetrosCubicos(Number(somaMetrosCubicos.toFixed(2)));
+          setTotalValor(Number(somaValor.toFixed(2)));
           setIsLoading(false);
         },
         (error) => {
@@ -91,27 +112,23 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
     }
   }, [atualizarDados]);
   
-  // Abre o modal de recibo
   const handleVerDetalhes = (registro: MedidaLenha, e: React.MouseEvent) => {
-    e.stopPropagation(); // Evita que o evento se propague
+    e.stopPropagation();
     setMedidaSelecionada(registro);
     setModalReciboAberto(true);
   };
   
-  // Abre o modal de edição
   const handleEditar = (registro: MedidaLenha, e: React.MouseEvent) => {
-    e.stopPropagation(); // Evita que o evento se propague
+    e.stopPropagation();
     setMedidaSelecionada(registro);
     setModalEditarAberto(true);
   };
   
-  // Abre o diálogo de confirmação de exclusão
   const handleExcluirConfirmacao = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Evita que o evento se propague
+    e.stopPropagation();
     setRegistroParaExcluir(id);
   };
   
-  // Executa a exclusão do registro
   const handleExcluir = async () => {
     if (!registroParaExcluir) return;
     
@@ -135,7 +152,6 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
     }
   };
   
-  // Formata valores para exibição
   const formatarData = (data: Date): string => {
     return format(data, "dd/MM/yyyy", { locale: ptBR });
   };
@@ -152,13 +168,23 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
       <Card className="w-full mt-6">
         <div className="p-4 flex flex-col md:flex-row justify-between items-center border-b">
           <h2 className="text-xl font-bold">Histórico de Entregas</h2>
-          <Button 
-            onClick={onClickNovo}
-            className="mt-2 md:mt-0"
-          >
-            <File className="mr-2 h-4 w-4" />
-            Nova Medição
-          </Button>
+          <div className="flex gap-2 mt-2 md:mt-0">
+            <Button 
+              variant="outline"
+              onClick={() => setModalComprovanteAberto(true)}
+              className="gap-2"
+            >
+              <Receipt className="h-4 w-4" />
+              Comprovante
+            </Button>
+            <Button 
+              onClick={onClickNovo}
+              className="gap-2"
+            >
+              <File className="h-4 w-4" />
+              Nova Medição
+            </Button>
+          </div>
         </div>
         
         <div className="overflow-x-auto p-4">
@@ -173,61 +199,84 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
               Nenhum registro encontrado. Clique em "Nova Medição" para adicionar.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Metros³</TableHead>
-                  <TableHead>Fornecedor</TableHead>
-                  <TableHead>NFe</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead className="text-right">Valor Total</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {registros.map((registro) => (
-                  <TableRow 
-                    key={registro.id}
-                    onClick={() => handleVerDetalhes(registro, new MouseEvent('click') as any)}
-                    className="cursor-pointer hover:bg-muted"
-                  >
-                    <TableCell>{formatarData(registro.data)}</TableCell>
-                    <TableCell>{registro.metrosCubicos} m³</TableCell>
-                    <TableCell>{registro.fornecedor}</TableCell>
-                    <TableCell>{registro.nfe || "-"}</TableCell>
-                    <TableCell>{registro.responsavel}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatarValor(registro.valorTotal)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={(e) => handleEditar(registro, e)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          className="text-destructive hover:bg-destructive/20"
-                          onClick={(e) => handleExcluirConfirmacao(registro.id, e)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Metros³</TableHead>
+                    <TableHead>Dimensões (C×L×A)</TableHead>
+                    <TableHead>Fornecedor</TableHead>
+                    <TableHead>NFe</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {registros.map((registro) => (
+                    <TableRow 
+                      key={registro.id}
+                      onClick={(e) => handleVerDetalhes(registro, e)}
+                      className="cursor-pointer hover:bg-muted"
+                    >
+                      <TableCell>{formatarData(registro.data)}</TableCell>
+                      <TableCell>{registro.metrosCubicos} m³</TableCell>
+                      <TableCell>
+                        {registro.comprimento && registro.largura 
+                          ? `${registro.comprimento}×${registro.largura}×${(registro.medidas.reduce((sum, value) => sum + value, 0) / 6).toFixed(2)}`
+                          : "Não disponível"}
+                      </TableCell>
+                      <TableCell>{registro.fornecedor}</TableCell>
+                      <TableCell>{registro.nfe || "-"}</TableCell>
+                      <TableCell>{registro.responsavel}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatarValor(registro.valorTotal)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={(e) => handleEditar(registro, e)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/20"
+                            onClick={(e) => handleExcluirConfirmacao(registro.id, e)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              <div className="mt-6 pt-4 border-t flex flex-col md:flex-row justify-between">
+                <div className="mb-4 md:mb-0">
+                  <p className="text-sm text-muted-foreground">Total de registros: {registros.length}</p>
+                </div>
+                <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">Total em metros cúbicos</span>
+                    <span className="text-xl font-bold">{totalMetrosCubicos.toFixed(2)} m³</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">Valor total</span>
+                    <span className="text-xl font-bold text-primary">{formatarValor(totalValor)}</span>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </Card>
       
-      {/* Modal de recibo */}
       {medidaSelecionada && (
         <ModalRecibo
           medida={medidaSelecionada}
@@ -236,7 +285,6 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
         />
       )}
       
-      {/* Modal de edição */}
       {medidaSelecionada && (
         <ModalEditarRegistro
           medida={medidaSelecionada}
@@ -248,7 +296,13 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
         />
       )}
       
-      {/* Diálogo de confirmação de exclusão */}
+      <ModalComprovanteTotal
+        isOpen={modalComprovanteAberto}
+        onClose={() => setModalComprovanteAberto(false)}
+        totalMetrosCubicos={totalMetrosCubicos}
+        totalValor={totalValor}
+      />
+      
       <AlertDialog open={!!registroParaExcluir} onOpenChange={(open) => !open && setRegistroParaExcluir(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

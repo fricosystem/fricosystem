@@ -161,21 +161,8 @@ const Requisicoes = () => {
       setIsLoading(true);
       const requisicaoRef = collection(db, "requisicoes");
       
-      let q;
-      
-      const isAdmin = user.email?.includes("admin");
-      
-      if (isAdmin) {
-        // Para admin, manter o orderBy
-        q = query(requisicaoRef, orderBy("data_criacao", "desc"));
-      } else {
-        // SOLUÇÃO 1: Para usuários normais, recuperar todos os documentos do usuário e ordenar manualmente
-        // Isso evita a necessidade do índice composto
-        q = query(
-          requisicaoRef,
-          where("usuario.email", "==", user.email)
-        );
-      }
+      // Query simplificada para todos os usuários
+      const q = query(requisicaoRef, orderBy("data_criacao", "desc"));
       
       const querySnapshot = await getDocs(q);
       const requisicoesList: Requisicao[] = [];
@@ -204,16 +191,6 @@ const Requisicoes = () => {
         
         requisicoesList.push(requisicao);
       });
-      
-      // Ordenar manualmente os resultados se não for admin (já que não usamos orderBy na consulta)
-      if (!isAdmin) {
-        requisicoesList.sort((a, b) => {
-          // Converter strings de data em objetos Date para comparação correta
-          const dateA = new Date(a.data_criacao.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$2/$1/$3'));
-          const dateB = new Date(b.data_criacao.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$2/$1/$3'));
-          return dateB.getTime() - dateA.getTime(); // Ordem decrescente
-        });
-      }
       
       setRequisicoes(requisicoesList);
       applyFilters(requisicoesList, searchTerm, statusFilter);

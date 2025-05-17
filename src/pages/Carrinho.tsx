@@ -123,9 +123,10 @@ const Carrinho = () => {
         // Primeiro carregamos todos os produtos para referência
         const produtosMap = await carregarProdutos();
         
-        // Depois carregamos o carrinho
+        // Depois carregamos o carrinho sem filtro de usuário
         const carrinhoRef = collection(db, "carrinho");
-        const q = query(carrinhoRef, where("email", "==", user.email));
+        const q = query(carrinhoRef); // Remova o where que filtra por email
+        
         const querySnapshot = await getDocs(q);
         
         const itensCarrinho: ProdutoCarrinho[] = querySnapshot.docs.map(doc => {

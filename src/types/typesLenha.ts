@@ -11,6 +11,8 @@ export interface MedidaLenha {
   data: Date;
   medidas: number[];
   metrosCubicos: number;
+  comprimento: number;
+  largura: number;
   fornecedor: string;
   nfe: string;
   responsavel: string;

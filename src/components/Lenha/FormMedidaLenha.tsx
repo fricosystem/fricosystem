@@ -18,9 +18,10 @@ interface FormMedidaLenhaProps {
 const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
   // Estado inicial
   const [medidas, setMedidas] = useState<number[]>([0, 0, 0, 0, 0, 0]);
+  const [comprimento, setComprimento] = useState<number>(0);
+  const [largura, setLargura] = useState<number>(0);
   const [fornecedor, setFornecedor] = useState("");
   const [nfe, setNfe] = useState("");
-  const [responsavel, setResponsavel] = useState("");
   const [valorUnitario, setValorUnitario] = useState<number>(0);
   
   // Valores calculados
@@ -42,19 +43,21 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       const media = medidas.reduce((sum, current) => sum + current, 0) / 6;
       setAlturaMedia(Number(media.toFixed(2)));
       
-      // Calcula cubagem
-      const cubagem = media * 7.4 * 2.2;
-      setMetrosCubicos(Number(cubagem.toFixed(2)));
-      
-      // Calcula valor total
-      const total = cubagem * valorUnitario;
-      setValorTotal(Number(total.toFixed(2)));
+      // Calcula cubagem usando altura média, comprimento e largura
+      if (comprimento > 0 && largura > 0) {
+        const cubagem = media * comprimento * largura;
+        setMetrosCubicos(Number(cubagem.toFixed(2)));
+        
+        // Calcula valor total
+        const total = cubagem * valorUnitario;
+        setValorTotal(Number(total.toFixed(2)));
+      }
     } else {
       setAlturaMedia(0);
       setMetrosCubicos(0);
       setValorTotal(0);
     }
-  }, [medidas, valorUnitario]);
+  }, [medidas, comprimento, largura, valorUnitario]);
   
   // Atualiza uma medida específica
   const handleMedidaChange = (index: number, value: string) => {
@@ -79,13 +82,23 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       toast({
         variant: "destructive",
         title: "Erro de validação",
-        description: "Todas as medidas devem ser maiores que zero.",
+        description: "Todas as medidas de altura devem ser maiores que zero.",
+      });
+      return;
+    }
+    
+    // Valida campos de comprimento e largura
+    if (comprimento <= 0 || largura <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Erro de validação",
+        description: "Comprimento e largura devem ser maiores que zero.",
       });
       return;
     }
     
     // Valida campos obrigatórios
-    if (!fornecedor || !responsavel || valorUnitario <= 0) {
+    if (!fornecedor || valorUnitario <= 0) {
       toast({
         variant: "destructive",
         title: "Campos incompletos",
@@ -100,10 +113,12 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       const novaMedida: Omit<MedidaLenha, "id"> = {
         data: new Date(),
         medidas: [...medidas],
+        comprimento,
+        largura,
         metrosCubicos,
         fornecedor,
         nfe,
-        responsavel,
+        responsavel: userData?.nome || "Usuário não identificado",
         valorUnitario,
         valorTotal,
         usuario: userData?.nome || "Usuário não identificado",
@@ -119,9 +134,10 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       
       // Limpa o formulário
       setMedidas([0, 0, 0, 0, 0, 0]);
+      setComprimento(0);
+      setLargura(0);
       setFornecedor("");
       setNfe("");
-      setResponsavel("");
       setValorUnitario(0);
       
       // Notifica componente pai sobre sucesso
@@ -169,14 +185,12 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="responsavel" className="text-base">Responsável*</Label>
+                <Label htmlFor="responsavel" className="text-base">Responsável</Label>
                 <Input 
                   id="responsavel"
-                  value={responsavel}
-                  onChange={(e) => setResponsavel(e.target.value)}
-                  placeholder="Nome do responsável"
-                  required
-                  className="h-12 text-base"
+                  value={userData?.nome || ""}
+                  disabled
+                  className="h-12 text-base bg-muted cursor-not-allowed"
                 />
               </div>
               
@@ -218,7 +232,41 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
             
             {/* Coluna 2 - Medidas */}
             <div className="space-y-6">
-              <h3 className="font-medium text-lg mb-2">Medidas de Altura (metros)*</h3>
+              <h3 className="font-medium text-lg mb-2">Dimensões da Carga*</h3>
+              
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="comprimento" className="text-base">Comprimento (metros)*</Label>
+                  <Input
+                    id="comprimento"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={comprimento || ""}
+                    onChange={(e) => setComprimento(Number(e.target.value))}
+                    placeholder="0,00"
+                    required
+                    className="h-12 text-base"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="largura" className="text-base">Largura (metros)*</Label>
+                  <Input
+                    id="largura"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={largura || ""}
+                    onChange={(e) => setLargura(Number(e.target.value))}
+                    placeholder="0,00"
+                    required
+                    className="h-12 text-base"
+                  />
+                </div>
+              </div>
+              
+              <h3 className="font-medium text-lg mb-2 mt-6">Medidas de Altura (metros)*</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 {medidas.map((medida, index) => (
                   <div key={index} className="space-y-2">
@@ -246,10 +294,10 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
                   Fórmula de cálculo:
                 </p>
                 <p className="text-sm">
-                  Cubagem = Altura Média × 7.4 × 2.2
+                  Cubagem = Altura Média × Comprimento × Largura
                 </p>
                 <p className="text-sm mt-2">
-                  As medidas devem ser tomadas em 6 pontos diferentes da carga.
+                  As medidas de altura devem ser tomadas em 6 pontos diferentes da carga.
                 </p>
               </div>
             </div>
@@ -268,7 +316,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
             )}
             <Button 
               type="submit" 
-              disabled={loading || !medidas.every(m => m > 0)}
+              disabled={loading || !medidas.every(m => m > 0) || comprimento <= 0 || largura <= 0}
               className="h-12 px-6 text-base"
             >
               {loading ? "Salvando..." : "Registrar Medição"}
