@@ -167,7 +167,6 @@ const TabelaRegistros = ({ onClickNovo, atualizarDados }: TabelaRegistrosProps) 
     <>
       <Card className="w-full mt-6">
         <div className="p-4 flex flex-col md:flex-row justify-between items-center border-b">
-          <h2 className="text-xl font-bold">Histórico de Entregas</h2>
           <div className="flex gap-2 mt-2 md:mt-0">
             <Button 
               variant="outline"

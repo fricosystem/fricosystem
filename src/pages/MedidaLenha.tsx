@@ -19,14 +19,7 @@ const MedidaLenha = () => {
   };
 
   return (
-    <AppLayout title="Medição de Lenha">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Bem-vindo, {userData?.nome}</h1>
-        <p className="text-muted-foreground">
-          Sistema para registro e cálculo de cubagem de lenha
-        </p>
-      </div>
-      
+    <AppLayout title="Cálculo de cubagem de Lenha">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">Histórico de Registros</h2>
         <div className="flex gap-2">
