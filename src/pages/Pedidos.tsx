@@ -342,7 +342,8 @@ const Pedidos = () => {
   };
 
   // Formatar valor para moeda brasileira
-  const formatarMoeda = (valor: number) => {
+  const formatarMoeda = (valor?: number) => {
+    if (valor === undefined || valor === null) return '-';
     return valor.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL'

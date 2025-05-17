@@ -49,6 +49,7 @@ import {
   ArchiveRestore,
   Briefcase,
   Package,
+  User,
   FileSpreadsheet
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
@@ -61,7 +62,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { db } from "@/firebase/firebase";
-import { collection, query, where, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -69,12 +70,14 @@ interface SidebarItem {
   to: string;
   icon: React.ElementType;
   label: string;
+  badgeCount?: number; // Adicione esta linha
 }
 
 interface SidebarCategory {
   label: string;
   icon: React.ElementType;
   items: SidebarItem[];
+  badgeCount?: number; // Adicione se quiser usar na categoria também
 }
 
 const AppSidebar = () => {
@@ -85,6 +88,7 @@ const AppSidebar = () => {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const { toast } = useToast();
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   const isAdmin = userData?.cargo === "ESTOQUISTA";
   
@@ -103,6 +107,43 @@ const AppSidebar = () => {
     
     setExpandedCategories(initialExpandedState);
   }, [location.pathname]);
+
+  // Monitor pending requests count
+  // Adicione este useEffect para monitorar as requisições pendentes
+  useEffect(() => {
+    if (!user || !userData?.unidade) return;
+
+    const unsubscribe = onSnapshot(
+      query(
+        collection(db, "requisicoes"),
+        where("unidade", "==", userData.unidade)
+      ),
+      (snapshot) => {
+        let count = 0;
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          // Verifica se existe o array solicitante e se algum item tem status "pendente"
+          if (data.solicitante && Array.isArray(data.solicitante)) {
+            const hasPending = data.solicitante.some((item: any) => 
+              item.status && item.status.toLowerCase() === "pendente"
+            );
+            if (hasPending) count++;
+          }
+        });
+        setPendingRequestsCount(count);
+      },
+      (error) => {
+        console.error("Erro ao monitorar requisições pendentes:", error);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar requisições pendentes",
+          variant: "destructive",
+        });
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user, userData?.unidade]);
   
   useEffect(() => {
     const loadTheme = async () => {
@@ -217,21 +258,22 @@ const AppSidebar = () => {
       label: "Principal",
       icon: Layers,
       items: [
-        {
-          to: "/dashboard",
-          icon: LayoutDashboard,
-          label: "Dashboard",
-        },
+        { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", },
       ],
     },
     {
       label: "Estoque",
       icon: Boxes,
+      badgeCount: pendingRequestsCount, // Badge na categoria
       items: [
         { to: "/produtos", icon: Box, label: "Produtos" },
-        { to: "/requisicoes", icon: ClipboardList, label: "Requisições" },
+        { 
+          to: "/requisicoes", 
+          icon: ClipboardList, 
+          label: "Requisições",
+          badgeCount: pendingRequestsCount // Badge no item
+        },
         { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
-        { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
       ],
     },
     {
@@ -245,27 +287,17 @@ const AppSidebar = () => {
         { to: "/ordensServico", icon: Clipboard, label: "Ordens de Serviço" },
         { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
         { to: "/inventario", icon: PackageSearch, label: "Inventário" },
+        { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
+        { to: "/medidalenha", icon: FileSpreadsheet, label: "Cubagem/Medida de lenha" },
+        { to: "/fornecedores", icon: Users, label: "Fornecedores" },
       ],
     },
-    /*
-    {
-      label: "Produção",
-      icon: Factory,
-      items: [
-        { to: "/producao", icon: BarChart, label: "Dashboard Prod" },
-        { to: "/producao/planejamento", icon: ClipboardCheck, label: "Planejamento" },
-        { to: "/producao/planejamentoDiarioProducao", icon: Calendar, label: "Planejamento Diário" },
-        { to: "/producao/produtosProducao", icon: Package, label: "Produtos Produção" },
-        { to: "/producao/produtosFinaisProducao", icon: CheckSquare, label: "Produtos Finais" },
-      ],
-    },*/
     {
       label: "Financeiro",
       icon: Wallet,
       items: [
         { to: "/financial", icon: Wallet, label: "Financeiro" },
         { to: "/cost-centers", icon: BarChart3, label: "Centros de Custo" },
-        { to: "/fornecedores", icon: Users, label: "Fornecedores" },
         { to: "/relatorios", icon: Home, label: "Relatórios" },
       ],
     },
@@ -273,14 +305,7 @@ const AppSidebar = () => {
       label: "Administrativo",
       icon: Settings,
       items: [
-        { to: "/administrativo/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-        { to: "/administrativo/usuarios", icon: UserRound, label: "Usuários" },
-        { to: "/administrativo/produtos", icon: Box, label: "Produtos" },
-        { to: "/administrativo/fornecedores", icon: Users, label: "Fornecedores" },
-        { to: "/administrativo/depositos", icon: Warehouse, label: "Depósitos" },
-        { to: "/administrativo/unidades", icon: Building2, label: "Unidades" },
         { to: "/importarPlanilha", icon: FileSpreadsheet, label: "Importar Planilha XLSX" },
-        { to: "/medidalenha", icon: FileSpreadsheet, label: "Cubagem/Medida de lenha" },
       ],
     }] : []),
     {
@@ -500,6 +525,11 @@ const AppSidebar = () => {
                                     {totalItens}
                                   </span>
                                 )}
+                                {item.to === "/requisicoes" && pendingRequestsCount > 0 && (
+                                  <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                                    {pendingRequestsCount}
+                                  </span>
+                                )}
                               </SidebarMenuButton>
                             </SidebarMenuItem>
                           ))}
@@ -587,6 +617,11 @@ const AppSidebar = () => {
                         </div>
                       </div>
                     </div>
+
+                    <DropdownMenuItem onClick={() => navigate("/configuracoes")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Perfil</span>
+                    </DropdownMenuItem>
 
                     <DropdownMenuItem onClick={toggleTheme} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       {theme === "light" ? (
