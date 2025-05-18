@@ -38,6 +38,7 @@ interface ModalEditarRegistroProps {
   medida: MedidaLenha;
   isOpen: boolean;
   onClose: () => void;
+  onSaveSuccess?: () => void; // Add this line
 }
 
 // Schema de validação do formulário
@@ -60,7 +61,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const ModalEditarRegistro = ({ medida, isOpen, onClose }: ModalEditarRegistroProps) => {
+const ModalEditarRegistro = ({ medida, isOpen, onClose, onSaveSuccess }: ModalEditarRegistroProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Inicializar o formulário com valores da medida selecionada
@@ -117,9 +118,10 @@ const ModalEditarRegistro = ({ medida, isOpen, onClose }: ModalEditarRegistroPro
         responsavel: data.responsavel,
         valorUnitario: data.valorUnitario,
         valorTotal: valorTotal,
-        // Mantém medidas e usuário originais
+        // Mantém medidas, usuário e status_envio originais
         medidas: medida.medidas,
         usuario: medida.usuario,
+        status_envio: medida.status_envio || "pendente"
       });
       
       toast({
@@ -128,6 +130,9 @@ const ModalEditarRegistro = ({ medida, isOpen, onClose }: ModalEditarRegistroPro
       });
       
       onClose();
+      if (onSaveSuccess) {
+        onSaveSuccess();
+      }
     } catch (error) {
       console.error("Erro ao atualizar registro:", error);
       toast({

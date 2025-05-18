@@ -2,7 +2,6 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-// Configurações ORIGINAIS do FR Stock Manager (mantidas)
 const firebaseConfig = {
   apiKey: "AIzaSyCcbmL_iL3hRLNZCJAh-jCx0FADlKgzSNk",
   authDomain: "frstockmanager-22c3b.firebaseapp.com",

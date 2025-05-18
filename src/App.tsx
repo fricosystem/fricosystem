@@ -104,12 +104,12 @@ const AppContent = () => {
           <Route path="/enderecamento" element={<AuthGuard><Enderecamento /></AuthGuard>} />
           <Route path="/ordensServico" element={<AuthGuard><OrdensServico /></AuthGuard>} />
           <Route path="/fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
-          <Route path="/importarPlanilha" element={<AuthGuard><ImportarPlanilha /></AuthGuard>} />
-          <Route path="/medidalenha" element={<AuthGuard><MedidaLenha /></AuthGuard>} />
+          <Route path="/importar-planilha" element={<AuthGuard><ImportarPlanilha /></AuthGuard>} />
+          <Route path="/medida-de-lenha" element={<AuthGuard><MedidaLenha /></AuthGuard>} />
 
           {/* Rotas de Entrada Manual e Transferência */}
-          <Route path="/entradaProdutosET" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />
-          <Route path="/transferenciasET" element={<AuthGuard><TransferenciasET /></AuthGuard>} />
+          <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />
+          <Route path="/transferencia" element={<AuthGuard><TransferenciasET /></AuthGuard>} />
 
           {/* Rotas de Compras e Pedidos */}
           <Route path="/compras" element={<AuthGuard><Compras /></AuthGuard>} />

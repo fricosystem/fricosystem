@@ -112,7 +112,8 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
     try {
       const novaMedida: Omit<MedidaLenha, "id"> = {
         data: new Date(),
-        medidas: [...medidas],
+        // Simply convert numbers to strings to match the expected string[] type
+        medidas: medidas.map(m => m.toString()),
         comprimento,
         largura,
         metrosCubicos,
@@ -125,7 +126,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       };
       
       // Salva no Firestore
-      await addDoc(collection(db, "medidasLenha"), novaMedida);
+      await addDoc(collection(db, "medidas_lenha"), novaMedida);
       
       toast({
         title: "Registro salvo com sucesso!",
@@ -202,17 +203,15 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
                   min="0.01"
                   step="0.01"
                   value={valorUnitario || ""}
-                  onChange={(e) => setValorUnitario(Number(e.target.value))}
+                  onChange={(e) => {/* Removida capacidade de edição */}}
                   placeholder="0,00"
-                  readOnly={!!fornecedor}
-                  className={`h-12 text-base ${fornecedor ? "bg-muted cursor-not-allowed" : ""}`}
+                  readOnly={true}
+                  className="h-12 text-base bg-muted cursor-not-allowed"
                   required
                 />
-                {fornecedor && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Valor definido pelo fornecedor selecionado
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valor definido automaticamente quando o fornecedor é selecionado
+                </p>
               </div>
               
               <div className="bg-secondary p-6 rounded-lg mt-6">

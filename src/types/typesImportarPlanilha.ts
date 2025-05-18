@@ -31,3 +31,10 @@ export interface ImportedProduct {
   unidade_de_medida: string;
   detalhes: string;
 }
+
+export type ImportedEquipment = {
+  patrimonio: string;
+  equipamento: string;
+  setor: string;
+  tag: string;
+};

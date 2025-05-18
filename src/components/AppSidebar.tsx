@@ -11,46 +11,43 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard,
-  Box,
-  ClipboardList,
-  BarChart,
-  ShoppingCart,
-  PackageSearch,
-  Warehouse,
-  Wallet,
-  Receipt,
-  Truck,
-  FileText,
-  BarChart3,
-  Users,
+  Layers,
   Home,
+  Boxes,
+  Package,
+  ClipboardList,
+  Truck,
+  Warehouse,
+  ShoppingCart,
+  AlertTriangle,
+  FileText,
+  Users,
+  Wallet,
+  TrendingUp,
   Settings,
+  FileSpreadsheet,
+  // Novos ícones adicionados para diversificação
+  ListChecks,
+  PackagePlus,
+  Ruler,
+  Wrench,
+  ShoppingBag,
+  Receipt,
+  CalendarCheck,
+  PieChart,
+  Bell,
+  PackageSearch,
+  Download,
+  Database,
+  // Ícones para o dropdown do usuário
   LogOut,
   Sun,
   Moon,
   ChevronUp,
   ChevronDown,
-  Clipboard,
-  Factory,
-  LineChart,
   UserRound,
-  Calendar,
-  GraduationCap,
-  ClipboardCheck,
-  Layers,
-  Boxes,
-  Building2,
-  Network,
-  BadgePercent,
-  Monitor,
-  HardHat,
-  ArrowLeftRight,
-  ArchiveRestore,
   Briefcase,
-  Package,
-  User,
-  FileSpreadsheet
+  Building2
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useEffect, useState } from "react";
@@ -70,14 +67,14 @@ interface SidebarItem {
   to: string;
   icon: React.ElementType;
   label: string;
-  badgeCount?: number; // Adicione esta linha
+  badgeCount?: number;
 }
 
 interface SidebarCategory {
   label: string;
   icon: React.ElementType;
   items: SidebarItem[];
-  badgeCount?: number; // Adicione se quiser usar na categoria também
+  badgeCount?: number;
 }
 
 const AppSidebar = () => {
@@ -108,8 +105,6 @@ const AppSidebar = () => {
     setExpandedCategories(initialExpandedState);
   }, [location.pathname]);
 
-  // Monitor pending requests count
-  // Adicione este useEffect para monitorar as requisições pendentes
   useEffect(() => {
     if (!user || !userData?.unidade) return;
 
@@ -122,7 +117,6 @@ const AppSidebar = () => {
         let count = 0;
         snapshot.forEach((doc) => {
           const data = doc.data();
-          // Verifica se existe o array solicitante e se algum item tem status "pendente"
           if (data.solicitante && Array.isArray(data.solicitante)) {
             const hasPending = data.solicitante.some((item: any) => 
               item.status && item.status.toLowerCase() === "pendente"
@@ -258,37 +252,43 @@ const AppSidebar = () => {
       label: "Principal",
       icon: Layers,
       items: [
-        { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", },
+        { to: "/dashboard", icon: Home, label: "Visão Geral" },
       ],
     },
     {
       label: "Estoque",
       icon: Boxes,
-      badgeCount: pendingRequestsCount, // Badge na categoria
+      badgeCount: pendingRequestsCount,
       items: [
-        { to: "/produtos", icon: Box, label: "Produtos" },
-        { 
-          to: "/requisicoes", 
-          icon: ClipboardList, 
-          label: "Requisições",
-          badgeCount: pendingRequestsCount // Badge no item
-        },
-        { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
+        { to: "/produtos", icon: Package, label: "Produtos" },
+        { to: "/inventario", icon: ClipboardList, label: "Inventário" },
+        { to: "/inventario-ciclico", icon: ListChecks, label: "Inventário Cíclico" },
+        { to: "/entrada-manual", icon: PackagePlus, label: "Entrada Manual" },
+        { to: "/transferencia", icon: Truck, label: "Transferência" },
+        { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
+        { to: "/medida-de-lenha", icon: Ruler, label: "Cubagem e medida de Lenha" },
       ],
     },
     {
-      label: "Operacional",
-      icon: Network,
+      label: "Requisições",
+      icon: ClipboardList,
       items: [
-        { to: "/entradaProdutosET", icon: ArchiveRestore, label: "Entrada Manual" },
-        { to: "/transferenciasET", icon: ArrowLeftRight, label: "Transferência" },
-        { to: "/compras", icon: Truck, label: "Compras" },
-        { to: "/pedidos", icon: Truck, label: "Pedidos" },
-        { to: "/ordensServico", icon: Clipboard, label: "Ordens de Serviço" },
+        { to: "/requisicoes", icon: ClipboardList, label: "Requisições", badgeCount: pendingRequestsCount },
+        { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
+        { to: "/ordensServico", icon: Wrench, label: "Ordens de Serviço" },
+        { to: "/devolucoes", icon: AlertTriangle, label: "Devoluções" },
+      ],
+    },
+    {
+      label: "Compras",
+      icon: ShoppingCart,
+      items: [
+        { to: "/compras", icon: ShoppingCart, label: "Compras" },
+        { to: "/pedidos", icon: ShoppingBag, label: "Pedidos" },
+        { to: "/cotacoes-orcamentos", icon: FileText, label: "Cotações e Orçamentos" },
         { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
-        { to: "/inventario", icon: PackageSearch, label: "Inventário" },
-        { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
-        { to: "/medidalenha", icon: FileSpreadsheet, label: "Cubagem/Medida de lenha" },
+        { to: "/rastreamento-entregas", icon: Truck, label: "Rastreamento de Entregas" },
+        { to: "/calendario-recebimento", icon: CalendarCheck, label: "Calendário de Recebimento" },
         { to: "/fornecedores", icon: Users, label: "Fornecedores" },
       ],
     },
@@ -296,25 +296,38 @@ const AppSidebar = () => {
       label: "Financeiro",
       icon: Wallet,
       items: [
-        { to: "/financial", icon: Wallet, label: "Financeiro" },
-        { to: "/cost-centers", icon: BarChart3, label: "Centros de Custo" },
-        { to: "/relatorios", icon: Home, label: "Relatórios" },
+        { to: "/centro-custos", icon: TrendingUp, label: "Centro de Custos" },
+        { to: "/precificacao", icon: TrendingUp, label: "Precificação" },
+        { to: "/relatorios-financeiros", icon: PieChart, label: "Relatórios Financeiros" },
+      ],
+    },
+    {
+      label: "Administração",
+      icon: Settings,
+      items: [
+        { to: "/gestao-usuarios", icon: Users, label: "Gestão de Usuários" },
+        { to: "/configuracoes-sistema", icon: Settings, label: "Configurações do Sistema" },
+        { to: "/alertas-notificacoes", icon: Bell, label: "Alertas e Notificações" },
+        { to: "/sugestao-reabastecimento", icon: PackageSearch, label: "Sugestão de Reabastecimento" },
+        { to: "/integracoes", icon: Settings, label: "Integrações (ERP/API)" },
+      ],
+    },
+    {
+      label: "Utilitários",
+      icon: FileText,
+      items: [
+        { to: "/importar-planilha", icon: FileText, label: "Importar dados" },
+        { to: "/exportacoes", icon: Download, label: "Exportar dados" },
+        { to: "/backup-dados", icon: Database, label: "Backup/Restauração" },
       ],
     },
     ...(isAdmin ? [{
       label: "Administrativo",
       icon: Settings,
       items: [
-        { to: "/importarPlanilha", icon: FileSpreadsheet, label: "Importar Planilha XLSX" },
+
       ],
     }] : []),
-    {
-      label: "Sistema",
-      icon: Monitor,
-      items: [
-        { to: "/configuracoes", icon: Settings, label: "Configurações" },
-      ],
-    },
   ];
 
   const handleSignOut = async () => {
@@ -619,7 +632,7 @@ const AppSidebar = () => {
                     </div>
 
                     <DropdownMenuItem onClick={() => navigate("/configuracoes")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
-                      <User className="mr-2 h-4 w-4" />
+                      <UserRound className="mr-2 h-4 w-4" />
                       <span>Perfil</span>
                     </DropdownMenuItem>
 

@@ -7,18 +7,19 @@ export interface Usuario {
 }
 
 export interface MedidaLenha {
-  id?: string;
+  id: string;
   data: Date;
-  medidas: number[];
-  metrosCubicos: number;
+  medidas: string[];
   comprimento: number;
   largura: number;
+  metrosCubicos: number;
   fornecedor: string;
-  nfe: string;
+  nfe?: string;
   responsavel: string;
   valorUnitario: number;
   valorTotal: number;
   usuario: string;
+  status_envio?: string; // Add this line
 }
 
 export interface Fornecedor {

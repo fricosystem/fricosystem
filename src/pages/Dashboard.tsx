@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { Package, DollarSign, TrendingUp, AlertTriangle, ShoppingCart, FileText, Loader2, Users, Warehouse, Truck } from "lucide-react";
+import { Package, DollarSign, TrendingUp, AlertTriangle, ShoppingCart, FileText, Loader2, Users, Warehouse, Truck, Boxes, ClipboardList, BarChart2, PieChart as PieChartIcon, Map, Calendar, Clock, Layers } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import StatsCard from "@/components/StatsCard";
-import AlertaBaixoEstoque from "@/components/AlertaBaixoEstoque";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ScatterChart, Scatter, ZAxis, ComposedChart, FunnelChart, Funnel, Label } from "recharts";
+import { Badge } from "@/components/ui/badge";
 
 // Tipos para os dados do Firestore
 type Usuario = {
@@ -24,6 +24,7 @@ type Produto = {
   fornecedor_nome: string;
   nome?: string;
   data_criacao?: string;
+  quantidade?: number;
 };
 
 type Transferencia = {
@@ -63,6 +64,7 @@ const Dashboard = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [depositos, setDepositos] = useState<Deposito[]>([]);
   const [produtosEsteMes, setProdutosEsteMes] = useState(0);
+  const [produtosBaixoEstoque, setProdutosBaixoEstoque] = useState<Produto[]>([]);
 
   // Função para converter timestamp do Firestore para Date
   const convertFirebaseTimestamp = (timestamp: Date | { toDate: () => Date }): Date => {
@@ -80,6 +82,15 @@ const Dashboard = () => {
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month, 0).getDate();
+  };
+
+  // Função para converter string de valor para número
+  const parseCurrencyValue = (value: string | number): number => {
+    if (typeof value === 'number') return value;
+    
+    // Remove pontos de milhar e substitui vírgula decimal por ponto
+    const cleanedValue = value.replace(/\./g, '').replace(',', '.');
+    return parseFloat(cleanedValue) || 0;
   };
 
   // Carregar dados do Firestore
@@ -102,17 +113,24 @@ const Dashboard = () => {
         const produtosSnapshot = await getDocs(collection(db, "produtos"));
         const produtosData = produtosSnapshot.docs.map(doc => {
           const data = doc.data() as Produto;
-          // Garantir que valor_unitario é um número
-          if (typeof data.valor_unitario === 'string') {
-            data.valor_unitario = parseFloat(data.valor_unitario.toString().replace(/\./g, '').replace(',', '.'));
-          }
+          // Converter valor_unitario para número
+          data.valor_unitario = parseCurrencyValue(data.valor_unitario?.toString() || '0');
           return data;
         });
         setProdutos(produtosData);
         setTotalProdutos(produtosData.length);
         
-        const valorTotal = produtosData.reduce((sum, produto) => sum + (Number(produto.valor_unitario) || 0), 0);
+        // Calcular valor total do estoque
+        const valorTotal = produtosData.reduce((sum, produto) => {
+          const valorUnitario = Number(produto.valor_unitario);
+          const quantidade = produto.quantidade || 1;
+          return sum + (valorUnitario * quantidade);
+        }, 0);
         setValorEstoque(valorTotal);
+
+        // Identificar produtos com baixo estoque (quantidade < 5)
+        const baixoEstoque = produtosData.filter(p => p.quantidade && p.quantidade < 5);
+        setProdutosBaixoEstoque(baixoEstoque);
 
         // Calcular produtos deste mês
         const now = new Date();
@@ -320,28 +338,107 @@ const Dashboard = () => {
     ).length;
   };
 
+  // Dados para gráfico de radar (análise de estoque)
+  const dadosAnaliseEstoque = () => {
+    return [
+      {
+        subject: 'Valor Total',
+        A: Math.min(valorEstoque / 10000, 100), // Normalizado para escala 0-100
+        fullMark: 100,
+      },
+      {
+        subject: 'Produtos',
+        A: Math.min(totalProdutos / 100, 100), // Normalizado para escala 0-100
+        fullMark: 100,
+      },
+      {
+        subject: 'Fornecedores',
+        A: Math.min(fornecedores.length / 10, 100), // Normalizado para escala 0-100
+        fullMark: 100,
+      },
+      {
+        subject: 'Unidades',
+        A: Math.min(unidades.length / 5, 100), // Normalizado para escala 0-100
+        fullMark: 100,
+      },
+      {
+        subject: 'Transferências',
+        A: Math.min(transferencias.length / 50, 100), // Normalizado para escala 0-100
+        fullMark: 100,
+      },
+    ];
+  };
+
+  // Dados para gráfico de dispersão (valor vs quantidade)
+  const dadosValorQuantidade = () => {
+    return produtos.slice(0, 50).map(p => ({
+      x: Number(p.valor_unitario),
+      y: p.quantidade || 1,
+      z: 20, // Tamanho fixo para os pontos
+      name: p.nome || 'Produto sem nome'
+    }));
+  };
+
+  // Dados para gráfico de funil (produtos por unidade)
+  const dadosProdutosPorUnidade = () => {
+    const data = produtosPorUnidade();
+    const maxValue = Math.max(...data.map(item => item.value));
+    return data.map(item => ({
+      name: item.name,
+      value: item.value,
+      fill: COLORS[data.indexOf(item) % COLORS.length],
+      label: `${((item.value / maxValue) * 100).toFixed(0)}%`
+    }));
+  };
+
+  // Dados para gráfico composto (valor do estoque por unidade)
+  const dadosValorEstoquePorUnidade = () => {
+    const unidadeMap: Record<string, number> = {};
+    
+    produtos.forEach(produto => {
+      if (produto.unidade) {
+        const valor = Number(produto.valor_unitario) * (produto.quantidade || 1);
+        unidadeMap[produto.unidade] = (unidadeMap[produto.unidade] || 0) + valor;
+      }
+    });
+    
+    return Object.entries(unidadeMap).map(([name, value]) => ({
+      name,
+      valor: value,
+      quantidade: produtos.filter(p => p.unidade === name).length
+    }));
+  };
+
   return (
-    <AppLayout title="Dashboard">
+    <AppLayout title="Dashboard Inteligente">
       {/* Seletor de período */}
-      <div className="mb-6 shadow-sm">
+      <div className="mb-6">
         <Tabs defaultValue="hoje" value={period} onValueChange={(v) => setPeriod(v as "hoje" | "semana" | "mes" | "ano")}>
-          <TabsList className="shadow-sm">
-            <TabsTrigger value="hoje">Hoje</TabsTrigger>
-            <TabsTrigger value="semana">Esta Semana</TabsTrigger>
-            <TabsTrigger value="mes">Este Mês</TabsTrigger>
-            <TabsTrigger value="ano">Este Ano</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800">
+            <TabsTrigger value="hoje" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Hoje
+            </TabsTrigger>
+            <TabsTrigger value="semana" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" /> Semana
+            </TabsTrigger>
+            <TabsTrigger value="mes" className="flex items-center gap-2">
+              <Layers className="h-4 w-4" /> Mês
+            </TabsTrigger>
+            <TabsTrigger value="ano" className="flex items-center gap-2">
+              <BarChart2 className="h-4 w-4" /> Ano
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       {loading ? (
-        <Card className="mb-6 p-6 shadow-sm">
-          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+        <Card className="mb-6">
+          <div className="flex flex-col items-center justify-center p-8 space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-lg font-medium text-gray-800">Carregando dados do dashboard...</p>
+            <p className="text-lg font-medium">Carregando dados do dashboard...</p>
             <div className="w-full max-w-md">
-              <Progress value={loadingProgress} className="h-2 shadow-sm" />
-              <p className="text-sm text-muted-foreground text-center mt-2 shadow-sm">{loadingProgress}%</p>
+              <Progress value={loadingProgress} className="h-2" />
+              <p className="text-sm text-muted-foreground text-center mt-2">{loadingProgress}%</p>
             </div>
           </div>
         </Card>
@@ -352,202 +449,351 @@ const Dashboard = () => {
             <StatsCard
               title="Usuários Ativos"
               value={`${usuariosAtivos}/${totalUsuarios}`}
-              icon={<Users size={18} />}
+              icon={<Users className="h-5 w-5" />}
               trend={{
                 value: porcentagemAtivos,
-                positive: true,
-                label: `${porcentagemAtivos.toFixed(0)}% de usuários ativos`
+                positive: porcentagemAtivos > 70,
+                label: `${porcentagemAtivos.toFixed(0)}% de ativos`
               }}
-              className="shadow-sm"
+              description="Eficiência da equipe"
+              className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
             />
             <StatsCard
               title="Total de Produtos"
               value={totalProdutos.toString()}
-              icon={<Package size={18} />}
+              icon={<Package className="h-5 w-5" />}
               trend={{
                 value: porcentagemProdutosEsteMes,
-                positive: true,
-                label: `${produtosEsteMes} (${porcentagemProdutosEsteMes.toFixed(0)}%) cadastrados este mês`
+                positive: porcentagemProdutosEsteMes > 10,
+                label: `${produtosEsteMes} este mês`
               }}
-              className="shadow-sm"
+              description="Diversidade de itens"
+              className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
             />
             <StatsCard
-              title="Valor Total em Estoque"
+              title="Valor em Estoque"
               value={formatCurrency(valorEstoque)}
-              icon={<DollarSign size={18} />}
-              className="shadow-sm"
+              icon={<DollarSign className="h-5 w-5" />}
+              trend={{
+                value: valorEstoque > 100000 ? 100 : valorEstoque / 1000,
+                positive: true,
+                label: `Capital investido`
+              }}
+              description="Valor total do inventário"
+              className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
             />
             <StatsCard
-              title="Unidades Cadastradas"
-              value={unidades.length.toString()}
-              icon={<Warehouse size={18} />}
-              className="shadow-sm"
+              title="Baixo Estoque"
+              value={produtosBaixoEstoque.length.toString()}
+              icon={<AlertTriangle className="h-5 w-5 text-yellow-600" />}
+              trend={{
+                value: (produtosBaixoEstoque.length / totalProdutos) * 100,
+                positive: false,
+                label: `${((produtosBaixoEstoque.length / totalProdutos) * 100).toFixed(1)}%`
+              }}
+              description="Itens com estoque crítico"
+              className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-900/10"
             />
           </div>
 
-          {/* Gráficos principais */}
-          <div className="grid gap-6 md:grid-cols-2 mb-6">
-            {/* Transferências por período */}
-            <Card className="shadow-sm">
+          {/* Primeira linha de gráficos */}
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
+            {/* Transferências por período - Gráfico de Área */}
+            <Card className="col-span-2">
               <CardHeader>
-                <CardTitle className="text-lg text-gray-800">Transferências por Período</CardTitle>
-                <CardDescription className="text-gray-600">
-                  {period === "hoje" ? "Hoje por hora" : 
-                   period === "semana" ? "Esta semana por dia" : 
-                   period === "mes" ? "Este mês por dia" : "Este ano por mês"}
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Truck className="h-5 w-5" /> Movimentação de Estoque
+                    </CardTitle>
+                    <CardDescription>
+                      {period === "hoje" ? "Hoje por hora" : 
+                       period === "semana" ? "Esta semana por dia" : 
+                       period === "mes" ? "Este mês por dia" : "Este ano por mês"}
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="border-primary text-primary">
+                    {transferencias.length} transferências
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={transferenciasPorPeriodo()}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
+                    <AreaChart data={transferenciasPorPeriodo()}>
+                      <defs>
+                        <linearGradient id="colorTransferencias" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="name" />
+                      <YAxis />
                       <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'white',
-                          borderColor: '#e5e7eb',
-                          borderRadius: '0.5rem',
-                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)',
                         }}
+                        formatter={(value) => [`${value} itens`, 'Quantidade']}
                       />
-                      <Legend />
-                      <Bar dataKey="transferencias" name="Transferências" fill="#8884d8" />
-                    </BarChart>
+                      <Area 
+                        type="monotone" 
+                        dataKey="transferencias" 
+                        stroke="#8884d8" 
+                        fillOpacity={1} 
+                        fill="url(#colorTransferencias)" 
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Fornecedores por estado - Gráfico de Barras */}
-            <Card className="shadow-sm">
+            {/* Análise de Estoque - Gráfico de Radar */}
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg text-gray-800">Fornecedores por Estado</CardTitle>
-                <CardDescription className="text-gray-600">Distribuição geográfica dos fornecedores</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Boxes className="h-5 w-5" /> Saúde do Estoque
+                </CardTitle>
+                <CardDescription>Métricas-chave do inventário</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={fornecedoresPorEstado()}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
+                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={dadosAnaliseEstoque()}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="subject" />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} />
                       <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'white',
-                          borderColor: '#e5e7eb',
-                          borderRadius: '0.5rem',
-                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)',
                         }}
+                        formatter={(value) => [`${value}%`, 'Índice']}
                       />
-                      <Legend />
-                      <Bar dataKey="value" name="Fornecedores" fill="#00C49F" />
-                    </BarChart>
+                      <Radar 
+                        name="Estoque" 
+                        dataKey="A" 
+                        stroke="#8884d8" 
+                        fill="#8884d8" 
+                        fillOpacity={0.6} 
+                      />
+                    </RadarChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Mais gráficos e informações */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-            {/* Produtos por fornecedor */}
-            <Card className="shadow-sm">
+          {/* Segunda linha de gráficos */}
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
+            {/* Produtos por fornecedor - Gráfico de Barras Horizontais */}
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg text-gray-800">Produtos por Fornecedor</CardTitle>
-                <CardDescription className="text-gray-600">Top 5 fornecedores com mais produtos fornecidos</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="h-5 w-5" /> Top Fornecedores
+                </CardTitle>
+                <CardDescription>Por quantidade de produtos</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[250px]">
+                <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       layout="vertical"
                       data={produtosPorFornecedor()}
                       margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis type="number" stroke="#6b7280" />
-                      <YAxis dataKey="name" type="category" width={80} stroke="#6b7280" />
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis type="number" />
+                      <YAxis dataKey="name" type="category" width={100} />
                       <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'white',
-                          borderColor: '#e5e7eb',
-                          borderRadius: '0.5rem',
-                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)',
                         }}
+                        formatter={(value) => [`${value} produtos`, 'Quantidade']}
                       />
-                      <Legend />
-                      <Bar dataKey="value" name="Produtos" fill="#82ca9d" />
+                      <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Tempo de cadastro dos fornecedores */}
-            <Card className="shadow-sm">
+            {/* Fornecedores por estado - Gráfico de Pizza */}
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg text-gray-800">Tempo de Cadastro</CardTitle>
-                <CardDescription className="text-gray-600">Top 5 fornecedores mais antigos</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Map className="h-5 w-5" /> Fornecedores por Estado
+                </CardTitle>
+                <CardDescription>Distribuição geográfica</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[250px]">
+                <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={tempoCadastroFornecedores()}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
+                    <PieChart>
+                      <Pie
+                        data={fornecedoresPorEstado()}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        innerRadius={40}
+                        paddingAngle={5}
+                        dataKey="value"
+                        nameKey="name"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {fornecedoresPorEstado().map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
                       <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'white',
-                          borderColor: '#e5e7eb',
-                          borderRadius: '0.5rem',
-                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)',
                         }}
+                        formatter={(value) => [`${value} fornecedores`, 'Quantidade']}
                       />
                       <Legend />
-                      <Line type="monotone" dataKey="dias" name="Dias cadastrado" stroke="#ff7300" />
-                    </LineChart>
+                    </PieChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Produtos por unidade */}
-            <Card className="shadow-sm">
+            {/* Valor vs Quantidade - Gráfico de Dispersão */}
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg text-gray-800">Produtos por Unidade</CardTitle>
-                <CardDescription className="text-gray-600">Distribuição por unidade de medida</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChartIcon className="h-5 w-5" /> Valor vs Quantidade
+                </CardTitle>
+                <CardDescription>Relação entre valor unitário e estoque</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[250px]">
+                <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={produtosPorUnidade()}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        nameKey="name"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {produtosPorUnidade().map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
+                    <ScatterChart
+                      margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis type="number" dataKey="x" name="Valor" unit="R$" />
+                      <YAxis type="number" dataKey="y" name="Quantidade" />
+                      <ZAxis type="number" dataKey="z" range={[20, 100]} />
                       <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'white',
-                          borderColor: '#e5e7eb',
-                          borderRadius: '0.5rem',
-                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)',
+                        }}
+                        formatter={(value, name, props) => {
+                          if (name === 'x') return [formatCurrency(Number(value)), 'Valor'];
+                          if (name === 'y') return [value, 'Quantidade'];
+                          return [value, name];
                         }}
                       />
-                    </PieChart>
+                      <Scatter name="Produtos" data={dadosValorQuantidade()} fill="#8884d8" />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Terceira linha de gráficos */}
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-6">
+            {/* Produtos por unidade - Gráfico de Funil */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Warehouse className="h-5 w-5" /> Produtos por Unidade
+                </CardTitle>
+                <CardDescription>Distribuição por localização</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <FunnelChart>
+                      <Tooltip 
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)',
+                        }}
+                        formatter={(value) => [`${value} produtos`, 'Quantidade']}
+                      />
+                      <FunnelChart>
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)',
+                          }}
+                          formatter={(value) => [`${value} produtos`, 'Quantidade']}
+                        />
+                        <Funnel
+                          dataKey="value"
+                          data={dadosProdutosPorUnidade()}
+                          isAnimationActive
+                          nameKey="name"
+                          labelLine={false}
+                        >
+                          <Label
+                            position="center"
+                            fill="#fff"
+                            formatter={(entry: any) => entry.label}
+                          />
+                          {dadosProdutosPorUnidade().map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Funnel>
+                      </FunnelChart>
+                    </FunnelChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Valor do estoque por unidade - Gráfico Composto */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" /> Valor por Unidade
+                </CardTitle>
+                <CardDescription>Valor total do estoque por local</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart
+                      data={dadosValorEstoquePorUnidade()}
+                      margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="name" />
+                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                      <Tooltip 
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)',
+                        }}
+                        formatter={(value, name) => {
+                          if (name === 'valor') return [formatCurrency(Number(value)), 'Valor'];
+                          if (name === 'quantidade') return [value, 'Produtos'];
+                          return [value, name];
+                        }}
+                      />
+                      <Legend />
+                      <Bar yAxisId="left" dataKey="valor" name="Valor" fill="#8884d8" />
+                      <Line yAxisId="right" dataKey="quantidade" name="Produtos" stroke="#82ca9d" />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
@@ -555,75 +801,71 @@ const Dashboard = () => {
           </div>
 
           {/* Listas de informações */}
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Lista de unidades */}
-            <Card className="shadow-sm">
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            {/* Lista de produtos com baixo estoque */}
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2 text-gray-800">
-                  <Warehouse size={18} /> Unidades com mais produtos
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600" /> Produtos com Baixo Estoque
                 </CardTitle>
-                <CardDescription className="text-gray-600">Veja quais unidades tem mais produtos cadastrados</CardDescription>
+                <CardDescription>Itens que precisam de reposição</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {unidades.length > 0 ? (
-                    unidades.map((unidade, index) => (
-                      <div key={index} className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
-                        <p className="font-medium text-gray-800">{unidade}</p>
-                        <p className="text-sm text-gray-600">
-                          {produtos.filter(p => p.unidade === unidade).length} produtos
-                        </p>
+                <div className="space-y-4">
+                  {produtosBaixoEstoque.length > 0 ? (
+                    produtosBaixoEstoque.slice(0, 5).map((produto, index) => (
+                      <div key={index} className="flex items-start justify-between p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
+                        <div>
+                          <p className="font-medium">{produto.nome || 'Produto sem nome'}</p>
+                          <p className="text-sm text-muted-foreground">{produto.fornecedor_nome || 'Fornecedor não especificado'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-yellow-600">{produto.quantidade} un.</p>
+                          <p className="text-sm">{formatCurrency(Number(produto.valor_unitario))} cada</p>
+                        </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-center py-4 text-gray-600">Nenhuma unidade cadastrada</p>
+                    <div className="text-center py-6 text-muted-foreground">
+                      Nenhum produto com estoque baixo encontrado
+                    </div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Lista de fornecedores */}
-            <Card className="shadow-sm">
+            {/* Lista de fornecedores mais antigos */}
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2 text-gray-800">
-                  <Truck size={18} /> Fornecedores Cadastrados
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" /> Fornecedores Mais Antigos
                 </CardTitle>
-                <CardDescription className="text-gray-600">Informações sobre os fornecedores</CardDescription>
+                <CardDescription>Por tempo de relacionamento</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {fornecedores.length > 0 ? (
-                    fornecedores
-                      .filter(f => f.razao_social || f.nome)
-                      .slice(0, 5)
-                      .map((fornecedor, index) => {
-                        const nomeFornecedor = fornecedor.razao_social || fornecedor.nome || 'Fornecedor sem nome';
-                        const produtosCount = contarProdutosPorFornecedor(nomeFornecedor);
-                        const estado = fornecedor.endereco?.estado || 'Não informado';
-                        
-                        return (
-                          <div key={index} className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
-                            <div>
-                              <p className="font-medium text-gray-800">{nomeFornecedor}</p>
-                              <p className="text-xs text-gray-600">{estado}</p>
-                            </div>
-                            <div className="text-right">
-                              {fornecedor.createdAt ? (
-                                <p className="text-sm text-gray-600">
-                                  Cadastrado em {formatDate(convertFirebaseTimestamp(fornecedor.createdAt))}
-                                </p>
-                              ) : (
-                                <p className="text-sm text-gray-600">Data não disponível</p>
-                              )}
-                              <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 shadow-sm">
-                                {produtosCount} produto{produtosCount !== 1 ? 's' : ''}
-                              </span>
-                            </div>
+                <div className="space-y-4">
+                  {tempoCadastroFornecedores().length > 0 ? (
+                    tempoCadastroFornecedores().map((fornecedor, index) => {
+                      const estado = fornecedores.find(f => 
+                        (f.razao_social || f.nome) === fornecedor.name
+                      )?.endereco?.estado || 'Não informado';
+                      
+                      return (
+                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                          <div>
+                            <p className="font-medium">{fornecedor.name}</p>
+                            <p className="text-sm text-muted-foreground">{estado}</p>
                           </div>
-                        );
-                      })
+                          <Badge variant="secondary" className="px-3 py-1">
+                            {fornecedor.dias} dias
+                          </Badge>
+                        </div>
+                      );
+                    })
                   ) : (
-                    <p className="text-center py-4 text-gray-600">Nenhum fornecedor cadastrado</p>
+                    <div className="text-center py-6 text-muted-foreground">
+                      Nenhum fornecedor cadastrado
+                    </div>
                   )}
                 </div>
               </CardContent>

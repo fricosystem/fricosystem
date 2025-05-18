@@ -7,19 +7,23 @@ import AppLayout from "@/layouts/AppLayout";
 const OrdensServico = () => {
   return (
     <AppLayout title="Ordens de Serviço">
-      <div className="container mx-auto py-6">
-        <Tabs defaultValue="nova" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="nova">Nova Ordem</TabsTrigger>
-            <TabsTrigger value="listar">Listar Ordens</TabsTrigger>
-          </TabsList>
-          <TabsContent value="nova">
-            <NovaOrdemServico />
-          </TabsContent>
-          <TabsContent value="listar">
-            <ListaOrdensServico />
-          </TabsContent>
-        </Tabs>
+      <div className="flex flex-col h-[calc(100vh-64px)]"> {/* 64px é a altura do header */}
+        <div className="flex-1 overflow-auto px-4 py-4 md:px-6">
+          <Tabs defaultValue="nova" className="w-full h-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="nova">Nova Ordem</TabsTrigger>
+              <TabsTrigger value="listar">Listar Ordens</TabsTrigger>
+            </TabsList>
+            <div className="flex-1 overflow-auto">
+              <TabsContent value="nova" className="h-full">
+                <NovaOrdemServico />
+              </TabsContent>
+              <TabsContent value="listar" className="h-full">
+                <ListaOrdensServico />
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
       </div>
     </AppLayout>
   );
