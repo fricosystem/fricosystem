@@ -30,6 +30,7 @@ import TransferenciasET from "./pages/TransferenciasET";
 // Páginas de Compras e Pedidos
 import Compras from "./pages/Compras";
 import Pedidos from "./pages/Pedidos";
+import GestaoProdutos from "./pages/GestaoProdutos";
 
 // Páginas de Produção
 import DashboardProducao from "./pages/Producao/DashboardProducao";
@@ -106,6 +107,7 @@ const AppContent = () => {
           <Route path="/fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
           <Route path="/importar-planilha" element={<AuthGuard><ImportarPlanilha /></AuthGuard>} />
           <Route path="/medida-de-lenha" element={<AuthGuard><MedidaLenha /></AuthGuard>} />
+          <Route path="/gestao-produtos" element={<AuthGuard><GestaoProdutos /></AuthGuard>} />
 
           {/* Rotas de Entrada Manual e Transferência */}
           <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />

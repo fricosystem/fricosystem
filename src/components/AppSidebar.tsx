@@ -302,17 +302,6 @@ const AppSidebar = () => {
       ],
     },
     {
-      label: "Administração",
-      icon: Settings,
-      items: [
-        { to: "/gestao-usuarios", icon: Users, label: "Gestão de Usuários" },
-        { to: "/configuracoes-sistema", icon: Settings, label: "Configurações do Sistema" },
-        { to: "/alertas-notificacoes", icon: Bell, label: "Alertas e Notificações" },
-        { to: "/sugestao-reabastecimento", icon: PackageSearch, label: "Sugestão de Reabastecimento" },
-        { to: "/integracoes", icon: Settings, label: "Integrações (ERP/API)" },
-      ],
-    },
-    {
       label: "Utilitários",
       icon: FileText,
       items: [
@@ -325,7 +314,12 @@ const AppSidebar = () => {
       label: "Administrativo",
       icon: Settings,
       items: [
-
+        { to: "/gestao-usuarios", icon: Users, label: "Gestão de Usuários" },
+        { to: "/configuracoes-sistema", icon: Settings, label: "Configurações do Sistema" },
+        { to: "/alertas-notificacoes", icon: Bell, label: "Alertas e Notificações" },
+        { to: "/sugestao-reabastecimento", icon: PackageSearch, label: "Sugestão de Reabastecimento" },
+        { to: "/integracoes", icon: Settings, label: "Integrações (ERP/API)" },
+        { to: "/gestao-produtos", icon: Package, label: "Gestão de Produtos" },
       ],
     }] : []),
   ];
