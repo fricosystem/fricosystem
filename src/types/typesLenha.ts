@@ -28,4 +28,6 @@ export interface Fornecedor {
   valorUnitario: number;
   dataCadastro: Date;
   usuarioCadastro: string;
+  cnpj: string;
+  contato: string;
 }

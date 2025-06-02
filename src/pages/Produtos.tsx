@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchIcon, RefreshCw, ArrowUpDown } from "lucide-react";
+import { SearchIcon, RefreshCw, ArrowUpDown, Table, Grid } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import ProdutoCard from "@/components/ProdutoCard";
 import AddProdutoModal from "@/components/AddProdutoModal";
@@ -20,8 +20,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table as ShadcnTable,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ProductDetails from "@/components/ProductDetails";
+import { Badge } from "@/components/ui/badge";
 
-// Interface para o produto
 interface Produto {
   id: string;
   codigo: string;
@@ -41,6 +57,7 @@ interface Produto {
   fornecedor: string;
   fornecedor_nome: string;
   fornecedor_cnpj: string;
+  status?: "pendente" | "em_abastecimento" | "abastecido";
 }
 
 const Produtos = () => {
@@ -53,6 +70,9 @@ const Produtos = () => {
   const { toast } = useToast();
   const [produtosEmBaixoEstoque, setProdutosEmBaixoEstoque] = useState<Produto[]>([]);
   const [sortOption, setSortOption] = useState<string>("codigoEstoque-asc");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const fetchProdutos = async () => {
     setLoading(true);
@@ -87,7 +107,8 @@ const Produtos = () => {
             dataHora: data.data_criacao || new Date().toISOString(),
             fornecedor: data.fornecedor || "",
             fornecedor_nome: data.fornecedor_nome || "",
-            fornecedor_cnpj: data.fornecedor_cnpj || ""
+            fornecedor_cnpj: data.fornecedor_cnpj || "",
+            status: data.status || "pendente"
           };
         }) as Produto[];
         
@@ -131,6 +152,24 @@ const Produtos = () => {
       setProdutosEmBaixoEstoque([]);
     }
   }, [produtos]);
+
+  const getStatusBadge = (produto: Produto) => {
+    // Mostra o badge apenas para produtos com baixo estoque
+    if (produto.quantidadeAtual > produto.quantidadeMinima) {
+      return null;
+    }
+
+    switch(produto.status) {
+      case "pendente":
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">Pedido Pendente</Badge>;
+      case "em_abastecimento":
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">Comprado</Badge>;
+      case "abastecido":
+        return null;
+      default:
+        return null;
+    }
+  };
 
   const handleAdicionarAoCarrinho = (produto: Produto) => {
     const produtoCompleto = {
@@ -181,25 +220,21 @@ const Produtos = () => {
     const [field, order] = sortOption.split('-');
     
     return [...produtos].sort((a, b) => {
-      // Tratamento para campos que podem ser undefined
       const valueA = a[field as keyof Produto] || '';
       const valueB = b[field as keyof Produto] || '';
       
-      // Ordenação especial para datas
       if (field === 'dataVencimento') {
         const dateA = new Date(valueA as string).getTime();
         const dateB = new Date(valueB as string).getTime();
         return order === 'asc' ? dateA - dateB : dateB - dateA;
       }
       
-      // Ordenação numérica para valores
       if (field === 'valorUnitario') {
         return order === 'asc' 
           ? (valueA as number) - (valueB as number)
           : (valueB as number) - (valueA as number);
       }
       
-      // Ordenação padrão para strings
       if (typeof valueA === 'string' && typeof valueB === 'string') {
         return order === 'asc'
           ? valueA.localeCompare(valueB)
@@ -208,6 +243,51 @@ const Produtos = () => {
       
       return 0;
     });
+  };
+
+  const handleRowClick = (produto: Produto) => {
+    setSelectedProduto(produto);
+    setIsDetailsModalOpen(true);
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    });
+  };
+
+  const mapToProductDetails = (produto: Produto) => {
+    return {
+      atualizado_em: produto.dataHora,
+      codigo: produto.codigo,
+      codigo_estoque: produto.codigoEstoque,
+      codigo_material: produto.codigo,
+      data_criacao: produto.dataHora,
+      data_vencimento: produto.dataVencimento,
+      deposito: produto.deposito,
+      deposito_id: "",
+      descricao: produto.detalhes,
+      detalhes: produto.detalhes,
+      fornecedor_cnpj: produto.fornecedor_cnpj,
+      fornecedor_id: produto.fornecedor,
+      fornecedor_nome: produto.fornecedor_nome,
+      imagem: produto.imagem,
+      nome: produto.nome,
+      prateleira: produto.prateleira,
+      quantidade: produto.quantidadeAtual,
+      quantidade_minima: produto.quantidadeMinima,
+      status: produto.quantidadeAtual > 0 ? "disponivel" : "indisponivel",
+      unidade: produto.unidade,
+      unidade_de_medida: produto.unidade_de_medida || produto.unidade,
+      valor_unitario: produto.valorUnitario
+    };
   };
 
   const produtosFiltrados = produtos
@@ -261,16 +341,33 @@ const Produtos = () => {
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="icon"
-            className="ml-2"
             onClick={fetchProdutos}
             title="Atualizar dados"
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" title="Alternar visualização">
+                {viewMode === "cards" ? <Grid className="h-4 w-4" /> : <Table className="h-4 w-4" />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setViewMode("cards")}>
+                <Grid className="h-4 w-4 mr-2" />
+                Visualização em Cards
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode("table")}>
+                <Table className="h-4 w-4 mr-2" />
+                Visualização em Tabela
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
           Adicionar Produto
@@ -294,22 +391,30 @@ const Produtos = () => {
       )}
   
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {Array(8)
-            .fill(0)
-            .map((_, index) => (
-              <Card key={index} className="overflow-hidden">
-                <div className="h-56 bg-muted">
-                  <Skeleton className="h-full w-full" />
-                </div>
-                <div className="p-4 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              </Card>
+        viewMode === "cards" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array(8)
+              .fill(0)
+              .map((_, index) => (
+                <Card key={index} className="overflow-hidden">
+                  <div className="h-56 bg-muted">
+                    <Skeleton className="h-full w-full" />
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                </Card>
+              ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {Array(5).fill(0).map((_, index) => (
+              <Skeleton key={index} className="h-12 w-full" />
             ))}
-        </div>
+          </div>
+        )
       ) : produtosFiltrados.length === 0 ? (
         <EmptyState
           title="Nenhum produto encontrado"
@@ -321,7 +426,7 @@ const Produtos = () => {
               : "Adicione novos produtos para começar."
           }
         />
-      ) : (
+      ) : viewMode === "cards" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {produtosFiltrados.map((produto) => (
             <ProdutoCard
@@ -331,7 +436,74 @@ const Produtos = () => {
               onDelete={() => handleDelete(produto.id)}
               onAddToCart={() => handleAdicionarAoCarrinho(produto)}
             />
+
           ))}
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <ShadcnTable>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Código</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Fornecedor</TableHead>
+                <TableHead>Estoque</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Vencimento</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {produtosFiltrados.map((produto) => (
+                <TableRow 
+                  key={produto.id} 
+                  className="cursor-pointer hover:bg-gray-800"
+                  onClick={() => handleRowClick(produto)}
+                >
+                  <TableCell className="font-medium">{produto.codigoEstoque}</TableCell>
+                  <TableCell>{produto.nome}</TableCell>
+                  <TableCell>{produto.fornecedor_nome || "-"}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span>{produto.quantidadeAtual} {produto.unidade_de_medida || produto.unidade}</span>
+                      {produto.quantidadeAtual <= produto.quantidadeMinima && (
+                        <span className="text-xs text-red-500">Estoque baixo</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {formatCurrency(produto.valorUnitario)}
+                  </TableCell>
+                  <TableCell>{formatDate(produto.dataVencimento)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAdicionarAoCarrinho(produto);
+                        }}
+                      >
+                        Adicionar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(produto.id);
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </ShadcnTable>
         </div>
       )}
   
@@ -340,6 +512,19 @@ const Produtos = () => {
         onOpenChange={setIsAddModalOpen}
         onSuccess={fetchProdutos}
       />
+
+      {selectedProduto && (
+        <ProductDetails
+          product={mapToProductDetails(selectedProduto)}
+          isOpen={isDetailsModalOpen}
+          onClose={() => setIsDetailsModalOpen(false)}
+          onEdit={() => {
+            // Implemente a lógica de edição aqui
+            setIsDetailsModalOpen(false);
+            // Abrir modal de edição se necessário
+          }}
+        />
+      )}
     </AppLayout>
   );
 };

@@ -142,7 +142,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
       }
     }}>
       <DialogContent 
-        className="sm:max-w-md"
+        className="sm:max-w-2xl"
         onInteractOutside={(e) => {
           if (isSubmitting) {
             e.preventDefault();
@@ -153,23 +153,23 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
           <DialogTitle>Detalhes do Produto</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 my-2">
-          <div className="flex flex-col items-center mb-4">
+        <div className="space-y-6 my-4 px-4">
+          <div className="flex flex-col items-center mb-6">
             {product.imagem ? (
               <img 
                 src={product.imagem} 
                 alt={product.nome} 
-                className="w-32 h-32 object-contain rounded-md border" 
+                className="w-full max-h-80 object-contain rounded-md border" 
               />
             ) : (
-              <div className="w-32 h-32 bg-muted rounded-md flex items-center justify-center">
+              <div className="w-full max-h-80 bg-muted rounded-md flex items-center justify-center">
                 <span className="text-muted-foreground">Sem imagem</span>
               </div>
             )}
-            <h3 className="text-xl font-semibold mt-2">{product.nome}</h3>
+            <h3 className="text-2xl font-semibold mt-6">{product.nome}</h3>
           </div>
             
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
             <div className="space-y-1">
               <p className="font-medium">Código Material:</p>
               <p className="text-muted-foreground">{product.codigo_material}</p>
@@ -214,8 +214,8 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
             </div>
           )}
           
-          <div className="pt-4">
-            <label htmlFor="quantity" className="block text-sm font-medium mb-1">
+          <div className="pt-6">
+            <label htmlFor="quantity" className="block text-sm font-medium mb-2">
               Quantidade para adicionar:
             </label>
             <Input
@@ -224,13 +224,13 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
               min="1"
               max={product.quantidade}
               value={quantity}
-              onChange={e => setQuantity(Math.max(1, Math.min(product.quantidade, parseInt(e.target.value) || 0)))}
+              onChange={(e) => setQuantity(Math.max(1, Math.min(product.quantidade, parseInt(e.target.value) || 0)))}
               className="w-full"
             />
           </div>
         </div>
           
-        <DialogFooter className="flex justify-between w-full">
+        <DialogFooter className="flex justify-between w-full px-4 pb-4">
           <Button 
             variant="outline" 
             onClick={handleEditClick}

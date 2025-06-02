@@ -25,6 +25,7 @@ interface UserData {
   nome: string;
   email: string;
   cpf: string;
+  cnpj: string;
   cargo: string;
   tema: string;
   data_registro: Timestamp;
@@ -34,6 +35,7 @@ interface UserData {
   centro_de_custo: string;
   online: string; // Adicionado campo online
   unidade: string;
+  fornecedorCnpj: string;
 }
 
 // Defina a interface para o contexto

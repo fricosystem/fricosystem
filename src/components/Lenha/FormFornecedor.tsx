@@ -21,6 +21,26 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Função para formatar telefone
+const formatPhone = (value: string) => {
+  if (!value) return "";
+  
+  // Remove tudo que não é dígito
+  const cleaned = value.replace(/\D/g, '');
+  
+  // Aplica a formatação (00) 0 0000-0000
+  const match = cleaned.match(/^(\d{0,2})(\d{0,1})(\d{0,4})(\d{0,4})$/);
+  if (!match) return value;
+  
+  let formatted = "";
+  if (match[1]) formatted += `(${match[1]}`;
+  if (match[2]) formatted += `) ${match[2]}`;
+  if (match[3]) formatted += ` ${match[3]}`;
+  if (match[4]) formatted += `-${match[4]}`;
+  
+  return formatted;
+};
+
 interface FormFornecedorProps {
   onSaveSuccess: () => void;
   onCancel?: () => void;
@@ -29,12 +49,16 @@ interface FormFornecedorProps {
 const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
   const [nome, setNome] = useState("");
   const [valorUnitario, setValorUnitario] = useState<number>(0);
+  const [cnpj, setCnpj] = useState("");
+  const [contato, setContato] = useState("");
   const [loading, setLoading] = useState(false);
   
   // Estados para edição
   const [editId, setEditId] = useState<string | null>(null);
   const [editNome, setEditNome] = useState("");
   const [editValorUnitario, setEditValorUnitario] = useState<number>(0);
+  const [editCnpj, setEditCnpj] = useState("");
+  const [editContato, setEditContato] = useState("");
   
   // Estado para confirmação de exclusão
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -47,7 +71,6 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
   const { data: fornecedores = [], refetch } = useQuery({
     queryKey: ["fornecedoreslenha"],
     queryFn: async () => {
-      // Verificar se a coleção existe
       try {
         const querySnapshot = await getDocs(collection(db, "fornecedoreslenha"));
         return querySnapshot.docs.map(doc => ({
@@ -60,6 +83,16 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
       }
     }
   });
+  
+  // Manipulador de mudança para o campo de telefone
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
+    const formatted = formatPhone(e.target.value);
+    if (isEdit) {
+      setEditContato(formatted);
+    } else {
+      setContato(formatted);
+    }
+  };
   
   // Salva novo fornecedor no Firestore
   const handleSalvar = async (e: React.FormEvent) => {
@@ -91,11 +124,12 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
       const novoFornecedor = {
         nome,
         valorUnitario,
+        cnpj,
+        contato,
         dataCadastro: new Date(),
         usuarioCadastro: userData?.nome || "Usuário não identificado",
       };
       
-      // Salva no Firestore
       await addDoc(collection(db, "fornecedoreslenha"), novoFornecedor);
       
       toast({
@@ -106,11 +140,10 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
       // Limpa o formulário
       setNome("");
       setValorUnitario(0);
+      setCnpj("");
+      setContato("");
       
-      // Atualiza a lista
       refetch();
-      
-      // Notifica componente pai sobre sucesso
       onSaveSuccess();
     } catch (error) {
       console.error("Erro ao salvar fornecedor:", error);
@@ -129,6 +162,8 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
     setEditId(fornecedor.id);
     setEditNome(fornecedor.nome);
     setEditValorUnitario(fornecedor.valorUnitario);
+    setEditCnpj(fornecedor.cnpj || "");
+    setEditContato(fornecedor.contato || "");
   };
   
   // Cancelar edição
@@ -136,6 +171,8 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
     setEditId(null);
     setEditNome("");
     setEditValorUnitario(0);
+    setEditCnpj("");
+    setEditContato("");
   };
   
   // Salvar edição de fornecedor
@@ -149,7 +186,6 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
       return;
     }
     
-    // Verifica se o novo nome já existe (exceto o próprio fornecedor sendo editado)
     if (fornecedores.some(f => 
       f.nome.toLowerCase() === editNome.toLowerCase() && f.id !== fornecedorId
     )) {
@@ -167,7 +203,9 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
       const fornecedorRef = doc(db, "fornecedoreslenha", fornecedorId);
       await updateDoc(fornecedorRef, {
         nome: editNome,
-        valorUnitario: editValorUnitario
+        valorUnitario: editValorUnitario,
+        cnpj: editCnpj,
+        contato: editContato
       });
       
       toast({
@@ -231,163 +269,227 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
   
   return (
     <>
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-2xl font-bold">Novo Fornecedor</CardTitle>
-        </CardHeader>
-        
-        <CardContent className="pb-6">
-          <form onSubmit={handleSalvar} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="nome" className="text-base">Nome do Fornecedor*</Label>
-                  <Input 
-                    id="nome"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    placeholder="Nome do fornecedor"
-                    required
-                    className="h-12 text-base"
-                  />
+      <div className="w-full max-w-4xl mx-auto space-y-8">
+        {/* Card do formulário de cadastro */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl font-bold">Novo Fornecedor</CardTitle>
+          </CardHeader>
+          
+          <CardContent className="pb-6">
+            <form onSubmit={handleSalvar} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nome" className="text-base">Nome do Fornecedor*</Label>
+                    <Input 
+                      id="nome"
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      placeholder="Nome do fornecedor"
+                      required
+                      className="h-12 text-base"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="valorUnitario" className="text-base">Valor Unitário (R$/m³)*</Label>
+                    <Input 
+                      id="valorUnitario"
+                      type="number" 
+                      min="0.01"
+                      step="0.01"
+                      value={valorUnitario || ""}
+                      onChange={(e) => setValorUnitario(Number(e.target.value))}
+                      placeholder="0,00"
+                      required
+                      className="h-12 text-base"
+                    />
+                  </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="valorUnitario" className="text-base">Valor Unitário (R$/m³)*</Label>
-                  <Input 
-                    id="valorUnitario"
-                    type="number" 
-                    min="0.01"
-                    step="0.01"
-                    value={valorUnitario || ""}
-                    onChange={(e) => setValorUnitario(Number(e.target.value))}
-                    placeholder="0,00"
-                    required
-                    className="h-12 text-base"
-                  />
-                </div>
-                
-                <div className="pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    * Campos obrigatórios
-                  </p>
-                </div>
-              </div>
-              
-              <div className="space-y-6">
-                <div className="bg-muted p-6 rounded-lg h-full">
-                  <h3 className="font-medium text-lg mb-4">Fornecedores Cadastrados</h3>
-                  <div className="max-h-60 overflow-y-auto pr-2">
-                    {fornecedores.length > 0 ? (
-                      <ul className="space-y-3">
-                        {fornecedores.map((fornecedor) => (
-                          <li key={fornecedor.id} className="border-b pb-2 last:border-0">
-                            {editId === fornecedor.id ? (
-                              <div className="space-y-2 py-1">
-                                <Input 
-                                  value={editNome}
-                                  onChange={(e) => setEditNome(e.target.value)}
-                                  placeholder="Nome do fornecedor"
-                                  className="h-10 text-sm mb-2"
-                                />
-                                <div className="flex gap-2 items-center">
-                                  <Input 
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                    value={editValorUnitario || ""}
-                                    onChange={(e) => setEditValorUnitario(Number(e.target.value))}
-                                    placeholder="0,00"
-                                    className="h-10 text-sm"
-                                  />
-                                  <div className="flex gap-1">
-                                    <Button 
-                                      type="button" 
-                                      variant="outline" 
-                                      size="icon" 
-                                      onClick={() => handleEditSave(fornecedor.id || "")}
-                                      disabled={loading}
-                                      className="h-8 w-8"
-                                    >
-                                      <Save className="h-4 w-4" />
-                                    </Button>
-                                    <Button 
-                                      type="button" 
-                                      variant="outline" 
-                                      size="icon" 
-                                      onClick={handleEditCancel}
-                                      className="h-8 w-8"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex justify-between items-center">
-                                <span className="font-medium">{fornecedor.nome}</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm bg-primary/10 px-2 py-1 rounded">
-                                    R$ {(fornecedor.valorUnitario ?? 0).toFixed(2)}/m³
-                                  </span>
-                                  <div className="flex gap-1">
-                                    <Button 
-                                      type="button" 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      onClick={() => handleEditStart(fornecedor)}
-                                      className="h-8 w-8"
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <Button 
-                                      type="button" 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      onClick={() => handleConfirmDelete(fornecedor.id || "", fornecedor.nome)}
-                                      className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted-foreground py-4 text-center">
-                        Nenhum fornecedor cadastrado.
-                      </p>
-                    )}
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cnpj" className="text-base">CNPJ</Label>
+                    <Input 
+                      id="cnpj"
+                      value={cnpj}
+                      onChange={(e) => setCnpj(e.target.value)}
+                      placeholder="00.000.000/0000-00"
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="contato" className="text-base">Contato (Telefone)*</Label>
+                    <Input 
+                      id="contato"
+                      value={contato}
+                      onChange={(e) => handlePhoneChange(e)}
+                      placeholder="(00) 0 0000-0000"
+                      className="h-12 text-base"
+                      required
+                    />
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <CardFooter className="flex justify-end p-0 pt-6 gap-4">
-              {onCancel && (
+              
+              <div className="pt-2">
+                <p className="text-sm text-muted-foreground">
+                  * Campos obrigatórios
+                </p>
+              </div>
+              
+              <CardFooter className="flex justify-end p-0 pt-6 gap-4">
+                {onCancel && (
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={onCancel}
+                    className="h-12 px-6 text-base"
+                  >
+                    Cancelar
+                  </Button>
+                )}
                 <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={onCancel}
+                  type="submit" 
+                  disabled={loading}
                   className="h-12 px-6 text-base"
                 >
-                  Cancelar
+                  {loading ? "Salvando..." : "Cadastrar Fornecedor"}
                 </Button>
-              )}
-              <Button 
-                type="submit" 
-                disabled={loading}
-                className="h-12 px-6 text-base"
-              >
-                {loading ? "Salvando..." : "Cadastrar Fornecedor"}
-              </Button>
-            </CardFooter>
-          </form>
-        </CardContent>
-      </Card>
+              </CardFooter>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Card da lista de fornecedores - Layout ajustado conforme solicitado */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl font-bold">Fornecedores Cadastrados</CardTitle>
+          </CardHeader>
+          
+          <CardContent>
+            <div className="bg-muted p-6 rounded-lg">
+              <div className="max-h-96 overflow-y-auto scroll-smooth">
+                {fornecedores.length > 0 ? (
+                  <ul className="space-y-0">
+                    {fornecedores.map((fornecedor) => (
+                      <li key={fornecedor.id} className="border-b border-gray-300 py-4 last:border-b-0">
+                        {editId === fornecedor.id ? (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-sm">Nome</Label>
+                                <Input 
+                                  value={editNome}
+                                  onChange={(e) => setEditNome(e.target.value)}
+                                  className="h-10 text-sm"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-sm">Valor (R$/m³)</Label>
+                                <Input 
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={editValorUnitario || ""}
+                                  onChange={(e) => setEditValorUnitario(Number(e.target.value))}
+                                  className="h-10 text-sm"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-sm">CNPJ</Label>
+                                <Input 
+                                  value={editCnpj}
+                                  onChange={(e) => setEditCnpj(e.target.value)}
+                                  className="h-10 text-sm"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-sm">Telefone</Label>
+                                <Input 
+                                  value={editContato}
+                                  onChange={(e) => handlePhoneChange(e, true)}
+                                  className="h-10 text-sm"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-2 justify-end pt-2">
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleEditSave(fornecedor.id || "")}
+                                disabled={loading}
+                              >
+                                <Save className="h-3 w-3 mr-1" /> Salvar
+                              </Button>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm"
+                                onClick={handleEditCancel}
+                              >
+                                <X className="h-3 w-3 mr-1" /> Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-2">
+                                <div className="font-medium text-lg">{fornecedor.nome}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  CNPJ: {fornecedor.cnpj || "Não informado"}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Contato: {fornecedor.contato || "Não informado"}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Valor Unitário: R$ {(fornecedor.valorUnitario ?? 0).toFixed(2)}/m³
+                                </div>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button 
+                                  type="button" 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => handleEditStart(fornecedor)}
+                                  className="h-8 w-8 hover:bg-gray-200"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  type="button" 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => handleConfirmDelete(fornecedor.id || "", fornecedor.nome)}
+                                  className="h-8 w-8 text-red-500 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground py-4 text-center">
+                    Nenhum fornecedor cadastrado.
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
       {/* Dialog de confirmação de exclusão */}
       <AlertDialog open={!!deleteId} onOpenChange={() => !loading && handleCancelDelete()}>

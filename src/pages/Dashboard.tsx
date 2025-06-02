@@ -462,11 +462,6 @@ const Dashboard = () => {
               title="Total de Produtos"
               value={totalProdutos.toString()}
               icon={<Package className="h-5 w-5" />}
-              trend={{
-                value: porcentagemProdutosEsteMes,
-                positive: porcentagemProdutosEsteMes > 10,
-                label: `${produtosEsteMes} este mês`
-              }}
               description="Diversidade de itens"
               className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
             />
@@ -474,11 +469,6 @@ const Dashboard = () => {
               title="Valor em Estoque"
               value={formatCurrency(valorEstoque)}
               icon={<DollarSign className="h-5 w-5" />}
-              trend={{
-                value: valorEstoque > 100000 ? 100 : valorEstoque / 1000,
-                positive: true,
-                label: `Capital investido`
-              }}
               description="Valor total do inventário"
               className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
             />

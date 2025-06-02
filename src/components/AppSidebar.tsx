@@ -87,7 +87,7 @@ const AppSidebar = () => {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
-  const isAdmin = userData?.cargo === "ESTOQUISTA";
+  const isAdmin = userData?.cargo === "DESENVOLVEDOR";
   
   const getUserEmail = () => {
     if (!user) return null;
@@ -253,6 +253,7 @@ const AppSidebar = () => {
       icon: Layers,
       items: [
         { to: "/dashboard", icon: Home, label: "Visão Geral" },
+        { to: "/fornecedor-produtos", icon: ShoppingCart, label: "Ordens de Compra" },
       ],
     },
     {
@@ -284,7 +285,6 @@ const AppSidebar = () => {
       icon: ShoppingCart,
       items: [
         { to: "/compras", icon: ShoppingCart, label: "Compras" },
-        { to: "/pedidos", icon: ShoppingBag, label: "Pedidos" },
         { to: "/cotacoes-orcamentos", icon: FileText, label: "Cotações e Orçamentos" },
         { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
         { to: "/rastreamento-entregas", icon: Truck, label: "Rastreamento de Entregas" },

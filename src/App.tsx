@@ -22,6 +22,7 @@ import OrdensServico from "./pages/OrdensServico";
 import Fornecedores from "./pages/Fornecedores";
 import ImportarPlanilha from "./pages/ImportarPlanilha";
 import MedidaLenha from "./pages/MedidaLenha";
+import FornecedorProdutos from "./pages/Fornecedor/FornecedorProdutos";
 
 // Páginas de Transferência e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
@@ -29,7 +30,6 @@ import TransferenciasET from "./pages/TransferenciasET";
 
 // Páginas de Compras e Pedidos
 import Compras from "./pages/Compras";
-import Pedidos from "./pages/Pedidos";
 import GestaoProdutos from "./pages/GestaoProdutos";
 
 // Páginas de Produção
@@ -108,6 +108,7 @@ const AppContent = () => {
           <Route path="/importar-planilha" element={<AuthGuard><ImportarPlanilha /></AuthGuard>} />
           <Route path="/medida-de-lenha" element={<AuthGuard><MedidaLenha /></AuthGuard>} />
           <Route path="/gestao-produtos" element={<AuthGuard><GestaoProdutos /></AuthGuard>} />
+          <Route path="/fornecedor-produtos" element={<AuthGuard><FornecedorProdutos /></AuthGuard>} />
 
           {/* Rotas de Entrada Manual e Transferência */}
           <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />
@@ -115,7 +116,6 @@ const AppContent = () => {
 
           {/* Rotas de Compras e Pedidos */}
           <Route path="/compras" element={<AuthGuard><Compras /></AuthGuard>} />
-          <Route path="/pedidos" element={<AuthGuard><Pedidos /></AuthGuard>} />
 
           {/* Rotas de Produção */}
           <Route path="/producao" element={<AuthGuard><DashboardProducao /></AuthGuard>} />

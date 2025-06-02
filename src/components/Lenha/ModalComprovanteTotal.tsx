@@ -11,21 +11,14 @@ import {
 import { Printer, Download, Share2, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-interface Item {
-  quantidade: number;
-  diametro: number;
-  comprimento: number;
-  metrosCubicos: number;
-  valor: number;
-}
+import { MedidaLenha } from "@/types/typesLenha";
 
 interface ModalComprovanteTotalProps {
   isOpen: boolean;
   onClose: () => void;
   totalMetrosCubicos: number;
   totalValor: number;
-  itens?: Item[]; // Tornando opcional com ?
+  itens: MedidaLenha[];
 }
 
 const ModalComprovanteTotal = ({
@@ -33,7 +26,7 @@ const ModalComprovanteTotal = ({
   onClose,
   totalMetrosCubicos,
   totalValor,
-  itens = [] // Valor padrão para evitar undefined
+  itens = []
 }: ModalComprovanteTotalProps) => {
   const comprovanteRef = useRef<HTMLDivElement>(null);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -43,6 +36,10 @@ const ModalComprovanteTotal = ({
       style: 'currency',
       currency: 'BRL'
     });
+  };
+
+  const formatarData = (data: Date): string => {
+    return format(data, "dd/MM/yyyy", { locale: ptBR });
   };
 
   const dataFormatada = format(new Date(), "dd/MM/yyyy", { locale: ptBR });
@@ -70,128 +67,143 @@ const ModalComprovanteTotal = ({
           <head>
             <style>
               @page {
-                size: A5 landscape;
-                margin: 10mm;
-              }
-              @page :first {
-                margin-top: 20mm;
+                size: A4 portrait;
+                margin: 5mm;
               }
               body { 
                 font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
                 color: #000;
               }
-              .page {
-                page-break-after: always;
+              .container {
+                width: 100%;
+                max-width: 210mm;
+                margin: 0 auto;
                 padding: 10mm;
               }
-              .page:last-child {
-                page-break-after: auto;
-              }
               .header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 15px;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 15px;
+              }
+              .logo {
+                height: 60px;
+                margin-right: 20px;
+              }
+              .header-text {
+                flex: 1;
                 text-align: center;
-                margin-bottom: 15mm;
               }
               .title {
-                font-size: 20px;
+                font-size: 18px;
                 font-weight: bold;
-                margin-bottom: 5mm;
+                margin: 0;
               }
               .date {
-                margin-bottom: 10mm;
+                font-size: 14px;
+                margin: 5px 0 0 0;
               }
-              .detalhes {
-                margin: 10mm 0;
-              }
-              .linha {
+              .totals {
+                margin: 20px 0;
+                padding: 15px;
+                background-color: #f5f5f5;
+                border-radius: 5px;
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 8mm;
-                font-size: 16px;
               }
-              .valor-destaque {
-                font-weight: bold;
-                font-size: 18px;
-              }
-              .assinatura {
-                margin-top: 20mm;
+              .total-item {
                 text-align: center;
               }
-              .linha-assinatura {
-                width: 80mm;
-                margin: 0 auto;
-                border-top: 1px solid #000;
-                padding-top: 5mm;
+              .total-label {
+                font-size: 14px;
+                margin-bottom: 5px;
+              }
+              .total-value {
+                font-weight: bold;
+                font-size: 16px;
               }
               table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 10mm;
-              }
-              th, td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
+                margin-top: 20px;
+                font-size: 12px;
+                page-break-inside: avoid;
               }
               th {
                 background-color: #f2f2f2;
+                font-weight: bold;
+                text-align: left;
+                padding: 8px;
+                border: 1px solid #ddd;
               }
-              .footer {
+              td {
+                padding: 8px;
+                border: 1px solid #ddd;
+              }
+              .no-items {
                 text-align: center;
-                margin-top: 10mm;
-                font-size: 12px;
+                padding: 20px;
+                font-style: italic;
+                color: #666;
               }
             </style>
           </head>
           <body>
-            <div class="page">
+            <div class="container">
               <div class="header">
-                <h1 class="title">Relatório dos totais</h1>
-                <div class="date">${dataFormatada}</div>
-              </div>
-              
-              <div class="detalhes">
-                <div class="linha">
-                  <span>Total em metros cúbicos:</span>
-                  <span class="valor-destaque">${totalMetrosCubicos.toFixed(2)} m³</span>
-                </div>
-                <div class="linha">
-                  <span>Valor total:</span>
-                  <span class="valor-destaque">${formatarValor(totalValor)}</span>
+                <img src="/Uploads/IconeFrico3D.png" alt="Fricó Alimentos Logo" class="logo" onerror="this.style.display='none'" />
+                <div class="header-text">
+                  <h1 class="title">RELATÓRIO GERAL DE MEDIÇÃO DE LENHA</h1>
+                  <div class="date">Data do relatório: ${dataFormatada}</div>
                 </div>
               </div>
               
-              <div class="assinatura">
-                <div class="linha-assinatura"></div>
-                <div>Assinatura</div>
+              <div class="totals">
+                <div class="total-item">
+                  <div class="total-label">Total em metros cúbicos</div>
+                  <div class="total-value">${totalMetrosCubicos.toFixed(2)} m³</div>
+                </div>
+                <div class="total-item">
+                  <div class="total-label">Valor total</div>
+                  <div class="total-value">${formatarValor(totalValor)}</div>
+                </div>
               </div>
-            </div>
-            
-            ${itens.length > 0 ? `
-            <div class="page">
+
               <table>
                 <thead>
                   <tr>
-                    <th>Quantidade</th>
-                    <th>Diâmetro (cm)</th>
-                    <th>Comprimento (m)</th>
-                    <th>m³</th>
-                    <th>Valor</th>
+                    <th>Data</th>
+                    <th>NFe</th>
+                    <th>Metros³</th>
+                    <th>Fornecedor</th>
+                    <th>Responsável</th>
+                    <th>Valor Total</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${itens.map(item => `
+                  ${itens && itens.length > 0 ? 
+                    itens.map(item => `
+                      <tr>
+                        <td>${item.data ? formatarData(new Date(item.data)) : '-'}</td>
+                        <td>${item.nfe || '-'}</td>
+                        <td>${item.metrosCubicos?.toFixed(2) || '0.00'}</td>
+                        <td>${item.fornecedor || '-'}</td>
+                        <td>${item.responsavel || '-'}</td>
+                        <td>${item.valorTotal ? formatarValor(item.valorTotal) : 'R$ 0,00'}</td>
+                        <td>${item.status_envio || 'Emissão para o fornecedor'}</td>
+                      </tr>
+                    `).join('') : `
                     <tr>
-                      <td>${item.quantidade}</td>
-                      <td>${item.diametro}</td>
-                      <td>${item.comprimento}</td>
-                      <td>${item.metrosCubicos.toFixed(2)}</td>
-                      <td>${formatarValor(item.valor)}</td>
+                      <td colspan="7" class="no-items">Nenhum item cadastrado</td>
                     </tr>
-                  `).join('')}
+                  `}
                 </tbody>
               </table>
             </div>
-            ` : ''}
           </body>
           </html>
         `);
@@ -219,35 +231,67 @@ const ModalComprovanteTotal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={isPrinting ? undefined : onClose}>
-      <DialogContent className="sm:max-w-md print:hidden bg-gray-900 text-gray-100 border-gray-700">
+      <DialogContent className="sm:max-w-4xl print:hidden bg-gray-900 text-gray-100 border-gray-700">
         <DialogHeader>
-          <DialogTitle className="text-center text-xl text-white">Relatório dos Totais</DialogTitle>
+          <DialogTitle className="text-center text-xl text-white">Modelo de impressão</DialogTitle>
         </DialogHeader>
 
-        <div className="flex justify-between">
-                <span className="text-gray-300">Modelo de impressão:</span>
-        </div>
-        
         <div ref={comprovanteRef} className="p-6 bg-gray-800 rounded-lg border border-gray-700">
-          <div className="text-center border-b border-gray-700 pb-4 mb-6">
-            <h2 className="text-xl font-bold text-white">Relatório dos Totais</h2>
-            <p className="text-gray-400">{dataFormatada}</p>
+          <div className="flex items-center mb-6 pb-4 border-b border-gray-700">
+            <div className="mr-4">
+              <img src="/Uploads/IconeFrico3D.png" 
+              alt="Fricó Alimentos Logo" className="h-12" onError={(e) => (e.currentTarget.style.display = 'none')} />
+            </div>
+            <div className="flex-1 text-center">
+              <h2 className="text-lg font-bold text-white">RELATÓRIO GERAL DE MEDIÇÃO DE LENHA</h2>
+              <p className="text-gray-400 text-sm">Data do relatório: {dataFormatada}</p>
+            </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between">
-                <span className="text-gray-300">Total em metros cúbicos:</span>
-                <span className="font-bold text-white">{totalMetrosCubicos.toFixed(2)} m³</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-300">Valor total:</span>
-                <span className="font-bold text-green-400">
-                  {formatarValor(totalValor)}
-                </span>
-              </div>
+          <div className="bg-gray-700 p-4 rounded-lg mb-6 flex justify-between">
+            <div className="text-center">
+              <div className="text-gray-300 text-sm">Total em metros cúbicos</div>
+              <div className="font-bold text-white text-lg">{totalMetrosCubicos.toFixed(2)} m³</div>
             </div>
+            <div className="text-center">
+              <div className="text-gray-300 text-sm">Valor total</div>
+              <div className="font-bold text-green-400 text-lg">{formatarValor(totalValor)}</div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-700 text-gray-300">
+                  <th className="p-2 border border-gray-600">Data</th>
+                  <th className="p-2 border border-gray-600">NFe</th>
+                  <th className="p-2 border border-gray-600">Metros³</th>
+                  <th className="p-2 border border-gray-600">Fornecedor</th>
+                  <th className="p-2 border border-gray-600">Responsável</th>
+                  <th className="p-2 border border-gray-600">Valor Total</th>
+                  <th className="p-2 border border-gray-600">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {itens && itens.length > 0 ? (
+                  itens.map((item, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-gray-900' : 'bg-gray-800'}>
+                      <td className="p-2 border border-gray-700">{item.data ? formatarData(new Date(item.data)) : '-'}</td>
+                      <td className="p-2 border border-gray-700">{item.nfe || '-'}</td>
+                      <td className="p-2 border border-gray-700">{item.metrosCubicos?.toFixed(2) || '0.00'}</td>
+                      <td className="p-2 border border-gray-700">{item.fornecedor || '-'}</td>
+                      <td className="p-2 border border-gray-700">{item.responsavel || '-'}</td>
+                      <td className="p-2 border border-gray-700">{item.valorTotal ? formatarValor(item.valorTotal) : 'R$ 0,00'}</td>
+                      <td className="p-2 border border-gray-700">{item.status_envio || 'Emissão para o fornecedor'}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="p-4 text-center text-gray-500 italic">Nenhum item cadastrado</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 

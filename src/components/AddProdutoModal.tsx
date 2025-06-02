@@ -17,9 +17,9 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
+  CommandInput,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -53,6 +53,8 @@ interface Fornecedor {
   id: string;
   razaoSocial: string;
   cnpj: string;
+  email: string;
+  telefone: string;
 }
 
 interface AddProdutoModalProps {
@@ -79,6 +81,8 @@ interface FormData {
   fornecedorAtual: string;
   fornecedorNome: string;
   fornecedorCNPJ: string;
+  fornecedorEmail: string;
+  fornecedorTelefone: string;
   prateleira: string;
 }
 
@@ -113,6 +117,8 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       fornecedorAtual: "",
       fornecedorNome: "",
       fornecedorCNPJ: "",
+      fornecedorEmail: "",
+      fornecedorTelefone: "",
       prateleira: "",
     },
   });
@@ -132,6 +138,8 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
             id: doc.id,
             razaoSocial: data.razaoSocial || "",
             cnpj: data.cnpj || "",
+            email: data.email || "",
+            telefone: data.telefone || "",
           });
         });
         
@@ -277,12 +285,16 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       // Get fornecedor details if ID is provided
       let fornecedorNome = formData.fornecedorNome;
       let fornecedorCNPJ = formData.fornecedorCNPJ;
+      let fornecedorEmail = formData.fornecedorEmail;
+      let fornecedorTelefone = formData.fornecedorTelefone;
 
       if (formData.fornecedorAtual) {
         const selectedFornecedor = fornecedores.find(f => f.id === formData.fornecedorAtual);
         if (selectedFornecedor) {
           fornecedorNome = selectedFornecedor.razaoSocial;
           fornecedorCNPJ = selectedFornecedor.cnpj;
+          fornecedorEmail = selectedFornecedor.email;
+          fornecedorTelefone = selectedFornecedor.telefone;
         }
       }
 
@@ -306,6 +318,8 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         fornecedor_id: formData.fornecedorAtual || null,
         fornecedor_nome: fornecedorNome || null,
         fornecedor_cnpj: fornecedorCNPJ || null,
+        fornecedor_email: fornecedorEmail || null,
+        fornecedor_telefone: fornecedorTelefone || null,
         prateleira: formData.prateleira || "Não endereçado",
         unidade_de_medida: formData.unidadeMedida,
       };
@@ -550,9 +564,11 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                                   value={`${fornecedor.razaoSocial} ${fornecedor.cnpj}`}
                                   onSelect={() => {
                                     form.setValue("fornecedorAtual", fornecedor.id);
-                                    // Salvar também o nome e CNPJ do fornecedor
+                                    // Salvar também os dados do fornecedor
                                     form.setValue("fornecedorNome", fornecedor.razaoSocial);
                                     form.setValue("fornecedorCNPJ", fornecedor.cnpj);
+                                    form.setValue("fornecedorEmail", fornecedor.email);
+                                    form.setValue("fornecedorTelefone", fornecedor.telefone);
                                     setFornecedorPopoverOpen(false);
                                   }}
                                 >
