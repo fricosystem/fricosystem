@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/firebase/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, getDoc, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
   const [fornecedor, setFornecedor] = useState("");
   const [nfe, setNfe] = useState("");
   const [valorUnitario, setValorUnitario] = useState<number>(0);
+  const [chavePixFornecedor, setChavePixFornecedor] = useState(""); // Novo estado para armazenar a chave Pix
   
   // Valores calculados
   const [alturaMedia, setAlturaMedia] = useState<number>(0);
@@ -68,9 +69,29 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
   };
   
   // Handler para quando o fornecedor é selecionado
-  const handleFornecedorChange = (novoFornecedor: string, novoValorUnitario: number) => {
+  const handleFornecedorChange = async (novoFornecedor: string, novoValorUnitario: number) => {
     setFornecedor(novoFornecedor);
     setValorUnitario(novoValorUnitario);
+    
+    // Busca a chave Pix do fornecedor no Firestore
+    if (novoFornecedor) {
+      try {
+        const fornecedorRef = doc(db, "fornecedoreslenha", novoFornecedor);
+        const fornecedorDoc = await getDoc(fornecedorRef);
+        
+        if (fornecedorDoc.exists()) {
+          const fornecedorData = fornecedorDoc.data();
+          setChavePixFornecedor(fornecedorData.chavePix || "");
+        } else {
+          setChavePixFornecedor("");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar chave Pix do fornecedor:", error);
+        setChavePixFornecedor("");
+      }
+    } else {
+      setChavePixFornecedor("");
+    }
   };
   
   // Salva no Firestore
@@ -112,7 +133,6 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
     try {
       const novaMedida: Omit<MedidaLenha, "id"> = {
         data: new Date(),
-        // Simply convert numbers to strings to match the expected string[] type
         medidas: medidas.map(m => m.toString()),
         comprimento,
         largura,
@@ -123,6 +143,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
         valorUnitario,
         valorTotal,
         usuario: userData?.nome || "Usuário não identificado",
+        chavePixFornecedor, // Adiciona a chave Pix ao objeto que será salvo
       };
       
       // Salva no Firestore
@@ -140,6 +161,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       setFornecedor("");
       setNfe("");
       setValorUnitario(0);
+      setChavePixFornecedor(""); // Limpa a chave Pix também
       
       // Notifica componente pai sobre sucesso
       onSaveSuccess();

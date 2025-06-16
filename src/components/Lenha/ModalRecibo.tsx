@@ -122,6 +122,11 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
             font-size: 12px;
             margin-top: 5px;
           }
+          .recibo-chave-pix {
+            margin-top: 10px;
+            font-size: 12px;
+            text-align: center;
+          }
           .logo-container {
             text-align: center;
             margin-bottom: 10px;
@@ -146,7 +151,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
               padding: 5px 0;
               font-size: 12px;
               margin: 10px 0;
-}
+            }
           }
         </style>
       </head>
@@ -193,6 +198,9 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
             <div class="recibo-assinatura">
               <div class="recibo-assinatura-line"></div>
               <div class="recibo-assinatura-text">Assinatura do Funcionário</div>
+              ${medida.chavePixFornecedor ? `
+                <div class="recibo-chave-pix">Chave Pix para pagamento: ${medida.chavePixFornecedor}</div>
+              ` : ''}
             </div>
           </div>
           
@@ -347,6 +355,9 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
               <div className="mt-12 pt-2 text-center">
                 <div className="mx-auto w-3/4 border-t border-dashed border-gray-600 pt-2">
                   <div className="text-sm text-gray-500">Assinatura</div>
+                  {medida.chavePixFornecedor && (
+                    <div className="text-xs text-gray-500 mt-2">Chave Pix para pagamento: {medida.chavePixFornecedor}</div>
+                  )}
                 </div>
               </div>
             </div>

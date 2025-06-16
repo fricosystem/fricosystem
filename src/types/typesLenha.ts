@@ -20,6 +20,7 @@ export interface MedidaLenha {
   valorTotal: number;
   usuario: string;
   status_envio?: string; // Add this line
+  chavePixFornecedor: string;
 }
 
 export interface Fornecedor {
@@ -30,4 +31,5 @@ export interface Fornecedor {
   usuarioCadastro: string;
   cnpj: string;
   contato: string;
+  chavePix: string;
 }

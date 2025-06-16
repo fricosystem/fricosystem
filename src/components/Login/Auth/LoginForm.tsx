@@ -1,63 +1,43 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/firebase/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/firebase/firebase";
 
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const { user, isActive } = await signIn(email, password);
       
-      // Update último_login in Firestore
-      const userDoc = doc(db, "usuarios", user.uid);
-      const userSnapshot = await getDoc(userDoc);
-      
-      if (userSnapshot.exists()) {
-        const userData = userSnapshot.data();
-        
-        if (userData.ativo !== "sim") {
-          await auth.signOut();
-          toast({
-            title: "Conta desativada",
-            description: "Sua conta está desativada. Entre em contato com o administrador.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-        
-        await updateDoc(userDoc, {
-          ultimo_login: serverTimestamp()
-        });
-        
+      if (!isActive) {
+        setTimeout(() => navigate('/bem-vindo'), 0);
         toast({
-          title: "Login realizado com sucesso",
-          description: `Bem-vindo de volta, ${userData.nome}!`,
-        });
-        
-        onSuccess();
-      } else {
-        toast({
-          title: "Usuário não encontrado",
-          description: "Não foi possível encontrar seu cadastro no sistema.",
+          title: "Conta desativada",
+          description: "Você será redirecionado para a tela de boas-vindas.",
           variant: "destructive",
         });
-        await auth.signOut();
+        return;
       }
+      
+      toast({
+        title: "Login realizado com sucesso",
+        description: `Bem-vindo de volta!`,
+      });
+      
+      navigate('/dashboard');
+      onSuccess();
     } catch (error: any) {
       console.error(error);
       let errorMessage = "Ocorreu um erro ao fazer login. Tente novamente.";

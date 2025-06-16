@@ -1,4 +1,3 @@
-// AuthContext.tsx
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { 
   getAuth, 
@@ -19,7 +18,6 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 
-// Defina o tipo para os dados do usuário
 interface UserData {
   id: string;
   nome: string;
@@ -33,17 +31,16 @@ interface UserData {
   imagem_perfil: string;
   ativo: string;
   centro_de_custo: string;
-  online: string; // Adicionado campo online
+  online: string;
   unidade: string;
   fornecedorCnpj: string;
 }
 
-// Defina a interface para o contexto
 interface AuthContextType {
   user: User | null;
   userData: UserData | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<User>;
+  signIn: (email: string, password: string) => Promise<{user: User, isActive: boolean}>;
   signUp: (email: string, password: string, displayName: string, cpf: string, cargo: string, imagemPerfil?: string, centroDeCusto?: string) => Promise<User>;
   logout: () => Promise<void>;
 }
@@ -73,7 +70,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const auth = getAuth();
   const db = getFirestore();
 
-  // Função para atualizar o status online
   const updateOnlineStatus = async (status: string) => {
     if (user) {
       try {
@@ -94,10 +90,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        // Adiciona event listener para detectar fechamento do navegador
         window.addEventListener('beforeunload', handleBeforeUnload);
         
-        // Buscar dados adicionais do usuário no Firestore
         try {
           const userDocRef = doc(db, "usuarios", currentUser.uid);
           const userDoc = await getDoc(userDocRef);
@@ -106,17 +100,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
             const userData = userDoc.data() as UserData;
             setUserData(userData);
             
-            // Atualiza para online ao fazer login
-            await updateDoc(userDocRef, {
-              online: 'online',
-              ultimo_login: serverTimestamp()
-            });
+            if (userData.ativo === "sim") {
+              await updateDoc(userDocRef, {
+                online: 'online',
+                ultimo_login: serverTimestamp()
+              });
+            }
           }
         } catch (error) {
           console.error("Erro ao buscar dados do usuário:", error);
         }
       } else {
-        // Remove event listener se não houver usuário logado
         window.removeEventListener('beforeunload', handleBeforeUnload);
         setUserData(null);
       }
@@ -129,7 +123,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       unsubscribe();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [auth, db, user]);
+  }, [auth, db]);
 
   async function signUp(email: string, password: string, displayName: string, cpf: string, cargo: string, imagemPerfil: string = "", centroDeCusto: string = ""): Promise<User> {
     try {
@@ -152,7 +146,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         imagem_perfil: imagemPerfil,
         ativo: "sim",
         centro_de_custo: centroDeCusto,
-        online: "online" // Define como online ao criar conta
+        online: "online"
       });
       
       return userCredential.user;
@@ -161,17 +155,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  async function signIn(email: string, password: string): Promise<User> {
+  async function signIn(email: string, password: string): Promise<{user: User, isActive: boolean}> {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
       
-      const userDocRef = doc(db, "usuarios", userCredential.user.uid);
-      await updateDoc(userDocRef, {
-        ultimo_login: serverTimestamp(),
-        online: 'online' // Atualiza para online ao fazer login
-      });
+      const userDocRef = doc(db, "usuarios", user.uid);
+      const userDoc = await getDoc(userDocRef);
       
-      return userCredential.user;
+      if (!userDoc.exists()) {
+        throw new Error("User data not found");
+      }
+      
+      const userData = userDoc.data() as UserData;
+      const isActive = userData.ativo === "sim";
+      
+      if (isActive) {
+        await updateDoc(userDocRef, {
+          ultimo_login: serverTimestamp(),
+          online: 'online'
+        });
+      }
+      
+      return { user, isActive };
     } catch (error) {
       throw error;
     }
@@ -180,7 +186,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   async function logout(): Promise<void> {
     try {
       if (user) {
-        await updateOnlineStatus('offline'); // Atualiza para offline antes de fazer logout
+        await updateOnlineStatus('offline');
       }
       await signOut(auth);
     } catch (error) {

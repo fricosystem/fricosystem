@@ -51,6 +51,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
   const [valorUnitario, setValorUnitario] = useState<number>(0);
   const [cnpj, setCnpj] = useState("");
   const [contato, setContato] = useState("");
+  const [chavePix, setChavePix] = useState("");
   const [loading, setLoading] = useState(false);
   
   // Estados para edição
@@ -59,6 +60,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
   const [editValorUnitario, setEditValorUnitario] = useState<number>(0);
   const [editCnpj, setEditCnpj] = useState("");
   const [editContato, setEditContato] = useState("");
+  const [editChavePix, setEditChavePix] = useState("");
   
   // Estado para confirmação de exclusão
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -126,6 +128,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
         valorUnitario,
         cnpj,
         contato,
+        chavePix,
         dataCadastro: new Date(),
         usuarioCadastro: userData?.nome || "Usuário não identificado",
       };
@@ -142,6 +145,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
       setValorUnitario(0);
       setCnpj("");
       setContato("");
+      setChavePix("");
       
       refetch();
       onSaveSuccess();
@@ -164,6 +168,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
     setEditValorUnitario(fornecedor.valorUnitario);
     setEditCnpj(fornecedor.cnpj || "");
     setEditContato(fornecedor.contato || "");
+    setEditChavePix(fornecedor.chavePix || "");
   };
   
   // Cancelar edição
@@ -173,6 +178,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
     setEditValorUnitario(0);
     setEditCnpj("");
     setEditContato("");
+    setEditChavePix("");
   };
   
   // Salvar edição de fornecedor
@@ -205,7 +211,8 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
         nome: editNome,
         valorUnitario: editValorUnitario,
         cnpj: editCnpj,
-        contato: editContato
+        contato: editContato,
+        chavePix: editChavePix
       });
       
       toast({
@@ -333,6 +340,20 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
                   </div>
                 </div>
               </div>
+
+              {/* Nova linha para a Chave Pix */}
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="chavePix" className="text-base">Chave Pix para Pagamento</Label>
+                  <Input 
+                    id="chavePix"
+                    value={chavePix}
+                    onChange={(e) => setChavePix(e.target.value)}
+                    placeholder="Chave Pix (CPF/CNPJ, telefone, e-mail ou chave aleatória)"
+                    className="h-12 text-base"
+                  />
+                </div>
+              </div>
               
               <div className="pt-2">
                 <p className="text-sm text-muted-foreground">
@@ -418,6 +439,18 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
                                 />
                               </div>
                             </div>
+
+                            <div className="grid grid-cols-1 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-sm">Chave Pix</Label>
+                                <Input 
+                                  value={editChavePix}
+                                  onChange={(e) => setEditChavePix(e.target.value)}
+                                  className="h-10 text-sm"
+                                  placeholder="Chave Pix para pagamento"
+                                />
+                              </div>
+                            </div>
                             
                             <div className="flex gap-2 justify-end pt-2">
                               <Button 
@@ -452,6 +485,9 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
                                 </div>
                                 <div className="text-sm text-muted-foreground">
                                   Valor Unitário: R$ {(fornecedor.valorUnitario ?? 0).toFixed(2)}/m³
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Chave Pix: {fornecedor.chavePix || "Não informada"}
                                 </div>
                               </div>
                               <div className="flex gap-1">

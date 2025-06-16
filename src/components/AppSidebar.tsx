@@ -277,7 +277,7 @@ const AppSidebar = () => {
         { to: "/requisicoes", icon: ClipboardList, label: "Requisições", badgeCount: pendingRequestsCount },
         { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
         { to: "/ordensServico", icon: Wrench, label: "Ordens de Serviço" },
-        { to: "/devolucoes", icon: AlertTriangle, label: "Devoluções" },
+        { to: "/devolucao", icon: AlertTriangle, label: "Devoluções" },
       ],
     },
     {

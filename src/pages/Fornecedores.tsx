@@ -12,9 +12,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Check, Eye } from "lucide-react";
+import { Check, Eye, Search } from "lucide-react";
 import { User } from "firebase/auth";
 import ModalFornecedor from "@/components/modalFornecedores";
+
+declare global {
+  interface Window {
+    handleCNPJResponse: (data: any) => void;
+  }
+}
 
 interface Supplier {
   razaoSocial: string;
@@ -33,6 +39,27 @@ interface Supplier {
   pessoaContato: string;
   condicoesPagamento: string;
   prazoEntrega: string;
+}
+
+interface CNPJResponse {
+  nome: string;
+  cnpj: string;
+  email: string;
+  telefone: string;
+  atividade_principal: Array<{
+    text: string;
+  }>;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  municipio: string;
+  uf: string;
+  cep: string;
+  qsa: Array<{
+    nome: string;
+  }>;
+  error?: string;
 }
 
 const validateCNPJ = (cnpj: string) => {
@@ -102,11 +129,19 @@ const formatPhone = (value: string) => {
     .substring(0, 15);
 };
 
+const formatCEP = (value: string) => {
+  return value
+    .replace(/\D/g, '')
+    .replace(/^(\d{5})(\d)/, '$1-$2')
+    .substring(0, 9);
+};
+
 const SupplierPage = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingCNPJ, setIsFetchingCNPJ] = useState(false);
   const [success, setSuccess] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
@@ -130,7 +165,80 @@ const SupplierPage = () => {
     condicoesPagamento: "",
     prazoEntrega: ""
   });
-  
+
+  const fetchCNPJData = (cnpj: string) => {
+    const cnpjNumeros = cnpj.replace(/[^\d]/g, '');
+    console.log('CNPJ enviado para API:', cnpjNumeros);
+    
+    if (cnpjNumeros.length !== 14) {
+      console.log('CNPJ não tem 14 dígitos:', cnpjNumeros.length);
+      toast.warning("CNPJ deve conter 14 dígitos");
+      return;
+    }
+
+    setIsFetchingCNPJ(true);
+
+    const script = document.createElement('script');
+    script.src = `https://receitaws.com.br/v1/cnpj/${cnpjNumeros}?callback=handleCNPJResponse`;
+    
+    window.handleCNPJResponse = (data: CNPJResponse) => {
+      document.body.removeChild(script);
+      delete window.handleCNPJResponse;
+      
+      console.log('Dados retornados:', data);
+      
+      if (data.error) {
+        toast.error(data.error);
+        setIsFetchingCNPJ(false);
+        return;
+      }
+      
+      if (data.nome) {
+        setFormData(prev => ({
+          ...prev,
+          razaoSocial: data.nome,
+          cnpj: formatCNPJ(data.cnpj),
+          endereco: {
+            rua: data.logradouro || "",
+            numero: data.numero || "",
+            complemento: data.complemento || "",
+            bairro: data.bairro || "",
+            cidade: data.municipio || "",
+            estado: data.uf || "",
+            cep: formatCEP(data.cep || "")
+          },
+          telefone: formatPhone(data.telefone || ""),
+          email: data.email || "",
+          pessoaContato: data.qsa?.[0]?.nome || ""
+        }));
+        
+        toast.success("Dados do CNPJ preenchidos automaticamente");
+      } else {
+        toast.warning("CNPJ válido, mas não encontrado na base de dados");
+      }
+      setIsFetchingCNPJ(false);
+    };
+
+    script.onerror = () => {
+      document.body.removeChild(script);
+      if (window.handleCNPJResponse) {
+        delete window.handleCNPJResponse;
+      }
+      toast.error("Erro ao buscar CNPJ. Tente novamente mais tarde.");
+      setIsFetchingCNPJ(false);
+    };
+
+    document.body.appendChild(script);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (window.handleCNPJResponse) {
+        delete window.handleCNPJResponse;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -179,14 +287,28 @@ const SupplierPage = () => {
         }
       });
     } else if (name === "cnpj") {
+      const formattedValue = formatCNPJ(value);
       setFormData({
         ...formData,
-        [name]: formatCNPJ(value)
+        [name]: formattedValue
       });
+
+      const cnpjNumeros = formattedValue.replace(/[^\d]/g, '');
+      if (cnpjNumeros.length === 14) {
+        fetchCNPJData(cnpjNumeros);
+      }
     } else if (name === "telefone") {
       setFormData({
         ...formData,
         [name]: formatPhone(value)
+      });
+    } else if (name === "endereco.cep") {
+      setFormData({
+        ...formData,
+        endereco: {
+          ...formData.endereco,
+          cep: formatCEP(value)
+        }
       });
     } else {
       setFormData({
@@ -245,7 +367,7 @@ const SupplierPage = () => {
       
       setSuccess(true);
       toast.success("Fornecedor cadastrado com sucesso");
-      fetchSuppliers(); // Atualiza a lista após o cadastro
+      fetchSuppliers();
       
       setTimeout(() => {
         setFormData({
@@ -309,11 +431,10 @@ const SupplierPage = () => {
   return (
     <AppLayout title="Gerenciamento de Fornecedores">
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Formulário de Cadastro (30% da largura) - agora à esquerda */}
         <div className="w-full lg:w-4/12">
           <Card className="shadow-md">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xl text-blue-700">Cadastro de Fornecedor</CardTitle>
+              <CardTitle className="text-xl text-white">Cadastro de Fornecedor</CardTitle>
               <CardDescription>Preencha os dados do fornecedor</CardDescription>
             </CardHeader>
             
@@ -345,15 +466,39 @@ const SupplierPage = () => {
                     
                     <div className="space-y-2">
                       <Label htmlFor="cnpj" className="text-xs">CNPJ</Label>
-                      <Input
-                        id="cnpj"
-                        name="cnpj"
-                        value={formData.cnpj}
-                        onChange={handleChange}
-                        placeholder="00.000.000/0000-00"
-                        maxLength={18}
-                        className="text-sm"
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="cnpj"
+                          name="cnpj"
+                          value={formData.cnpj}
+                          onChange={handleChange}
+                          placeholder="00.000.000/0000-00"
+                          maxLength={18}
+                          className="text-sm flex-1"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            const cnpjNumeros = formData.cnpj.replace(/[^\d]/g, '');
+                            if (cnpjNumeros.length === 14) {
+                              fetchCNPJData(cnpjNumeros);
+                            } else {
+                              toast.warning("Digite um CNPJ completo (14 dígitos)");
+                            }
+                          }}
+                          disabled={isFetchingCNPJ}
+                        >
+                          {isFetchingCNPJ ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                          ) : (
+                            <Search className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Digite o CNPJ completo para buscar os dados automaticamente
+                      </p>
                     </div>
                     
                     <h3 className="text-sm font-medium text-gray-700 pt-1">Endereço</h3>
@@ -571,7 +716,7 @@ const SupplierPage = () => {
                     </Button>
                     <Button 
                       type="submit" 
-                      disabled={isLoading} 
+                      disabled={isLoading || isFetchingCNPJ} 
                       className="bg-blue-700 hover:bg-blue-800 text-xs h-8"
                     >
                       {isLoading ? "Cadastrando..." : "Cadastrar"}
@@ -583,11 +728,10 @@ const SupplierPage = () => {
           </Card>
         </div>
         
-        {/* Listagem de Fornecedores (70% da largura) - agora à direita */}
         <div className="w-full lg:w-8/12">
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-xl text-blue-700">Lista de Fornecedores</CardTitle>
+              <CardTitle className="text-xl text-white">Lista de Fornecedores</CardTitle>
               <CardDescription>Fornecedores cadastrados no sistema</CardDescription>
             </CardHeader>
             <CardContent>
@@ -643,7 +787,6 @@ const SupplierPage = () => {
         </div>
       </div>
 
-      {/* Modal de Detalhes do Fornecedor */}
       {modalAberto && fornecedorSelecionado && (
         <ModalFornecedor 
           fornecedor={fornecedorSelecionado} 
