@@ -265,6 +265,7 @@ const AppSidebar = () => {
         { to: "/inventario", icon: ClipboardList, label: "Inventário" },
         { to: "/inventario-ciclico", icon: ListChecks, label: "Inventário Cíclico" },
         { to: "/entrada-manual", icon: PackagePlus, label: "Entrada Manual" },
+        { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
         { to: "/transferencia", icon: Truck, label: "Transferência" },
         { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
         { to: "/medida-de-lenha", icon: Ruler, label: "Cubagem e medida de Lenha" },
@@ -286,7 +287,6 @@ const AppSidebar = () => {
       items: [
         { to: "/compras", icon: ShoppingCart, label: "Compras" },
         { to: "/cotacoes-orcamentos", icon: FileText, label: "Cotações e Orçamentos" },
-        { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
         { to: "/rastreamento-entregas", icon: Truck, label: "Rastreamento de Entregas" },
         { to: "/calendario-recebimento", icon: CalendarCheck, label: "Calendário de Recebimento" },
         { to: "/fornecedores", icon: Users, label: "Fornecedores" },

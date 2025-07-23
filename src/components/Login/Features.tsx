@@ -4,12 +4,12 @@ import { BarChart4, Calendar, Clipboard, CreditCard, Database, FileText, Users }
 const features = [
   {
     title: "Gestão de Estoque",
-    description: "Controle total sobre seu inventário com rastreamento em tempo real, previsão inteligente de demanda e alertas automatizados de reposição.",
+    description: "Controle total sobre o inventário com rastreamento em tempo real, previsão inteligente de demanda e alertas automatizados de reposição.",
     icon: <Database className="h-10 w-10 text-frico-500" />
   },
   {
     title: "Gestão Financeira",
-    description: "Acompanhamento detalhado de receitas e despesas, fluxo de caixa, relatórios personalizados e integração com sistemas contábeis.",
+    description: "Acompanhamento detalhado de receitas e despesas, relatórios personalizados e integrado com processos contábeis.",
     icon: <CreditCard className="h-10 w-10 text-frico-500" />
   },
   {
@@ -19,12 +19,12 @@ const features = [
   },
   {
     title: "Planejamento Estratégico",
-    description: "Ferramentas para definição de metas, acompanhamento de KPIs e visualização clara do progresso empresarial em tempo real.",
+    description: "Tenha controle total sobre sua operação: alinhe o planejamento estratégico com indicadores de estoque e garanta uma gestão eficiente.",
     icon: <BarChart4 className="h-10 w-10 text-frico-500" />
   },
   {
     title: "Gestão de Documentos",
-    description: "Organize, armazene e compartilhe documentos com segurança, mantendo todo o controle de versões e acessos.",
+    description: "Organize, armazene e compartilhe documentos com segurança, mantendo todo o controle organizacional.",
     icon: <FileText className="h-10 w-10 text-frico-500" />
   },
   {
@@ -41,8 +41,8 @@ export function Features() {
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold text-white mb-4">Funcionalidades Integradas</h2>
           <p className="text-gray-500 max-w-2xl mx-auto text-xl">
-            Nossa plataforma centraliza todas as operações essenciais da sua empresa em um único lugar, 
-            proporcionando eficiência e visibilidade completa.
+            Nossa plataforma centraliza todas as operações essenciais da empresa em um único lugar, 
+            proporcionando facilidade, eficiência e acertividade em cada processo.
           </p>
         </div>
         

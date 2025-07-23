@@ -12,13 +12,17 @@ export interface ItemNotaFiscal {
 
 interface NotaFiscal {
   id: string;
+  numero: string;
   fornecedor: string;
   valor: number;
-  data: string;
+  dataEmissao: string;
+  dataProcessamento: string;
   status: 'processada' | 'pendente';
   itens: ItemNotaFiscal[];
-  cnpjFornecedor?: string;
-  chaveAcesso?: string;
+  cnpjFornecedor: string;
+  chaveAcesso: string;
+  xmlContent: string;
+  tipoProcessamento?: 'estoque' | 'consumo_direto';
 }
 
 const isValidXML = (text: string): boolean => {
@@ -57,56 +61,8 @@ export const useNotasFiscais = () => {
   const fetchNotasFiscais = async () => {
     try {
       setLoading(true);
-      // Simulação de dados para demonstração
-      const notasDemo: NotaFiscal[] = [
-        {
-          id: 'NF-12345',
-          fornecedor: 'Fornecedor Exemplo 1',
-          valor: 1500.75,
-          data: new Date('2023-05-15').toISOString(),
-          status: 'processada',
-          cnpjFornecedor: '12.345.678/0001-90',
-          chaveAcesso: 'NFe35150812345678901234567890123456789012345678',
-          itens: [
-            {
-              codigo: 'PROD001',
-              descricao: 'Produto A',
-              quantidade: 2,
-              unidade: 'UN',
-              valorUnitario: 500.25,
-              valorTotal: 1000.50
-            },
-            {
-              codigo: 'PROD002',
-              descricao: 'Produto B',
-              quantidade: 1,
-              unidade: 'UN',
-              valorUnitario: 500.25,
-              valorTotal: 500.25
-            }
-          ]
-        },
-        {
-          id: 'NF-67890',
-          fornecedor: 'Fornecedor Exemplo 2',
-          valor: 3200.00,
-          data: new Date('2023-06-20').toISOString(),
-          status: 'processada',
-          cnpjFornecedor: '98.765.432/0001-21',
-          chaveAcesso: 'NFe35150898765432109876543210987654321098765432',
-          itens: [
-            {
-              codigo: 'PROD003',
-              descricao: 'Produto C',
-              quantidade: 5,
-              unidade: 'UN',
-              valorUnitario: 640.00,
-              valorTotal: 3200.00
-            }
-          ]
-        }
-      ];
-      setNotasFiscais(notasDemo);
+      // Inicializa com array vazio - os dados reais devem vir de uma API
+      setNotasFiscais([]);
     } catch (error: any) {
       console.error('Erro ao carregar notas fiscais:', error);
       toast({
@@ -197,6 +153,7 @@ export const useNotasFiscais = () => {
       const idMatch = xmlString.match(/<nNF>(.*?)<\/nNF>/);
       const cnpjMatch = xmlString.match(/<emit>[\s\S]*?<CNPJ>(.*?)<\/CNPJ>/);
       const chaveMatch = xmlString.match(/<infNFe.*Id="(.*?)"/);
+      const dataEmissaoMatch = xmlString.match(/<dhEmi>(.*?)<\/dhEmi>/);
       
       // Extrair itens
       const itemRegex = /<det.*?>[\s\S]*?<cProd>(.*?)<\/cProd>[\s\S]*?<xProd>(.*?)<\/xProd>[\s\S]*?<qCom>(.*?)<\/qCom>[\s\S]*?<uCom>(.*?)<\/uCom>[\s\S]*?<vUnCom>(.*?)<\/vUnCom>[\s\S]*?<vProd>(.*?)<\/vProd>/g;
@@ -216,37 +173,29 @@ export const useNotasFiscais = () => {
 
       return {
         id: idMatch ? `NF-${idMatch[1]}` : `NF-${Math.floor(10000 + Math.random() * 90000)}`,
-        fornecedor: fornecedorMatch ? fornecedorMatch[1] : `Fornecedor ${Math.floor(Math.random() * 100)}`,
-        valor: valorMatch ? parseFloat(valorMatch[1]) : parseFloat((Math.random() * 10000).toFixed(2)),
-        cnpjFornecedor: cnpjMatch ? cnpjMatch[1] : undefined,
-        chaveAcesso: chaveMatch ? chaveMatch[1] : undefined,
-        itens: itens.length > 0 ? itens : [
-          {
-            codigo: '001',
-            descricao: 'Produto Exemplo',
-            quantidade: 1,
-            unidade: 'UN',
-            valorUnitario: 100.00,
-            valorTotal: 100.00,
-          }
-        ],
+        numero: idMatch ? idMatch[1] : Math.floor(10000 + Math.random() * 90000).toString(),
+        fornecedor: fornecedorMatch ? fornecedorMatch[1] : 'Fornecedor não identificado',
+        valor: valorMatch ? parseFloat(valorMatch[1]) : 0,
+        dataEmissao: dataEmissaoMatch ? dataEmissaoMatch[1] : new Date().toISOString(),
+        dataProcessamento: new Date().toISOString(),
+        cnpjFornecedor: cnpjMatch ? cnpjMatch[1] : '',
+        chaveAcesso: chaveMatch ? chaveMatch[1] : '',
+        xmlContent: xmlString,
+        itens: itens.length > 0 ? itens : [],
       };
     } catch (error) {
       console.error('Erro ao extrair dados do XML:', error);
       return {
         id: `NF-${Math.floor(10000 + Math.random() * 90000)}`,
-        fornecedor: `Fornecedor ${Math.floor(Math.random() * 100)}`,
-        valor: parseFloat((Math.random() * 10000).toFixed(2)),
-        itens: [
-          {
-            codigo: '001',
-            descricao: 'Produto Exemplo',
-            quantidade: 1,
-            unidade: 'UN',
-            valorUnitario: 100.00,
-            valorTotal: 100.00,
-          }
-        ],
+        numero: Math.floor(10000 + Math.random() * 90000).toString(),
+        fornecedor: 'Fornecedor não identificado',
+        valor: 0,
+        dataEmissao: new Date().toISOString(),
+        dataProcessamento: new Date().toISOString(),
+        cnpjFornecedor: '',
+        chaveAcesso: '',
+        xmlContent: '',
+        itens: [],
       };
     }
   };
@@ -277,22 +226,16 @@ export const useNotasFiscais = () => {
 
       const novaNota: NotaFiscal = {
         id: dados.id || `NF-${Math.floor(10000 + Math.random() * 90000)}`,
+        numero: dados.numero || Math.floor(10000 + Math.random() * 90000).toString(),
         fornecedor: dados.fornecedor || 'Fornecedor Desconhecido',
         valor: dados.valor || 0,
-        data: new Date().toISOString(),
-        status: 'processada',
-        itens: dados.itens || [
-          {
-            codigo: '001',
-            descricao: 'Produto Exemplo',
-            quantidade: 1,
-            unidade: 'UN',
-            valorUnitario: 100.00,
-            valorTotal: 100.00,
-          }
-        ],
-        cnpjFornecedor: dados.cnpjFornecedor,
-        chaveAcesso: dados.chaveAcesso,
+        dataEmissao: dados.dataEmissao || new Date().toISOString(),
+        dataProcessamento: new Date().toISOString(),
+        status: 'pendente',
+        itens: dados.itens || [],
+        cnpjFornecedor: dados.cnpjFornecedor || '',
+        chaveAcesso: dados.chaveAcesso || '',
+        xmlContent: xmlContent
       };
 
       setNotasFiscais((prev) => [novaNota, ...prev]);
@@ -318,13 +261,15 @@ export const useNotasFiscais = () => {
 
   return {
     notasFiscais,
+    setNotasFiscais,
     loading,
     searchTerm,
     setSearchTerm,
     arquivoSelecionado,
+    setArquivoSelecionado,
     carregando,
     sefazValidado,
-    setArquivoSelecionado,
+    xmlContent,
     handleArquivoChange,
     processarNota,
     fetchNotasFiscais,

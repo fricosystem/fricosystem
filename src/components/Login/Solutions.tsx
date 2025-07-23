@@ -4,21 +4,21 @@ const solutions = [
   {
     title: "Otimize seu Controle de Estoque",
     description: "Reduza custos operacionais e evite perdas com um sistema preciso que mantém seus níveis de estoque sempre ideais, através de previsões baseadas em dados históricos e sazonalidade.",
-    imageSrc: "/inventory.jpg",
+    imageSrc: "/imagens/inventory.jpg",
     reverse: false,
     quote: "A excelência no controle de estoque é o primeiro passo para uma operação eficiente."
   },
   {
     title: "Gerencie suas Finanças com Precisão",
     description: "Tenha visibilidade completa sobre a saúde financeira da sua empresa, com dashboards personalizados que destacam oportunidades de crescimento e pontos de atenção em tempo real.",
-    imageSrc: "/finance.jpg",
+    imageSrc: "/imagens/dashboard.jpg",
     reverse: true,
     quote: "Informações financeiras precisas são a base para decisões estratégicas acertadas."
   },
   {
     title: "Potencialize sua Gestão de Pessoas",
     description: "Centralize todo o ciclo de vida do colaborador, desde o recrutamento até avaliações de desempenho, promovendo uma cultura organizacional forte e alinhada com seus objetivos.",
-    imageSrc: "/hr.jpg",
+    imageSrc: "/imagens/recursos-humanos.jpg",
     reverse: false,
     quote: "Pessoas motivadas e bem gerenciadas são o maior ativo de qualquer organização."
   }
@@ -31,8 +31,8 @@ export function Solutions() {
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold text-white mb-4">Nossas Soluções</h2>
           <p className="text-gray-400 max-w-2xl mx-auto text-xl">
-            Desenvolvidas para atender as necessidades específicas da sua empresa, 
-            nossas soluções integradas elevam a eficiência operacional a um novo patamar.
+            O FR Stock Manager foi desenvolvido para atender as necessidades específicas da empresa, 
+            trazendo soluções integradas para levar a eficiência operacional a um novo patamar.
           </p>
         </div>
         
@@ -43,12 +43,16 @@ export function Solutions() {
               className={`flex flex-col ${solution.reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} gap-8 items-center`}
             >
               <div className="lg:w-1/2">
-                <div className="relative h-64 md:h-96 w-full overflow-hidden rounded-xl">
-                  <div className="absolute inset-0 bg-frico-800/20"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    {/* Placeholder for image - in real implementation this would be an actual image */}
-                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 w-full h-full flex items-center justify-center">
-                      <span className="text-white text-lg">{solution.title} (Imagem)</span>
+                <div className="relative h-64 md:h-96 w-full overflow-hidden rounded-xl group">
+                  {/* Efeito de borda gradiente animado */}
+                  <div className="absolute inset-0 rounded-xl p-0.5 bg-transparent group-hover:bg-[conic-gradient(from_var(--shimmer-angle),#00ff87_0%,#7e3af2_20%,#ffffff_40%,#0084ff_60%,#00ff87_80%,#7e3af2_100%)] bg-[length:400%_400%] animate-[shimmer_3s_linear_infinite]">
+                    <div className="relative h-full w-full rounded-xl bg-gray-900 overflow-hidden">
+                      <img 
+                        src={solution.imageSrc} 
+                        alt={solution.title}
+                        className="w-full h-full object-cover transition-all duration-500 ease-in-out transform group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-frico-800/20 transition-all duration-300 group-hover:bg-frico-800/10"></div>
                     </div>
                   </div>
                 </div>

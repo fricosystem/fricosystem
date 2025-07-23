@@ -13,7 +13,7 @@ const testimonials = [
     name: "Ana Ferreira",
     position: "CFO",
     company: "Grupo Alimentício Brasil",
-    content: "A visibilidade que temos agora sobre nossos indicadores financeiros é incomparável. As decisões estratégicas se tornaram muito mais assertivas e ágeis.",
+    content: "A visibilidade que temos agora sobre nossos indicadores financeiros é incomparável. As decisões estratégicas organizacionais se tornaram muito mais assertivas e ágeis.",
     initials: "AF"
   },
   {
@@ -31,7 +31,7 @@ export function Testimonials() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold text-white mb-4">O que nossos clientes dizem</h2>
-          <p className="text-gray-400 max-w-2xl mx-auto text-xl">
+          <p className="text-gray-200 max-w-2xl mx-auto text-xl">
             Empresas de todos os portes já experimentaram o poder de transformação 
             do Nexus Hub em suas operações diárias.
           </p>
@@ -53,7 +53,7 @@ export function Testimonials() {
                     <p className="text-gray-500 text-sm">{testimonial.company}</p>
                   </div>
                 </div>
-                <p className="text-gray-400 italic text-center">"{testimonial.content}"</p>
+                <p className="text-cyan-400 italic text-center">"{testimonial.content}"</p>
               </CardContent>
             </Card>
           ))}
