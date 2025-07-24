@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { FileText, Upload, Search, Loader2, CheckCircle, AlertCircle, X, Link2, Plus } from "lucide-react";
-import { collection, getDocs, addDoc, updateDoc, doc, query, where } from "firebase/firestore";
+import { FileText, Upload, Search, Loader2, CheckCircle, AlertCircle, X, Link2, Plus, Download } from "lucide-react";
+import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 import AppLayout from "@/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,8 @@ import EmptyState from "@/components/EmptyState";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useNotasFiscais } from "@/hooks/useNotasFiscais";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface SefazStatus {
   status: "online" | "partial" | "offline";
@@ -30,6 +31,7 @@ interface ItemNotaFiscal {
   valorUnitario: number;
   valorTotal: number;
   vinculado?: boolean;
+  produtoVinculado?: string;
 }
 
 interface NotaFiscal {
@@ -39,270 +41,139 @@ interface NotaFiscal {
   valor: number;
   dataEmissao: string;
   dataProcessamento: string;
-  status: 'processada' | 'pendente';
+  status: 'pendente' | 'processada_estoque' | 'processada_consumo';
   itens: ItemNotaFiscal[];
   cnpjFornecedor: string;
   chaveAcesso: string;
   xmlContent: string;
   tipoProcessamento?: 'estoque' | 'consumo_direto';
+  usuarioProcessamento?: string;
 }
 
 interface Produto {
   id: string;
-  codigo: string;
-  codigoEstoque: string;
+  codigo_material: string;
   nome: string;
-  unidade: string;
-  unidade_de_medida: string;
-  deposito: string;
-  quantidadeAtual: number;
-  quantidadeMinima: number;
-  detalhes: string;
-  imagem: string;
-  valorUnitario: number;
-  prateleira: string;
-  dataVencimento: string;
-  dataHora: string;
-  fornecedor: string;
-  fornecedor_nome: string;
-  fornecedor_cnpj: string;
-  status?: "pendente" | "em_abastecimento" | "abastecido";
+  codigo_estoque: string;
+  quantidade: number;
 }
 
-interface ConsumoDiretoItem {
+interface CentroCusto {
+  id: string;
+  nome: string;
+  unidade: string;
+}
+
+interface NotaFiscalUpdate {
+  [key: string]: any;
+  status: 'pendente' | 'processada_estoque' | 'processada_consumo';
+  tipoProcessamento?: 'estoque' | 'consumo_direto';
+  dataProcessamento: string;
+  usuarioProcessamento?: string;
+  itens: Array<{
+    codigo: string;
+    descricao: string;
+    quantidade: number;
+    unidade: string;
+    valorUnitario: number;
+    valorTotal: number;
+    vinculado?: boolean;
+    produtoVinculado?: string;
+  }>;
+}
+
+interface ConsumoDireto {
   id: string;
   nfeId: string;
   nfeNumero: string;
   dataProcessamento: string;
   fornecedor: string;
   cnpjFornecedor: string;
-  itemCodigo: string;
-  itemDescricao: string;
-  quantidade: number;
-  unidade: string;
-  valorUnitario: number;
-  valorTotal: number;
-  centroCusto?: string;
-  responsavel?: string;
+  itens: {
+    codigo: string;
+    descricao: string;
+    quantidade: number;
+    unidade: string;
+    valorUnitario: number;
+    valorTotal: number;
+  }[];
+  centrosCusto: {
+    id: string;
+    nome: string;
+    unidade: string;
+  }[];
+  responsavel: string;
   observacoes?: string;
-}
-
-interface Deposito {
-  id: string;
-  deposito: string;
-  unidade: string;
+  usuarioRegistro: string;
 }
 
 const NotasFiscais = () => {
-  const {
-    notasFiscais,
-    setNotasFiscais,
-    loading,
-    arquivoSelecionado,
-    setArquivoSelecionado,
-    carregando,
-    sefazValidado,
-    handleArquivoChange,
-    processarNota
-  } = useNotasFiscais();
-
+  const [notasFiscais, setNotasFiscais] = useState<NotaFiscal[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [sefazValidado, setSefazValidado] = useState<boolean | null>(null);
+  const { user, userData } = useAuth();
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [notaSelecionada, setNotaSelecionada] = useState<NotaFiscal | null>(null);
   const [showVinculacaoModal, setShowVinculacaoModal] = useState(false);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loadingProdutos, setLoadingProdutos] = useState(false);
-  const [produtoParaCriar, setProdutoParaCriar] = useState<ItemNotaFiscal | null>(null);
-  const [novoProduto, setNovoProduto] = useState<Partial<Produto> | null>(null);
-  const [depositos, setDepositos] = useState<Deposito[]>([]);
-  const [loadingDepositos, setLoadingDepositos] = useState(false);
   const [showProcessamentoModal, setShowProcessamentoModal] = useState(false);
   const [showConsumoDiretoModal, setShowConsumoDiretoModal] = useState(false);
-  const [consumoDiretoData, setConsumoDiretoData] = useState<Partial<ConsumoDiretoItem>>({});
-  const [xmlContent, setXmlContent] = useState<string | null>(null);
+  const [showEstoqueModal, setShowEstoqueModal] = useState(false);
+  const [consumoDiretoData, setConsumoDiretoData] = useState<Partial<ConsumoDireto>>({
+    responsavel: userData?.nome || user?.displayName || '',
+    observacoes: ''
+  });
+  const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
+  const [loadingCentrosCusto, setLoadingCentrosCusto] = useState(false);
+  const [produtosVinculados, setProdutosVinculados] = useState<Record<string, string>>({});
+  const [centrosSelecionados, setCentrosSelecionados] = useState<string[]>([]);
+  const [searchCentroCusto, setSearchCentroCusto] = useState('');
   const { toast } = useToast();
 
-  const URL_SEFAZ = 'https://nfe.fazenda.sp.gov.br/ws/nfestatusservico2.asmx';
-  const [sefazStatus, setSefazStatus] = useState<SefazStatus>({
-    status: "online",
-    message: "Sistema online e operacional",
-    lastChecked: new Date().toLocaleTimeString('pt-BR')
-  });
-  const [checkingSefaz, setCheckingSefaz] = useState(false);
-
-  const parseXML = (xmlString: string): Promise<any> => {
-    return new Promise((resolve, reject) => {
-      try {
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-        
-        const errors = xmlDoc.getElementsByTagName("parsererror");
-        if (errors.length > 0) {
-          throw new Error("XML malformado ou inválido");
-        }
-  
-        const xmlToObj = (node: Element): any => {
-          const obj: any = {};
-          
-          if (node.attributes && node.attributes.length > 0) {
-            for (let i = 0; i < node.attributes.length; i++) {
-              const attr = node.attributes[i];
-              obj[attr.name] = attr.value;
-            }
-          }
-          
-          if (node.childNodes.length > 0) {
-            for (let i = 0; i < node.childNodes.length; i++) {
-              const child = node.childNodes[i] as Element;
-              
-              if (child.nodeType === 1) {
-                const nodeName = child.nodeName;
-                
-                if (child.childNodes.length === 1 && child.childNodes[0].nodeType === 3) {
-                  obj[nodeName] = child.childNodes[0].nodeValue?.trim() || '';
-                } else {
-                  if (typeof obj[nodeName] === 'undefined') {
-                    obj[nodeName] = xmlToObj(child);
-                  } else {
-                    if (!Array.isArray(obj[nodeName])) {
-                      obj[nodeName] = [obj[nodeName]];
-                    }
-                    obj[nodeName].push(xmlToObj(child));
-                  }
-                }
-              }
-            }
-          }
-          
-          return obj;
-        };
-  
-        resolve(xmlToObj(xmlDoc.documentElement));
-      } catch (error) {
-        console.error("Erro no parser XML:", error);
-        reject(new Error("Erro ao processar o arquivo XML. Verifique se é um arquivo válido."));
-      }
-    });
+  // Função para baixar XML
+  const downloadXML = (xmlContent: string, numeroNota: string) => {
+    const blob = new Blob([xmlContent], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `NFe_${numeroNota}.xml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
-  const getSafeValue = (obj: any, path: string[]): any => {
+  // Carregar notas fiscais do Firestore
+  const carregarNotasFiscais = async () => {
+    setLoading(true);
     try {
-      let current = obj;
-      for (const key of path) {
-        if (!current || typeof current !== 'object') return null;
-        current = current[key];
-        if (Array.isArray(current)) {
-          current = current.length > 0 ? current[0] : null;
-        }
-      }
-      return current || null;
-    } catch (error) {
-      console.error('Erro no getSafeValue:', error);
-      return null;
-    }
-  };
-  
-  const extrairDadosNFe = (nfeData: any): NotaFiscal => {
-    try {
-      const nfeRoot = 
-        getSafeValue(nfeData, ['nfeProc', 'NFe', 'infNFe']) ||
-        getSafeValue(nfeData, ['NFe', 'infNFe']) ||
-        getSafeValue(nfeData, ['infNFe']) ||
-        nfeData;
-  
-      if (!nfeRoot) {
-        throw new Error("Estrutura principal da NFe não encontrada");
-      }
-
-      const ide = getSafeValue(nfeRoot, ['ide']) || {};
-      const emit = getSafeValue(nfeRoot, ['emit']) || {};
-      const total = getSafeValue(nfeRoot, ['total', 'ICMSTot']) || {};
-
-      const detItems = getSafeValue(nfeRoot, ['det']);
-      let itens: ItemNotaFiscal[] = [];
-      
-      if (detItems) {
-        const itemsArray = Array.isArray(detItems) ? detItems : [detItems];
-        itens = itemsArray
-          .filter((item: any) => item && getSafeValue(item, ['prod']))
-          .map((item: any) => {
-            const prod = getSafeValue(item, ['prod']) || {};
-            return {
-              codigo: prod.cProd?.[0] || prod.$?.cProd || '',
-              descricao: prod.xProd?.[0] || '',
-              quantidade: parseFloat(prod.qCom?.[0] || prod.$?.qCom || '0'),
-              unidade: prod.uCom?.[0] || prod.$?.uCom || '',
-              valorUnitario: parseFloat(prod.vUnCom?.[0] || prod.$?.vUnCom || '0'),
-              valorTotal: parseFloat(prod.vProd?.[0] || prod.$?.vProd || '0')
-            };
-          });
-      }
-
-      return {
-        id: uuidv4(),
-        numero: ide.nNF?.[0] || ide.$?.nNF || ide.cNF?.[0] || ide.$?.cNF || '',
-        fornecedor: emit.xFant?.[0] || emit.xNome?.[0] || emit.$?.xNome || '',
-        valor: parseFloat(total.vNF?.[0] || total.$?.vNF || '0'),
-        dataEmissao: ide.dhEmi?.[0] || ide.$?.dhEmi || ide.dEmi?.[0] || ide.$?.dEmi || '',
-        dataProcessamento: new Date().toISOString(),
-        status: 'pendente',
-        itens,
-        cnpjFornecedor: emit.CNPJ?.[0] || emit.$?.CNPJ || emit.cnpj?.[0] || emit.CPF?.[0] || '',
-        chaveAcesso: getSafeValue(nfeData, ['nfeProc', 'protNFe', 'infProt', 'chNFe']) || 
-                    nfeRoot.$?.Id?.replace('NFe', '') || '',
-        xmlContent: ''
-      };
-    } catch (error) {
-      console.error("Erro detalhado na extração:", error);
-      throw new Error(`Falha ao extrair dados da NFe: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    processarNota();
-  };
-
-  const checkRealSefazStatus = async () => {
-    try {
-      const response = await fetch(URL_SEFAZ, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/xml; charset=utf-8',
-          'SOAPAction': 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico2/nfeStatusServicoNF2'
-        },
-        body: `<?xml version="1.0"?>
-          <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
-            <soap:Body>
-              <nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico2">
-                <!-- XML de consulta específico -->
-              </nfeDadosMsg>
-            </soap:Body>
-          </soap:Envelope>`
-      });
-      
-      // Processar resposta XML
-    } catch (error) {
-      console.error("Erro na consulta SEFAZ:", error);
-    }
-  };
-
-  const carregarDepositos = async () => {
-    setLoadingDepositos(true);
-    try {
-      const depositosRef = collection(db, "depositos");
-      const depositosSnapshot = await getDocs(depositosRef);
-      const depositosData = depositosSnapshot.docs.map(doc => ({
+      const notasRef = collection(db, "notas_fiscais");
+      const notasSnapshot = await getDocs(notasRef);
+      const notasData = notasSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Deposito[];
-      setDepositos(depositosData);
+      })) as NotaFiscal[];
+      setNotasFiscais(notasData);
     } catch (error) {
-      console.error("Erro ao carregar depósitos:", error);
+      console.error("Erro ao carregar notas fiscais:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as notas fiscais",
+        variant: "destructive"
+      });
     } finally {
-      setLoadingDepositos(false);
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    carregarNotasFiscais();
+  }, []);
+
+  // Carregar produtos do Firestore
   const carregarProdutos = async () => {
     setLoadingProdutos(true);
     try {
@@ -315,217 +186,466 @@ const NotasFiscais = () => {
       setProdutos(produtosData);
     } catch (error) {
       console.error("Erro ao carregar produtos:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os produtos",
+        variant: "destructive"
+      });
     } finally {
       setLoadingProdutos(false);
     }
   };
 
-  const abrirModalVinculacao = async () => {
+  // Carregar centros de custo do Firestore
+  const carregarCentrosCusto = async () => {
+    setLoadingCentrosCusto(true);
+    try {
+      const centrosRef = collection(db, "centro_de_custo");
+      const centrosSnapshot = await getDocs(centrosRef);
+      const centrosData = centrosSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as CentroCusto[];
+      setCentrosCusto(centrosData);
+    } catch (error) {
+      console.error("Erro ao carregar centros de custo:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os centros de custo",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingCentrosCusto(false);
+    }
+  };
+
+  // Abrir modal de processamento
+  const abrirModalProcessamento = async () => {
     if (!notaSelecionada) return;
     setShowProcessamentoModal(true);
   };
 
+  // Selecionar tipo de processamento
   const handleSelecionarProcessamento = (tipo: 'estoque' | 'consumo_direto') => {
     if (!notaSelecionada) return;
     
     setShowProcessamentoModal(false);
     
-    const atualizarNota = async () => {
-      try {
-        const notaRef = doc(db, "notas_fiscais", notaSelecionada.id);
-        await updateDoc(notaRef, {
-          tipoProcessamento: tipo,
-          status: 'processada'
-        });
-        
-        setNotasFiscais(notasFiscais.map(n => 
-          n.id === notaSelecionada.id ? 
-          { 
-            ...n, 
-            tipoProcessamento: tipo, 
-            status: 'processada',
-            numero: n.numero,
-            dataEmissao: n.dataEmissao,
-            dataProcessamento: n.dataProcessamento,
-            xmlContent: n.xmlContent
-          } : n
-        ));
-        
-        setNotaSelecionada({
-          ...notaSelecionada,
-          tipoProcessamento: tipo,
-          status: 'processada',
-          numero: notaSelecionada.numero,
-          dataEmissao: notaSelecionada.dataEmissao,
-          dataProcessamento: notaSelecionada.dataProcessamento,
-          xmlContent: notaSelecionada.xmlContent
-        });
-        
-        if (tipo === 'estoque') {
-          setShowVinculacaoModal(true);
-          await carregarDepositos();
-          await carregarProdutos();
-        } else {
-          setShowConsumoDiretoModal(true);
-          setConsumoDiretoData({
-            nfeId: notaSelecionada.id,
-            nfeNumero: notaSelecionada.numero,
-            dataProcessamento: new Date().toISOString(),
-            fornecedor: notaSelecionada.fornecedor,
-            cnpjFornecedor: notaSelecionada.cnpjFornecedor
-          });
-        }
-      } catch (error) {
-        console.error("Erro ao atualizar nota fiscal:", error);
-      }
-    };
-    
-    atualizarNota();
-  };
-
-  const produtoJaExiste = (codigoItem: string) => {
-    return produtos.some(produto => produto.codigo === codigoItem);
-  };
-
-  const vincularProduto = async (item: ItemNotaFiscal, produto: Produto) => {
-    try {
-      const produtoRef = doc(db, "produtos", produto.id);
-      await updateDoc(produtoRef, {
-        quantidadeAtual: produto.quantidadeAtual + item.quantidade,
-        valorUnitario: item.valorUnitario,
-        fornecedor_nome: notaSelecionada?.fornecedor,
-        fornecedor_cnpj: notaSelecionada?.cnpjFornecedor,
-        status: "em_abastecimento"
-      });
-      
-      setProdutos(produtos.map(p => 
-        p.id === produto.id ? {
-          ...p,
-          quantidadeAtual: p.quantidadeAtual + item.quantidade,
-          valorUnitario: item.valorUnitario,
-          fornecedor_nome: notaSelecionada?.fornecedor || p.fornecedor_nome,
-          fornecedor_cnpj: notaSelecionada?.cnpjFornecedor || p.fornecedor_cnpj,
-          status: "em_abastecimento"
-        } : p
-      ));
-      
-      if (notaSelecionada) {
-        setNotaSelecionada({
-          ...notaSelecionada,
-          itens: notaSelecionada.itens.map(i => 
-            i.codigo === item.codigo ? { ...i, vinculado: true } : i
-          ),
-          numero: notaSelecionada.numero,
-          dataEmissao: notaSelecionada.dataEmissao,
-          dataProcessamento: notaSelecionada.dataProcessamento,
-          xmlContent: notaSelecionada.xmlContent
-        });
-      }
-    } catch (error) {
-      console.error("Erro ao vincular produto:", error);
-    }
-  };
-
-  const criarNovoProduto = async () => {
-    if (!produtoParaCriar || !novoProduto || !notaSelecionada) return;
-    
-    try {
-      const produtosRef = collection(db, "produtos");
-      const novoProdutoCompleto: Omit<Produto, 'id'> = {
-        codigo: produtoParaCriar.codigo,
-        codigoEstoque: novoProduto.codigoEstoque || produtoParaCriar.codigo,
-        nome: novoProduto.nome || produtoParaCriar.descricao,
-        unidade: produtoParaCriar.unidade,
-        unidade_de_medida: novoProduto.unidade_de_medida || produtoParaCriar.unidade,
-        deposito: novoProduto.deposito || "Principal",
-        quantidadeAtual: produtoParaCriar.quantidade,
-        quantidadeMinima: novoProduto.quantidadeMinima || 0,
-        detalhes: novoProduto.detalhes || "",
-        imagem: novoProduto.imagem || "",
-        valorUnitario: produtoParaCriar.valorUnitario,
-        prateleira: novoProduto.prateleira || "",
-        dataVencimento: novoProduto.dataVencimento || "",
-        dataHora: new Date().toISOString(),
+    if (tipo === 'estoque') {
+      carregarProdutos();
+      setShowEstoqueModal(true);
+    } else {
+      carregarCentrosCusto();
+      setShowConsumoDiretoModal(true);
+      setConsumoDiretoData({
+        nfeId: notaSelecionada.id,
+        nfeNumero: notaSelecionada.numero,
+        dataProcessamento: new Date().toISOString(),
         fornecedor: notaSelecionada.fornecedor,
-        fornecedor_nome: notaSelecionada.fornecedor,
-        fornecedor_cnpj: notaSelecionada.cnpjFornecedor || "",
-        status: "em_abastecimento"
-      };
-      
-      await addDoc(produtosRef, novoProdutoCompleto);
-      await carregarProdutos();
-      setProdutoParaCriar(null);
-      setNovoProduto(null);
-      
-      setNotaSelecionada({
-        ...notaSelecionada,
-        itens: notaSelecionada.itens.map(i => 
-          i.codigo === produtoParaCriar.codigo ? { ...i, vinculado: true } : i
-        ),
-        numero: notaSelecionada.numero,
-        dataEmissao: notaSelecionada.dataEmissao,
-        dataProcessamento: notaSelecionada.dataProcessamento,
-        xmlContent: notaSelecionada.xmlContent
+        cnpjFornecedor: notaSelecionada.cnpjFornecedor,
+        responsavel: userData?.nome || user?.displayName || '',
+        itens: notaSelecionada.itens,
+        usuarioRegistro: user?.uid || ''
       });
-    } catch (error) {
-      console.error("Erro ao criar novo produto:", error);
     }
   };
 
-  const finalizarVinculacao = () => {
-    const atualizarStatus = async () => {
-      const produtosParaAtualizar = produtos.filter(p => 
-        notaSelecionada?.itens.some(i => i.codigo === p.codigo && i.vinculado)
-      );
-      
-      try {
-        await Promise.all(produtosParaAtualizar.map(async produto => {
-          const produtoRef = doc(db, "produtos", produto.id);
-          await updateDoc(produtoRef, {
-            status: "abastecido"
-          });
-        }));
-        
-        setNotaSelecionada(null);
-        setShowVinculacaoModal(false);
-      } catch (error) {
-        console.error("Erro ao finalizar vinculação:", error);
-      }
-    };
-    
-    atualizarStatus();
+  // Vincular produto a um item da NFe
+  const handleVincularProduto = (itemCodigo: string, produtoId: string) => {
+    setProdutosVinculados(prev => ({
+      ...prev,
+      [itemCodigo]: produtoId
+    }));
   };
 
+  const toggleCentroCusto = (centroId: string) => {
+    setCentrosSelecionados(prev =>
+      prev.includes(centroId)
+        ? prev.filter(id => id !== centroId)
+        : [...prev, centroId]
+    );
+  };
+
+  // Confirmar processamento para estoque
+  const confirmarProcessamentoEstoque = async () => {
+    if (!notaSelecionada) return;
+    
+    try {
+      // Atualizar produtos no Firestore
+      await Promise.all(
+        notaSelecionada.itens.map(async item => {
+          const produtoId = produtosVinculados[item.codigo];
+          if (produtoId) {
+            const produtoRef = doc(db, "produtos", produtoId);
+            const produto = produtos.find(p => p.id === produtoId);
+            
+            if (produto) {
+              await updateDoc(produtoRef, {
+                quantidade: (produto.quantidade || 0) + item.quantidade
+              });
+            }
+          }
+        })
+      );
+  
+      // Criar objeto para atualização no Firestore
+      const notaAtualizadaFirestore: NotaFiscalUpdate = {
+        status: 'processada_estoque',
+        tipoProcessamento: 'estoque',
+        dataProcessamento: new Date().toISOString(),
+        usuarioProcessamento: user?.uid || '',
+        itens: notaSelecionada.itens.map(item => ({
+          ...item,
+          vinculado: !!produtosVinculados[item.codigo],
+          produtoVinculado: produtosVinculados[item.codigo] || undefined
+        }))
+      };
+  
+      // Atualizar nota fiscal no Firestore
+      const notaRef = doc(db, "notas_fiscais", notaSelecionada.id);
+      await updateDoc(notaRef, notaAtualizadaFirestore);
+  
+      // Criar objeto completo para o estado local
+      const notaAtualizadaEstado: NotaFiscal = {
+        ...notaSelecionada,
+        ...notaAtualizadaFirestore
+      };
+  
+      // Atualizar estado local
+      setNotasFiscais(notasFiscais.map(n => 
+        n.id === notaSelecionada.id ? notaAtualizadaEstado : n
+      ));
+  
+      setNotaSelecionada(notaAtualizadaEstado);
+      setShowEstoqueModal(false);
+      setProdutosVinculados({});
+  
+      toast({
+        title: "Nota fiscal processada",
+        description: "Os itens foram adicionados ao estoque com sucesso.",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Erro ao processar nota para estoque:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao processar a nota fiscal para estoque.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Registrar consumo direto
   const salvarConsumoDireto = async () => {
     if (!notaSelecionada || !consumoDiretoData) return;
     
     try {
-      await Promise.all(notaSelecionada.itens.map(async (item) => {
-        const consumoDiretoRef = collection(db, "consumo_direto_nfe");
-        await addDoc(consumoDiretoRef, {
-          nfeId: notaSelecionada.id,
-          nfeNumero: notaSelecionada.numero,
-          dataProcessamento: new Date().toISOString(),
-          fornecedor: notaSelecionada.fornecedor,
-          cnpjFornecedor: notaSelecionada.cnpjFornecedor,
-          itemCodigo: item.codigo,
-          itemDescricao: item.descricao,
-          quantidade: item.quantidade,
-          unidade: item.unidade,
-          valorUnitario: item.valorUnitario,
-          valorTotal: item.valorTotal,
-          centroCusto: consumoDiretoData.centroCusto || '',
-          responsavel: consumoDiretoData.responsavel || '',
-          observacoes: consumoDiretoData.observacoes || ''
-        });
-      }));
-      
+      // Filtrar centros de custo selecionados
+      const centrosSelecionadosData = centrosCusto.filter(centro => 
+        centrosSelecionados.includes(centro.id)
+      );
+  
+      // Criar registro de consumo direto
+      const consumoDiretoRef = collection(db, "consumo_direto");
+      await addDoc(consumoDiretoRef, {
+        nfeId: notaSelecionada.id,
+        nfeNumero: notaSelecionada.numero,
+        dataProcessamento: new Date().toISOString(),
+        fornecedor: notaSelecionada.fornecedor,
+        cnpjFornecedor: notaSelecionada.cnpjFornecedor,
+        itens: notaSelecionada.itens,
+        centrosCusto: centrosSelecionadosData,
+        responsavel: userData?.nome || user?.displayName || '',
+        observacoes: consumoDiretoData.observacoes || '',
+        usuarioRegistro: user?.uid || ''
+      });
+  
+      // Criar objeto para atualização no Firestore
+      const notaAtualizadaFirestore: NotaFiscalUpdate = {
+        status: 'processada_consumo',
+        tipoProcessamento: 'consumo_direto',
+        dataProcessamento: new Date().toISOString(),
+        usuarioProcessamento: user?.uid || '',
+        itens: notaSelecionada.itens
+      };
+  
+      // Atualizar nota fiscal no Firestore
+      const notaRef = doc(db, "notas_fiscais", notaSelecionada.id);
+      await updateDoc(notaRef, notaAtualizadaFirestore);
+  
+      // Criar objeto completo para o estado local
+      const notaAtualizadaEstado: NotaFiscal = {
+        ...notaSelecionada,
+        ...notaAtualizadaFirestore
+      };
+  
+      // Atualizar estado local
+      setNotasFiscais(notasFiscais.map(n => 
+        n.id === notaSelecionada.id ? notaAtualizadaEstado : n
+      ));
+  
+      setNotaSelecionada(notaAtualizadaEstado);
       setShowConsumoDiretoModal(false);
-      setNotaSelecionada(null);
+      setCentrosSelecionados([]);
+  
+      toast({
+        title: "Consumo direto registrado",
+        description: "Os itens foram registrados como consumo direto com sucesso.",
+        variant: "default"
+      });
     } catch (error) {
-      console.error("Erro ao salvar consumo direto:", error);
+      console.error("Erro ao registrar consumo direto:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao registrar o consumo direto.",
+        variant: "destructive"
+      });
     }
   };
+
+  // Filtrar centros de custo baseado na pesquisa
+  const filteredCentrosCusto = centrosCusto.filter(centro =>
+    centro.nome.toLowerCase().includes(searchCentroCusto.toLowerCase()) ||
+    centro.unidade.toLowerCase().includes(searchCentroCusto.toLowerCase())
+  );
+
+  // Handler para upload de arquivo
+  const handleArquivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivos = e.target.files;
+    setSefazValidado(null);
+
+    if (!arquivos || arquivos.length === 0) {
+      setArquivoSelecionado(null);
+      return;
+    }
+
+    const arquivo = arquivos[0];
+
+    if (!arquivo.name.endsWith('.xml')) {
+      toast({
+        title: 'Formato inválido',
+        description: 'Por favor, selecione um arquivo XML.',
+        variant: 'destructive',
+      });
+      setArquivoSelecionado(null);
+      return;
+    }
+
+    setArquivoSelecionado(arquivo);
+  };
+
+  // Handler para submit do formulário
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!arquivoSelecionado) return;
+
+    setCarregando(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        if (!event.target?.result) {
+          toast({
+            title: 'Erro na leitura',
+            description: 'Não foi possível ler o conteúdo do arquivo.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        const xmlContent = event.target.result as string;
+        
+        // Extrair dados do XML
+        const dados = extrairDadosXML(xmlContent);
+
+        // Adicionar nota fiscal ao Firestore
+        const notasRef = collection(db, "notas_fiscais");
+        const novaNota = {
+          ...dados,
+          status: 'pendente',
+          xmlContent: xmlContent
+        };
+
+        await addDoc(notasRef, novaNota);
+
+        // Atualizar estado local
+        setNotasFiscais([novaNota as NotaFiscal, ...notasFiscais]);
+
+        toast({
+          title: "Nota fiscal processada",
+          description: "A nota fiscal foi carregada com sucesso.",
+          variant: "default"
+        });
+      };
+
+      reader.readAsText(arquivoSelecionado);
+    } catch (error) {
+      console.error("Erro ao processar nota fiscal:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao processar a nota fiscal.",
+        variant: "destructive"
+      });
+    } finally {
+      setCarregando(false);
+      setArquivoSelecionado(null);
+    }
+  };
+
+  const removerNotaFiscal = async (notaId: string) => {
+    try {
+      // Verifica se o usuário realmente quer remover
+      const confirmacao = window.confirm("Tem certeza que deseja remover esta nota fiscal? Esta ação não pode ser desfeita.");
+      
+      if (!confirmacao) return;
+  
+      // Remove do Firestore
+      await deleteDoc(doc(db, "notas_fiscais", notaId));
+      
+      // Atualiza o estado local
+      setNotasFiscais(notasFiscais.filter(nota => nota.id !== notaId));
+      
+      // Fecha o modal se estiver aberto
+      if (notaSelecionada?.id === notaId) {
+        setNotaSelecionada(null);
+      }
+  
+      toast({
+        title: "Nota fiscal removida",
+        description: "A nota fiscal foi removida com sucesso.",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Erro ao remover nota fiscal:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao remover a nota fiscal.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const extrairDadosXML = (xmlString: string): NotaFiscal => {
+    try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+        // Extrair dados básicos com fallbacks seguros
+        const nfeNode = xmlDoc.querySelector("NFe") || xmlDoc.querySelector("nfeProc > NFe");
+        const infNFe = nfeNode?.querySelector("infNFe");
+        
+        // Dados do emitente (fornecedor)
+        const emitNode = infNFe?.querySelector("emit");
+        const fornecedor = emitNode?.querySelector("xNome")?.textContent?.trim() || "Fornecedor não informado";
+        const cnpjFornecedor = emitNode?.querySelector("CNPJ")?.textContent?.trim() || 
+                              emitNode?.querySelector("CPF")?.textContent?.trim() || "";
+
+        // Dados da nota
+        const ideNode = infNFe?.querySelector("ide");
+        const numero = ideNode?.querySelector("nNF")?.textContent?.trim() || "Sem número";
+        const chaveAcesso = infNFe?.getAttribute("Id")?.replace("NFe", "") || "";
+        
+        // Data de emissão com tratamento de formatos
+        let dataEmissao = ideNode?.querySelector("dhEmi")?.textContent?.trim() || 
+                        ideNode?.querySelector("dEmi")?.textContent?.trim() || "";
+        
+        if (dataEmissao && /^\d{4}-\d{2}-\d{2}$/.test(dataEmissao)) {
+            dataEmissao = new Date(dataEmissao + 'T00:00:00').toISOString();
+        } else if (!dataEmissao) {
+            dataEmissao = new Date().toISOString();
+        }
+
+        // Valor total com fallback para 0
+        const totalNode = infNFe?.querySelector("total > ICMSTot");
+        const valor = parseFloat(totalNode?.querySelector("vNF")?.textContent?.trim() || "0");
+
+        // Extrair itens com tratamento completo
+        const itens: ItemNotaFiscal[] = [];
+        const detNodes = infNFe?.querySelectorAll("det");
+
+        detNodes?.forEach(det => {
+            const prod = det.querySelector("prod");
+            
+            if (prod) {
+                const codigo = prod.querySelector("cProd")?.textContent?.trim() || uuidv4().substring(0, 8); // Gera um código se não existir
+                const descricao = prod.querySelector("xProd")?.textContent?.trim() || "Produto não descrito";
+                const quantidade = parseFloat(prod.querySelector("qCom")?.textContent?.trim() || "0");
+                const unidade = prod.querySelector("uCom")?.textContent?.trim() || "UN";
+                const valorUnitario = parseFloat(prod.querySelector("vUnCom")?.textContent?.trim() || "0");
+                let valorTotal = parseFloat(prod.querySelector("vProd")?.textContent?.trim() || "0");
+
+                // Adicionar IPI se existir
+                const imposto = det.querySelector("imposto");
+                const ipiNode = imposto?.querySelector("IPI > IPITrib");
+                const valorIPI = parseFloat(ipiNode?.querySelector("vIPI")?.textContent?.trim() || "0");
+                valorTotal += valorIPI;
+                
+                // Verifica se já existe um item com o mesmo código e descrição
+                const itemExistente = itens.find(item => 
+                    item.codigo === codigo && item.descricao === descricao
+                );
+
+                if (itemExistente) {
+                    // Se existir, soma as quantidades e valores
+                    itemExistente.quantidade += quantidade;
+                    itemExistente.valorTotal += valorTotal;
+                    itemExistente.valorUnitario = itemExistente.valorTotal / itemExistente.quantidade;
+                } else {
+                    // Se não existir, adiciona novo item
+                    itens.push({
+                        codigo,
+                        descricao,
+                        quantidade,
+                        unidade,
+                        valorUnitario,
+                        valorTotal,
+                        vinculado: false
+                    });
+                }
+            }
+        });
+
+        // Retornar objeto completo com valores padrão para todos os campos
+        return {
+            id: uuidv4(),
+            numero,
+            fornecedor,
+            valor,
+            dataEmissao: dataEmissao,
+            dataProcessamento: new Date().toISOString(),
+            status: 'pendente',
+            itens,
+            cnpjFornecedor,
+            chaveAcesso,
+            xmlContent: xmlString,
+            tipoProcessamento: 'estoque',
+            usuarioProcessamento: ''
+        };
+    } catch (error) {
+        console.error("Erro ao extrair dados do XML:", error);
+        toast({
+            title: "Erro",
+            description: "Não foi possível extrair os dados do XML da nota fiscal.",
+            variant: "destructive"
+        });
+        // Retornar objeto com valores padrão em caso de erro
+        return {
+            id: uuidv4(),
+            numero: "",
+            fornecedor: "",
+            valor: 0,
+            dataEmissao: new Date().toISOString(),
+            dataProcessamento: new Date().toISOString(),
+            status: 'pendente',
+            itens: [],
+            cnpjFornecedor: "",
+            chaveAcesso: "",
+            xmlContent: "",
+            tipoProcessamento: 'estoque',
+            usuarioProcessamento: ''
+        };
+    }
+};
 
   if (loading) {
     return (
@@ -540,7 +660,11 @@ const NotasFiscais = () => {
   }
 
   const notasPendentes = notasFiscais.filter(n => n.status === 'pendente');
-  const notasProcessadas = notasFiscais.filter(n => n.status === 'processada');
+  const notasProcessadasEstoque = notasFiscais.filter(n => n.status === 'processada_estoque');
+  const notasProcessadasConsumo = notasFiscais.filter(n => n.status === 'processada_consumo');
+  const notasHistorico = [...notasProcessadasEstoque, ...notasProcessadasConsumo].sort((a, b) => 
+    new Date(b.dataProcessamento).getTime() - new Date(a.dataProcessamento).getTime()
+  );
 
   return (
     <AppLayout title="Notas Fiscais">
@@ -614,10 +738,12 @@ const NotasFiscais = () => {
 
           {/* Abas de Notas Fiscais */}
           <div className="mt-6">
-            <Tabs defaultValue="processadas">
+            <Tabs defaultValue="pendentes">
               <TabsList>
                 <TabsTrigger value="pendentes">Pendentes ({notasPendentes.length})</TabsTrigger>
-                <TabsTrigger value="processadas">Processadas ({notasProcessadas.length})</TabsTrigger>
+                <TabsTrigger value="estoque">Estoque ({notasProcessadasEstoque.length})</TabsTrigger>
+                <TabsTrigger value="consumo">Consumo ({notasProcessadasConsumo.length})</TabsTrigger>
+                <TabsTrigger value="historico">Histórico ({notasHistorico.length})</TabsTrigger>
               </TabsList>
               
               {/* Aba Pendentes */}
@@ -645,30 +771,53 @@ const NotasFiscais = () => {
                               <th className="text-left p-3 text-sm font-medium">Data</th>
                               <th className="text-left p-3 text-sm font-medium">Valor</th>
                               <th className="text-left p-3 text-sm font-medium">Status</th>
+                              <th className="text-left p-3 text-sm font-medium">Ações</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {notasPendentes.map((nota) => (
-                              <tr 
-                                key={nota.id} 
-                                className="hover:bg-muted/50 cursor-pointer border-t"
-                                onClick={() => setNotaSelecionada(nota)}
-                              >
-                                <td className="p-3">{nota.numero || '-'}</td>
-                                <td className="p-3">{nota.fornecedor || '-'}</td>
-                                <td className="p-3">
-                                  {nota.dataEmissao ? new Date(nota.dataEmissao).toLocaleDateString('pt-BR') : '-'}
-                                </td>
-                                <td className="p-3">
-                                  R$ {(nota.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td className="p-3">
-                                  <span className={`text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300`}>
-                                    Pendente
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
+                          {notasPendentes.map((nota) => (
+                            <tr 
+                              key={nota.id} 
+                              className="hover:bg-muted/50 cursor-pointer border-t"
+                              onClick={() => setNotaSelecionada(nota)}
+                            >
+                              <td className="p-3">{nota.numero || '-'}</td>
+                              <td className="p-3">{nota.fornecedor || '-'}</td>
+                              <td className="p-3">
+                                {nota.dataEmissao ? new Date(nota.dataEmissao).toLocaleDateString('pt-BR') : '-'}
+                              </td>
+                              <td className="p-3">
+                                R$ {(nota.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="p-3">
+                                <Badge variant="outline">Pendente</Badge>
+                              </td>
+                              <td className="p-3 flex space-x-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (nota.xmlContent) {
+                                      downloadXML(nota.xmlContent, nota.numero);
+                                    }
+                                  }}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removerNotaFiscal(nota.id);
+                                  }}
+                                >
+                                  <X className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
                           </tbody>
                         </table>
                       </div>
@@ -683,13 +832,135 @@ const NotasFiscais = () => {
                 )}
               </TabsContent>
 
-              {/* Aba Processadas */}
-              <TabsContent value="processadas" className="mt-4">
-                {notasProcessadas.length > 0 ? (
+              {/* Aba Estoque */}
+              <TabsContent value="estoque" className="mt-4">
+                {notasProcessadasEstoque.length > 0 ? (
                   <Card>
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-medium">Notas fiscais processadas</h3>
+                        <h3 className="text-lg font-medium">Notas fiscais - Estoque</h3>
+                        <div className="relative w-64">
+                          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar nota fiscal..."
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="border rounded-md">
+                        <table className="w-full">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="text-left p-3 text-sm font-medium">Número</th>
+                              <th className="text-left p-3 text-sm font-medium">Fornecedor</th>
+                              <th className="text-left p-3 text-sm font-medium">Data</th>
+                              <th className="text-left p-3 text-sm font-medium">Valor</th>
+                              <th className="text-left p-3 text-sm font-medium">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {notasProcessadasEstoque.map((nota) => (
+                              <tr 
+                                key={nota.id} 
+                                className="hover:bg-muted/50 cursor-pointer border-t"
+                                onClick={() => setNotaSelecionada(nota)}
+                              >
+                                <td className="p-3">{nota.numero || '-'}</td>
+                                <td className="p-3">{nota.fornecedor || '-'}</td>
+                                <td className="p-3">
+                                  {nota.dataEmissao ? new Date(nota.dataEmissao).toLocaleDateString('pt-BR') : '-'}
+                                </td>
+                                <td className="p-3">
+                                  R$ {(nota.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-3">
+                                  <Badge variant="secondary">Estoque</Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </Card>
+                ) : (
+                  <EmptyState
+                    title="Nenhuma nota fiscal processada para estoque"
+                    description="Não existem notas fiscais processadas para estoque no momento."
+                    icon={<FileText size={50} />}
+                  />
+                )}
+              </TabsContent>
+
+              {/* Aba Consumo */}
+              <TabsContent value="consumo" className="mt-4">
+                {notasProcessadasConsumo.length > 0 ? (
+                  <Card>
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium">Notas fiscais - Consumo Direto</h3>
+                        <div className="relative w-64">
+                          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar nota fiscal..."
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="border rounded-md">
+                        <table className="w-full">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="text-left p-3 text-sm font-medium">Número</th>
+                              <th className="text-left p-3 text-sm font-medium">Fornecedor</th>
+                              <th className="text-left p-3 text-sm font-medium">Data</th>
+                              <th className="text-left p-3 text-sm font-medium">Valor</th>
+                              <th className="text-left p-3 text-sm font-medium">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {notasProcessadasConsumo.map((nota) => (
+                              <tr 
+                                key={nota.id} 
+                                className="hover:bg-muted/50 cursor-pointer border-t"
+                                onClick={() => setNotaSelecionada(nota)}
+                              >
+                                <td className="p-3">{nota.numero || '-'}</td>
+                                <td className="p-3">{nota.fornecedor || '-'}</td>
+                                <td className="p-3">
+                                  {nota.dataEmissao ? new Date(nota.dataEmissao).toLocaleDateString('pt-BR') : '-'}
+                                </td>
+                                <td className="p-3">
+                                  R$ {(nota.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-3">
+                                  <Badge variant="secondary">Consumo</Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </Card>
+                ) : (
+                  <EmptyState
+                    title="Nenhuma nota fiscal processada para consumo"
+                    description="Não existem notas fiscais processadas para consumo direto no momento."
+                    icon={<FileText size={50} />}
+                  />
+                )}
+              </TabsContent>
+
+              {/* Aba Histórico */}
+              <TabsContent value="historico" className="mt-4">
+                {notasHistorico.length > 0 ? (
+                  <Card>
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium">Histórico de Notas Fiscais</h3>
                         <div className="relative w-64">
                           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Input
@@ -708,11 +979,12 @@ const NotasFiscais = () => {
                               <th className="text-left p-3 text-sm font-medium">Data</th>
                               <th className="text-left p-3 text-sm font-medium">Valor</th>
                               <th className="text-left p-3 text-sm font-medium">Tipo</th>
-                              <th className="text-left p-3 text-sm font-medium">Status</th>
+                              <th className="text-left p-3 text-sm font-medium">Processamento</th>
+                              <th className="text-left p-3 text-sm font-medium">Ações</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {notasProcessadas.map((nota) => (
+                            {notasHistorico.map((nota) => (
                               <tr 
                                 key={nota.id} 
                                 className="hover:bg-muted/50 cursor-pointer border-t"
@@ -727,12 +999,28 @@ const NotasFiscais = () => {
                                   R$ {(nota.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-3">
-                                  {nota.tipoProcessamento === 'estoque' ? 'Estoque' : 'Consumo Direto'}
+                                  {nota.tipoProcessamento === 'estoque' ? (
+                                    <Badge variant="secondary">Estoque</Badge>
+                                  ) : (
+                                    <Badge variant="secondary">Consumo Direto</Badge>
+                                  )}
                                 </td>
                                 <td className="p-3">
-                                  <span className={`text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300`}>
-                                    Processada
-                                  </span>
+                                  {nota.dataProcessamento ? new Date(nota.dataProcessamento).toLocaleString('pt-BR') : '-'}
+                                </td>
+                                <td className="p-3">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (nota.xmlContent) {
+                                        downloadXML(nota.xmlContent, nota.numero);
+                                      }
+                                    }}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
                                 </td>
                               </tr>
                             ))}
@@ -743,8 +1031,8 @@ const NotasFiscais = () => {
                   </Card>
                 ) : (
                   <EmptyState
-                    title="Nenhuma nota fiscal processada"
-                    description="Não existem notas fiscais processadas no momento."
+                    title="Nenhuma nota fiscal no histórico"
+                    description="Não existem notas fiscais processadas no histórico."
                     icon={<FileText size={50} />}
                   />
                 )}
@@ -779,52 +1067,6 @@ const NotasFiscais = () => {
                   Revise os dados e itens extraídos, confirme as quantidades recebidas e finalize o processo para atualizar automaticamente o estoque.
                 </p>
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* Card de Status SEFAZ */}
-          <Card className="mt-4">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Status da SEFAZ</CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={checkRealSefazStatus}
-                disabled={checkingSefaz}
-              >
-                {checkingSefaz ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verificar"}
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {checkingSefaz ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Verificando status da SEFAZ...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center space-x-2">
-                    {sefazStatus.status === 'online' && (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    )}
-                    {sefazStatus.status === 'partial' && (
-                      <AlertCircle className="h-4 w-4 text-amber-500" />
-                    )}
-                    {sefazStatus.status === 'offline' && (
-                      <AlertCircle className="h-4 w-4 text-red-500" />
-                    )}
-                    <span className={`text-sm ${
-                      sefazStatus.status === 'online' ? 'text-green-500' :
-                      sefazStatus.status === 'partial' ? 'text-amber-500' : 'text-red-500'
-                    }`}>
-                      {sefazStatus.message}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Última verificação: {sefazStatus.lastChecked}
-                  </p>
-                </>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -879,15 +1121,53 @@ const NotasFiscais = () => {
                     {notaSelecionada.chaveAcesso || 'Não informada'}
                   </p>
                 </div>
+                {notaSelecionada.dataProcessamento && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Processamento</p>
+                    <p className="font-medium">
+                      {new Date(notaSelecionada.dataProcessamento).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+                {notaSelecionada.tipoProcessamento && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tipo</p>
+                    <p className="font-medium">
+                      {notaSelecionada.tipoProcessamento === 'estoque' ? 'Estoque' : 'Consumo Direto'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">Itens da Nota Fiscal</h3>
-                {notaSelecionada.status === 'pendente' && (
-                  <Button onClick={abrirModalVinculacao}>
-                    Processar Nota Fiscal
-                  </Button>
-                )}
+                <div className="flex space-x-2">
+                  {notaSelecionada.xmlContent && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => downloadXML(notaSelecionada.xmlContent, notaSelecionada.numero)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Baixar XML
+                    </Button>
+                  )}
+                  {notaSelecionada.status === 'pendente' && (
+                    <>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => removerNotaFiscal(notaSelecionada.id)}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Remover
+                      </Button>
+                      <Button onClick={abrirModalProcessamento}>
+                        Processar Nota Fiscal
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="border rounded-md">
@@ -899,7 +1179,10 @@ const NotasFiscais = () => {
                       <th className="text-left p-3 text-sm font-medium">Quantidade</th>
                       <th className="text-left p-3 text-sm font-medium">Unidade</th>
                       <th className="text-left p-3 text-sm font-medium">Valor Unit.</th>
-                      <th className="text-left p-3 text-sm font-medium">Status</th>
+                      <th className="text-left p-3 text-sm font-medium">Valor Total</th>
+                      {notaSelecionada.status !== 'pendente' && (
+                        <th className="text-left p-3 text-sm font-medium">Status</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -914,19 +1197,20 @@ const NotasFiscais = () => {
                             R$ {(item.valorUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                           <td className="p-3">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              item.vinculado 
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-                            }`}>
-                              {item.vinculado ? 'Vinculado' : 'Pendente'}
-                            </span>
+                            R$ {(item.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
+                          {notaSelecionada.status !== 'pendente' && (
+                            <td className="p-3">
+                              <Badge variant={item.vinculado ? "default" : "outline"}>
+                                {item.vinculado ? 'Processado' : 'Não processado'}
+                              </Badge>
+                            </td>
+                          )}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="text-center p-4 text-muted-foreground">
+                        <td colSpan={notaSelecionada.status !== 'pendente' ? 7 : 6} className="text-center p-4 text-muted-foreground">
                           Nenhum item encontrado nesta nota fiscal
                         </td>
                       </tr>
@@ -978,316 +1262,211 @@ const NotasFiscais = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Vinculação */}
-      {showVinculacaoModal && notaSelecionada && (
-        <Dialog open={showVinculacaoModal} onOpenChange={setShowVinculacaoModal}>
-          <DialogContent className="max-w-6xl h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <Link2 className="h-5 w-5 mr-2" />
-                Vincular Itens da Nota Fiscal ao Estoque
-              </DialogTitle>
-            </DialogHeader>
-
-            {loadingProdutos ? (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <span className="ml-2">Carregando produtos...</span>
+      {/* Modal de Processamento para Estoque */}
+      {showEstoqueModal && notaSelecionada && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50">
+          <div className="w-full max-w-4xl h-full bg-background overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Vincular Itens ao Estoque</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowEstoqueModal(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-6 mt-4">
-                <div>
-                  <h3 className="font-medium mb-2">Itens da Nota Fiscal</h3>
+
+              {loadingProdutos ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <span className="ml-2">Carregando produtos...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
                   <div className="border rounded-md">
                     <table className="w-full">
                       <thead className="bg-muted/50">
                         <tr>
-                          <th className="text-left p-2 text-sm font-medium">Código</th>
-                          <th className="text-left p-2 text-sm font-medium">Descrição</th>
-                          <th className="text-left p-2 text-sm font-medium">Qtd</th>
-                          <th className="text-left p-2 text-sm font-medium">Ação</th>
+                          <th className="text-left p-3 text-sm font-medium">Código</th>
+                          <th className="text-left p-3 text-sm font-medium">Descrição</th>
+                          <th className="text-left p-3 text-sm font-medium">Quantidade</th>
+                          <th className="text-left p-3 text-sm font-medium">Vincular a</th>
                         </tr>
                       </thead>
                       <tbody>
                         {notaSelecionada.itens?.map((item, index) => (
                           <tr key={index} className="border-t">
-                            <td className="p-2">{item.codigo || '-'}</td>
-                            <td className="p-2">{item.descricao || '-'}</td>
-                            <td className="p-2">{(item.quantidade || 0).toLocaleString('pt-BR')} {item.unidade || '-'}</td>
-                            <td className="p-2">
-                              {produtoJaExiste(item.codigo) ? (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  disabled={item.vinculado}
-                                  onClick={() => {
-                                    const produto = produtos.find(p => p.codigo === item.codigo);
-                                    if (produto) {
-                                      vincularProduto(item, produto);
-                                    }
-                                  }}
-                                >
-                                  {item.vinculado ? (
-                                    <>
-                                      <CheckCircle className="h-4 w-4 mr-1" /> Vinculado
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Link2 className="h-4 w-4 mr-1" /> Vincular
-                                    </>
-                                  )}
-                                </Button>
-                              ) : (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => {
-                                    setProdutoParaCriar(item);
-                                    setNovoProduto({
-                                      codigoEstoque: item.codigo,
-                                      nome: item.descricao,
-                                      unidade_de_medida: item.unidade,
-                                      deposito: "Principal",
-                                      quantidadeMinima: 0,
-                                      valorUnitario: item.valorUnitario
-                                    });
-                                  }}
-                                >
-                                  <Plus className="h-4 w-4 mr-1" /> Criar Produto
-                                </Button>
-                              )}
+                            <td className="p-3">{item.codigo || '-'}</td>
+                            <td className="p-3">{item.descricao || '-'}</td>
+                            <td className="p-3">{(item.quantidade || 0).toLocaleString('pt-BR')} {item.unidade || '-'}</td>
+                            <td className="p-3">
+                              <Select
+                                value={produtosVinculados[item.codigo] || ''}
+                                onValueChange={(value) => handleVincularProduto(item.codigo, value)}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Selecione um produto" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-background">
+                                  {produtos.map((produto) => (
+                                    <SelectItem 
+                                      key={produto.id} 
+                                      value={produto.id}
+                                      className="hover:bg-muted/50"
+                                    >
+                                      {produto.codigo_material} - {produto.nome} (Estoque: {produto.quantidade})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </div>
 
-                <div>
-                  <h3 className="font-medium mb-2">Produtos no Estoque</h3>
-                  <div className="border rounded-md">
-                    <table className="w-full">
-                      <thead className="bg-muted/50">
-                        <tr>
-                          <th className="text-left p-2 text-sm font-medium">Código</th>
-                          <th className="text-left p-2 text-sm font-medium">Nome</th>
-                          <th className="text-left p-2 text-sm font-medium">Estoque</th>
-                          <th className="text-left p-2 text-sm font-medium">Valor</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {produtos?.map((produto, index) => (
-                          <tr key={index} className="border-t">
-                            <td className="p-2">{produto.codigo || '-'}</td>
-                            <td className="p-2">{produto.nome || '-'}</td>
-                            <td className="p-2">
-                              {(produto.quantidadeAtual || 0).toLocaleString('pt-BR')} {produto.unidade || '-'}
-                            </td>
-                            <td className="p-2">
-                              R$ {(produto.valorUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end mt-6 space-x-2">
-              <Button variant="outline" onClick={() => setShowVinculacaoModal(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={finalizarVinculacao}
-                disabled={!notaSelecionada.itens?.some(i => i.vinculado)}
-              >
-                Finalizar Vinculação
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Modal de Criação de Produto */}
-      {produtoParaCriar && novoProduto && (
-        <Dialog open={!!produtoParaCriar} onOpenChange={(open) => !open && setProdutoParaCriar(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Criar Novo Produto</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Código do Produto</label>
-                <Input 
-                  value={novoProduto.codigoEstoque || produtoParaCriar.codigo || ''}
-                  onChange={(e) => setNovoProduto({...novoProduto, codigoEstoque: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Nome do Produto</label>
-                <Input 
-                  value={novoProduto.nome || produtoParaCriar.descricao || ''}
-                  onChange={(e) => setNovoProduto({...novoProduto, nome: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Unidade de Medida</label>
-                  <Input 
-                    value={novoProduto.unidade_de_medida || produtoParaCriar.unidade || ''}
-                    onChange={(e) => setNovoProduto({...novoProduto, unidade_de_medida: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Depósito</label>
-                  {loadingDepositos ? (
-                    <Input disabled value="Carregando depósitos..." />
-                  ) : (
-                    <Select
-                      value={novoProduto.deposito || "Principal"}
-                      onValueChange={(value) => setNovoProduto({...novoProduto, deposito: value})}
+                  <div className="flex justify-end mt-6 space-x-2">
+                    <Button variant="outline" onClick={() => setShowEstoqueModal(false)}>
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={confirmarProcessamentoEstoque}
+                      disabled={Object.keys(produtosVinculados).length !== notaSelecionada.itens.length}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um depósito" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {depositos.map((deposito) => (
-                          <SelectItem key={deposito.id} value={deposito.deposito}>
-                            {deposito.deposito} ({deposito.unidade})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                      Confirmar Processamento
+                    </Button>
+                  </div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Quantidade Mínima</label>
-                  <Input 
-                    type="number"
-                    value={novoProduto.quantidadeMinima || 0}
-                    onChange={(e) => setNovoProduto({...novoProduto, quantidadeMinima: Number(e.target.value)})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Valor Unitário</label>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    value={novoProduto.valorUnitario || produtoParaCriar.valorUnitario || 0}
-                    onChange={(e) => setNovoProduto({...novoProduto, valorUnitario: Number(e.target.value)})}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Prateleira</label>
-                <Input 
-                  value={novoProduto.prateleira || ""}
-                  onChange={(e) => setNovoProduto({...novoProduto, prateleira: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Detalhes</label>
-                <Input 
-                  value={novoProduto.detalhes || ""}
-                  onChange={(e) => setNovoProduto({...novoProduto, detalhes: e.target.value})}
-                />
-              </div>
+              )}
             </div>
-
-            <div className="flex justify-end mt-6 space-x-2">
-              <Button variant="outline" onClick={() => setProdutoParaCriar(null)}>
-                Cancelar
-              </Button>
-              <Button onClick={criarNovoProduto}>
-                <Plus className="h-4 w-4 mr-2" /> Criar Produto
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       )}
 
       {/* Modal de Consumo Direto */}
       {showConsumoDiretoModal && notaSelecionada && (
-        <Dialog open={showConsumoDiretoModal} onOpenChange={setShowConsumoDiretoModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Registrar Consumo Direto</DialogTitle>
-              <DialogDescription>
-                Preencha os detalhes para registrar os itens como consumo direto
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Centro de Custo</label>
-                <Input 
-                  value={consumoDiretoData.centroCusto || ''}
-                  onChange={(e) => setConsumoDiretoData({...consumoDiretoData, centroCusto: e.target.value})}
-                />
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50">
+          <div className="w-full max-w-md h-full bg-background overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Registrar Consumo Direto</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowConsumoDiretoModal(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Responsável</label>
-                <Input 
-                  value={consumoDiretoData.responsavel || ''}
-                  onChange={(e) => setConsumoDiretoData({...consumoDiretoData, responsavel: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Observações</label>
-                <Input 
-                  value={consumoDiretoData.observacoes || ''}
-                  onChange={(e) => setConsumoDiretoData({...consumoDiretoData, observacoes: e.target.value})}
-                />
-              </div>
-
-              <div className="mt-4">
-                <h4 className="font-medium mb-2">Itens da Nota Fiscal</h4>
-                <div className="border rounded-md p-4">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2 text-sm font-medium">Código</th>
-                        <th className="text-left p-2 text-sm font-medium">Descrição</th>
-                        <th className="text-left p-2 text-sm font-medium">Quantidade</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {notaSelecionada.itens?.map((item, index) => (
-                        <tr key={index} className="border-b">
-                          <td className="p-2">{item.codigo}</td>
-                          <td className="p-2">{item.descricao}</td>
-                          <td className="p-2">{item.quantidade} {item.unidade}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {loadingCentrosCusto ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <span className="ml-2">Carregando centros de custo...</span>
                 </div>
-              </div>
-            </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Centro de Custo</label>
+                    <div className="relative">
+                      <div className="flex items-center border rounded-md mb-2">
+                        <Search className="h-4 w-4 ml-3 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar centro de custo..."
+                          className="border-0 pl-2 focus-visible:ring-0"
+                          value={searchCentroCusto}
+                          onChange={(e) => setSearchCentroCusto(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-2">
+                        {filteredCentrosCusto.length > 0 ? (
+                          filteredCentrosCusto.map(centro => (
+                            <div key={centro.id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded">
+                              <input
+                                type="checkbox"
+                                id={`centro-${centro.id}`}
+                                checked={centrosSelecionados.includes(centro.id)}
+                                onChange={() => toggleCentroCusto(centro.id)}
+                                className="h-4 w-4"
+                              />
+                              <label htmlFor={`centro-${centro.id}`} className="text-sm flex-1">
+                                <div className="font-medium">{centro.nome}</div>
+                                <div className="text-muted-foreground text-xs">{centro.unidade}</div>
+                              </label>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center p-4 text-muted-foreground text-sm">
+                            Nenhum centro de custo encontrado
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowConsumoDiretoModal(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={salvarConsumoDireto}>
-                Registrar Consumo Direto
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Responsável</label>
+                    <Input 
+                      value={userData?.nome || user?.displayName || ''}
+                      readOnly
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Observações</label>
+                    <Input 
+                      value={consumoDiretoData.observacoes || ''}
+                      onChange={(e) => setConsumoDiretoData({
+                        ...consumoDiretoData,
+                        observacoes: e.target.value
+                      })}
+                      placeholder="Opcional"
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <h4 className="font-medium mb-2">Itens da Nota Fiscal</h4>
+                    <div className="border rounded-md p-4 max-h-60 overflow-y-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-2 text-sm font-medium">Código</th>
+                            <th className="text-left p-2 text-sm font-medium">Descrição</th>
+                            <th className="text-left p-2 text-sm font-medium">Quantidade</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {notaSelecionada.itens?.map((item, index) => (
+                            <tr key={index} className="border-b">
+                              <td className="p-2">{item.codigo}</td>
+                              <td className="p-2">{item.descricao}</td>
+                              <td className="p-2">{item.quantidade} {item.unidade}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end mt-6 space-x-2">
+                    <Button variant="outline" onClick={() => setShowConsumoDiretoModal(false)}>
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={salvarConsumoDireto}
+                      disabled={centrosSelecionados.length === 0}
+                    >
+                      Registrar Consumo Direto
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </AppLayout>
   );
