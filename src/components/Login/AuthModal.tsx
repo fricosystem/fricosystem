@@ -19,24 +19,34 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-[#1A1F2C]/80 backdrop-blur-xl border border-white/10 text-white">
+      <DialogContent className="sm:max-w-[425px] bg-white border border-gray-200 rounded-lg shadow-xl text-gray-800">
         <DialogHeader>
-          <DialogTitle className="text-3xl font-bold text-center text-white">
+          <DialogTitle className="text-2xl font-bold text-center text-gray-900">
             {activeTab === "login" ? "Acesse sua conta" : "Crie sua conta"}
           </DialogTitle>
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "login" | "register")} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-black/30">
-            <TabsTrigger value="login" className="text-black">Login</TabsTrigger>
-            <TabsTrigger value="register" className="text-white">Cadastro</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-gray-100 h-12 p-1 rounded-md">
+            <TabsTrigger 
+              value="login" 
+              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-white text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              Login
+            </TabsTrigger>
+            <TabsTrigger 
+              value="register" 
+              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-white text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              Cadastro
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="login" className="mt-4">
+          <TabsContent value="login" className="mt-6">
             <LoginForm onSuccess={handleSuccess} />
           </TabsContent>
           
-          <TabsContent value="register" className="mt-4">
+          <TabsContent value="register" className="mt-6">
             <RegisterForm onSuccess={handleSuccess} />
           </TabsContent>
         </Tabs>
