@@ -25,9 +25,16 @@ import {
 } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
-import UsuarioForm from '@/components/UsuarioForm';
-import { Unidade } from '@/types/unidade';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import AppLayout from '@/layouts/AppLayout';
+
+// Definindo a interface Unidade
+interface Unidade {
+  id: string;
+  nome: string;
+}
 
 // Define Usuario interface internally
 export interface Usuario {
@@ -39,7 +46,38 @@ export interface Usuario {
   perfil: string;
   senha: string;
   unidade: string;
+  permissoes?: string[];
 }
+
+// Define permissions list
+const PERMISSOES = [
+  { id: 'dashboard', label: 'Dashboard Geral' },
+  { id: 'ordens_compra', label: 'Ordens de Compra' },
+  { id: 'produtos', label: 'Produtos' },
+  { id: 'inventario', label: 'Inventário' },
+  { id: 'inventario_ciclico', label: 'Inventário Cíclico' },
+  { id: 'entrada_manual', label: 'Entrada Manual' },
+  { id: 'notas_fiscais', label: 'NF - Entrada XML' },
+  { id: 'transferencia', label: 'Transferência' },
+  { id: 'enderecamento', label: 'Endereçamento' },
+  { id: 'medida_lenha', label: 'Medida de Lenha' },
+  { id: 'requisicoes', label: 'Requisições' },
+  { id: 'carrinho', label: 'Carrinho' },
+  { id: 'ordens_servico', label: 'Ordens de Serviço' },
+  { id: 'devolucoes', label: 'Devoluções' },
+  { id: 'compras', label: 'Compras' },
+  { id: 'cotacoes_orcamentos', label: 'Cotações e Orçamentos' },
+  { id: 'rastreamento_entregas', label: 'Rastreamento de Entregas' },
+  { id: 'calendario_recebimento', label: 'Calendário de Recebimento' },
+  { id: 'fornecedores', label: 'Fornecedores' },
+  { id: 'notas_fiscais_lancamento', label: 'NF - Lançamento' },
+  { id: 'precificacao', label: 'Precificação' },
+  { id: 'relatorios_financeiros', label: 'Relatórios Financeiros' },
+  { id: 'importar_dados', label: 'Importar dados' },
+  { id: 'exportar_dados', label: 'Exportar dados' },
+  { id: 'backup_dados', label: 'Backup/Restauração' },
+  { id: 'tudo', label: 'Acesso Total (todas as permissões)' },
+];
 
 // Firebase service functions
 const usuarioService = {
@@ -97,6 +135,203 @@ const unidadeService = {
     } as Unidade));
     return unidades.sort((a, b) => a.nome.localeCompare(b.nome));
   },
+};
+
+const UsuarioForm = ({
+  usuario,
+  onSubmit,
+  onCancel,
+  isLoading,
+  unidades,
+}: {
+  usuario?: Usuario;
+  onSubmit: (usuario: Omit<Usuario, 'id'>) => Promise<void>;
+  onCancel: () => void;
+  isLoading: boolean;
+  unidades: Unidade[];
+}) => {
+  const [formData, setFormData] = useState<Omit<Usuario, 'id'>>({
+    ativo: usuario?.ativo || 'sim',
+    email: usuario?.email || '',
+    imagem_perfil: usuario?.imagem_perfil || '',
+    nome: usuario?.nome || '',
+    perfil: usuario?.perfil || 'usuario',
+    senha: usuario?.senha || '',
+    unidade: usuario?.unidade || '',
+    permissoes: usuario?.permissoes || [],
+  });
+
+  const [selectedPermissoes, setSelectedPermissoes] = useState<string[]>(usuario?.permissoes || []);
+
+  useEffect(() => {
+    if (usuario) {
+      setFormData({
+        ativo: usuario.ativo,
+        email: usuario.email,
+        imagem_perfil: usuario.imagem_perfil,
+        nome: usuario.nome,
+        perfil: usuario.perfil,
+        senha: usuario.senha,
+        unidade: usuario.unidade,
+        permissoes: usuario.permissoes || [],
+      });
+      setSelectedPermissoes(usuario.permissoes || []);
+    }
+  }, [usuario]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (value: string) => {
+    setFormData(prev => ({ ...prev, perfil: value }));
+  };
+
+  const handleUnidadeChange = (value: string) => {
+    setFormData(prev => ({ ...prev, unidade: value }));
+  };
+
+  const handleStatusChange = (value: string) => {
+    setFormData(prev => ({ ...prev, ativo: value }));
+  };
+
+  const handlePermissaoChange = (permissaoId: string, isChecked: boolean) => {
+    if (permissaoId === 'tudo') {
+      if (isChecked) {
+        setSelectedPermissoes(['tudo']);
+      } else {
+        setSelectedPermissoes([]);
+      }
+    } else {
+      if (isChecked) {
+        setSelectedPermissoes(prev => [...prev.filter(p => p !== 'tudo'), permissaoId]);
+      } else {
+        setSelectedPermissoes(prev => prev.filter(p => p !== permissaoId));
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onSubmit({ ...formData, permissoes: selectedPermissoes });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="nome">Nome</Label>
+          <Input
+            id="nome"
+            name="nome"
+            value={formData.nome}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="senha">Senha</Label>
+          <Input
+            id="senha"
+            name="senha"
+            type="password"
+            value={formData.senha}
+            onChange={handleChange}
+            required={!usuario}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="perfil">Perfil</Label>
+          <Select value={formData.perfil} onValueChange={handleSelectChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o perfil" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Administrador</SelectItem>
+              <SelectItem value="usuario">Usuário</SelectItem>
+              <SelectItem value="estoque">Estoque</SelectItem>
+              <SelectItem value="financeiro">Financeiro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="unidade">Unidade</Label>
+          <Select value={formData.unidade} onValueChange={handleUnidadeChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione a unidade" />
+            </SelectTrigger>
+            <SelectContent>
+              {unidades.map(unidade => (
+                <SelectItem key={unidade.id} value={unidade.nome}>
+                  {unidade.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <Select value={formData.ativo} onValueChange={handleStatusChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sim">Ativo</SelectItem>
+              <SelectItem value="nao">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Permissões</Label>
+        <div className="border rounded-md p-4">
+          <ScrollArea className="h-64">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {PERMISSOES.map(permissao => (
+                <div key={permissao.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`permissao-${permissao.id}`}
+                    checked={
+                      permissao.id === 'tudo' 
+                        ? selectedPermissoes.includes('tudo')
+                        : selectedPermissoes.includes(permissao.id) || selectedPermissoes.includes('tudo')
+                    }
+                    onCheckedChange={(checked) => 
+                      handlePermissaoChange(permissao.id, checked as boolean)
+                    }
+                    disabled={permissao.id !== 'tudo' && selectedPermissoes.includes('tudo')}
+                  />
+                  <Label htmlFor={`permissao-${permissao.id}`}>{permissao.label}</Label>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? 'Salvando...' : 'Salvar'}
+        </Button>
+      </div>
+    </form>
+  );
 };
 
 const GestaoUsuarios = () => {
@@ -340,7 +575,7 @@ const GestaoUsuarios = () => {
 
         {/* Dialog do formulário */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
             <DialogHeader>
             <DialogTitle>
                 {editingUsuario ? 'Editar Usuário' : 'Novo Usuário'}

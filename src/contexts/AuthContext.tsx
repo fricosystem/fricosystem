@@ -34,6 +34,7 @@ interface UserData {
   online: string;
   unidade: string;
   fornecedorCnpj: string;
+  permissoes: string[];
 }
 
 interface AuthContextType {
@@ -98,7 +99,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           
           if (userDoc.exists()) {
             const userData = userDoc.data() as UserData;
-            setUserData(userData);
+            setUserData({
+              ...userData,
+              id: currentUser.uid
+            });
             
             if (userData.ativo === "sim") {
               await updateDoc(userDocRef, {
@@ -146,7 +150,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         imagem_perfil: imagemPerfil,
         ativo: "sim",
         centro_de_custo: centroDeCusto,
-        online: "online"
+        online: "online",
+        permissoes: ["dashboard"] // Permissões padrão para novos usuários
       });
       
       return userCredential.user;

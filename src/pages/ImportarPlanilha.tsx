@@ -323,10 +323,10 @@ const ImportarPlanilha = () => {
 
   return (
     <AppLayout title="Importar Planilha">
-      <div className="flex flex-col min-h-[calc(100vh-64px)] bg-gray-900 text-white">
+      <div className="flex flex-col min-h-[calc(100vh-64px)] bg-gray-950 text-white">
         <div className="flex-1 p-4 md:p-6">
           <div className="max-w-full mx-auto space-y-6">
-            <Card className="w-full bg-gray-800 border-gray-700">
+            <Card className="w-full bg-gray-950">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
                   <Upload className="mr-2 h-5 w-5" />
@@ -455,7 +455,7 @@ const ImportarPlanilha = () => {
 
             {activeTab === "produtos" && importedData.length > 0 && (
               <div className="space-y-6">
-                <Card className="w-full bg-gray-800 border-gray-700">
+                <Card className="w-full bg-gray-950 border-gray-700">
                   <CardHeader>
                     <CardTitle className="flex items-center text-white">
                       <FileText className="mr-2 h-5 w-5" />

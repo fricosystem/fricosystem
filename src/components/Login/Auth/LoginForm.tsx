@@ -25,7 +25,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         setTimeout(() => navigate('/bem-vindo'), 0);
         toast({
           title: "Conta desativada",
-          description: "Você será redirecionado para a tela de boas-vindas.",
+          description: "Procure um administrador para ativar sua conta.",
           variant: "destructive",
         });
         return;

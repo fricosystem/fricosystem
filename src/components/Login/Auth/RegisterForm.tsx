@@ -66,19 +66,15 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
         nome: name.trim(),
         email: email.trim().toLowerCase(),
         centro_de_custo: centroDeCusto,
-        perfil: "usuario", // Nível de acesso padrão
-        ativo: true,
+        ativo: "não",
         tema: "dark",
         data_criacao: serverTimestamp(),
         data_atualizacao: serverTimestamp(),
         ultimo_login: null,
         imagem_perfil: "",
+        senha: confirmPassword,
         permissoes: [
-          "dashboard",
-          "produtos", 
-          "requisicoes",
-          "carrinho",
-          "devolucoes"
+          "dashboard"
         ] // Páginas que o usuário pode acessar inicialmente
       };
 

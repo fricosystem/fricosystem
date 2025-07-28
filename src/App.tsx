@@ -25,6 +25,7 @@ import Fornecedores from "./pages/Fornecedores";
 import ImportarPlanilha from "./pages/ImportarPlanilha";
 import MedidaLenha from "./pages/MedidaLenha";
 import FornecedorProdutos from "./pages/Fornecedor/FornecedorProdutos";
+import NotasFiscaisLancamento from "./pages/NotasFiscaisLancamento";
 
 // Páginas de Transferência e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
@@ -115,6 +116,7 @@ const AppContent = () => {
           <Route path="/gestao-produtos" element={<AuthGuard><GestaoProdutos /></AuthGuard>} />
           <Route path="/gestao-usuarios" element={<AuthGuard><GestaoUsuarios /></AuthGuard>} />
           <Route path="/fornecedor-produtos" element={<AuthGuard><FornecedorProdutos /></AuthGuard>} />
+          <Route path="/notas-fiscais-lancamento" element={<AuthGuard><NotasFiscaisLancamento /></AuthGuard>} />
 
           {/* Rotas de Entrada Manual e Transferência */}
           <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />

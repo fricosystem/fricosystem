@@ -12,7 +12,7 @@ const OrdensServico = () => {
           <Tabs defaultValue="nova" className="w-full h-full flex flex-col">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="nova">Nova Ordem</TabsTrigger>
-              <TabsTrigger value="listar">Listar Ordens</TabsTrigger>
+              <TabsTrigger value="listar">Ordens criadas</TabsTrigger>
             </TabsList>
             <div className="flex-1 overflow-auto">
               <TabsContent value="nova" className="h-full">

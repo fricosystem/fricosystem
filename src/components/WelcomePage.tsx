@@ -11,7 +11,7 @@ const WelcomePage = () => {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   
   const textSequence = [
-    'Aguarde aprovação pela nossa Equipe Fricó Alimentos',
+    'Aguarde aprovação pela nossa equipe administrativa Fricó Alimentos',
     'Já conhece a inteligência do FR Stock Manager?',
     'Sabia que o FR Stock Manager otimiza seu estoque em tempo real?',
     'Você está prestes a experimentar um novo nível de controle logístico.',
@@ -36,7 +36,7 @@ const WelcomePage = () => {
       if (displayText.length < currentText.length) {
         timer = setTimeout(() => {
           setDisplayText(currentText.substring(0, displayText.length + 1));
-        }, 60);
+        }, 30);
       } else {
         // Finished typing, wait 2 seconds then start deleting
         timer = setTimeout(() => {
@@ -63,87 +63,113 @@ const WelcomePage = () => {
     return () => clearTimeout(timer);
   }, [displayText, currentTextIndex, isTyping, isDeleting, textSequence]);
 
-  // Floating particles animation
-  const particles = Array.from({ length: 8 }, (_, i) => i);
+  // Generate random particles with individual paths
+  const particles = Array.from({ length: 15 }, (_, i) => {
+    const startX = Math.random() * window.innerWidth;
+    const startY = Math.random() * window.innerHeight;
+    const endX = Math.random() * window.innerWidth;
+    const endY = Math.random() * window.innerHeight;
+    const duration = 15 + Math.random() * 30;
+    const delay = Math.random() * 5;
+    const size = 3 + Math.random() * 5;
+    const opacity = 0.2 + Math.random() * 0.5;
+    
+    return {
+      id: i,
+      startX,
+      startY,
+      endX,
+      endY,
+      duration,
+      delay,
+      size,
+      opacity
+    };
+  });
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Animated background particles */}
+      {/* Animated background particles with individual random paths */}
       {particles.map((particle) => (
         <motion.div
-          key={particle}
+          key={particle.id}
           className="absolute"
           initial={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
+            x: particle.startX,
+            y: particle.startY,
+            opacity: 0
           }}
           animate={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
+            x: [particle.startX, particle.endX, particle.startX],
+            y: [particle.startY, particle.endY, particle.startY],
+            opacity: [0, particle.opacity, 0]
           }}
           transition={{
-            duration: Math.random() * 10 + 10,
+            duration: particle.duration,
+            delay: particle.delay,
             repeat: Infinity,
-            ease: "linear",
+            repeatType: "loop",
+            ease: "easeInOut"
+          }}
+          style={{
+            width: `${particle.size}px`,
+            height: `${particle.size}px`
           }}
         >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{
-              duration: Math.random() * 5 + 3,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          >
-            <Box className="w-4 h-4 text-gray-600 opacity-30" />
-          </motion.div>
+          <Box className="w-full h-full text-gray-400" />
         </motion.div>
       ))}
 
-      {/* Floating boxes with different animations */}
+      {/* Floating elements with independent random movements */}
       <motion.div
-        className="absolute top-20 left-10"
+        className="absolute top-1/4 left-1/4"
         animate={{
-          y: [0, -30, 0],
-          rotate: [0, 180, 360],
+          x: [0, 50, 0, -30, 0],
+          y: [0, -20, 30, 0, 0],
+          rotate: [0, 10, -5, 0]
         }}
         transition={{
-          duration: 6,
+          duration: 12,
           repeat: Infinity,
-          ease: "easeInOut",
+          repeatType: "reverse",
+          ease: "easeInOut"
         }}
       >
-        <Box className="w-12 h-12 text-gray-500" />
+        <Box className="w-8 h-8 text-gray-500 opacity-70" />
       </motion.div>
 
       <motion.div
-        className="absolute top-32 right-16"
+        className="absolute top-1/3 right-1/4"
         animate={{
-          x: [0, 40, 0],
-          scale: [1, 1.2, 1],
+          x: [0, -40, 20, 0],
+          y: [0, 30, -20, 0],
+          scale: [1, 1.3, 0.8, 1]
         }}
         transition={{
-          duration: 4,
+          duration: 15,
           repeat: Infinity,
-          ease: "easeInOut",
+          repeatType: "reverse",
+          ease: "easeInOut"
         }}
       >
-        <Box className="w-8 h-8 text-gray-400" />
+        <Box className="w-6 h-6 text-gray-400 opacity-70" />
       </motion.div>
 
       <motion.div
-        className="absolute bottom-40 left-1/4"
+        className="absolute bottom-1/3 left-1/3"
         animate={{
-          y: [0, -20, 0],
-          x: [0, 20, 0],
+          x: [0, 60, -40, 0],
+          y: [0, -30, 40, 0],
+          rotate: [0, -15, 10, 0]
         }}
         transition={{
-          duration: 8,
+          duration: 18,
           repeat: Infinity,
-          ease: "easeInOut",
+          repeatType: "reverse",
+          ease: "easeInOut"
         }}
       >
-        <Box className="w-10 h-10 text-gray-600" />
+        <Box className="w-7 h-7 text-gray-600 opacity-70" />
       </motion.div>
 
       {/* Main content */}
@@ -154,19 +180,14 @@ const WelcomePage = () => {
           transition={{ duration: 1, delay: 0.5 }}
           className="text-center mb-12"
         >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="mx-auto mb-8 w-24 h-24 bg-white rounded-full flex items-center justify-center"
-          >
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            >
-              <Box className="w-12 h-12 text-black" />
-            </motion.div>
-          </motion.div>
+          {/* Ícone da Fricó fixo no centro */}
+          <div className="mx-auto mb-8 flex justify-center">
+            <img 
+              src="/Uploads/IconeFrico3D.png" 
+              alt="Fricó Alimentos Logo" 
+              className="w-28 h-28 object-scale-down" 
+            />
+          </div>
 
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 font-sans">
             {displayText}

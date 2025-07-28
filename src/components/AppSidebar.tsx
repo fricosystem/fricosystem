@@ -26,7 +26,6 @@ import {
   TrendingUp,
   Settings,
   FileSpreadsheet,
-  // Novos ícones adicionados para diversificação
   ListChecks,
   PackagePlus,
   Ruler,
@@ -39,7 +38,6 @@ import {
   PackageSearch,
   Download,
   Database,
-  // Ícones para o dropdown do usuário
   LogOut,
   Sun,
   Moon,
@@ -68,6 +66,7 @@ interface SidebarItem {
   icon: React.ElementType;
   label: string;
   badgeCount?: number;
+  permission?: string;
 }
 
 interface SidebarCategory {
@@ -89,6 +88,32 @@ const AppSidebar = () => {
 
   const isAdmin = userData?.cargo === "DESENVOLVEDOR";
   
+  // Verifica se o usuário está ativo
+  useEffect(() => {
+    if (userData?.ativo === "não") {
+      navigate("/bem-vindo");
+      toast({
+        title: "Conta inativa",
+        description: "Sua conta está inativa. Entre em contato com o administrador.",
+        variant: "destructive",
+      });
+    }
+  }, [userData, navigate, toast]);
+
+  // Filtra os itens do sidebar baseado nas permissões do usuário
+  const filterItemsByPermission = (items: SidebarItem[]) => {
+    if (!userData?.permissoes) return items;
+    // Se o usuário tem permissão "tudo", retorna todos os itens
+    if (userData.permissoes.includes("tudo")) return items;
+    // Caso contrário, filtra normalmente
+    return items.filter(item => {
+      // Se não tem permissão definida, permite acesso
+      if (!item.permission) return true;
+      // Verifica se a permissão está no array de permissões do usuário
+      return userData.permissoes.includes(item.permission);
+    });
+  };
+
   const getUserEmail = () => {
     if (!user) return null;
     return user.email || null;
@@ -251,76 +276,75 @@ const AppSidebar = () => {
     {
       label: "Principal",
       icon: Layers,
-      items: [
-        { to: "/dashboard", icon: Home, label: "Visão Geral" },
-        { to: "/fornecedor-produtos", icon: ShoppingCart, label: "Ordens de Compra" },
-      ],
+      items: filterItemsByPermission([
+        { to: "/dashboard", icon: Home, label: "Dashboard Geral", permission: "dashboard" },
+        { to: "/fornecedor-produtos", icon: ShoppingCart, label: "Ordens de Compra", permission: "ordens_compra" },
+      ]),
     },
     {
       label: "Estoque",
       icon: Boxes,
-      badgeCount: pendingRequestsCount,
-      items: [
-        { to: "/produtos", icon: Package, label: "Produtos" },
-        { to: "/inventario", icon: ClipboardList, label: "Inventário" },
-        { to: "/inventario-ciclico", icon: ListChecks, label: "Inventário Cíclico" },
-        { to: "/entrada-manual", icon: PackagePlus, label: "Entrada Manual" },
-        { to: "/notas-fiscais", icon: Receipt, label: "Notas Fiscais" },
-        { to: "/transferencia", icon: Truck, label: "Transferência" },
-        { to: "/enderecamento", icon: Warehouse, label: "Endereçamento" },
-        { to: "/medida-de-lenha", icon: Ruler, label: "Cubagem e medida de Lenha" },
-      ],
+      items: filterItemsByPermission([
+        { to: "/produtos", icon: Package, label: "Produtos", permission: "produtos" },
+        { to: "/inventario", icon: ClipboardList, label: "Inventário", permission: "inventario" },
+        { to: "/inventario-ciclico", icon: ListChecks, label: "Inventário Cíclico", permission: "inventario_ciclico" },
+        { to: "/entrada-manual", icon: PackagePlus, label: "Entrada Manual", permission: "entrada_manual" },
+        { to: "/notas-fiscais", icon: Receipt, label: "NF - Entrada XML", permission: "notas_fiscais" },
+        { to: "/transferencia", icon: Truck, label: "Transferência", permission: "transferencia" },
+        { to: "/enderecamento", icon: Warehouse, label: "Endereçamento", permission: "enderecamento" },
+        { to: "/medida-de-lenha", icon: Ruler, label: "Cubagem e medida de Lenha", permission: "medida_lenha" },
+      ]),
     },
     {
       label: "Requisições",
       icon: ClipboardList,
-      items: [
-        { to: "/requisicoes", icon: ClipboardList, label: "Requisições", badgeCount: pendingRequestsCount },
-        { to: "/carrinho", icon: ShoppingCart, label: "Carrinho" },
-        { to: "/ordensServico", icon: Wrench, label: "Ordens de Serviço" },
-        { to: "/devolucao", icon: AlertTriangle, label: "Devoluções" },
-      ],
+      items: filterItemsByPermission([
+        { to: "/requisicoes", icon: ClipboardList, label: "Requisições", badgeCount: pendingRequestsCount, permission: "requisicoes" },
+        { to: "/carrinho", icon: ShoppingCart, label: "Carrinho", permission: "carrinho" },
+        { to: "/ordensServico", icon: Wrench, label: "Ordens de Serviço", permission: "ordens_servico" },
+        { to: "/devolucao", icon: AlertTriangle, label: "Devoluções", permission: "devolucoes" },
+      ]),
     },
     {
       label: "Compras",
       icon: ShoppingCart,
-      items: [
-        { to: "/compras", icon: ShoppingCart, label: "Compras" },
-        { to: "/cotacoes-orcamentos", icon: FileText, label: "Cotações e Orçamentos" },
-        { to: "/rastreamento-entregas", icon: Truck, label: "Rastreamento de Entregas" },
-        { to: "/calendario-recebimento", icon: CalendarCheck, label: "Calendário de Recebimento" },
-        { to: "/fornecedores", icon: Users, label: "Fornecedores" },
-      ],
+      items: filterItemsByPermission([
+        { to: "/compras", icon: ShoppingCart, label: "Compras", permission: "compras" },
+        { to: "/cotacoes-orcamentos", icon: FileText, label: "Cotações e Orçamentos", permission: "cotacoes_orcamentos" },
+        { to: "/rastreamento-entregas", icon: Truck, label: "Rastreamento de Entregas", permission: "rastreamento_entregas" },
+        { to: "/calendario-recebimento", icon: CalendarCheck, label: "Calendário de Recebimento", permission: "calendario_recebimento" },
+        { to: "/fornecedores", icon: Users, label: "Fornecedores", permission: "fornecedores" },
+      ]),
     },
     {
       label: "Financeiro",
       icon: Wallet,
-      items: [
-        { to: "/centro-custos", icon: TrendingUp, label: "Centro de Custos" },
-        { to: "/precificacao", icon: TrendingUp, label: "Precificação" },
-        { to: "/relatorios-financeiros", icon: PieChart, label: "Relatórios Financeiros" },
-      ],
+      items: filterItemsByPermission([
+        { to: "/notas-fiscais-lancamento", icon: TrendingUp, label: "NF - Lançamento", permission: "notas_fiscais_lancamento" },
+        { to: "/precificacao", icon: TrendingUp, label: "Precificação", permission: "precificacao" },
+        { to: "/relatorios-financeiros", icon: PieChart, label: "Relatórios Financeiros", permission: "relatorios_financeiros" },
+      ]),
     },
     {
       label: "Utilitários",
       icon: FileText,
-      items: [
-        { to: "/importar-planilha", icon: FileText, label: "Importar dados" },
-        { to: "/exportacoes", icon: Download, label: "Exportar dados" },
-        { to: "/backup-dados", icon: Database, label: "Backup/Restauração" },
-      ],
+      items: filterItemsByPermission([
+        { to: "/importar-planilha", icon: FileText, label: "Importar dados", permission: "importar_dados" },
+        { to: "/exportacoes", icon: Download, label: "Exportar dados", permission: "exportar_dados" },
+        { to: "/backup-dados", icon: Database, label: "Backup/Restauração", permission: "backup_dados" },
+      ]),
     },
     ...(isAdmin ? [{
       label: "Administrativo",
       icon: Settings,
-      items: [
-        { to: "/gestao-usuarios", icon: Users, label: "Gestão de Usuários" },
-        { to: "/configuracoes-sistema", icon: Settings, label: "Configurações do Sistema" },
-        { to: "/alertas-notificacoes", icon: Bell, label: "Alertas e Notificações" },
-        { to: "/sugestao-reabastecimento", icon: PackageSearch, label: "Sugestão de Reabastecimento" },
-        { to: "/integracoes", icon: Settings, label: "Integrações (ERP/API)" },
-        { to: "/gestao-produtos", icon: Package, label: "Gestão de Produtos" },
-      ],
+      items: filterItemsByPermission([
+        { to: "/gestao-usuarios", icon: Users, label: "Gestão de Usuários", permission: "gestao_usuarios" },
+        { to: "/configuracoes-sistema", icon: Settings, label: "Configurações do Sistema", permission: "configuracoes_sistema" },
+        { to: "/alertas-notificacoes", icon: Bell, label: "Alertas e Notificações", permission: "alertas_notificacoes" },
+        { to: "/sugestao-reabastecimento", icon: PackageSearch, label: "Sugestão de Reabastecimento", permission: "sugestao_reabastecimento" },
+        { to: "/integracoes", icon: Settings, label: "Integrações (ERP/API)", permission: "integracoes" },
+        { to: "/gestao-produtos", icon: Package, label: "Gestão de Produtos", permission: "gestao_produtos" },
+      ]),
     }] : []),
   ];
 
@@ -483,68 +507,77 @@ const AppSidebar = () => {
           <div className="overflow-y-auto flex-grow" style={{ maxHeight: "calc(100vh - 180px)" }}>
             {sidebarCategories.map((category, index) => (
               <SidebarGroup key={index}>
-                <div 
-                  className={`${categoryBtnClasses} ${
-                    expandedCategories[category.label] 
-                      ? firebaseClasses.categoryBtn.active
-                      : firebaseClasses.categoryBtn.hover
-                  } ${firebaseClasses.text.normal}`}
-                  onClick={() => toggleCategoryExpansion(category.label)}
-                >
-                  <div className="flex items-center gap-1">
-                    <category.icon className="h-5 w-5" />
-                    <SidebarGroupLabel className="flex-1 text-1xl font-bold">{category.label}</SidebarGroupLabel>
-                  </div>
-                  <motion.div
-                    animate={{ rotate: expandedCategories[category.label] ? 180 : 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </motion.div>
-                </div>
-                
-                <AnimatePresence>
-                  {expandedCategories[category.label] && (
-                    <motion.div
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      variants={contentVariants}
-                      className="overflow-hidden"
+                {category.items.length > 0 && (
+                  <>
+                    <div 
+                      className={`${categoryBtnClasses} ${
+                        expandedCategories[category.label] 
+                          ? firebaseClasses.categoryBtn.active
+                          : firebaseClasses.categoryBtn.hover
+                      } ${firebaseClasses.text.normal}`}
+                      onClick={() => toggleCategoryExpansion(category.label)}
                     >
-                      <SidebarGroupContent className="pl-8 pr-1 mt-0.4">
-                        <SidebarMenu>
-                          {category.items.map((item) => (
-                            <SidebarMenuItem key={item.to}>
-                              <SidebarMenuButton
-                                isActive={location.pathname === item.to}
-                                onClick={() => navigate(item.to)}
-                                className={`flex items-center h-10 transition-all duration-200 rounded-md ${
-                                  location.pathname === item.to 
-                                    ? firebaseClasses.menuItem.active 
-                                    : firebaseClasses.menuItem.hover
-                                }`}
-                              >
-                                <item.icon className="mr-2 h-6 w-6" />
-                                <span className="flex-1 text-1xl font-bold">{item.label}</span>
-                                {item.to === "/carrinho" && totalItens > 0 && (
-                                  <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
-                                    {totalItens}
-                                  </span>
-                                )}
-                                {item.to === "/requisicoes" && pendingRequestsCount > 0 && (
-                                  <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
-                                    {pendingRequestsCount}
-                                  </span>
-                                )}
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          ))}
-                        </SidebarMenu>
-                      </SidebarGroupContent>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <div className="flex items-center gap-1">
+                        <category.icon className="h-5 w-5" />
+                        <SidebarGroupLabel className="flex-1 text-1xl font-bold">{category.label}</SidebarGroupLabel>
+                        {category.badgeCount && category.badgeCount > 0 && (
+                          <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                            {category.badgeCount}
+                          </span>
+                        )}
+                      </div>
+                      <motion.div
+                        animate={{ rotate: expandedCategories[category.label] ? 180 : 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </motion.div>
+                    </div>
+                    
+                    <AnimatePresence>
+                      {expandedCategories[category.label] && (
+                        <motion.div
+                          initial="hidden"
+                          animate="visible"
+                          exit="hidden"
+                          variants={contentVariants}
+                          className="overflow-hidden"
+                        >
+                          <SidebarGroupContent className="pl-8 pr-1 mt-0.4">
+                            <SidebarMenu>
+                              {category.items.map((item) => (
+                                <SidebarMenuItem key={item.to}>
+                                  <SidebarMenuButton
+                                    isActive={location.pathname === item.to}
+                                    onClick={() => navigate(item.to)}
+                                    className={`flex items-center h-10 transition-all duration-200 rounded-md ${
+                                      location.pathname === item.to 
+                                        ? firebaseClasses.menuItem.active 
+                                        : firebaseClasses.menuItem.hover
+                                    }`}
+                                  >
+                                    <item.icon className="mr-2 h-6 w-6" />
+                                    <span className="flex-1 text-1xl font-bold">{item.label}</span>
+                                    {item.to === "/carrinho" && totalItens > 0 && (
+                                      <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                                        {totalItens}
+                                      </span>
+                                    )}
+                                    {item.to === "/requisicoes" && pendingRequestsCount > 0 && (
+                                      <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                                        {pendingRequestsCount}
+                                      </span>
+                                    )}
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                              ))}
+                            </SidebarMenu>
+                          </SidebarGroupContent>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                )}
               </SidebarGroup>
             ))}
           </div>
