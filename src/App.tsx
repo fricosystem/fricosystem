@@ -11,8 +11,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import TelaBemVindo from "./pages/TelaBemVindo";
 import Produtos from "./pages/Produtos";
-import NotasFiscais from "./pages/NotasFiscais";
-import Relatorios from "./pages/Relatorios";
+import NotasFiscais from "./pages/NotasFiscaisParse";
 import Administrativo from "./pages/Administrativo";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
@@ -26,6 +25,8 @@ import ImportarPlanilha from "./pages/ImportarPlanilha";
 import MedidaLenha from "./pages/MedidaLenha";
 import FornecedorProdutos from "./pages/Fornecedor/FornecedorProdutos";
 import NotasFiscaisLancamento from "./pages/NotasFiscaisLancamento";
+import PCP from "./pages/PCP/PCP";
+import RelatoriosES from "./pages/Relatorios/Relatorios";
 
 // Páginas de Transferência e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
@@ -35,13 +36,6 @@ import TransferenciasET from "./pages/TransferenciasET";
 import Compras from "./pages/Compras";
 import GestaoProdutos from "./pages/GestaoProdutos";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
-
-// Páginas de Produção
-import DashboardProducao from "./pages/Producao/DashboardProducao";
-import PlanejamentoProducao from "./pages/Producao/PlanejamentoProducao";
-import PlanejamentoDiarioProducao from "./pages/Producao/PlanejamentoDiarioProducao";
-import ProdutosProducao from "./pages/Producao/ProdutosProducao";
-import ProdutosFinaisProducao from "./pages/Producao/ProdutosFinaisProducao";
 
 // Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
@@ -102,7 +96,6 @@ const AppContent = () => {
           <Route path="/bem-vindo" element={<AuthGuard><TelaBemVindo /></AuthGuard>} />
           <Route path="/produtos" element={<AuthGuard><Produtos /></AuthGuard>} />
           <Route path="/notas-fiscais" element={<AuthGuard><NotasFiscais /></AuthGuard>} />
-          <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
           <Route path="/administrativo" element={<AuthGuard><Administrativo /></AuthGuard>} />
           <Route path="/configuracoes" element={<AuthGuard><Configuracoes /></AuthGuard>} />
           <Route path="/carrinho" element={<AuthGuard><Carrinho /></AuthGuard>} />
@@ -117,6 +110,8 @@ const AppContent = () => {
           <Route path="/gestao-usuarios" element={<AuthGuard><GestaoUsuarios /></AuthGuard>} />
           <Route path="/fornecedor-produtos" element={<AuthGuard><FornecedorProdutos /></AuthGuard>} />
           <Route path="/notas-fiscais-lancamento" element={<AuthGuard><NotasFiscaisLancamento /></AuthGuard>} />
+          <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
+          <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
 
           {/* Rotas de Entrada Manual e Transferência */}
           <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />
@@ -124,13 +119,6 @@ const AppContent = () => {
 
           {/* Rotas de Compras e Pedidos */}
           <Route path="/compras" element={<AuthGuard><Compras /></AuthGuard>} />
-
-          {/* Rotas de Produção */}
-          <Route path="/producao" element={<AuthGuard><DashboardProducao /></AuthGuard>} />
-          <Route path="/producao/planejamento" element={<AuthGuard><PlanejamentoProducao /></AuthGuard>} />
-          <Route path="/producao/planejamentoDiarioProducao" element={<AuthGuard><PlanejamentoDiarioProducao /></AuthGuard>} />
-          <Route path="/producao/produtosProducao" element={<AuthGuard><ProdutosProducao /></AuthGuard>} />
-          <Route path="/producao/produtosFinaisProducao" element={<AuthGuard><ProdutosFinaisProducao /></AuthGuard>} />
 
           {/* Rotas de Comunicação */}
           <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />

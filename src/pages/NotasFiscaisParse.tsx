@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FileText, Upload, Search, Loader2, CheckCircle, AlertCircle, X, Link2, Plus, Download } from "lucide-react";
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/components/ui/use-toast";
@@ -133,6 +133,77 @@ const NotasFiscais = () => {
   const [searchCentroCusto, setSearchCentroCusto] = useState('');
   const { toast } = useToast();
 
+  // Função para criar relatório de entrada
+  const criarRelatorioEntrada = async (notaFiscal: NotaFiscal, itens: ItemNotaFiscal[], tipo: 'estoque' | 'consumo_direto') => {
+    try {
+      const centrosSelecionadosData = centrosCusto.filter(centro => 
+        centrosSelecionados.includes(centro.id)
+      );
+
+      // Criar relatório principal
+      const relatorioPrincipal = {
+        tipo: "entrada",
+        subtipo: tipo === 'estoque' ? "entrada_estoque" : "entrada_consumo_direto",
+        nfe_id: notaFiscal.id,
+        nfe_numero: notaFiscal.numero,
+        fornecedor: notaFiscal.fornecedor,
+        cnpj_fornecedor: notaFiscal.cnpjFornecedor,
+        chave_acesso: notaFiscal.chaveAcesso,
+        data_registro: serverTimestamp(),
+        data_emissao: notaFiscal.dataEmissao,
+        valor_total: notaFiscal.valor,
+        tipo_entrada: tipo === 'estoque' ? "Estoque" : "Consumo Direto",
+        centros_custo: tipo === 'consumo_direto' ? centrosSelecionadosData.map(c => ({
+          id: c.id,
+          nome: c.nome,
+          unidade: c.unidade
+        })) : [],
+        usuario: {
+          id: user?.uid || "",
+          email: user?.email || "",
+          nome: userData?.nome || ""
+        },
+        status: "confirmado"
+      };
+
+      // Adicionar relatório principal
+      const relatorioRef = await addDoc(collection(db, "relatorios"), relatorioPrincipal);
+
+      // Criar relatórios para cada item
+      for (const item of itens) {
+        const produtoVinculado = produtos.find(p => p.id === produtosVinculados[item.codigo]);
+        const centroDeCustoSelecionado = centrosSelecionadosData[0]; // Pega o primeiro centro de custo para consumo direto
+        
+        const relatorioItem = {
+          relatorio_id: relatorioRef.id,
+          tipo: "entrada_item",
+          produto_id: produtoVinculado?.id || "",
+          codigo_material: produtoVinculado?.codigo_material || item.codigo,
+          nome_produto: produtoVinculado?.nome || item.descricao,
+          quantidade: item.quantidade,
+          valor_unitario: item.valorUnitario,
+          valor_total: item.valorTotal,
+          unidade: item.unidade,
+          deposito: tipo === 'estoque' ? "Estoque Principal" : "Consumo Direto",
+          centro_de_custo: tipo === 'consumo_direto' ? centroDeCustoSelecionado?.nome : "Estoque",
+          unidade_centro_custo: tipo === 'consumo_direto' ? centroDeCustoSelecionado?.unidade : "",
+          data_registro: serverTimestamp(),
+          usuario: {
+            id: user?.uid || "",
+            email: user?.email || "",
+            nome: userData?.nome || ""
+          }
+        };
+
+        await addDoc(collection(db, "relatorios"), relatorioItem);
+      }
+
+    } catch (error) {
+      console.error("Erro ao criar relatório de entrada:", error);
+      throw error;
+    }
+  };
+
   // Função para baixar XML
   const downloadXML = (xmlContent: string, numeroNota: string) => {
     const blob = new Blob([xmlContent], { type: 'application/xml' });
@@ -150,7 +221,7 @@ const NotasFiscais = () => {
   const carregarNotasFiscais = async () => {
     setLoading(true);
     try {
-      const notasRef = collection(db, "notas_fiscais");
+      const notasRef = collection(db, "notas_fiscais_xml");
       const notasSnapshot = await getDocs(notasRef);
       const notasData = notasSnapshot.docs.map(doc => ({
         id: doc.id,
@@ -302,8 +373,15 @@ const NotasFiscais = () => {
       };
   
       // Atualizar nota fiscal no Firestore
-      const notaRef = doc(db, "notas_fiscais", notaSelecionada.id);
+      const notaRef = doc(db, "notas_fiscais_xml", notaSelecionada.id);
       await updateDoc(notaRef, notaAtualizadaFirestore);
+
+      // Criar relatório de entrada
+      await criarRelatorioEntrada(
+        notaSelecionada,
+        notaSelecionada.itens,
+        'estoque'
+      );
   
       // Criar objeto completo para o estado local
       const notaAtualizadaEstado: NotaFiscal = {
@@ -370,8 +448,15 @@ const NotasFiscais = () => {
       };
   
       // Atualizar nota fiscal no Firestore
-      const notaRef = doc(db, "notas_fiscais", notaSelecionada.id);
+      const notaRef = doc(db, "notas_fiscais_xml", notaSelecionada.id);
       await updateDoc(notaRef, notaAtualizadaFirestore);
+
+      // Criar relatório de entrada
+      await criarRelatorioEntrada(
+        notaSelecionada,
+        notaSelecionada.itens,
+        'consumo_direto'
+      );
   
       // Criar objeto completo para o estado local
       const notaAtualizadaEstado: NotaFiscal = {
@@ -459,7 +544,7 @@ const NotasFiscais = () => {
         const dados = extrairDadosXML(xmlContent);
 
         // Adicionar nota fiscal ao Firestore
-        const notasRef = collection(db, "notas_fiscais");
+        const notasRef = collection(db, "notas_fiscais_xml");
         const novaNota = {
           ...dados,
           status: 'pendente',
@@ -500,7 +585,7 @@ const NotasFiscais = () => {
       if (!confirmacao) return;
   
       // Remove do Firestore
-      await deleteDoc(doc(db, "notas_fiscais", notaId));
+      await deleteDoc(doc(db, "notas_fiscais_xml", notaId));
       
       // Atualiza o estado local
       setNotasFiscais(notasFiscais.filter(nota => nota.id !== notaId));

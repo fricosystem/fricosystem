@@ -55,6 +55,7 @@ interface ProdutoCarrinho {
   email?: string;
   timestamp?: number;
   produtoEstoque?: Produto; // Referência ao produto no estoque
+  centroDeCusto?: string; // Novo campo para centro de custo
 }
 
 interface Usuario {
@@ -64,12 +65,18 @@ interface Usuario {
   email?: string;
 }
 
+interface CentroDeCusto {
+  id: string;
+  nome: string;
+  unidade: string;
+}
+
 const Carrinho = () => {
   const navigate = useNavigate();
   const [carrinho, setCarrinho] = useState<ProdutoCarrinho[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [produtos, setProdutos] = useState<Record<string, Produto>>({});
   
   // Estados para o dropdown de solicitantes
@@ -79,6 +86,11 @@ const Carrinho = () => {
   const [isLoadingUsuarios, setIsLoadingUsuarios] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [tentouEnviarSemSolicitante, setTentouEnviarSemSolicitante] = useState(false);
+
+  // Estados para centros de custo
+  const [centrosDeCusto, setCentrosDeCusto] = useState<CentroDeCusto[]>([]);
+  const [centroDeCustoTodos, setCentroDeCustoTodos] = useState<string>("");
+  const [isLoadingCentrosDeCusto, setIsLoadingCentrosDeCusto] = useState(false);
 
   // Carregar todos os produtos para referência
   const carregarProdutos = async () => {
@@ -107,6 +119,35 @@ const Carrinho = () => {
         variant: "destructive",
       });
       return {};
+    }
+  };
+
+  // Carregar centros de custo do Firestore
+  const carregarCentrosDeCusto = async () => {
+    try {
+      setIsLoadingCentrosDeCusto(true);
+      const centrosRef = collection(db, "centro_de_custo");
+      const snapshot = await getDocs(centrosRef);
+      
+      const centros: CentroDeCusto[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        nome: doc.data().nome || "",
+        unidade: doc.data().unidade || ""
+      }));
+      
+      // Ordenar por nome
+      centros.sort((a, b) => a.nome.localeCompare(b.nome));
+      
+      setCentrosDeCusto(centros);
+    } catch (error) {
+      console.error("Erro ao carregar centros de custo:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os centros de custo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingCentrosDeCusto(false);
     }
   };
 
@@ -157,6 +198,7 @@ const Carrinho = () => {
     };
 
     carregarCarrinho();
+    carregarCentrosDeCusto();
   }, [user]);
 
   // Carregar lista de usuários do Firestore
@@ -186,8 +228,8 @@ const Carrinho = () => {
         setUsuarios(usuariosValidos);
         
         // Se o usuário atual estiver na lista, selecioná-lo automaticamente
-        if (user && user.email) {
-          const usuarioAtual = usuariosValidos.find(u => u.email === user.email);
+        if (userData) {
+          const usuarioAtual = usuariosValidos.find(u => u.id === userData.id);
           if (usuarioAtual) {
             setSolicitanteSelecionado(usuarioAtual);
           }
@@ -205,7 +247,7 @@ const Carrinho = () => {
     };
 
     carregarUsuarios();
-  }, [user]);
+  }, [user, userData]);
 
   const handleRemover = async (id: string) => {
     try {
@@ -264,6 +306,51 @@ const Carrinho = () => {
         title: "Erro",
         description: "Não foi possível atualizar a quantidade",
         variant: "destructive",
+      });
+    }
+  };
+
+  const handleCentroDeCustoChange = async (id: string, centroDeCusto: string) => {
+    try {
+      const docRef = doc(db, "carrinho", id);
+      await updateDoc(docRef, {
+        centroDeCusto: centroDeCusto
+      });
+      
+      setCarrinho((prevCarrinho) =>
+        prevCarrinho.map((item) =>
+          item.id === id ? { ...item, centroDeCusto } : item
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao atualizar centro de custo:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o centro de custo",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCentroDeCustoTodosChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const novoCentroDeCusto = e.target.value;
+    setCentroDeCustoTodos(novoCentroDeCusto);
+    
+    if (novoCentroDeCusto) {
+      // Aplicar a todos os itens do carrinho
+      const novosItens = carrinho.map(item => ({
+        ...item,
+        centroDeCusto: novoCentroDeCusto
+      }));
+      
+      setCarrinho(novosItens);
+      
+      // Atualizar no Firestore (opcional - pode ser feito apenas no envio final)
+      // Aqui estamos atualizando imediatamente para persistência
+      novosItens.forEach(item => {
+        if (item.centroDeCusto !== novoCentroDeCusto) {
+          handleCentroDeCustoChange(item.id, novoCentroDeCusto);
+        }
       });
     }
   };
@@ -367,81 +454,98 @@ const Carrinho = () => {
       return;
     }
 
+    // Verificar se todos os itens têm centro de custo definido
+    const itensSemCentroDeCusto = carrinho.filter(item => !item.centroDeCusto);
+    if (itensSemCentroDeCusto.length > 0) {
+      toast({
+        title: "Centro de custo obrigatório",
+        description: "Todos os itens devem ter um centro de custo definido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Se passar nas validações, prosseguir com o envio
     handleFinalizarPedido();
   };
 
   // Função para finalizar o pedido enviando para a coleção "requisicoes"
   const handleFinalizarPedido = async () => {
-  // Esta função só será chamada se houver um solicitante selecionado
-  try {
-    setIsSubmitting(true);
-    
-    // Obter nome do usuário logado
-    const userName = user?.displayName || user?.email || "Usuário não identificado";
-    
-    // Gerar o próximo ID sequencial
-    const nextId = await getNextRequestId();
-    
-    // Criar um único documento de requisição com todos os itens
-    const requisicaoData = {
-      requisicao_id: nextId, // Campo com ID sequencial
-      status: "pendente", // Status padrão
-      itens: carrinho.map(item => ({
-        nome: item.nome,
-        codigo_material: item.codigo_material || "",
-        codigo_estoque: item.codigo_estoque || "",
-        quantidade: item.quantidade,
-        valor_unitario: item.valor_unitario,
-        unidade: item.unidade,
-        unidade_de_medida: item.unidade_de_medida,
-        deposito: item.deposito || "",
-        prateleira: item.prateleira || "",
-        detalhes: item.detalhes || "",
-        imagem: item.imagem || ""
-      })),
-      usuario: {
-        email: user?.email,
-        nome: userName
-      },
-      // Adicionar informações do solicitante (garantido não ser null neste ponto)
-      solicitante: {
-        id: solicitanteSelecionado!.id,
-        nome: solicitanteSelecionado!.nome,
-        cargo: solicitanteSelecionado!.cargo,
-        email: solicitanteSelecionado!.email || ""
-      },
-      data_criacao: serverTimestamp(),
-      valor_total: valorTotal
-    };
-    
-    // Adicionar à coleção de requisições
-    await addDoc(collection(db, "requisicoes"), requisicaoData);
-    
-    // Remover todos os itens do carrinho após a criação da requisição
-    for (const item of carrinho) {
-      await deleteDoc(doc(db, "carrinho", item.id));
-    }
+    try {
+      setIsSubmitting(true);
+      
+      // Usar userData do AuthContext que já contém todas as informações do usuário
+      const userName = userData?.nome || user?.displayName || user?.email || "Usuário não identificado";
+      
+      // Gerar o próximo ID sequencial
+      const nextId = await getNextRequestId();
+      
+      // Criar um único documento de requisição com todos os itens
+      const requisicaoData = {
+        requisicao_id: nextId, // Campo com ID sequencial
+        status: "pendente", // Status padrão
+        itens: carrinho.map(item => {
+          const centroDeCustoSelecionado = centrosDeCusto.find(c => c.id === item.centroDeCusto);
+          
+          return {
+            nome: item.nome,
+            codigo_material: item.codigo_material || "",
+            codigo_estoque: item.codigo_estoque || "",
+            quantidade: item.quantidade,
+            valor_unitario: item.valor_unitario,
+            unidade: item.unidade,
+            unidade_de_medida: item.unidade_de_medida,
+            deposito: item.deposito || "",
+            prateleira: item.prateleira || "",
+            detalhes: item.detalhes || "",
+            imagem: item.imagem || "",
+            centro_de_custo: centroDeCustoSelecionado.nome,
+          };
+        }),
+        usuario: {
+          id: user?.uid || "",
+          email: user?.email || "",
+          nome: userName
+        },
+        // Adicionar informações do solicitante (garantido não ser null neste ponto)
+        solicitante: {
+          id: solicitanteSelecionado!.id,
+          nome: solicitanteSelecionado!.nome,
+          cargo: solicitanteSelecionado!.cargo,
+          email: solicitanteSelecionado!.email || ""
+        },
+        data_criacao: serverTimestamp(),
+        valor_total: valorTotal
+      };
+      
+      // Adicionar à coleção de requisições
+      await addDoc(collection(db, "requisicoes"), requisicaoData);
+      
+      // Remover todos os itens do carrinho após a criação da requisição
+      for (const item of carrinho) {
+        await deleteDoc(doc(db, "carrinho", item.id));
+      }
 
-    toast({
-      title: "Sucesso!",
-      description: `Requisição ${nextId} enviada com sucesso!`,
-    });
-    
-    // Limpar o carrinho após o envio
-    setCarrinho([]);
-    
-  } catch (error) {
-    console.error("Erro ao finalizar pedido:", error);
-    toast({
-      title: "Erro",
-      description: "Ocorreu um erro ao enviar a requisição. Tente novamente mais tarde.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      toast({
+        title: "Sucesso!",
+        description: `Requisição ${nextId} enviada com sucesso!`,
+      });
+      
+      // Limpar o carrinho após o envio
+      setCarrinho([]);
+      setCentroDeCustoTodos("");
+      
+    } catch (error) {
+      console.error("Erro ao finalizar pedido:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao enviar a requisição. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const valorTotal = carrinho.reduce(
     (total, produto) => total + produto.valor_unitario * produto.quantidade,
@@ -478,92 +582,122 @@ const Carrinho = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Seletor de Solicitante */}
-            <div className={`bg-card rounded-lg shadow p-4 ${tentouEnviarSemSolicitante && !solicitanteSelecionado ? 'border-2 border-destructive' : ''}`}>
-              <h2 className="text-lg font-medium mb-3 flex items-center">
-                Solicitante
-                <span className="text-destructive ml-1">*</span>
-              </h2>
-              
-              {tentouEnviarSemSolicitante && !solicitanteSelecionado && (
-                <Alert variant="destructive" className="mb-3">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    É necessário selecionar um solicitante para finalizar o pedido.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              <Popover open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-                <PopoverTrigger asChild>
-                  <Button 
-                    variant={tentouEnviarSemSolicitante && !solicitanteSelecionado ? "destructive" : "outline"}
-                    className="w-full justify-between"
-                    disabled={isLoadingUsuarios}
-                  >
-                    {isLoadingUsuarios ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        <span>Carregando solicitantes...</span>
-                        <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
-                      </>
-                    ) : solicitanteSelecionado ? (
-                      <>
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <div className="text-left">
-                            <p className="font-medium">{solicitanteSelecionado.nome}</p>
-                            <p className="text-xs text-muted-foreground">{solicitanteSelecionado.cargo}</p>
+            {/* Seletor de Solicitante e Centro de Custo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Seletor de Solicitante */}
+              <div className={`bg-card rounded-lg shadow p-4 ${tentouEnviarSemSolicitante && !solicitanteSelecionado ? 'border-2 border-destructive' : ''}`}>
+                <h2 className="text-lg font-medium mb-3 flex items-center">
+                  Solicitante
+                  <span className="text-destructive ml-1">*</span>
+                </h2>
+                
+                {tentouEnviarSemSolicitante && !solicitanteSelecionado && (
+                  <Alert variant="destructive" className="mb-3">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      É necessário selecionar um solicitante para finalizar o pedido.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                <Popover open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant={tentouEnviarSemSolicitante && !solicitanteSelecionado ? "destructive" : "outline"}
+                      className="w-full justify-between"
+                      disabled={isLoadingUsuarios}
+                    >
+                      {isLoadingUsuarios ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <span>Carregando solicitantes...</span>
+                          <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                        </>
+                      ) : solicitanteSelecionado ? (
+                        <>
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <div className="text-left">
+                              <p className="font-medium">{solicitanteSelecionado.nome}</p>
+                              <p className="text-xs text-muted-foreground">{solicitanteSelecionado.cargo}</p>
+                            </div>
                           </div>
-                        </div>
-                        <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
-                      </>
-                    ) : (
-                      <>
-                        <span>Selecione um solicitante</span>
-                        <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
-                      </>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="start">
-                  <div className="p-3 border-b">
-                    <div className="flex items-center gap-2">
-                      <Search className="h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar solicitante..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="h-8"
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-                  <div className="max-h-72 overflow-y-auto">
-                    {usuariosFiltrados.length === 0 ? (
-                      <div className="p-3 text-center text-sm text-muted-foreground">
-                        Nenhum solicitante encontrado
+                          <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                        </>
+                      ) : (
+                        <>
+                          <span>Selecione um solicitante</span>
+                          <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                        </>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="start">
+                    <div className="p-3 border-b">
+                      <div className="flex items-center gap-2">
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar solicitante..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="h-8"
+                          autoFocus
+                        />
                       </div>
-                    ) : (
-                      usuariosFiltrados.map((usuario) => (
-                        <div
-                          key={usuario.id}
-                          className={`flex flex-col p-3 cursor-pointer hover:bg-muted/50 ${
-                            solicitanteSelecionado?.id === usuario.id ? "bg-muted" : ""
-                          }`}
-                          onClick={() => handleSelecionarSolicitante(usuario)}
-                        >
-                          <span className="font-medium">{usuario.nome}</span>
-                          <span className="text-xs text-muted-foreground">{usuario.cargo}</span>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      {usuariosFiltrados.length === 0 ? (
+                        <div className="p-3 text-center text-sm text-muted-foreground">
+                          Nenhum solicitante encontrado
                         </div>
-                      ))
-                    )}
+                      ) : (
+                        usuariosFiltrados.map((usuario) => (
+                          <div
+                            key={usuario.id}
+                            className={`flex flex-col p-3 cursor-pointer hover:bg-muted/50 ${
+                              solicitanteSelecionado?.id === usuario.id ? "bg-muted" : ""
+                            }`}
+                            onClick={() => handleSelecionarSolicitante(usuario)}
+                          >
+                            <span className="font-medium">{usuario.nome}</span>
+                            <span className="text-xs text-muted-foreground">{usuario.cargo}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground mt-2">
+                  * Campo obrigatório
+                </p>
+              </div>
+              
+              {/* Seletor de Centro de Custo para todos os itens */}
+              <div className="bg-card rounded-lg shadow p-4">
+                <h2 className="text-lg font-medium mb-3">Centro de Custo (Todos os Itens)</h2>
+                {isLoadingCentrosDeCusto ? (
+                  <div className="flex items-center justify-center h-10">
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <span>Carregando centros de custo...</span>
                   </div>
-                </PopoverContent>
-              </Popover>
-              <p className="text-xs text-muted-foreground mt-2">
-                * Campo obrigatório
-              </p>
+                ) : (
+                  <select
+                    value={centroDeCustoTodos}
+                    onChange={handleCentroDeCustoTodosChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Selecione um centro de custo</option>
+                    {centrosDeCusto.map((centro) => (
+                      <option key={centro.id} value={centro.id}>
+                        {centro.nome} - {centro.unidade}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Selecione para aplicar a todos os itens
+                </p>
+              </div>
             </div>
             
             <div className="bg-card rounded-lg shadow">
@@ -579,71 +713,105 @@ const Carrinho = () => {
                 // Obter valores do produto no estoque
                 const quantidadeDisponivel = produto.produtoEstoque?.quantidade || 0;
                 const quantidadeMinima = produto.produtoEstoque?.quantidade_minima;
+                const centroDeCustoSelecionado = centrosDeCusto.find(c => c.id === produto.centroDeCusto);
                 
                 return (
-                  <div key={produto.id} className="grid grid-cols-[0.5fr,2fr,1fr,1fr,1fr] md:grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 items-center border-b">
-                    <div>
-                      <img
-                        src={produto.imagem || "/placeholder.svg"}
-                        alt={produto.nome}
-                        className="w-12 h-12 md:w-16 md:h-16 object-cover rounded"
-                      />
-                    </div>
-                    <div>
-                      <div className="font-medium">{produto.nome}</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        <p>Código: {produto.codigo_material || "N/A"} | Depósito: {produto.deposito || "N/A"}</p>
-                        <p className="mt-1">
-                          Disponível: {quantidadeDisponivel} un. 
-                          {quantidadeMinima !== undefined && ` | Mínimo: ${quantidadeMinima} un.`}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2 h-8 text-destructive hover:text-destructive-foreground hover:bg-destructive/20"
-                        onClick={() => handleRemover(produto.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" /> Remover
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <div className="flex items-center border rounded-md">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 p-0 rounded-none"
-                          onClick={() => handleDecrease(produto.id)}
-                          disabled={produto.quantidade <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <input
-                          type="number"
-                          min="1"
-                          max={quantidadeDisponivel}
-                          value={produto.quantidade}
-                          onChange={(e) => handleQuantidadeChange(produto.id, parseInt(e.target.value, 10) || 1)}
-                          className="w-10 text-center border-none focus:ring-0 bg-transparent"
+                  <div key={produto.id} className="border-b">
+                    <div className="grid grid-cols-[0.5fr,2fr,1fr,1fr,1fr] md:grid-cols-[1fr,3fr,1fr,1fr,1fr] gap-4 p-4 items-center">
+                      <div>
+                        <img
+                          src={produto.imagem || "/placeholder.svg"}
+                          alt={produto.nome}
+                          className="w-12 h-12 md:w-16 md:h-16 object-cover rounded"
                         />
+                      </div>
+                      <div>
+                        <div className="font-medium">{produto.nome}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          <p>Código: {produto.codigo_material || "N/A"} | Depósito: {produto.deposito || "N/A"}</p>
+                          <p className="mt-1">
+                            Disponível: {quantidadeDisponivel} un. 
+                            {quantidadeMinima !== undefined && ` | Mínimo: ${quantidadeMinima} un.`}
+                          </p>
+                        </div>
                         <Button
-                          type="button"
                           variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 p-0 rounded-none"
-                          onClick={() => handleIncrease(produto.id)}
-                          disabled={produto.quantidade >= quantidadeDisponivel}
+                          size="sm"
+                          className="mt-2 h-8 text-destructive hover:text-destructive-foreground hover:bg-destructive/20"
+                          onClick={() => handleRemover(produto.id)}
                         >
-                          <Plus className="h-3 w-3" />
+                          <Trash2 className="h-4 w-4 mr-1" /> Remover
                         </Button>
                       </div>
+                      <div className="flex items-center justify-center">
+                        <div className="flex items-center border rounded-md">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 p-0 rounded-none"
+                            onClick={() => handleDecrease(produto.id)}
+                            disabled={produto.quantidade <= 1}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <input
+                            type="number"
+                            min="1"
+                            max={quantidadeDisponivel}
+                            value={produto.quantidade}
+                            onChange={(e) => handleQuantidadeChange(produto.id, parseInt(e.target.value, 10) || 1)}
+                            className="w-10 text-center border-none focus:ring-0 bg-transparent"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 p-0 rounded-none"
+                            onClick={() => handleIncrease(produto.id)}
+                            disabled={produto.quantidade >= quantidadeDisponivel}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {formatCurrency(produto.valor_unitario)}
+                      </div>
+                      <div className="text-right font-medium">
+                        {formatCurrency(produto.valor_unitario * produto.quantidade)}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      {formatCurrency(produto.valor_unitario)}
-                    </div>
-                    <div className="text-right font-medium">
-                      {formatCurrency(produto.valor_unitario * produto.quantidade)}
+                    
+                    {/* Seletor de Centro de Custo individual */}
+                    <div className="px-4 pb-4 -mt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Centro de Custo:</span>
+                        {isLoadingCentrosDeCusto ? (
+                          <div className="flex items-center">
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            <span className="text-xs">Carregando...</span>
+                          </div>
+                        ) : (
+                          <select
+                            value={produto.centroDeCusto || ""}
+                            onChange={(e) => handleCentroDeCustoChange(produto.id, e.target.value)}
+                            className="flex h-8 text-sm rounded-md border border-input bg-background px-2 py-1 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <option value="">Selecione um centro de custo</option>
+                            {centrosDeCusto.map((centro) => (
+                              <option key={centro.id} value={centro.id}>
+                                {centro.nome} - {centro.unidade}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {centroDeCustoSelecionado && (
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {centroDeCustoSelecionado.unidade}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -671,7 +839,7 @@ const Carrinho = () => {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Enviando...
                   </>
-                ) : "Finalizar Pedido"}
+                ) : "Finalizar Requisição"}
               </Button>
             </div>
           </div>

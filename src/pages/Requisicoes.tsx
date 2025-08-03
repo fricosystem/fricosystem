@@ -9,6 +9,8 @@ import {
   doc,
   updateDoc,
   getDoc,
+  addDoc,
+  serverTimestamp
 } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -92,12 +94,15 @@ interface Item {
   valor_unitario?: number;
   codigo_material?: string;
   codigo_estoque?: string;
-  unidade?: string;
+  unidade_medida?: string;
   unidade_de_medida?: string;
   deposito?: string;
   prateleira?: string;
   detalhes?: string;
   imagem?: string;
+  centroDeCusto?: string;
+  centro_de_custo?: string;
+  unidade?: string;
 }
 
 interface Usuario {
@@ -121,6 +126,25 @@ interface Produto {
   // outros campos
 }
 
+interface CentroDeCusto {
+  id: string;
+  nome: string;
+  unidade: string;
+}
+
+interface ProdutoCarrinho {
+  id: string;
+  nome: string;
+  quantidade: number;
+  valor_unitario: number;
+  codigo_material?: string;
+  deposito?: string;
+  prateleira?: string;
+  centroDeCusto?: string;
+  centro_de_custo?: string;
+  unidade?: string;
+}
+
 const Requisicoes = () => {
   const { user } = useAuth();
   const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
@@ -134,6 +158,50 @@ const Requisicoes = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isFinalizarDialogOpen, setIsFinalizarDialogOpen] = useState(false);
   const [errosEstoque, setErrosEstoque] = useState<string[]>([]);
+  const [centrosDeCusto, setCentrosDeCusto] = useState<CentroDeCusto[]>([]);
+  const [solicitanteSelecionado, setSolicitanteSelecionado] = useState<Solicitante | null>(null);
+  const [userData, setUserData] = useState<any>(null);
+
+  const criarRelatorioSaida = async (requisicaoId: string, itens: ProdutoCarrinho[]) => {
+    try {
+      // Criar um relatório para cada item do carrinho
+      for (const item of itens) {
+        const centroDeCustoSelecionado = centrosDeCusto.find(c => c.id === (item.centroDeCusto || item.centro_de_custo));
+        
+        const relatorioData = {
+          requisicao_id: requisicaoId,
+          produto_id: item.id,
+          codigo_material: item.codigo_material || "",
+          nome_produto: item.nome,
+          quantidade: item.quantidade,
+          valor_unitario: item.valor_unitario,
+          valor_total: item.valor_unitario * item.quantidade,
+          solicitante: {
+            id: solicitanteSelecionado?.id || "",
+            nome: solicitanteSelecionado?.nome || "",
+            cargo: solicitanteSelecionado?.cargo || ""
+          },
+          usuario: {
+            id: user?.uid || "",
+            email: user?.email || "",
+            nome: userData?.nome || ""
+          },
+          deposito: item.deposito || "",
+          prateleira: item.prateleira || "",
+          centro_de_custo: centroDeCustoSelecionado?.nome || item.centro_de_custo || "",
+          unidade: centroDeCustoSelecionado?.unidade || item.unidade || "",
+          status: "saida",
+          data_saida: serverTimestamp(),
+          data_registro: serverTimestamp()
+        };
+
+        await addDoc(collection(db, "relatorios"), relatorioData);
+      }
+    } catch (error) {
+      console.error("Erro ao criar relatório de saída:", error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -150,6 +218,40 @@ const Requisicoes = () => {
     
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const fetchCentrosDeCusto = async () => {
+    try {
+      const centrosRef = collection(db, "centros_de_custo");
+      const querySnapshot = await getDocs(centrosRef);
+      const centrosList: CentroDeCusto[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        centrosList.push({
+          id: doc.id,
+          nome: data.nome || "",
+          unidade: data.unidade || ""
+        });
+      });
+      
+      setCentrosDeCusto(centrosList);
+    } catch (error) {
+      console.error("Erro ao carregar centros de custo:", error);
+    }
+  };
+
+  const fetchUserData = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const userDoc = await getDoc(doc(db, "usuarios", user.uid));
+      if (userDoc.exists()) {
+        setUserData(userDoc.data());
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados do usuário:", error);
+    }
+  };
 
   const fetchRequisicoes = async () => {
     if (!user?.email) {
@@ -180,6 +282,8 @@ const Requisicoes = () => {
           itens: data.itens?.map(item => ({
             ...item,
             preco: item.valor_unitario || item.preco || 0,
+            centro_de_custo: item.centroDeCusto || item.centro_de_custo,
+            unidade: item.unidade
           })) || [],
           usuario: data.usuario || { 
             email: user?.email || "Email não informado",
@@ -197,6 +301,9 @@ const Requisicoes = () => {
       
       if (requisicoesList.length > 0 && !selectedRequisicao) {
         setSelectedRequisicao(requisicoesList[0]);
+        if (requisicoesList[0].solicitante) {
+          setSolicitanteSelecionado(requisicoesList[0].solicitante);
+        }
       }
       
     } catch (error) {
@@ -212,6 +319,8 @@ const Requisicoes = () => {
   };
 
   useEffect(() => {
+    fetchCentrosDeCusto();
+    fetchUserData();
     fetchRequisicoes();
   }, [user]);
 
@@ -241,6 +350,9 @@ const Requisicoes = () => {
     if (filtered.length > 0 && selectedRequisicao && 
         !filtered.some(req => req.id === selectedRequisicao.id)) {
       setSelectedRequisicao(filtered[0]);
+      if (filtered[0].solicitante) {
+        setSolicitanteSelecionado(filtered[0].solicitante);
+      }
     }
   };
 
@@ -316,7 +428,6 @@ const Requisicoes = () => {
     }
   };
 
-  // Função para verificar se há estoque suficiente
   const verificarEstoque = async () => {
     if (!selectedRequisicao) return false;
     
@@ -362,45 +473,43 @@ const Requisicoes = () => {
     }
   };
 
-  // Função para baixar do estoque
   const baixarEstoque = async () => {
-  if (!selectedRequisicao) return false;
-  
-  try {
-    const produtosRef = collection(db, "produtos");
+    if (!selectedRequisicao) return false;
     
-    // Para cada item na requisição
-    for (const item of selectedRequisicao.itens) {
-      if (!item.codigo_material) continue;
+    try {
+      const produtosRef = collection(db, "produtos");
       
-      const q = query(produtosRef, where("codigo_material", "==", item.codigo_material));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        const produtoDoc = querySnapshot.docs[0];
-        const produtoData = produtoDoc.data() as Produto;
+      // Para cada item na requisição
+      for (const item of selectedRequisicao.itens) {
+        if (!item.codigo_material) continue;
         
-        // Atualizar quantidade (subtrair)
-        const novaQuantidade = produtoData.quantidade - item.quantidade;
-        await updateDoc(produtoDoc.ref, {
-          quantidade: novaQuantidade
-        });
+        const q = query(produtosRef, where("codigo_material", "==", item.codigo_material));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const produtoDoc = querySnapshot.docs[0];
+          const produtoData = produtoDoc.data() as Produto;
+          
+          // Atualizar quantidade (subtrair)
+          const novaQuantidade = produtoData.quantidade - item.quantidade;
+          await updateDoc(produtoDoc.ref, {
+            quantidade: novaQuantidade
+          });
+        }
       }
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao baixar estoque:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o estoque dos produtos",
+        variant: "destructive",
+      });
+      return false;
     }
-    
-    return true;
-  } catch (error) {
-    console.error("Erro ao baixar estoque:", error);
-    toast({
-      title: "Erro",
-      description: "Não foi possível atualizar o estoque dos produtos",
-      variant: "destructive",
-    });
-    return false;
-  }
-};
+  };
 
-  // Função para abrir diálogo de finalização
   const openFinalizarDialog = async () => {
     if (!selectedRequisicao) return;
     
@@ -420,56 +529,72 @@ const Requisicoes = () => {
   };
 
   const handleFinalizar = async () => {
-  if (!selectedRequisicao) return;
-  
-  try {
-    setIsUpdating(true);
+    if (!selectedRequisicao) return;
     
-    // Baixar estoque
-    const baixaOk = await baixarEstoque();
-    
-    if (!baixaOk) {
+    try {
+      setIsUpdating(true);
+      
+      // Baixar estoque
+      const baixaOk = await baixarEstoque();
+      
+      if (!baixaOk) {
+        setIsUpdating(false);
+        return;
+      }
+      
+      // Criar relatório de saída
+      const produtosCarrinho: ProdutoCarrinho[] = selectedRequisicao.itens.map(item => ({
+        id: item.codigo_material || "",
+        nome: item.nome,
+        quantidade: item.quantidade,
+        valor_unitario: item.valor_unitario || item.preco || 0,
+        codigo_material: item.codigo_material,
+        deposito: item.deposito,
+        prateleira: item.prateleira,
+        centroDeCusto: item.centroDeCusto,
+        centro_de_custo: item.centro_de_custo,
+        unidade: item.unidade
+      }));
+      
+      await criarRelatorioSaida(selectedRequisicao.requisicao_id, produtosCarrinho);
+      
+      // Atualizar status da requisição
+      const requisicaoRef = doc(db, "requisicoes", selectedRequisicao.id);
+      await updateDoc(requisicaoRef, {
+        status: "concluida"
+      });
+      
+      // Atualizar o estado local
+      const updatedRequisicao = {
+        ...selectedRequisicao,
+        status: "concluida"
+      };
+      
+      setSelectedRequisicao(updatedRequisicao);
+      
+      // Atualizar a lista de requisições
+      const updatedRequisicoes = requisicoes.map(req => 
+        req.id === selectedRequisicao.id ? updatedRequisicao : req
+      );
+      
+      setRequisicoes(updatedRequisicoes);
+      
+      toast({
+        title: "Requisição concluída",
+        description: `A requisição ${selectedRequisicao.requisicao_id} foi concluída com sucesso.`,
+      });
+    } catch (error) {
+      console.error("Erro ao finalizar requisição:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível finalizar a requisição",
+        variant: "destructive",
+      });
+    } finally {
       setIsUpdating(false);
-      return;
+      setIsFinalizarDialogOpen(false);
     }
-    
-    // Atualizar status da requisição
-    const requisicaoRef = doc(db, "requisicoes", selectedRequisicao.id);
-    await updateDoc(requisicaoRef, {
-      status: "concluida"
-    });
-    
-    // Atualizar o estado local
-    const updatedRequisicao = {
-      ...selectedRequisicao,
-      status: "concluida"
-    };
-    
-    setSelectedRequisicao(updatedRequisicao);
-    
-    // Atualizar a lista de requisições
-    const updatedRequisicoes = requisicoes.map(req => 
-      req.id === selectedRequisicao.id ? updatedRequisicao : req
-    );
-    
-    setRequisicoes(updatedRequisicoes);
-    
-    toast({
-      title: "Requisição concluída",
-      description: `A requisição ${selectedRequisicao.requisicao_id} foi concluída com sucesso.`,
-    });
-  } catch (error) {
-    console.error("Erro ao finalizar requisição:", error);
-    toast({
-      title: "Erro",
-      description: "Não foi possível finalizar a requisição",
-      variant: "destructive",
-    });
-  } finally {
-    setIsUpdating(false);
-    setIsFinalizarDialogOpen(false);
-  }
-};
+  };
 
   const handleExportImage = async () => {
     if (!selectedRequisicao) return;
@@ -481,7 +606,7 @@ const Requisicoes = () => {
       comprovanteElement.style.padding = '20px';
       comprovanteElement.style.backgroundColor = 'white';
       comprovanteElement.style.color = 'black';
-      comprovanteElement.style.fontFamily = 'Arial, sans-serif'; // Usando fonte segura
+      comprovanteElement.style.fontFamily = 'Arial, sans-serif';
       comprovanteElement.style.boxSizing = 'border-box';
 
       // Formatar a data
@@ -530,16 +655,26 @@ const Requisicoes = () => {
             <thead>
               <tr style="border-bottom: 1px solid #eee;">
                 <th style="text-align: left; padding: 8px 0; font-weight: bold;">Nome</th>
+                <th style="text-align: left; padding: 8px 0; font-weight: bold;">Centro de Custo</th>
+                <th style="text-align: left; padding: 8px 0; font-weight: bold;">Unidade</th>
                 <th style="text-align: right; padding: 8px 0; font-weight: bold;">Qtd.</th>
                 <th style="text-align: right; padding: 8px 0; font-weight: bold;">Preço</th>
               </tr>
             </thead>
             <tbody>
-              ${selectedRequisicao.itens.map(item => `
+              ${selectedRequisicao.itens.map(item => {
+                const centroDeCusto = centrosDeCusto.find(c => c.id === (item.centroDeCusto || item.centro_de_custo));
+                return `
                 <tr style="border-bottom: 1px solid #eee;">
                   <td style="padding: 8px 0;">
                     ${item.nome}
                     ${item.codigo_material ? `<p style="margin: 0; font-size: 12px; color: #666;">Código: ${item.codigo_material}</p>` : ''}
+                  </td>
+                  <td style="padding: 8px 0;">
+                    ${centroDeCusto?.nome || item.centro_de_custo || 'Não informado'}
+                  </td>
+                  <td style="padding: 8px 0;">
+                    ${centroDeCusto?.unidade || item.unidade || 'Não informado'}
                   </td>
                   <td style="text-align: right; padding: 8px 0;">
                     ${item.quantidade} ${item.unidade_de_medida || 'un'}
@@ -548,11 +683,12 @@ const Requisicoes = () => {
                     ${formatCurrency(item.valor_unitario || item.preco || 0)}
                   </td>
                 </tr>
-              `).join('')}
+              `}).join('')}
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="2" style="text-align: right; padding: 8px 0; font-weight: bold;">Total</td>
+                <td colspan="3" style="text-align: right; padding: 8px 0; font-weight: bold;">Total</td>
+                <td style="text-align: right; padding: 8px 0; font-weight: bold;">${selectedRequisicao.itens.reduce((sum, item) => sum + item.quantidade, 0)}</td>
                 <td style="text-align: right; padding: 8px 0; font-weight: bold;">${formatCurrency(selectedRequisicao.valor_total)}</td>
               </tr>
             </tfoot>
@@ -565,16 +701,15 @@ const Requisicoes = () => {
 
       // Configurações para ignorar erros
       const options = {
-        skipFonts: true, // Ignorar fontes externas
+        skipFonts: true,
         filter: (node: Node) => {
-          // Ignorar tags de estilo que podem causar problemas
           if (node instanceof HTMLLinkElement && node.rel === 'stylesheet') {
             return false;
           }
           return true;
         },
-        backgroundColor: 'white', // Garantir fundo branco
-        cacheBust: true // Evitar cache
+        backgroundColor: 'white',
+        cacheBust: true
       };
 
       // Converter para PNG ignorando erros
@@ -695,7 +830,12 @@ const Requisicoes = () => {
                         ? "border-primary bg-primary/10 dark:bg-primary/20"
                         : "border-border"
                     }`}
-                    onClick={() => setSelectedRequisicao(requisicao)}
+                    onClick={() => {
+                      setSelectedRequisicao(requisicao);
+                      if (requisicao.solicitante) {
+                        setSolicitanteSelecionado(requisicao.solicitante);
+                      }
+                    }}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -829,35 +969,49 @@ const Requisicoes = () => {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="w-full">Nome</TableHead>
-                              <TableHead className="text-right">Qtd.</TableHead>
-                              <TableHead className="text-right">Preço</TableHead>
+                              <TableHead className="w-[40%]">Nome</TableHead>
+                              <TableHead className="w-[20%]">Centro de Custo</TableHead>
+                              <TableHead className="w-[15%]">Unidade</TableHead>
+                              <TableHead className="w-[10%] text-right">Qtd.</TableHead>
+                              <TableHead className="w-[15%] text-right">Preço</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {selectedRequisicao.itens.map((item, index) => (
-                              <TableRow key={`${item.nome}-${index}`}>
-                                <TableCell className="font-medium">
-                                  {item.nome}
-                                  {item.codigo_material && (
-                                    <p className="text-xs text-muted-foreground">
-                                      Código: {item.codigo_material}
-                                    </p>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {item.quantidade}
-                                  {item.unidade && <span> {item.unidade_de_medida}</span>}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {formatCurrency(item.valor_unitario || item.preco || 0)}
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                            {selectedRequisicao.itens.map((item, index) => {
+                              const centroDeCusto = centrosDeCusto.find(c => c.id === (item.centroDeCusto || item.centro_de_custo));
+                              return (
+                                <TableRow key={`${item.nome}-${index}`}>
+                                  <TableCell className="font-medium">
+                                    {item.nome}
+                                    {item.codigo_material && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Código: {item.codigo_material}
+                                      </p>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {centroDeCusto?.nome || item.centro_de_custo || 'Não informado'}
+                                  </TableCell>
+                                  <TableCell>
+                                    {centroDeCusto?.unidade || item.unidade || 'Não informado'}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {item.quantidade}
+                                    {item.unidade && <span> {item.unidade_de_medida}</span>}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {formatCurrency(item.valor_unitario || item.preco || 0)}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                           <TableFooter>
                             <TableRow>
-                              <TableCell colSpan={2}>Total</TableCell>
+                              <TableCell colSpan={3}>Total</TableCell>
+                              <TableCell className="text-right">
+                                {selectedRequisicao.itens.reduce((sum, item) => sum + item.quantidade, 0)}
+                              </TableCell>
                               <TableCell className="text-right">
                                 {formatCurrency(selectedRequisicao.valor_total)}
                               </TableCell>

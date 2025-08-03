@@ -31,6 +31,7 @@ import {
   Ruler,
   Wrench,
   ShoppingBag,
+  Factory,
   Receipt,
   CalendarCheck,
   PieChart,
@@ -293,6 +294,7 @@ const AppSidebar = () => {
         { to: "/transferencia", icon: Truck, label: "Transferência", permission: "transferencia" },
         { to: "/enderecamento", icon: Warehouse, label: "Endereçamento", permission: "enderecamento" },
         { to: "/medida-de-lenha", icon: Ruler, label: "Cubagem e medida de Lenha", permission: "medida_lenha" },
+        { to: "/relatorios", icon: FileSpreadsheet, label: "Relatórios", permission: "relatorios" },
       ]),
     },
     {
@@ -332,6 +334,13 @@ const AppSidebar = () => {
         { to: "/importar-planilha", icon: FileText, label: "Importar dados", permission: "importar_dados" },
         { to: "/exportacoes", icon: Download, label: "Exportar dados", permission: "exportar_dados" },
         { to: "/backup-dados", icon: Database, label: "Backup/Restauração", permission: "backup_dados" },
+      ]),
+    },
+    {
+      label: "Produção",
+      icon: Factory,
+      items: filterItemsByPermission([
+        { to: "/pcp", icon: TrendingUp, label: "PCP", permission: "pcp" },
       ]),
     },
     ...(isAdmin ? [{
