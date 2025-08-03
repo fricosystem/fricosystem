@@ -27,7 +27,7 @@ export function AuthModal({
   };
   
   return <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] backdrop-blur-xl border border-white/10 text-white bg-white/[0.06]">
+      <DialogContent className="sm:max-w-[425px] backdrop-blur-xl border border-white/10 text-white bg-white/[0.04]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center text-white">
             {activeTab === "login" ? "Acesse sua conta" : "Crie sua conta"}

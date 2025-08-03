@@ -128,7 +128,7 @@ export function Header() {
             onValueChange={(val) => setActiveTab(val as "login" | "register")} 
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2 bg-blue-600">
+            <TabsList className="grid w-full grid-cols-2 bg-[#1A1F2C]/[0.02]">
               <TabsTrigger value="login" className="text-white bg-transparent">
                 Login
               </TabsTrigger>

@@ -25,7 +25,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         setTimeout(() => navigate('/bem-vindo'), 0);
         toast({
           title: "Conta desativada",
-          description: "Procure um administrador para ativar sua conta.",
+          description: "Procure o RH para ativar sua conta.",
           variant: "destructive",
         });
         return;
@@ -45,7 +45,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         errorMessage = "Email ou senha incorretos.";
       } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = "Muitas tentativas de login. Tente novamente mais tarde.";
+        errorMessage = "Muitas tentativas de login. Procure o RH para verificar sua conta.";
       }
       
       toast({
@@ -69,7 +69,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           value={email} 
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="bg-gray-900 border-gray-700 text-white placeholder-gray-500"
+          className="bg-[#1A1F2C]/[0.02] border-gray-700 text-white placeholder-gray-500"
         />
       </div>
       
@@ -82,7 +82,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           value={password} 
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="bg-gray-900 border-gray-700 text-white placeholder-gray-500"
+          className="bg-[#1A1F2C]/[0.02] border-gray-700 text-white placeholder-gray-500"
         />
       </div>
       

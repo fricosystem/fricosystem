@@ -136,7 +136,7 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           value={name} 
           onChange={(e) => setName(e.target.value)}
           required
-          className="bg-gray-900 border-gray-700 text-white placeholder-gray-500"
+          className="bg-[#1A1F2C]/[0.02] border-gray-700 text-white placeholder-gray-500"
         />
       </div>
       
@@ -149,14 +149,14 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           value={email} 
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="bg-gray-900 border-gray-700 text-white placeholder-gray-500"
+          className="bg-[#1A1F2C]/[0.02] border-gray-700 text-white placeholder-gray-500"
         />
       </div>
       
       <div className="space-y-2">
         <Label htmlFor="centroDeCusto">Centro de Custo</Label>
         <Select onValueChange={setCentroDeCusto} required>
-          <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+          <SelectTrigger className="bg-[#1A1F2C]/[0.02] border-gray-700 text-white">
             <SelectValue placeholder="Selecione" />
           </SelectTrigger>
           <SelectContent>
@@ -178,7 +178,7 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           value={password} 
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="bg-gray-900 border-gray-700 text-white placeholder-gray-500"
+          className="bg-[#1A1F2C]/[0.02] border-gray-700 text-white placeholder-gray-500"
         />
       </div>
       
@@ -191,7 +191,7 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           value={confirmPassword} 
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
-          className="bg-gray-900 border-gray-700 text-white placeholder-gray-500"
+          className="bg-[#1A1F2C]/[0.02] border-gray-700 text-white placeholder-gray-500"
         />
       </div>
       

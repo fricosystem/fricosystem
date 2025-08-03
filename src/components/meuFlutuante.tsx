@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { db } from "@/firebase/firebase";
-import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, setDoc, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { 
   Calendar, Settings, Box, ClipboardList, 
@@ -13,7 +13,9 @@ import {
   ArrowLeftRight, ArchiveRestore, Clipboard, ClipboardCheck,
   Package, CheckSquare, HardHat, GraduationCap, BarChart3,
   Users, Monitor, ArrowLeftFromLine, ArrowDownFromLine, Home,
-  Building2, FileSpreadsheet
+  Building2, FileSpreadsheet, AlertTriangle, TrendingUp, PieChart,
+  Bell, PackagePlus, Ruler, Wrench, ShoppingBag, CalendarCheck,
+  ListChecks, Download, Database
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -24,11 +26,38 @@ const FuturisticFloatingMenu = () => {
   const { toast } = useToast();
   
   const [activeMenu, setActiveMenu] = useState(null);
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [minimized, setMinimized] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   
-  const isAdmin = userData?.cargo === "admin";
+  const isAdmin = userData?.cargo === "DESENVOLVEDOR";
+
+  // Verifica se o usuário está ativo
+  useEffect(() => {
+    if (userData?.ativo === "não") {
+      navigate("/bem-vindo");
+      toast({
+        title: "Conta inativa",
+        description: "Sua conta está inativa. Entre em contato com o administrador.",
+        variant: "destructive",
+      });
+    }
+  }, [userData, navigate, toast]);
+
+  // Filtra os itens do menu baseado nas permissões do usuário
+  const filterItemsByPermission = (items: any[]) => {
+    if (!userData?.permissoes) return items;
+    // Se o usuário tem permissão "tudo", retorna todos os itens
+    if (userData.permissoes.includes("tudo")) return items;
+    // Caso contrário, filtra normalmente
+    return items.filter(item => {
+      // Se não tem permissão definida, permite acesso
+      if (!item.permission) return true;
+      // Verifica se a permissão está no array de permissões do usuário
+      return userData.permissoes.includes(item.permission);
+    });
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -43,6 +72,45 @@ const FuturisticFloatingMenu = () => {
   }, []);
 
   useEffect(() => {
+    if (!user || !userData?.unidade) return;
+
+    const unsubscribe = onSnapshot(
+      query(
+        collection(db, "requisicoes"),
+        where("unidade", "==", userData.unidade)
+      ),
+      (snapshot) => {
+        let count = 0;
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.solicitante && Array.isArray(data.solicitante)) {
+            const hasPending = data.solicitante.some((item: any) => 
+              item.status && item.status.toLowerCase() === "pendente"
+            );
+            if (hasPending) count++;
+          }
+        });
+        setPendingRequestsCount(count);
+      },
+      (error) => {
+        console.error("Erro ao monitorar requisições pendentes:", error);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar requisições pendentes",
+          variant: "destructive",
+        });
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user, userData?.unidade]);
+
+  const getUserEmail = () => {
+    if (!user) return null;
+    return user.email || null;
+  };
+
+  useEffect(() => {
     const loadTheme = async () => {
       const userEmail = getUserEmail();
       if (!userEmail) return;
@@ -55,7 +123,7 @@ const FuturisticFloatingMenu = () => {
         if (!querySnapshot.empty) {
           const userDoc = querySnapshot.docs[0];
           if (userDoc.data().tema) {
-            const savedTheme = userDoc.data().tema;
+            const savedTheme = userDoc.data().tema as "light" | "dark";
             setTheme(savedTheme);
             document.documentElement.classList.toggle("dark", savedTheme === "dark");
           } else {
@@ -65,21 +133,26 @@ const FuturisticFloatingMenu = () => {
             await setDoc(doc(db, "usuarios", userDoc.id), { tema: defaultTheme }, { merge: true });
           }
         } else {
-          setTheme("dark");
+          const defaultTheme = "dark";
+          setTheme(defaultTheme);
+          document.documentElement.classList.toggle("dark", defaultTheme === "dark");
+          const newUserDocRef = doc(collection(db, "usuarios"));
+          await setDoc(newUserDocRef, { 
+            email: userEmail, 
+            tema: defaultTheme 
+          });
         }
       } catch (error) {
         console.error("Erro ao carregar tema:", error);
-        setTheme("dark");
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const fallbackTheme = prefersDark ? "dark" : "light";
+        setTheme(fallbackTheme);
+        document.documentElement.classList.toggle("dark", fallbackTheme === "dark");
       }
     };
     
     loadTheme();
   }, [user]);
-
-  const getUserEmail = () => {
-    if (!user) return null;
-    return user.email || null;
-  };
 
   const toggleTheme = async () => {
     const userEmail = getUserEmail();
@@ -113,7 +186,6 @@ const FuturisticFloatingMenu = () => {
     } catch (error) {
       setTheme(theme);
       document.documentElement.classList.toggle("dark", theme === "dark");
-      
       toast({
         description: "Erro ao salvar preferência de tema. Tente novamente.",
         variant: "destructive",
@@ -192,128 +264,102 @@ const FuturisticFloatingMenu = () => {
     return "Usuário";
   };
 
+  const getUserUnidade = () => {
+    if (userData?.unidade) {
+      return userData.unidade;
+    }
+    return "";
+  };
+
   const menuCategories = [
     {
       id: "principal",
       icon: <Layers size={24} />,
       label: "Principal",
-      items: [
-        { id: "dashboard", icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/dashboard" },
-      ]
+      items: filterItemsByPermission([
+        { id: "dashboard", icon: <LayoutDashboard size={20} />, label: "Dashboard Geral", path: "/dashboard", permission: "dashboard" },
+        { id: "fornecedor-produtos", icon: <ShoppingCart size={20} />, label: "Ordens de Compra", path: "/fornecedor-produtos", permission: "ordens_compra" },
+      ]),
     },
     {
       id: "estoque",
       icon: <Boxes size={24} />,
       label: "Estoque",
-      items: [
-        { id: "produtos", icon: <Box size={20} />, label: "Produtos", path: "/produtos" },
-        { id: "requisicoes", icon: <ClipboardList size={20} />, label: "Requisições", path: "/requisicoes" },
-        { 
-          id: "carrinho", 
-          icon: <ShoppingCart size={20} />, 
-          label: "Carrinho", 
-          path: "/carrinho", 
-          badge: totalItens > 0 ? totalItens : null 
-        },
-        { id: "enderecamento", icon: <Warehouse size={20} />, label: "Endereçamento", path: "/enderecamento" }
-      ]
+      items: filterItemsByPermission([
+        { id: "produtos", icon: <Package size={20} />, label: "Produtos", path: "/produtos", permission: "produtos" },
+        { id: "inventario", icon: <ClipboardList size={20} />, label: "Inventário", path: "/inventario", permission: "inventario" },
+        { id: "inventario-ciclico", icon: <ListChecks size={20} />, label: "Inventário Cíclico", path: "/inventario-ciclico", permission: "inventario_ciclico" },
+        { id: "entrada-manual", icon: <PackagePlus size={20} />, label: "Entrada Manual", path: "/entrada-manual", permission: "entrada_manual" },
+        { id: "notas-fiscais", icon: <Receipt size={20} />, label: "NF - Entrada XML", path: "/notas-fiscais", permission: "notas_fiscais" },
+        { id: "transferencia", icon: <Truck size={20} />, label: "Transferência", path: "/transferencia", permission: "transferencia" },
+        { id: "enderecamento", icon: <Warehouse size={20} />, label: "Endereçamento", path: "/enderecamento", permission: "enderecamento" },
+        { id: "medida-de-lenha", icon: <Ruler size={20} />, label: "Cubagem e medida de Lenha", path: "/medida-de-lenha", permission: "medida_lenha" },
+        { id: "relatorios", icon: <FileSpreadsheet size={20} />, label: "Relatórios", path: "/relatorios", permission: "relatorios" },
+      ]),
     },
     {
-      id: "operacional",
-      icon: <Network size={24} />,
-      label: "Operacional",
-      items: [
-        { id: "entradaManual", icon: <ArchiveRestore size={20} />, label: "Entrada Manual", path: "/entradaProdutosET" },
-        { id: "transferencia", icon: <ArrowLeftRight size={20} />, label: "Transferência", path: "/transferenciasET" },
-        { id: "compras", icon: <Truck size={20} />, label: "Compras", path: "/compras" },
-        { id: "pedidos", icon: <Truck size={20} />, label: "Pedidos", path: "/pedidos" },
-        { id: "ordensServico", icon: <Clipboard size={20} />, label: "Ordens de Serviço", path: "/ordensServico" },
-        { id: "notas-fiscais", icon: <Receipt size={20} />, label: "Notas Fiscais", path: "/notas-fiscais" },
-        { id: "inventario", icon: <PackageSearch size={20} />, label: "Inventário", path: "/inventario" }
-      ]
+      id: "requisicoes",
+      icon: <ClipboardList size={24} />,
+      label: "Requisições",
+      items: filterItemsByPermission([
+        { id: "requisicoes", icon: <ClipboardList size={20} />, label: "Requisições", path: "/requisicoes", badge: pendingRequestsCount > 0 ? pendingRequestsCount : null, permission: "requisicoes" },
+        { id: "carrinho", icon: <ShoppingCart size={20} />, label: "Carrinho", path: "/carrinho", badge: totalItens > 0 ? totalItens : null, permission: "carrinho" },
+        { id: "ordensServico", icon: <Wrench size={20} />, label: "Ordens de Serviço", path: "/ordensServico", permission: "ordens_servico" },
+        { id: "devolucao", icon: <AlertTriangle size={20} />, label: "Devoluções", path: "/devolucao", permission: "devolucoes" },
+      ]),
     },
     {
-      id: "producao",
-      icon: <Factory size={24} />,
-      label: "Produção",
-      items: [
-        { id: "producao-dash", icon: <BarChart size={20} />, label: "Dashboard Prod", path: "/producao" },
-        { id: "planejamento", icon: <ClipboardCheck size={20} />, label: "Planejamento", path: "/producao/planejamento" },
-        { 
-          id: "planejamentoDiario", 
-          icon: <Calendar size={20} />, 
-          label: "Planejamento Diário", 
-          path: "/producao/planejamentoDiarioProducao" 
-        },
-        { 
-          id: "produtosProducao", 
-          icon: <Package size={20} />, 
-          label: "Produtos Produção", 
-          path: "/producao/produtosProducao" 
-        },
-        { 
-          id: "produtosFinais", 
-          icon: <CheckSquare size={20} />, 
-          label: "Produtos Finais", 
-          path: "/producao/produtosFinaisProducao" 
-        }
-      ]
+      id: "compras",
+      icon: <ShoppingCart size={24} />,
+      label: "Compras",
+      items: filterItemsByPermission([
+        { id: "compras", icon: <ShoppingCart size={20} />, label: "Compras", path: "/compras", permission: "compras" },
+        { id: "cotacoes-orcamentos", icon: <FileText size={20} />, label: "Cotações e Orçamentos", path: "/cotacoes-orcamentos", permission: "cotacoes_orcamentos" },
+        { id: "rastreamento-entregas", icon: <Truck size={20} />, label: "Rastreamento de Entregas", path: "/rastreamento-entregas", permission: "rastreamento_entregas" },
+        { id: "calendario-recebimento", icon: <CalendarCheck size={20} />, label: "Calendário de Recebimento", path: "/calendario-recebimento", permission: "calendario_recebimento" },
+        { id: "fornecedores", icon: <Users size={20} />, label: "Fornecedores", path: "/fornecedores", permission: "fornecedores" },
+      ]),
     },
     {
       id: "financeiro",
       icon: <Wallet size={24} />,
       label: "Financeiro",
-      items: [
-        { id: "financeiro-dash", icon: <Wallet size={20} />, label: "Financeiro", path: "/financial" },
-        { id: "centros-custo", icon: <BarChart3 size={20} />, label: "Centros de Custo", path: "/cost-centers" },
-        { id: "fornecedores", icon: <Users size={20} />, label: "Fornecedores", path: "/fornecedores" },
-        { id: "relatorios", icon: <Home size={20} />, label: "Relatórios", path: "/relatorios" }
-      ]
+      items: filterItemsByPermission([
+        { id: "notas-fiscais-lancamento", icon: <TrendingUp size={20} />, label: "NF - Lançamento", path: "/notas-fiscais-lancamento", permission: "notas_fiscais_lancamento" },
+        { id: "precificacao", icon: <TrendingUp size={20} />, label: "Precificação", path: "/precificacao", permission: "precificacao" },
+        { id: "relatorios-financeiros", icon: <PieChart size={20} />, label: "Relatórios Financeiros", path: "/relatorios-financeiros", permission: "relatorios_financeiros" },
+      ]),
+    },
+    {
+      id: "utilitarios",
+      icon: <FileText size={24} />,
+      label: "Utilitários",
+      items: filterItemsByPermission([
+        { id: "importar-planilha", icon: <FileText size={20} />, label: "Importar dados", path: "/importar-planilha", permission: "importar_dados" },
+        { id: "exportacoes", icon: <Download size={20} />, label: "Exportar dados", path: "/exportacoes", permission: "exportar_dados" },
+        { id: "backup-dados", icon: <Database size={20} />, label: "Backup/Restauração", path: "/backup-dados", permission: "backup_dados" },
+      ]),
+    },
+    {
+      id: "producao",
+      icon: <Factory size={24} />,
+      label: "Produção",
+      items: filterItemsByPermission([
+        { id: "pcp", icon: <TrendingUp size={20} />, label: "PCP", path: "/pcp", permission: "pcp" },
+      ]),
     },
     ...(isAdmin ? [{
       id: "administrativo",
       icon: <Settings size={24} />,
       label: "Administrativo",
-      items: [
-        { 
-          id: "admin-dashboard", 
-          icon: <LayoutDashboard size={20} />, 
-          label: "Dashboard", 
-          path: "/administrativo/dashboard" 
-        },
-        { 
-          id: "admin-usuarios", 
-          icon: <UserRound size={20} />, 
-          label: "Usuários", 
-          path: "/administrativo/usuarios" 
-        },
-        { 
-          id: "admin-produtos", 
-          icon: <Box size={20} />, 
-          label: "Produtos", 
-          path: "/administrativo/produtos" 
-        },
-        { 
-          id: "admin-fornecedores", 
-          icon: <Users size={20} />, 
-          label: "Fornecedores", 
-          path: "/administrativo/fornecedores" 
-        },
-        { 
-          id: "admin-depositos", 
-          icon: <Warehouse size={20} />, 
-          label: "Depósitos", 
-          path: "/administrativo/depositos" 
-        },
-        { 
-          id: "admin-unidades", 
-          icon: <Building2 size={20} />, 
-          label: "Unidades", 
-          path: "/administrativo/unidades" 
-        },
-        { id: "importarPlanilha", icon: <FileSpreadsheet size={20} />, label: "Importar Planilha XLSX", path: "/importarPlanilha" },
-        { id: "medidalenha", icon: <FileSpreadsheet size={20} />, label: "Cubagem/Medida de lenha", path: "/medidalenha" }
-      ]
+      items: filterItemsByPermission([
+        { id: "gestao-usuarios", icon: <Users size={20} />, label: "Gestão de Usuários", path: "/gestao-usuarios", permission: "gestao_usuarios" },
+        { id: "configuracoes-sistema", icon: <Settings size={20} />, label: "Configurações do Sistema", path: "/configuracoes-sistema", permission: "configuracoes_sistema" },
+        { id: "alertas-notificacoes", icon: <Bell size={20} />, label: "Alertas e Notificações", path: "/alertas-notificacoes", permission: "alertas_notificacoes" },
+        { id: "sugestao-reabastecimento", icon: <PackageSearch size={20} />, label: "Sugestão de Reabastecimento", path: "/sugestao-reabastecimento", permission: "sugestao_reabastecimento" },
+        { id: "integracoes", icon: <Settings size={20} />, label: "Integrações (ERP/API)", path: "/integracoes", permission: "integracoes" },
+        { id: "gestao-produtos", icon: <Package size={20} />, label: "Gestão de Produtos", path: "/gestao-produtos", permission: "gestao_produtos" },
+      ]),
     }] : []),
     {
       id: "sistema",
@@ -359,22 +405,22 @@ const FuturisticFloatingMenu = () => {
         onClick={handleClick}
         className={`flex items-center w-full px-4 py-3 text-left transition-all duration-200 ${
           isActive 
-            ? "bg-green-600/30 dark:bg-green-600/30 text-green-700 dark:text-green-300" 
-            : "hover:bg-green-600/20 dark:hover:bg-green-500/20"
+            ? "bg-blue-600/30 dark:bg-blue-600/30 text-blue-700 dark:text-blue-300" 
+            : "hover:bg-blue-600/20 dark:hover:bg-blue-500/20"
         } rounded-lg ${className || ""}`}
       >
         <span className={`mr-3 ${
           isActive 
-            ? "text-green-600 dark:text-green-400" 
-            : "text-green-500 dark:text-green-400"
+            ? "text-blue-600 dark:text-blue-400" 
+            : "text-blue-500 dark:text-blue-400"
         }`}>{icon}</span>
         <span className={`${
           isActive 
-            ? "text-green-700 dark:text-green-300" 
+            ? "text-blue-700 dark:text-blue-300" 
             : "text-gray-700 dark:text-gray-200"
         }`}>{label}</span>
         {badge && (
-          <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 dark:bg-green-500 rounded-full">
+          <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 dark:bg-blue-500 rounded-full">
             {badge}
           </span>
         )}
@@ -411,6 +457,12 @@ const FuturisticFloatingMenu = () => {
                         <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
                           <Briefcase className="h-3 w-3 mr-1" />
                           {getUserCargo()}
+                        </div>
+                      )}
+                      {getUserUnidade() && (
+                        <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          <Building2 className="h-3 w-3 mr-1" />
+                          {getUserUnidade()}
                         </div>
                       )}
                     </div>
@@ -453,7 +505,12 @@ const FuturisticFloatingMenu = () => {
                     }`}
                     aria-label={category.label}
                   >
-                    {category.id === "principal" && totalItens > 0 && (
+                    {category.id === "requisicoes" && pendingRequestsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                        {pendingRequestsCount}
+                      </span>
+                    )}
+                    {category.id === "carrinho" && totalItens > 0 && (
                       <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
                         {totalItens}
                       </span>
@@ -476,9 +533,11 @@ const FuturisticFloatingMenu = () => {
         className={`fixed z-50 flex items-center justify-center rounded-full p-3 shadow-lg transition-all duration-300 ${
           minimized ? "bottom-4 right-4" : "bottom-8 left-1/2 transform -translate-x-1/2"
         } ${
-          selectedCategory?.id === "principal" && totalItens > 0 
-            ? "bg-green-600 text-white" 
-            : "bg-white dark:bg-gray-800 text-green-600 dark:text-green-400"
+          selectedCategory?.id === "requisicoes" && pendingRequestsCount > 0 
+            ? "bg-red-500 text-white" 
+            : selectedCategory?.id === "carrinho" && totalItens > 0
+            ? "bg-blue-600 text-white"
+            : "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400"
         }`}
       >
         {minimized ? (
@@ -493,12 +552,17 @@ const FuturisticFloatingMenu = () => {
               </div>
             ) : (
               <>
-                <ArrowLeftFromLine size={24} className="text-green-500" />
+                <ArrowLeftFromLine size={24} className="text-blue-500" />
                 {selectedCategory?.icon && (
                   <div className="ml-2">
                     {selectedCategory.icon}
-                    {selectedCategory?.id === "principal" && totalItens > 0 && (
-                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
+                    {selectedCategory?.id === "requisicoes" && pendingRequestsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                        {pendingRequestsCount}
+                      </span>
+                    )}
+                    {selectedCategory?.id === "carrinho" && totalItens > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
                         {totalItens}
                       </span>
                     )}
@@ -508,7 +572,7 @@ const FuturisticFloatingMenu = () => {
             )}
           </div>
         ) : (
-          <ArrowDownFromLine size={24} className="text-green-600 dark:text-green-400" />
+          <ArrowDownFromLine size={24} className="text-blue-600 dark:text-blue-400" />
         )}
       </button>
     </>
