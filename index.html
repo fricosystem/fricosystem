@@ -2,12 +2,11 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=7.5, maximum-scale=7.5, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.75" />
     <title>FR Stock Manager</title>
     <meta name="description" content="Sistema de gestão de estoque Fricó Alimentos" />
     <meta name="author" content="Fricó Alimentos" />
 
-    <!-- Meta tags para SEO e compartilhamento -->
     <meta property="og:title" content="FR Stock Manager - Fricó Alimentos" />
     <meta property="og:description" content="Sistema completo de gestão de estoque" />
     <meta property="og:type" content="website" />
@@ -17,113 +16,97 @@
     <meta name="twitter:site" content="@frico_alimentos" />
     <meta name="twitter:image" content="/Uploads/IconeFrico3D.png" />
     
-    <!-- Favicon -->
     <link rel="icon" href="/Uploads/IconeFrico3D.png" type="image/png">
-    
-    <!-- Fontes do Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Estilos personalizados -->
     <style>
-      :root {
-        --text-primary: #333333;
-        --text-secondary: #555555;
-        --bg-primary: #ffffff;
-        --bg-secondary: #f0f0f0;
-      }
-
-      /* Reset básico e estilos globais */
-      *, *::before, *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      html {
-        -webkit-text-size-adjust: 100%;
-        -webkit-tap-highlight-color: transparent;
-        height: 100%;
-        font-size: 14px;
-      }
-
-      @media (min-width: 640px) {
-        html {
-          font-size: 15px;
-        }
+      /* Aplicar Poppins como fonte principal em todo o site */
+      body, html {
+        font-family: 'Poppins', sans-serif;
       }
       
-      @media (min-width: 768px) {
-        html {
-          font-size: 16px;
-        }
+      /* Forçar o zoom de 75% em componentes específicos */
+      .login-container,
+      .dashboard-container,
+      .sidebar,
+      .auth-container,
+      [data-component="login"],
+      [data-component="dashboard"],
+      [data-component="sidebar"] {
+        transform: scale(0.75);
+        transform-origin: top left;
+        width: 133.33%; /* Compensar a redução da escala */
       }
-
-      body {
-        font-family: 'Poppins', sans-serif;
-        line-height: 1.5;
-        color: var(--text-primary);
-        background-color: var(--bg-primary);
-        height: 100%;
-        overflow-x: hidden;
+      
+      /* Ajustar contêineres pai para lidar com o redimensionamento */
+      .login-wrapper,
+      .dashboard-wrapper,
+      .sidebar-wrapper,
+      .auth-wrapper {
+        overflow: hidden;
       }
-
-      #root {
-        height: 100%;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-
-      /* Ajustes para o tema claro (mantive seus estilos originais com melhorias) */
-      :root:not(.dark) .font-roboto, 
-      :root:not(.dark) .font-roboto * {
+      
+      /* Manter a classe font-roboto para compatibilidade, mas usar Poppins */
+      .font-roboto, .font-roboto * {
         font-family: 'Poppins', sans-serif;
         letter-spacing: 0.02em;
-        color: var(--text-primary);
+        font-size: 0.9rem;
+      }
+      
+      /* Ajustes para pesos de fonte específicos do Firebase */
+      .font-roboto .text-sm {
+        font-weight: 600;
+      }
+      
+      .font-roboto .text-xs {
+        font-weight: 600;
+      }
+      
+      .font-roboto .font-medium {
+        font-weight: 600;
+      }
+      
+      /* Ajustes para melhorar a visibilidade no tema claro */
+      :root:not(.dark) .font-roboto {
+        color: #333333; /* Cor escura para texto em tema claro */
       }
       
       :root:not(.dark) .text-gray-300 {
-        color: var(--text-primary) !important;
+        color: #333333 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
       }
       
       :root:not(.dark) .text-gray-400 {
-        color: var(--text-secondary) !important;
+        color: #555555 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
       }
       
       :root:not(.dark) .text-gray-500 {
-        color: #666666 !important;
+        color: #666666 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
       }
       
+      /* Ajustes para os items do menu no tema claro */
       :root:not(.dark) .hover\:bg-\[\#2c384a\]:hover {
-        background-color: #e0e0e0 !important;
+        background-color: #e0e0e0 !important; /* Fundo mais claro para hover no tema claro */
       }
       
       :root:not(.dark) .bg-\[\#2c384a\] {
-        background-color: var(--bg-secondary) !important;
+        background-color: #f0f0f0 !important; /* Fundo mais claro no tema claro */
       }
       
       :root:not(.dark) .bg-\[\#1c2834\] {
-        background-color: var(--bg-primary) !important;
+        background-color: #ffffff !important; /* Fundo do sidebar no tema claro */
       }
       
       :root:not(.dark) .border-\[\#3e4a5e\] {
-        border-color: #dddddd !important;
-      }
-
-      /* Classes utilitárias adicionais */
-      .text-2xs {
-        font-size: 0.625rem; /* 10px */
-        line-height: 1rem;
+        border-color: #dddddd !important; /* Cor da borda para tema claro */
       }
     </style>
   </head>
 
   <body>
     <div id="root"></div>
-    
-    <!-- Scripts -->
+    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
