@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,7 +34,6 @@ const FuturisticFloatingMenu = () => {
   
   const isAdmin = userData?.cargo === "DESENVOLVEDOR";
 
-  // Verifica se o usuário está ativo
   useEffect(() => {
     if (userData?.ativo === "não") {
       navigate("/bem-vindo");
@@ -45,16 +45,11 @@ const FuturisticFloatingMenu = () => {
     }
   }, [userData, navigate, toast]);
 
-  // Filtra os itens do menu baseado nas permissões do usuário
   const filterItemsByPermission = (items: any[]) => {
     if (!userData?.permissoes) return items;
-    // Se o usuário tem permissão "tudo", retorna todos os itens
     if (userData.permissoes.includes("tudo")) return items;
-    // Caso contrário, filtra normalmente
     return items.filter(item => {
-      // Se não tem permissão definida, permite acesso
       if (!item.permission) return true;
-      // Verifica se a permissão está no array de permissões do usuário
       return userData.permissoes.includes(item.permission);
     });
   };
@@ -431,7 +426,7 @@ const FuturisticFloatingMenu = () => {
   return (
     <>
       {!minimized && (
-        <div id="floating-menu-container" className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 ${theme === "dark" ? "dark" : ""}`}>
+        <div id="floating-menu-container" className={`fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 ${theme === "dark" ? "dark" : ""}`}>
           {activeMenu && (
             <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 overflow-hidden transition-all duration-300 ease-in-out animate-fadeIn">
               {activeMenu === "sistema" && (
@@ -531,7 +526,7 @@ const FuturisticFloatingMenu = () => {
       <button
         onClick={toggleMinimize}
         className={`fixed z-50 flex items-center justify-center rounded-full p-3 shadow-lg transition-all duration-300 ${
-          minimized ? "bottom-4 right-4" : "bottom-8 left-1/2 transform -translate-x-1/2"
+          minimized ? "bottom-4 right-4" : "bottom-4 left-1/2 transform -translate-x-1/2"
         } ${
           selectedCategory?.id === "requisicoes" && pendingRequestsCount > 0 
             ? "bg-red-500 text-white" 
@@ -539,11 +534,12 @@ const FuturisticFloatingMenu = () => {
             ? "bg-blue-600 text-white"
             : "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400"
         }`}
+        style={{ width: "48px", height: "48px" }}
       >
         {minimized ? (
           <div className="relative flex items-center">
             {userData?.imagem_perfil ? (
-              <div className="w-10 h-10 rounded-full overflow-hidden">
+              <div className="w-8 h-8 rounded-full overflow-hidden">
                 <img 
                   src={userData.imagem_perfil} 
                   alt="Profile" 
@@ -552,17 +548,17 @@ const FuturisticFloatingMenu = () => {
               </div>
             ) : (
               <>
-                <ArrowLeftFromLine size={24} className="text-blue-500" />
+                <ArrowLeftFromLine size={20} className="text-blue-500" />
                 {selectedCategory?.icon && (
                   <div className="ml-2">
-                    {selectedCategory.icon}
+                    {React.cloneElement(selectedCategory.icon, { size: 20 })}
                     {selectedCategory?.id === "requisicoes" && pendingRequestsCount > 0 && (
-                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-red-500 rounded-full">
                         {pendingRequestsCount}
                       </span>
                     )}
                     {selectedCategory?.id === "carrinho" && totalItens > 0 && (
-                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-600 rounded-full">
                         {totalItens}
                       </span>
                     )}
@@ -572,7 +568,7 @@ const FuturisticFloatingMenu = () => {
             )}
           </div>
         ) : (
-          <ArrowDownFromLine size={24} className="text-blue-600 dark:text-blue-400" />
+          <ArrowDownFromLine size={20} className="text-blue-600 dark:text-blue-400" />
         )}
       </button>
     </>
