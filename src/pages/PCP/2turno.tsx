@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -12,9 +12,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import * as XLSX from "xlsx";
+import { toast } from "@/components/ui/use-toast";
 
 interface Produto {
   codigo: string;
@@ -30,6 +31,53 @@ const SegundoTurno: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [importData, setImportData] = useState<Produto[]>([]);
   const [status, setStatus] = useState<"empty" | "loaded" | "saved">("empty");
+
+  // Get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  // Load data from localStorage and Firestore on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      const today = getTodayDate();
+      const localStorageKey = `segundoTurno_${today}`;
+      
+      // Try to load from localStorage first
+      const savedData = localStorage.getItem(localStorageKey);
+      if (savedData) {
+        setProdutos(JSON.parse(savedData));
+        setStatus("loaded");
+        return;
+      }
+      
+      // If not in localStorage, try to load from Firestore
+      try {
+        const docRef = doc(db, "PCP", today);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists() && docSnap.data()["2 Turno"]) {
+          const firestoreData = docSnap.data()["2 Turno"].map((p: any) => ({
+            codigo: p.codigo,
+            textoBreve: p.texto_breve,
+            kg: parseFloat(p.kg).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            cx: parseFloat(p.cx).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            planejamento: p.planejamento ? parseFloat(p.planejamento).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00"
+          }));
+          
+          setProdutos(firestoreData);
+          setStatus("loaded");
+          // Save to localStorage for future use
+          localStorage.setItem(localStorageKey, JSON.stringify(firestoreData));
+        }
+      } catch (error) {
+        console.error("Error loading data from Firestore:", error);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Formatar número no formato brasileiro ao sair do campo
   const formatNumberOnBlur = (value: string): string => {
@@ -100,9 +148,15 @@ const SegundoTurno: React.FC = () => {
 
   // Confirmar importação
   const confirmImport = () => {
+    const today = getTodayDate();
+    const localStorageKey = `segundoTurno_${today}`;
+    
     setProdutos(importData);
     setStatus("loaded");
     setIsModalOpen(false);
+    
+    // Save to localStorage immediately
+    localStorage.setItem(localStorageKey, JSON.stringify(importData));
   };
 
   // Atualizar planejamento
@@ -110,6 +164,11 @@ const SegundoTurno: React.FC = () => {
     const newProdutos = [...produtos];
     newProdutos[index].planejamento = value;
     setProdutos(newProdutos);
+    
+    // Update localStorage on every change
+    const today = getTodayDate();
+    const localStorageKey = `segundoTurno_${today}`;
+    localStorage.setItem(localStorageKey, JSON.stringify(newProdutos));
   };
 
   // Formatar ao sair do campo
@@ -117,20 +176,28 @@ const SegundoTurno: React.FC = () => {
     const newProdutos = [...produtos];
     newProdutos[index].planejamento = formatNumberOnBlur(newProdutos[index].planejamento);
     setProdutos(newProdutos);
+    
+    // Update localStorage on blur
+    const today = getTodayDate();
+    const localStorageKey = `segundoTurno_${today}`;
+    localStorage.setItem(localStorageKey, JSON.stringify(newProdutos));
   };
 
   // Salvar dados no Firestore
   const saveToFirestore = async () => {
     if (produtos.length === 0) {
-      alert("Nenhum dado para salvar!");
+      toast({
+        title: "Erro",
+        description: "Nenhum dado para salvar!",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayDate();
       const docRef = doc(db, "PCP", today);
       
-      // Atualiza apenas o array do 2° Turno mantendo outros dados do documento
       await setDoc(docRef, {
         "2 Turno": produtos.map(p => ({
           codigo: p.codigo,
@@ -140,13 +207,25 @@ const SegundoTurno: React.FC = () => {
           planejamento: p.planejamento ? parseNumber(p.planejamento).toFixed(2) : "0.00"
         })),
         timestamp: new Date()
-      }, { merge: true }); // Usando merge para não sobrescrever outros turnos
+      }, { merge: true }); // Using merge to preserve other shifts' data
 
       setStatus("saved");
-      alert("Dados do 2° Turno salvos com sucesso!");
+      
+      // Update localStorage with saved data
+      const localStorageKey = `segundoTurno_${today}`;
+      localStorage.setItem(localStorageKey, JSON.stringify(produtos));
+      
+      toast({
+        title: "Sucesso",
+        description: "Dados do 2° Turno salvos com sucesso!",
+      });
     } catch (error) {
       console.error("Erro ao salvar no Firestore:", error);
-      alert("Erro ao salvar dados!");
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar dados!",
+        variant: "destructive",
+      });
     }
   };
 
@@ -172,7 +251,7 @@ const SegundoTurno: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">2° Turno (14:00 - 22:00)</h2>
+      <h2 className="text-2xl font-bold">2° Turno</h2>
       
       <Card>
         <CardHeader>

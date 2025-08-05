@@ -471,11 +471,11 @@ const Relatorios = () => {
 
         <div className="flex-1 overflow-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full bg-muted/30 rounded-lg border">
+            <div className="flex items-center justify-center h-full rounded-lg border">
               <p className="text-lg text-muted-foreground">Carregando relatórios...</p>
             </div>
           ) : relatoriosFiltrados.length === 0 ? (
-            <div className="flex items-center justify-center h-full bg-muted/30 rounded-lg border">
+            <div className="flex items-center justify-center h-full rounded-lg border">
               <p className="text-lg text-muted-foreground">Nenhum relatório encontrado</p>
             </div>
           ) : (
