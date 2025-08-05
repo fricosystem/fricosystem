@@ -505,11 +505,11 @@ const AppSidebar = () => {
           `}
         </style>
         <SidebarGroup>
-          <div className="flex flex-col items-center justify-center px-1 py-2">
+        <div className="flex flex-col items-center justify-center px-1 py-2">
             <img 
               src="/Uploads/IconeFrico3D.png" 
               alt="Fricó Alimentos Logo" 
-              className="w-16 h-16 rounded-lg object-scale-down" 
+              className="w-24 h-24 rounded-xl object-scale-down" 
             />
           </div>
           
