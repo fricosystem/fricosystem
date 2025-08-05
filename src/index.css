@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,6 +48,9 @@
     --sidebar-accent-foreground: 222.2 47.4% 11.2%;
     --sidebar-border: 214.3 31.8% 91.4%;
     --sidebar-ring: 201 96% 32%;
+
+    /* Zoom dinâmico */
+    font-size: 75%; /* 75% do tamanho padrão → zoom visual sem transform */
   }
 
   .dark {
@@ -103,7 +105,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground w-full h-screen overflow-hidden px-4;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
@@ -151,5 +153,15 @@
 
   .data-table-footer {
     @apply bg-card text-card-foreground rounded-md border shadow-sm p-4;
+  }
+
+  /* Responsividade do logo */
+  .app-logo {
+    @apply w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32;
+  }
+
+  /* Glow effect menor para telas pequenas */
+  .logo-glow {
+    @apply absolute -inset-2 blur-lg;
   }
 }
