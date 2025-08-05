@@ -506,12 +506,12 @@ const AppSidebar = () => {
         </style>
         <SidebarGroup>
         <div className="flex flex-col items-center justify-center px-1 py-2">
-            <img 
-              src="/Uploads/IconeFrico3D.png" 
-              alt="Fricó Alimentos Logo" 
-              className="w-24 h-24 rounded-xl object-scale-down" 
-            />
-          </div>
+          <img 
+            src="/Uploads/IconeFrico3D.png" 
+            alt="Fricó Alimentos Logo" 
+            className="w-20 h-20 rounded-xl object-scale-down" 
+          />
+        </div>
           
           <div className="overflow-y-auto flex-grow" style={{ maxHeight: "calc(100vh - 180px)" }}>
             {sidebarCategories.map((category, index) => (
