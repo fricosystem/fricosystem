@@ -123,7 +123,12 @@ interface Produto {
   nome: string;
   quantidade: number;
   codigo_material?: string;
-  // outros campos
+  valor_unitario?: number;
+  preco?: number;
+  deposito?: string;
+  prateleira?: string;
+  centro_de_custo?: string;
+  unidade?: string;
 }
 
 interface CentroDeCusto {
@@ -143,6 +148,7 @@ interface ProdutoCarrinho {
   centroDeCusto?: string;
   centro_de_custo?: string;
   unidade?: string;
+  tipo: string; // Campo adicionado
 }
 
 const Requisicoes = () => {
@@ -168,37 +174,65 @@ const Requisicoes = () => {
       for (const item of itens) {
         const centroDeCustoSelecionado = centrosDeCusto.find(c => c.id === (item.centroDeCusto || item.centro_de_custo));
         
+        // Buscar informações completas do produto no Firestore
+        let produtoInfo: Partial<Produto> = {};
+        if (item.codigo_material) {
+          try {
+            const produtosRef = collection(db, "produtos");
+            const q = query(produtosRef, where("codigo_material", "==", item.codigo_material));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+              const produtoDoc = querySnapshot.docs[0];
+              produtoInfo = produtoDoc.data();
+            }
+          } catch (error) {
+            console.error("Erro ao buscar informações do produto:", error);
+          }
+        }
+
         const relatorioData = {
           requisicao_id: requisicaoId,
-          produto_id: item.id,
-          codigo_material: item.codigo_material || "",
-          nome_produto: item.nome,
+          produto_id: item.id || produtoInfo.id || "",
+          codigo_material: item.codigo_material || produtoInfo.codigo_material || "",
+          nome_produto: item.nome || produtoInfo.nome || "",
           quantidade: item.quantidade,
-          valor_unitario: item.valor_unitario,
-          valor_total: item.valor_unitario * item.quantidade,
+          valor_unitario: item.valor_unitario || produtoInfo.valor_unitario || produtoInfo.preco || 0,
+          valor_total: (item.valor_unitario || produtoInfo.valor_unitario || produtoInfo.preco || 0) * item.quantidade,
+          tipo: "Requisição", // Adicionar este campo
+          status: "saida" as const,
           solicitante: {
-            id: solicitanteSelecionado?.id || "",
-            nome: solicitanteSelecionado?.nome || "",
-            cargo: solicitanteSelecionado?.cargo || ""
+            id: solicitanteSelecionado?.id || selectedRequisicao?.solicitante?.id || "",
+            nome: solicitanteSelecionado?.nome || selectedRequisicao?.solicitante?.nome || selectedRequisicao?.usuario.nome || "",
+            cargo: solicitanteSelecionado?.cargo || selectedRequisicao?.solicitante?.cargo || selectedRequisicao?.usuario.cargo || ""
           },
           usuario: {
             id: user?.uid || "",
             email: user?.email || "",
-            nome: userData?.nome || ""
+            nome: userData?.nome || selectedRequisicao?.usuario.nome || ""
           },
-          deposito: item.deposito || "",
-          prateleira: item.prateleira || "",
-          centro_de_custo: centroDeCustoSelecionado?.nome || item.centro_de_custo || "",
-          unidade: centroDeCustoSelecionado?.unidade || item.unidade || "",
-          status: "saida",
+          deposito: item.deposito || produtoInfo.deposito || "",
+          prateleira: item.prateleira || produtoInfo.prateleira || "",
+          centro_de_custo: centroDeCustoSelecionado?.nome || item.centro_de_custo || produtoInfo.centro_de_custo || "",
+          unidade: centroDeCustoSelecionado?.unidade || item.unidade || produtoInfo.unidade || "",
           data_saida: serverTimestamp(),
           data_registro: serverTimestamp()
         };
 
         await addDoc(collection(db, "relatorios"), relatorioData);
       }
+      
+      toast({
+        title: "Relatórios criados",
+        description: `Relatórios de saída criados para a requisição ${requisicaoId}.`,
+      });
     } catch (error) {
       console.error("Erro ao criar relatório de saída:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar os relatórios de saída",
+        variant: "destructive",
+      });
       throw error;
     }
   };
@@ -360,14 +394,14 @@ const Requisicoes = () => {
     applyFilters();
   }, [searchTerm, statusFilter, requisicoes]);
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'aprovado':
       case 'concluida':
@@ -553,7 +587,8 @@ const Requisicoes = () => {
         prateleira: item.prateleira,
         centroDeCusto: item.centroDeCusto,
         centro_de_custo: item.centro_de_custo,
-        unidade: item.unidade
+        unidade: item.unidade,
+        tipo: "Requisição"
       }));
       
       await criarRelatorioSaida(selectedRequisicao.requisicao_id, produtosCarrinho);

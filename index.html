@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=0.75" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FR Stock Manager</title>
     <meta name="description" content="Sistema de gestão de estoque Fricó Alimentos" />
     <meta name="author" content="Fricó Alimentos" />
@@ -25,9 +25,14 @@
       /* Aplicar Poppins como fonte principal em todo o site */
       body, html {
         font-family: 'Poppins', sans-serif;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow-x: hidden;
       }
       
-      /* Forçar o zoom de 75% em componentes específicos */
+      /* Reset de transformações de escala */
       .login-container,
       .dashboard-container,
       .sidebar,
@@ -35,24 +40,23 @@
       [data-component="login"],
       [data-component="dashboard"],
       [data-component="sidebar"] {
-        transform: scale(0.75);
-        transform-origin: top left;
-        width: 133.33%; /* Compensar a redução da escala */
+        transform: none !important;
+        width: auto !important;
       }
       
-      /* Ajustar contêineres pai para lidar com o redimensionamento */
+      /* Ajustar contêineres pai */
       .login-wrapper,
       .dashboard-wrapper,
       .sidebar-wrapper,
       .auth-wrapper {
-        overflow: hidden;
+        overflow: visible;
       }
       
       /* Manter a classe font-roboto para compatibilidade, mas usar Poppins */
       .font-roboto, .font-roboto * {
         font-family: 'Poppins', sans-serif;
         letter-spacing: 0.02em;
-        font-size: 0.9rem;
+        font-size: 1rem;
       }
       
       /* Ajustes para pesos de fonte específicos do Firebase */
@@ -70,36 +74,44 @@
       
       /* Ajustes para melhorar a visibilidade no tema claro */
       :root:not(.dark) .font-roboto {
-        color: #333333; /* Cor escura para texto em tema claro */
+        color: #333333;
       }
       
       :root:not(.dark) .text-gray-300 {
-        color: #333333 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
+        color: #333333 !important;
       }
       
       :root:not(.dark) .text-gray-400 {
-        color: #555555 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
+        color: #555555 !important;
       }
       
       :root:not(.dark) .text-gray-500 {
-        color: #666666 !important; /* Substituir texto cinza claro por um mais escuro no tema claro */
+        color: #666666 !important;
       }
       
       /* Ajustes para os items do menu no tema claro */
       :root:not(.dark) .hover\:bg-\[\#2c384a\]:hover {
-        background-color: #e0e0e0 !important; /* Fundo mais claro para hover no tema claro */
+        background-color: #e0e0e0 !important;
       }
       
       :root:not(.dark) .bg-\[\#2c384a\] {
-        background-color: #f0f0f0 !important; /* Fundo mais claro no tema claro */
+        background-color: #f0f0f0 !important;
       }
       
       :root:not(.dark) .bg-\[\#1c2834\] {
-        background-color: #ffffff !important; /* Fundo do sidebar no tema claro */
+        background-color: #ffffff !important;
       }
       
       :root:not(.dark) .border-\[\#3e4a5e\] {
-        border-color: #dddddd !important; /* Cor da borda para tema claro */
+        border-color: #dddddd !important;
+      }
+
+      /* Garantir que o root ocupe toda a tela */
+      #root {
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
       }
     </style>
   </head>

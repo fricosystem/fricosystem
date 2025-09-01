@@ -41,13 +41,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { addDoc, collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, orderBy, limit, Timestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Fornecedor {
   id: string;
@@ -55,6 +56,18 @@ interface Fornecedor {
   cnpj: string;
   email: string;
   telefone: string;
+}
+
+interface CentroCusto {
+  id: string;
+  nome: string;
+  unidade: string;
+}
+
+interface Unidade {
+  id: string;
+  nome: string;
+  cnpj: string;
 }
 
 interface AddProdutoModalProps {
@@ -84,18 +97,26 @@ interface FormData {
   fornecedorEmail: string;
   fornecedorTelefone: string;
   prateleira: string;
+  centroCusto: string;
 }
 
 const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps) => {
   const [loading, setLoading] = useState(false);
   const [calcularMinimo, setCalcularMinimo] = useState(false);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
+  const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [loadingFornecedores, setLoadingFornecedores] = useState(false);
+  const [loadingCentrosCusto, setLoadingCentrosCusto] = useState(false);
+  const [loadingUnidades, setLoadingUnidades] = useState(false);
   const [fornecedorPopoverOpen, setFornecedorPopoverOpen] = useState(false);
+  const [centroCustoPopoverOpen, setCentroCustoPopoverOpen] = useState(false);
+  const [unidadePopoverOpen, setUnidadePopoverOpen] = useState(false);
   const [ultimoCodigoEstoque, setUltimoCodigoEstoque] = useState<number | null>(null);
   const [loadingCodigoEstoque, setLoadingCodigoEstoque] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const { toast } = useToast();
+  const { userData } = useAuth();
 
   // Initialize react-hook-form
   const form = useForm<FormData>({
@@ -120,10 +141,11 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       fornecedorEmail: "",
       fornecedorTelefone: "",
       prateleira: "",
+      centroCusto: "",
     },
   });
 
-  // Carregar fornecedores e último código estoque do Firebase
+  // Carregar fornecedores, centros de custo, unidades e último código estoque do Firebase
   useEffect(() => {
     const fetchFornecedores = async () => {
       try {
@@ -153,6 +175,66 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         });
       } finally {
         setLoadingFornecedores(false);
+      }
+    };
+
+    const fetchCentrosCusto = async () => {
+      try {
+        setLoadingCentrosCusto(true);
+        const centrosCustoRef = collection(db, "centro_de_custo");
+        const q = query(centrosCustoRef, orderBy("nome", "asc"));
+        const querySnapshot = await getDocs(q);
+        
+        const centrosCustoData: CentroCusto[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          centrosCustoData.push({
+            id: doc.id,
+            nome: data.nome || "",
+            unidade: data.unidade || "",
+          });
+        });
+        
+        setCentrosCusto(centrosCustoData);
+      } catch (error) {
+        console.error("Erro ao buscar centros de custo:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar a lista de centros de custo.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingCentrosCusto(false);
+      }
+    };
+
+    const fetchUnidades = async () => {
+      try {
+        setLoadingUnidades(true);
+        const unidadesRef = collection(db, "unidades");
+        const q = query(unidadesRef, orderBy("nome", "asc"));
+        const querySnapshot = await getDocs(q);
+        
+        const unidadesData: Unidade[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          unidadesData.push({
+            id: doc.id,
+            nome: data.nome || "",
+            cnpj: data.cnpj || "",
+          });
+        });
+        
+        setUnidades(unidadesData);
+      } catch (error) {
+        console.error("Erro ao buscar unidades:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar a lista de unidades.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingUnidades(false);
       }
     };
 
@@ -206,6 +288,8 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
 
     if (open) {
       fetchFornecedores();
+      fetchCentrosCusto();
+      fetchUnidades();
       fetchUltimoCodigoEstoque();
     }
   }, [open, toast, form]);
@@ -279,6 +363,24 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
     return selectedFornecedor ? `${selectedFornecedor.razaoSocial} - ${selectedFornecedor.cnpj}` : null;
   };
 
+  // Get selected centro de custo name for display
+  const getSelectedCentroCustoName = () => {
+    const selectedId = form.watch("centroCusto");
+    if (!selectedId) return null;
+    
+    const selectedCentroCusto = centrosCusto.find(c => c.id === selectedId);
+    return selectedCentroCusto ? `${selectedCentroCusto.nome} - ${selectedCentroCusto.unidade}` : null;
+  };
+
+  // Get selected unidade name for display
+  const getSelectedUnidadeName = () => {
+    const selectedId = form.watch("unidade");
+    if (!selectedId) return null;
+    
+    const selectedUnidade = unidades.find(u => u.id === selectedId);
+    return selectedUnidade ? `${selectedUnidade.nome} - ${selectedUnidade.cnpj}` : null;
+  };
+
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
     try {
@@ -298,6 +400,30 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         }
       }
 
+      // Get centro de custo details if ID is provided
+      let centroCustoNome = "";
+      let centroCustoUnidade = "";
+
+      if (formData.centroCusto) {
+        const selectedCentroCusto = centrosCusto.find(c => c.id === formData.centroCusto);
+        if (selectedCentroCusto) {
+          centroCustoNome = selectedCentroCusto.nome;
+          centroCustoUnidade = selectedCentroCusto.unidade;
+        }
+      }
+
+      // Get unidade details if ID is provided
+      let unidadeNome = "";
+      let unidadeCNPJ = "";
+
+      if (formData.unidade) {
+        const selectedUnidade = unidades.find(u => u.id === formData.unidade);
+        if (selectedUnidade) {
+          unidadeNome = selectedUnidade.nome;
+          unidadeCNPJ = selectedUnidade.cnpj;
+        }
+      }
+
       // Normaliza o valor unitário para formato com ponto decimal
       const valorUnitarioNormalizado = normalizarValorUnitario(formData.valorUnitario);
 
@@ -306,7 +432,9 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         codigo_material: formData.codigo,
         codigo_estoque: formData.codigoEstoque || "0",
         nome: formData.nome,
-        unidade: formData.unidade,
+        unidade: unidadeNome || formData.unidade,
+        unidade_id: formData.unidade || null,
+        unidade_cnpj: unidadeCNPJ || null,
         deposito: formData.deposito,
         quantidade: parseFloat(formData.quantidade),
         quantidade_minima: parseFloat(formData.quantidadeMinima),
@@ -322,10 +450,45 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         fornecedor_telefone: fornecedorTelefone || null,
         prateleira: formData.prateleira || "Não endereçado",
         unidade_de_medida: formData.unidadeMedida,
+        centro_de_custo: centroCustoNome || null,
+        centro_de_custo_unidade: centroCustoUnidade || null,
+        centro_de_custo_id: formData.centroCusto || null,
       };
 
       // Add the product to Firestore
-      await addDoc(collection(db, "produtos"), produtoData);
+      const produtoRef = await addDoc(collection(db, "produtos"), produtoData);
+
+      // Criar registro de relatório para a entrada do produto
+      const relatorioData = {
+        requisicao_id: produtoRef.id,
+        produto_id: produtoRef.id,
+        codigo_material: formData.codigo,
+        nome_produto: formData.nome,
+        quantidade: parseFloat(formData.quantidade),
+        valor_unitario: valorUnitarioNormalizado,
+        valor_total: valorUnitarioNormalizado * parseFloat(formData.quantidade),
+        status: 'entrada',
+        tipo: "Cadastro",
+        solicitante: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          cargo: userData?.cargo || 'Administrador'
+        },
+        usuario: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          email: userData?.email || 'sistema@empresa.com'
+        },
+        deposito: formData.deposito,
+        prateleira: formData.prateleira || "Não endereçado",
+        centro_de_custo: centroCustoNome || formData.unidade,
+        unidade: unidadeNome || formData.unidade,
+        data_saida: Timestamp.fromDate(new Date()),
+        data_registro: Timestamp.fromDate(new Date())
+      };
+
+      // Adicionar o relatório de entrada
+      await addDoc(collection(db, "relatorios"), relatorioData);
 
       // Show success message
       toast({
@@ -360,7 +523,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 sm:py-4">
-            {/* Grid adaptativo para código e código estoque */}
+            {/* Grid adaptativo para código and código estoque */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -468,9 +631,66 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unidade da empresa*</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: FR01" {...field} required />
-                    </FormControl>
+                    <Popover open={unidadePopoverOpen} onOpenChange={setUnidadePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between text-left",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            style={{ height: '40px' }}
+                            disabled={loadingUnidades}
+                          >
+                            <span className="truncate">
+                              {loadingUnidades
+                                ? "Carregando..."
+                                : field.value
+                                  ? getSelectedUnidadeName()
+                                  : "Selecione a unidade"}
+                            </span>
+                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Buscar unidade..." className="h-9" />
+                          <CommandList className="max-h-[50vh] sm:max-h-[300px]">
+                            <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
+                            <CommandGroup>
+                              {unidades.map((unidade) => (
+                                <CommandItem
+                                  key={unidade.id}
+                                  value={`${unidade.nome} ${unidade.cnpj}`}
+                                  onSelect={() => {
+                                    form.setValue("unidade", unidade.id);
+                                    setUnidadePopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === unidade.id
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{unidade.nome}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      CNPJ: {unidade.cnpj}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -615,6 +835,78 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 )}
               />
             </div>
+
+            {/* Centro de Custo */}
+            <FormField
+              control={form.control}
+              name="centroCusto"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Centro de Custo*</FormLabel>
+                  <Popover open={centroCustoPopoverOpen} onOpenChange={setCentroCustoPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full justify-between text-left",
+                            !field.value && "text-muted-foreground"
+                          )}
+                          style={{ height: '40px' }}
+                          disabled={loadingCentrosCusto}
+                        >
+                          <span className="truncate">
+                            {loadingCentrosCusto
+                              ? "Carregando..."
+                              : field.value
+                                ? getSelectedCentroCustoName()
+                                : "Selecione o centro de custo"}
+                          </span>
+                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Buscar centro de custo..." className="h-9" />
+                        <CommandList className="max-h-[50vh] sm:max-h-[300px]">
+                          <CommandEmpty>Nenhum centro de custo encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {centrosCusto.map((centroCusto) => (
+                              <CommandItem
+                                key={centroCusto.id}
+                                value={`${centroCusto.nome} ${centroCusto.unidade}`}
+                                onSelect={() => {
+                                  form.setValue("centroCusto", centroCusto.id);
+                                  setCentroCustoPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === centroCusto.id
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{centroCusto.nome}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    Unidade: {centroCusto.unidade}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Quantidade e cálculo de quantidade mínima */}
             <div>

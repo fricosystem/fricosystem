@@ -110,7 +110,8 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
               valorUnitario: data.valorUnitario,
               valorTotal: data.valorTotal,
               usuario: data.usuario,
-              status_envio: data.status_envio || "pendente"
+              status_envio: data.status_envio || "pendente",
+              chavePixFornecedor: data.chavePixFornecedor || "" // Adicionando a propriedade faltante
             };
             
             docs.push(registro);
@@ -341,7 +342,7 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
         </div>
       </Card>
       
-      {/* Modais permanecem iguais */}
+      {/* Modais */}
       {medidaSelecionada && (
         <ModalRecibo
           medida={medidaSelecionada}
@@ -373,6 +374,7 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
         onClose={() => setModalComprovanteAberto(false)}
         totalMetrosCubicos={totalMetrosCubicos}
         totalValor={totalValor}
+        itens={registros} // Adicionando a propriedade faltante
       />
       
       <AlertDialog open={!!registroParaExcluir} onOpenChange={(open) => !open && setRegistroParaExcluir(null)}>

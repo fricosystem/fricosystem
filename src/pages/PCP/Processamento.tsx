@@ -606,48 +606,6 @@ const Processamento: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Card de Ordens de Produção */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Ordens de Produção</CardTitle>
-          <CardDescription>
-            Todas as ordens de produção registradas no sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Ordem</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead>Quantidade</TableHead>
-                <TableHead>Data Processamento</TableHead>
-                <TableHead>Turno</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrdens.map((ordem) => (
-                <TableRow key={ordem.id}>
-                  <TableCell className="font-medium">{ordem.id.substring(0, 8)}...</TableCell>
-                  <TableCell>{ordem.ordem_id}</TableCell>
-                  <TableCell>{ordem.produto}</TableCell>
-                  <TableCell>{ordem.quantidade}</TableCell>
-                  <TableCell>{formatShortDate(ordem.dataProcessamento)}</TableCell>
-                  <TableCell>{ordem.turno}</TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(ordem.status)}>
-                      {ordem.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
       {/* Dialog de Detalhes do Processamento */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="sm:max-w-[625px]">
