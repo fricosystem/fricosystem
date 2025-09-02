@@ -46,6 +46,7 @@ export interface Usuario {
   perfil: string;
   senha: string;
   unidade: string;
+  centro_de_custo?: string;
   permissoes?: string[];
 }
 
@@ -61,6 +62,7 @@ const PERMISSOES = [
   { id: 'transferencia', label: 'Transferência' },
   { id: 'enderecamento', label: 'Endereçamento' },
   { id: 'medida_lenha', label: 'Medida de Lenha' },
+  { id: 'pcp', label: 'PCP - Planejamento e Controle de Produção' },
   { id: 'requisicoes', label: 'Requisições' },
   { id: 'carrinho', label: 'Carrinho' },
   { id: 'ordens_servico', label: 'Ordens de Serviço' },
@@ -158,6 +160,7 @@ const UsuarioForm = ({
     perfil: usuario?.perfil || 'usuario',
     senha: usuario?.senha || '',
     unidade: usuario?.unidade || '',
+    centro_de_custo: usuario?.centro_de_custo || '',
     permissoes: usuario?.permissoes || [],
   });
 
@@ -173,6 +176,7 @@ const UsuarioForm = ({
         perfil: usuario.perfil,
         senha: usuario.senha,
         unidade: usuario.unidade,
+        centro_de_custo: usuario.centro_de_custo || '',
         permissoes: usuario.permissoes || [],
       });
       setSelectedPermissoes(usuario.permissoes || []);
@@ -194,6 +198,10 @@ const UsuarioForm = ({
 
   const handleStatusChange = (value: string) => {
     setFormData(prev => ({ ...prev, ativo: value }));
+  };
+
+  const handleCentroCustoChange = (value: string) => {
+    setFormData(prev => ({ ...prev, centro_de_custo: value }));
   };
 
   const handlePermissaoChange = (permissaoId: string, isChecked: boolean) => {
@@ -246,7 +254,7 @@ const UsuarioForm = ({
           <Input
             id="senha"
             name="senha"
-            type="password"
+            type="text"
             value={formData.senha}
             onChange={handleChange}
             required={!usuario}
@@ -288,8 +296,26 @@ const UsuarioForm = ({
               <SelectValue placeholder="Selecione o status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="sim">Ativo</SelectItem>
-              <SelectItem value="nao">Inativo</SelectItem>
+              <SelectItem value="sim">Sim</SelectItem>
+              <SelectItem value="nao">Não</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="centro_de_custo">Centro de Custo</Label>
+          <Select value={formData.centro_de_custo} onValueChange={handleCentroCustoChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o centro de custo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="administrativo">Administrativo</SelectItem>
+              <SelectItem value="operacional">Operacional</SelectItem>
+              <SelectItem value="financeiro">Financeiro</SelectItem>
+              <SelectItem value="comercial">Comercial</SelectItem>
+              <SelectItem value="producao">Produção</SelectItem>
+              <SelectItem value="manutencao">Manutenção</SelectItem>
+              <SelectItem value="logistica">Logística</SelectItem>
+              <SelectItem value="rh">Recursos Humanos</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -297,9 +323,9 @@ const UsuarioForm = ({
 
       <div className="space-y-2">
         <Label>Permissões</Label>
-        <div className="border rounded-md p-4">
+        <div className="border rounded-md p-6 m-2">
           <ScrollArea className="h-64">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
               {PERMISSOES.map(permissao => (
                 <div key={permissao.id} className="flex items-center space-x-2">
                   <Checkbox
@@ -358,11 +384,13 @@ const GestaoUsuarios = () => {
       const nome = usuario.nome || '';
       const email = usuario.email || '';
       const unidade = usuario.unidade || '';
+      const centroCusto = usuario.centro_de_custo || '';
       const searchLower = searchTerm.toLowerCase();
       
       const matchesSearch = nome.toLowerCase().includes(searchLower) ||
              email.toLowerCase().includes(searchLower) ||
-             unidade.toLowerCase().includes(searchLower);
+             unidade.toLowerCase().includes(searchLower) ||
+             centroCusto.toLowerCase().includes(searchLower);
 
       const matchesStatus = statusFilter === 'todos' || usuario.ativo === statusFilter;
       
@@ -519,6 +547,7 @@ const GestaoUsuarios = () => {
                         <TableHead>Email</TableHead>
                         <TableHead>Perfil</TableHead>
                         <TableHead>Unidade</TableHead>
+                        <TableHead>Centro de Custo</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -530,6 +559,7 @@ const GestaoUsuarios = () => {
                         <TableCell>{usuario.email}</TableCell>
                         <TableCell className="capitalize">{usuario.perfil}</TableCell>
                         <TableCell>{usuario.unidade}</TableCell>
+                        <TableCell className="capitalize">{usuario.centro_de_custo || '-'}</TableCell>
                         <TableCell>
                             <span className={`px-2 py-1 rounded-full text-xs ${
                             usuario.ativo === 'sim' 

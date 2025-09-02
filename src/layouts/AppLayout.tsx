@@ -37,8 +37,8 @@ const AppLayout = ({ children, title }: AppLayoutProps) => {
       <div className="flex h-screen w-full overflow-hidden"> {/* Adicione overflow-hidden */}
         <AppSidebar />
         <div className="flex-1 flex flex-col h-full">
-          <AppHeader title={title} className="sticky top-0 z-50 bg-background" /> {/* Adicione sticky e z-index */}
-          <main className="flex-1 overflow-auto p-6"> {/* Mantenha overflow-auto apenas no main */}
+          <AppHeader title={title} />
+          <main className="flex-1 overflow-auto p-6">
             {children}
           </main>
         </div>

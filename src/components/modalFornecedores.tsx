@@ -215,7 +215,7 @@ const ModalFornecedor = ({ fornecedor, onClose }: ModalFornecedorProps) => {
                           <TableCell>{formatCurrency(produto.valor_unitario)}</TableCell>
                           <TableCell>{formatDate(produto.data_vencimento)}</TableCell>
                           <TableCell>
-                            <Badge variant={status === "vencido" ? "destructive" : status === "alerta" ? "warning" : "default"}>
+                            <Badge variant={status === "vencido" ? "destructive" : status === "alerta" ? "destructive" : "default"}>
                               {statusText}
                             </Badge>
                           </TableCell>

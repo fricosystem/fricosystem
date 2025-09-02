@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 // Páginas
 import Login from "./pages/Login";
@@ -13,7 +14,7 @@ import TelaBemVindo from "./pages/TelaBemVindo";
 import Produtos from "./pages/Produtos";
 import NotasFiscais from "./pages/NotasFiscaisParse";
 import Administrativo from "./pages/Administrativo";
-import Configuracoes from "./pages/Configuracoes";
+import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
 import Carrinho from "./pages/Carrinho";
 import Requisicoes from "./pages/Requisicoes";
@@ -97,7 +98,7 @@ const AppContent = () => {
           <Route path="/produtos" element={<AuthGuard><Produtos /></AuthGuard>} />
           <Route path="/notas-fiscais" element={<AuthGuard><NotasFiscais /></AuthGuard>} />
           <Route path="/administrativo" element={<AuthGuard><Administrativo /></AuthGuard>} />
-          <Route path="/configuracoes" element={<AuthGuard><Configuracoes /></AuthGuard>} />
+          <Route path="/perfil" element={<AuthGuard><Perfil /></AuthGuard>} />
           <Route path="/carrinho" element={<AuthGuard><Carrinho /></AuthGuard>} />
           <Route path="/requisicoes" element={<AuthGuard><Requisicoes /></AuthGuard>} />
           <Route path="/devolucao" element={<AuthGuard><DevolucaoMateriais /></AuthGuard>} />
@@ -134,9 +135,11 @@ const AppContent = () => {
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };

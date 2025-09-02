@@ -91,71 +91,72 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
   return (
     <motion.div 
       ref={drop}
-      className={`rounded-lg border shadow-sm h-full flex flex-col w-full
+      className={`rounded-lg border shadow-sm h-full flex flex-col w-full min-w-0 max-w-full overflow-hidden
         transition-all duration-200 ${dropAreaClass}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
       {/* Cabeçalho */}
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent flex items-center">
-            <List className="mr-2 text-blue-500 dark:text-blue-400" size={20} /> Produtos
+      <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 min-w-0">
+        <div className="flex items-center justify-between mb-3 min-w-0">
+          <h2 className="text-base sm:text-lg font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent flex items-center min-w-0 truncate">
+            <List className="mr-2 text-blue-500 dark:text-blue-400 flex-shrink-0" size={20} /> 
+            <span className="truncate">Produtos</span>
           </h2>
           
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => setIsCompact(!isCompact)}
-            className="text-xs px-2 h-8"
+            className="text-xs px-2 h-8 flex-shrink-0"
           >
-            {isCompact ? "Expandir" : "Compactar"}
+            {isCompact ? "+" : "-"}
           </Button>
         </div>
         
-        <div className="flex flex-wrap gap-2 mb-3">
-          <Badge variant="outline" className="bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-200">
+        <div className="flex flex-wrap gap-1 sm:gap-2 mb-3 min-w-0">
+          <Badge variant="outline" className="bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-200 text-xs">
             Total: {totalProducts}
           </Badge>
-          <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-            Endereçados: {withPositionCount}
+          <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs">
+            End.: {withPositionCount}
           </Badge>
-          <Badge variant="outline" className="bg-orange-50 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">
-            Não endereçados: {withoutPositionCount}
+          <Badge variant="outline" className="bg-orange-50 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs">
+            Sem: {withoutPositionCount}
           </Badge>
         </div>
         
-        <div className="relative mb-3">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
+        <div className="relative mb-3 min-w-0">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 z-10" size={16} />
           <Input
-            placeholder="Buscar produto..."
-            className="pl-8 pr-8 transition-all duration-300 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring focus:ring-blue-200 dark:focus:ring-blue-700/30"
+            placeholder="Buscar..."
+            className="pl-8 pr-8 text-sm transition-all duration-300 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring focus:ring-blue-200 dark:focus:ring-blue-700/30 w-full min-w-0"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           {searchTerm && (
             <button 
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 z-10"
               onClick={handleClearSearch}
             >
-              <Trash2 size={16} />
+              <Trash2 size={14} />
             </button>
           )}
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <Select
             value={filterOption}
             onValueChange={setFilterOption}
           >
-            <SelectTrigger className="w-full bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
-              <SelectValue placeholder="Filtrar por endereçamento" />
+            <SelectTrigger className="flex-1 min-w-0 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-sm">
+              <SelectValue placeholder="Filtrar..." />
             </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
-              <SelectItem value="all">Todos os produtos</SelectItem>
-              <SelectItem value="with-position">Com endereçamento</SelectItem>
-              <SelectItem value="without-position">Sem endereçamento</SelectItem>
+            <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 z-50">
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="with-position">Com endereço</SelectItem>
+              <SelectItem value="without-position">Sem endereço</SelectItem>
             </SelectContent>
           </Select>
           
@@ -164,9 +165,9 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
               variant="ghost" 
               size="icon" 
               onClick={handleClearFilters}
-              className="h-10 w-10 flex-shrink-0"
+              className="h-9 w-9 flex-shrink-0"
             >
-              <FilterX size={16} />
+              <FilterX size={14} />
             </Button>
           )}
         </div>
@@ -198,17 +199,17 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
         </div>
       )}
       
-      <ScrollArea className="flex-1 px-3 pt-3 bg-white dark:bg-gray-950">
+      <ScrollArea className="flex-1 px-2 sm:px-3 pt-3 bg-white dark:bg-gray-950 overflow-hidden">
         <AnimatePresence>
           {filteredProducts.length === 0 ? (
             <motion.div 
-              className="text-center text-gray-500 dark:text-gray-400 py-8"
+              className="text-center text-gray-500 dark:text-gray-400 py-8 min-w-0"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
               <Package2 size={32} className="mx-auto mb-2 text-gray-400 dark:text-gray-600" />
-              <p>Nenhum produto encontrado</p>
+              <p className="text-sm">Nenhum produto encontrado</p>
               {(searchTerm || filterOption !== 'all') && (
                 <Button 
                   variant="ghost" 
@@ -226,7 +227,7 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ staggerChildren: 0.05 }}
-              className="pb-3 space-y-2"
+              className="pb-3 space-y-2 min-w-0"
             >
               {filteredProducts.map((product, index) => (
                 <motion.div
@@ -235,7 +236,7 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ delay: index * 0.03 }}
-                  className="px-2"
+                  className="px-1 min-w-0"
                 >
                   <ProductItem product={product} isCompact={isCompact} />
                 </motion.div>

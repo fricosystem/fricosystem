@@ -49,6 +49,9 @@
     --sidebar-border: 214.3 31.8% 91.4%;
     --sidebar-ring: 201 96% 32%;
 
+    /* Animações personalizadas */
+    --shimmer-angle: 0deg;
+
     /* Zoom dinâmico */
     font-size: 75%; /* 75% do tamanho padrão → zoom visual sem transform */
   }
@@ -105,8 +108,18 @@
   }
 
   body {
-    @apply bg-background text-foreground w-full h-screen overflow-hidden px-4;
+    @apply bg-background text-foreground w-full min-h-screen;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Ocultar scrollbars em todo o sistema */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer */
+  }
+
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
   }
 }
 

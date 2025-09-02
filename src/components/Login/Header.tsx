@@ -57,7 +57,7 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md py-2 md:py-3 h-20 bg-black/[0.02] rounded-none w-screen max-w-full">
+    <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md py-2 md:py-3 h-20 bg-black/[0.02] rounded-none w-screen max-w-full">{/* Removido 'hidden' */}
       <div className="w-full px-2 md:px-4 flex items-center justify-between">
         <div className="flex items-center gap-2 pl-1">
           <a href="#hero" className="flex items-center gap-2">
@@ -128,11 +128,17 @@ export function Header() {
             onValueChange={(val) => setActiveTab(val as "login" | "register")} 
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2 bg-[#1A1F2C]/[0.02]">
-              <TabsTrigger value="login" className="text-white bg-transparent">
+            <TabsList className="grid w-full grid-cols-2 bg-primary/10 rounded-lg p-1">
+              <TabsTrigger 
+                value="login" 
+                className="text-white bg-transparent hover:bg-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md transition-all duration-200"
+              >
                 Login
               </TabsTrigger>
-              <TabsTrigger value="register" className="text-white bg-transparent">
+              <TabsTrigger 
+                value="register" 
+                className="text-white bg-transparent hover:bg-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md transition-all duration-200"
+              >
                 Cadastro
               </TabsTrigger>
             </TabsList>

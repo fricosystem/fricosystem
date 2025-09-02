@@ -19,13 +19,7 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
     // Verificar se o produto já está na posição
     if (product) {
       setTimeout(() => {
-        toast.warning(`Já existe um produto na posição ${positionLabel}`, {
-          style: {
-            background: '#1f2937',
-            color: '#fbbf24',
-            border: '1px solid #374151'
-          }
-        });
+        toast.warning(`Já existe um produto na posição ${positionLabel}`);
       }, 0);
       return;
     }
@@ -36,13 +30,7 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
     // Se a operação foi bem-sucedida, mostrar toast de sucesso
     if (result !== false) {
       setTimeout(() => {
-        toast.success(`Produto ${item.nome} movido para ${positionLabel}`, {
-          style: {
-            background: '#1f2937',
-            color: '#10b981',
-            border: '1px solid #374151'
-          }
-        });
+        toast.success(`Produto ${item.nome} movido para ${positionLabel}`);
       }, 0);
     }
   }, [positionLabel, product, onProductDrop]);
@@ -76,34 +64,32 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
 
   // Determinar classes com base no estado de drop
   const getBgClass = () => {
-    if (isOver && canDrop) return 'bg-gray-700';
-    if (canDrop) return 'bg-gray-800';
-    return 'bg-gray-800';
+    if (isOver && canDrop) return 'bg-primary/10';
+    return 'bg-background';
   };
 
   const getBorderClass = () => {
-    if (isOver && canDrop) return 'border-amber-400 shadow-amber-400/30';
-    return 'border-gray-700';
+    if (isOver && canDrop) return 'border-primary shadow-primary/20';
+    return 'border-border';
   };
 
   return (
     <motion.div
       ref={drop}
-      className={`p-2 border-2 rounded-lg transition-all duration-200 h-28 
+      className={`p-1.5 sm:p-2 border-2 rounded-lg transition-all duration-200 h-20 sm:h-28 
         ${getBgClass()} 
         ${getBorderClass()}
         ${isOver ? 'shadow-lg' : ''}
         flex flex-col items-center justify-center relative`}
       animate={{
         scale: isOver && canDrop ? 1.05 : 1,
-        boxShadow: isOver && canDrop ? '0 4px 12px rgba(251, 191, 36, 0.25)' : '0 0 0 rgba(0, 0, 0, 0)'
       }}
       transition={{ duration: 0.2 }}
     >
       {/* Efeito de destaque quando pode receber drop */}
       {isOver && canDrop && (
         <motion.div 
-          className="absolute inset-0 rounded-md border-2 border-dashed border-amber-400 pointer-events-none"
+          className="absolute inset-0 rounded-md border-2 border-dashed border-primary pointer-events-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -112,11 +98,11 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
 
       {!product && (
         <motion.div 
-          className="text-center text-gray-500 flex flex-col items-center justify-center h-full w-full"
+          className="text-center text-muted-foreground flex flex-col items-center justify-center h-full w-full"
           animate={{ opacity: isOver && canDrop ? 0.5 : 1 }}
         >
-          <Package size={20} className="mb-2 text-gray-600" />
-          <span className="text-xs font-bold text-gray-400">{positionLabel}</span>
+          <Package size={16} className="mb-1 sm:mb-2" />
+          <span className="text-[10px] sm:text-xs font-bold">{positionLabel}</span>
         </motion.div>
       )}
 
@@ -132,7 +118,7 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
           whileTap={{ scale: 0.98 }}
           transition={{ type: "spring", stiffness: 400, damping: 17 }}
         >
-          <div className="w-full h-12 flex justify-center overflow-hidden rounded-md">
+          <div className="w-full h-8 sm:h-12 flex justify-center overflow-hidden rounded-md">
             <img
               src={product.imagem || '/placeholder.svg'}
               alt={product.nome}
@@ -142,9 +128,9 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
               }}
             />
           </div>
-          <div className="text-center mt-1 w-full">
-            <p className="text-xs font-bold line-clamp-1 text-gray-100">{product.nome}</p>
-            <p className="text-[10px] text-amber-400 font-mono">{product.codigo_material}</p>
+          <div className="text-center mt-0.5 sm:mt-1 w-full">
+            <p className="text-[10px] sm:text-xs font-bold line-clamp-1">{product.nome}</p>
+            <p className="text-[8px] sm:text-[10px] text-primary font-mono">{product.codigo_material}</p>
           </div>
         </motion.div>
       )}

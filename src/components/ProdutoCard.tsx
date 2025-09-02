@@ -300,7 +300,7 @@ const ProdutoCard = ({
                     )}
                   </div>
                   
-                  <div className="sticky bottom-0 bg-background pt-4 mt-4 border-t">
+                   <div className="sticky bottom-0 bg-background pt-4 mt-4 border-t">
                     <div className="flex flex-wrap gap-2 justify-end">
                       <AdicionarAoCarrinho 
                         produto={produto} 

@@ -58,10 +58,10 @@ const Enderecamento = () => {
   const renderContent = () => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center h-full py-20">
+        <div className="flex items-center justify-center h-[50vh] py-20">
           <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Carregando dados do estoque...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+            <p className="text-muted-foreground">Carregando dados do estoque...</p>
           </div>
         </div>
       );
@@ -69,13 +69,13 @@ const Enderecamento = () => {
     
     if (error) {
       return (
-        <div className="flex items-center justify-center h-full p-4">
+        <div className="flex items-center justify-center h-[50vh] p-4">
           <Alert variant="destructive" className="max-w-xl">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Erro ao carregar produtos</AlertTitle>
             <AlertDescription>
               {error}
-              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-950 rounded text-sm">
+              <div className="mt-2 p-2 bg-muted rounded text-sm">
                 Verifique se a conexão com o Firebase está configurada corretamente.
               </div>
             </AlertDescription>
@@ -86,13 +86,13 @@ const Enderecamento = () => {
 
     if (!produtos || produtos.length === 0) {
       return (
-        <div className="flex items-center justify-center h-full p-4">
+        <div className="flex items-center justify-center h-[50vh] p-4">
           <Alert className="max-w-xl">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Nenhum produto encontrado</AlertTitle>
             <AlertDescription>
               Não foram encontrados produtos na coleção. Verifique se existem documentos na coleção "produtos" do Firebase.
-              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-950 rounded text-sm">
+              <div className="mt-2 p-2 bg-muted rounded text-sm">
                 Debug: {JSON.stringify(debugInfo)}
               </div>
             </AlertDescription>
@@ -102,10 +102,11 @@ const Enderecamento = () => {
     }
 
     return (
-      <div className="flex flex-col h-full">
-        <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-6 h-full`}>
-          {/* Coluna da esquerda com a lista de produtos */}
-          <div className={`${isMobile ? 'w-full' : 'w-96'} flex-shrink-0`}>
+      <div className="space-y-6">
+        {/* Container principal */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[70vh]">
+          {/* Lista de produtos */}
+          <div className="lg:col-span-3 xl:col-span-3">
             <ProductList 
               products={filtrarProdutosPorEstoque(activeStock)} 
               onRemoveShelf={handleRemoveShelf}
@@ -113,46 +114,66 @@ const Enderecamento = () => {
             />
           </div>
           
-          {/* Coluna da direita com o grid de endereçamento */}
-          <div className="flex-grow h-full">
-            {/* Tabs integradas ao card */}
+          {/* Grid de endereçamento */}
+          <div className="lg:col-span-9 xl:col-span-9">
             <Tabs 
               defaultValue="estoque1" 
               value={activeStock}
               onValueChange={setActiveStock} 
-              className="flex flex-col bg-gray-50 dark:bg-gray-950 rounded-lg shadow overflow-hidden"
+              className="h-full"
             >
-              <TabsList className="grid grid-cols-5 w-full bg-gray-100 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700">
-                <TabsTrigger value="estoque1">Estoque 1</TabsTrigger>
-                <TabsTrigger value="estoque2">Estoque 2</TabsTrigger>
-                <TabsTrigger value="estoque3">Estoque 3</TabsTrigger>
-                <TabsTrigger value="estoque4">Estoque 4</TabsTrigger>
-                <TabsTrigger value="estoque5">Estoque 5</TabsTrigger>
+              <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 w-full mb-6">
+                <TabsTrigger value="estoque1" className="text-xs sm:text-sm">
+                  <span className="hidden sm:inline">Estoque </span>1
+                </TabsTrigger>
+                <TabsTrigger value="estoque2" className="text-xs sm:text-sm">
+                  <span className="hidden sm:inline">Estoque </span>2
+                </TabsTrigger>
+                <TabsTrigger value="estoque3" className="text-xs sm:text-sm">
+                  <span className="hidden sm:inline">Estoque </span>3
+                </TabsTrigger>
+                <TabsTrigger value="estoque4" className="text-xs sm:text-sm">
+                  <span className="hidden sm:inline">Estoque </span>4
+                </TabsTrigger>
+                <TabsTrigger value="estoque5" className="text-xs sm:text-sm">
+                  <span className="hidden sm:inline">Estoque </span>5
+                </TabsTrigger>
               </TabsList>
               
               {/* Conteúdo das tabs */}
-              {["estoque1", "estoque2", "estoque3", "estoque4", "estoque5"].map((estoque) => (
-                <TabsContent key={estoque} value={estoque} className="p-4">
-                  <WarehouseGrid 
-                    products={filtrarProdutosPorEstoque(estoque)}
-                    onUpdateProductPosition={(product, row, column) => 
-                      handleUpdateProductPosition(product, row, column, estoque)}
-                    currentStock={estoque}
-                  />
-                </TabsContent>
-              ))}
+              <div className="h-full">
+                {["estoque1", "estoque2", "estoque3", "estoque4", "estoque5"].map((estoque) => (
+                  <TabsContent key={estoque} value={estoque} className="h-full mt-0">
+                    <WarehouseGrid 
+                      products={filtrarProdutosPorEstoque(estoque)}
+                      onUpdateProductPosition={(product, row, column) => 
+                        handleUpdateProductPosition(product, row, column, estoque)}
+                      currentStock={estoque}
+                    />
+                  </TabsContent>
+                ))}
+              </div>
             </Tabs>
           </div>
         </div>
         
-        {/* Instruções de uso */}
-        <div className="bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
-          <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Como usar:</h3>
-          <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-            <li>Arraste produtos da lista para a prateleira desejada</li>
-            <li>Arraste produtos entre diferentes posições nas prateleiras</li>
-            <li>Solte produtos na lista de produtos para remover endereçamento</li>
-          </ul>
+        {/* Instruções de uso - parte inferior */}
+        <div className="border rounded-lg p-4 bg-card/50 backdrop-blur-sm">
+          <h3 className="font-semibold mb-3 text-base">📋 Como usar o sistema de endereçamento:</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-start space-x-2">
+              <span className="text-primary font-bold">1.</span>
+              <span className="text-muted-foreground">Arraste produtos da lista para a prateleira desejada</span>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-primary font-bold">2.</span>
+              <span className="text-muted-foreground">Arraste produtos entre diferentes posições nas prateleiras</span>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-primary font-bold">3.</span>
+              <span className="text-muted-foreground">Solte produtos na lista para remover endereçamento</span>
+            </div>
+          </div>
         </div>
       </div>
     );

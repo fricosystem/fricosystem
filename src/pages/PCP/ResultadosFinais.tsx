@@ -58,11 +58,59 @@ const ResultadosFinais: React.FC = () => {
   const [expandedClassificacao, setExpandedClassificacao] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Cache para documentos já carregados
+  const [documentCache, setDocumentCache] = useState<Record<string, any>>({});
+
   const formatNumber = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(value);
+  };
+
+  // Função para normalizar códigos
+  const normalizeCode = (code: string | undefined): string => {
+    return (code || "").trim().toLowerCase();
+  };
+
+  // Função para match melhorado de produtos
+  const isProductMatch = (produtoItem: any, produto: Produto): boolean => {
+    const itemCodigo = normalizeCode(produtoItem.codigo);
+    const produtoCodigo = normalizeCode(produto.codigo);
+    
+    // Prioridade 1: Match exato por código
+    if (itemCodigo && produtoCodigo && itemCodigo === produtoCodigo) {
+      return true;
+    }
+    
+    // Prioridade 2: Match por descrição (mais restritivo)
+    if (produtoItem.texto_breve && produto.descricao_produto) {
+      const textoBreve = produtoItem.texto_breve.toLowerCase().trim();
+      const descricao = produto.descricao_produto.toLowerCase().trim();
+      return textoBreve.includes(descricao) || descricao.includes(textoBreve);
+    }
+    
+    return false;
+  };
+
+  // Função para carregar documento com cache
+  const getDocumentWithCache = async (docId: string) => {
+    if (documentCache[docId]) {
+      return documentCache[docId];
+    }
+    
+    try {
+      const docRef = doc(db, "PCP", docId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setDocumentCache(prev => ({ ...prev, [docId]: data }));
+        return data;
+      }
+    } catch (error) {
+      console.error(`Erro ao carregar documento ${docId}:`, error);
+    }
+    return null;
   };
 
   const loadProdutos = async () => {
@@ -121,11 +169,25 @@ const ResultadosFinais: React.FC = () => {
 
   const mergeProdutosProcessados = async () => {
     try {
-      const classificacoes = [...new Set(produtos.map(p => p.classificacao))];
+      console.log("🔄 Iniciando merge de produtos processados...");
+      
+      // Validar dados básicos
+      const produtosSemClassificacao = produtos.filter(p => !p.classificacao || p.classificacao.trim() === "");
+      if (produtosSemClassificacao.length > 0) {
+        console.warn("⚠️ Produtos sem classificação encontrados:", produtosSemClassificacao.length);
+      }
+
+      const classificacoes = [...new Set(produtos.map(p => p.classificacao).filter(Boolean))];
+      console.log(`📊 Total de classificações encontradas: ${classificacoes.length}`, classificacoes);
+      
       const mergedData: ProdutoProcessado[] = [];
+      let totalProdutosProcessados = 0;
+      let produtosSemMatch = 0;
 
       for (const classificacao of classificacoes) {
         const produtosDaClassificacao = produtos.filter(p => p.classificacao === classificacao);
+        console.log(`🏷️ Processando classificação "${classificacao}" com ${produtosDaClassificacao.length} produtos`);
+        
         const produtosProcessadosData: {
           descricao: string;
           codigo: string;
@@ -138,43 +200,45 @@ const ResultadosFinais: React.FC = () => {
         }[] = [];
 
         for (const produto of produtosDaClassificacao) {
-          // Encontrar processamentos que contêm este produto
+          // Usar cache para reduzir consultas ao Firestore
           const processamentosComProduto = await Promise.all(
             processamentos.map(async (processamento) => {
-              const docRef = doc(db, "PCP", processamento.id);
-              const docSnap = await getDoc(docRef);
-              if (docSnap.exists()) {
-                const turno1 = docSnap.data()["1 Turno"] || [];
-                const turno2 = docSnap.data()["2 Turno"] || [];
-                
-                const produtoNoTurno1 = turno1.find((item: any) => 
-                  item.texto_breve?.includes(produto.descricao_produto) || 
-                  item.codigo === produto.codigo
-                );
-                
-                const produtoNoTurno2 = turno2.find((item: any) => 
-                  item.texto_breve?.includes(produto.descricao_produto) || 
-                  item.codigo === produto.codigo
-                );
+              const docData = await getDocumentWithCache(processamento.id);
+              if (!docData) return null;
 
-                if (produtoNoTurno1 || produtoNoTurno2) {
-                  return {
-                    kgTotal: (parseFloat(produtoNoTurno1?.kg || "0") + parseFloat(produtoNoTurno2?.kg || "0")),
-                    kgTurno1: parseFloat(produtoNoTurno1?.kg || "0"),
-                    kgTurno2: parseFloat(produtoNoTurno2?.kg || "0"),
-                    planejadoTurno1: parseFloat(produtoNoTurno1?.planejamento || "0"),
-                    planejadoTurno2: parseFloat(produtoNoTurno2?.planejamento || "0"),
-                    planoDiario: (parseFloat(produtoNoTurno1?.planejamento || "0") + 
-                                parseFloat(produtoNoTurno2?.planejamento || "0"))
-                  };
+              const turno1 = docData["1 Turno"] || [];
+              const turno2 = docData["2 Turno"] || [];
+              
+              // Usar função melhorada de match
+              const produtoNoTurno1 = turno1.find((item: any) => isProductMatch(item, produto));
+              const produtoNoTurno2 = turno2.find((item: any) => isProductMatch(item, produto));
+
+              if (produtoNoTurno1 || produtoNoTurno2) {
+                // Debug: log successful matches
+                if (produtoNoTurno1) {
+                  console.log(`✅ Match T1 - ${produto.codigo}: ${produtoNoTurno1.codigo} (${produtoNoTurno1.kg}kg)`);
                 }
+                if (produtoNoTurno2) {
+                  console.log(`✅ Match T2 - ${produto.codigo}: ${produtoNoTurno2.codigo} (${produtoNoTurno2.kg}kg)`);
+                }
+
+                return {
+                  kgTotal: (parseFloat(produtoNoTurno1?.kg || "0") + parseFloat(produtoNoTurno2?.kg || "0")),
+                  kgTurno1: parseFloat(produtoNoTurno1?.kg || "0"),
+                  kgTurno2: parseFloat(produtoNoTurno2?.kg || "0"),
+                  planejadoTurno1: parseFloat(produtoNoTurno1?.planejamento || "0"),
+                  planejadoTurno2: parseFloat(produtoNoTurno2?.planejamento || "0"),
+                  planoDiario: (parseFloat(produtoNoTurno1?.planejamento || "0") + 
+                              parseFloat(produtoNoTurno2?.planejamento || "0"))
+                };
               }
               return null;
             })
           );
 
           // Somar todos os processamentos encontrados para este produto
-          const total = processamentosComProduto.filter(Boolean).reduce((acc, curr) => ({
+          const validProcessamentos = processamentosComProduto.filter(Boolean);
+          const total = validProcessamentos.reduce((acc, curr) => ({
             kgTotal: acc.kgTotal + (curr?.kgTotal || 0),
             kgTurno1: acc.kgTurno1 + (curr?.kgTurno1 || 0),
             kgTurno2: acc.kgTurno2 + (curr?.kgTurno2 || 0),
@@ -196,6 +260,11 @@ const ResultadosFinais: React.FC = () => {
               codigo: produto.codigo,
               ...total
             });
+            totalProdutosProcessados++;
+          } else {
+            // Debug: produtos sem match
+            console.warn(`❌ Produto sem match: ${produto.codigo} - ${produto.descricao_produto}`);
+            produtosSemMatch++;
           }
         }
 
@@ -207,8 +276,16 @@ const ResultadosFinais: React.FC = () => {
         }
       }
 
+      // Logs de resumo
+      console.log(`📈 Resumo do processamento:
+        - Produtos processados: ${totalProdutosProcessados}
+        - Produtos sem match: ${produtosSemMatch}
+        - Classificações com dados: ${mergedData.length}
+        - Cache hits: ${Object.keys(documentCache).length} documentos`);
+
       setProdutosProcessados(mergedData);
     } catch (error) {
+      console.error("❌ Erro ao mesclar dados de produção:", error);
       toast({
         title: "Erro",
         description: "Falha ao mesclar dados de produção",

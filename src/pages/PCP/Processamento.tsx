@@ -94,12 +94,24 @@ const Processamento: React.FC = () => {
 
   const getTodayDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
+  const formatDate = (dateInput: string | Date) => {
+    if (!dateInput) return "N/A";
+    
+    let date: Date;
+    if (dateInput instanceof Date) {
+      date = dateInput;
+    } else {
+      date = new Date(dateInput);
+    }
+    
+    if (isNaN(date.getTime())) return "N/A";
+    
     return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -109,9 +121,18 @@ const Processamento: React.FC = () => {
     });
   };
 
-  const formatShortDate = (dateString: string) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
+  const formatShortDate = (dateInput: string | Date) => {
+    if (!dateInput) return "N/A";
+    
+    let date: Date;
+    if (dateInput instanceof Date) {
+      date = dateInput;
+    } else {
+      date = new Date(dateInput);
+    }
+    
+    if (isNaN(date.getTime())) return "N/A";
+    
     return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -129,7 +150,15 @@ const Processamento: React.FC = () => {
     const today = getTodayDate();
     const key = `processamento_${today}`;
     const savedData = localStorage.getItem(key);
-    return savedData ? JSON.parse(savedData) : null;
+    if (savedData) {
+      const parsed = JSON.parse(savedData);
+      // Reconstituir o timestamp como Date se estiver como string
+      if (parsed.timestamp && typeof parsed.timestamp === 'string') {
+        parsed.timestamp = new Date(parsed.timestamp);
+      }
+      return parsed;
+    }
+    return null;
   };
 
   const calcularComUmTurno = async (turno: '1 Turno' | '2 Turno') => {
@@ -497,7 +526,7 @@ const Processamento: React.FC = () => {
           <CardHeader>
             <CardTitle>Resultados do Processamento</CardTitle>
             <CardDescription>
-              {`Métricas calculadas em ${formatDate(processamentoData.timestamp.toString())} com base nos dados de: ${processamentoData.turnosProcessados?.join(' e ') || 'turnos desconhecidos'}`}
+              {`Métricas calculadas em ${formatDate(processamentoData.timestamp)} com base nos dados de: ${processamentoData.turnosProcessados?.join(' e ') || 'turnos desconhecidos'}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -561,7 +590,6 @@ const Processamento: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Turnos</TableHead>
                 <TableHead>KG Total</TableHead>
@@ -574,8 +602,7 @@ const Processamento: React.FC = () => {
             <TableBody>
               {processamentos.map((processamento) => (
                 <TableRow key={processamento.id}>
-                  <TableCell className="font-medium">{processamento.id?.substring(0, 8)}...</TableCell>
-                  <TableCell>{formatShortDate(processamento.timestamp.toString())}</TableCell>
+                  <TableCell>{formatShortDate(processamento.timestamp)}</TableCell>
                   <TableCell>
                     {processamento.turnosProcessados?.includes('1 Turno') && 
                      processamento.turnosProcessados?.includes('2 Turno') 
@@ -624,7 +651,7 @@ const Processamento: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium">Data/Hora:</h3>
-                  <p>{formatDate(selectedProcessamento.timestamp.toString())}</p>
+                  <p>{formatDate(selectedProcessamento.timestamp)}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium">Turnos Processados:</h3>

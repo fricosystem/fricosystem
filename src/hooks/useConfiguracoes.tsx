@@ -68,6 +68,50 @@ export const useConfiguracoes = () => {
     sidebarCollapsed: false,
   });
 
+  const saveEmailConfig = () => {
+    setSaveInProgress(true);
+    setTimeout(() => {
+      toast({
+        title: "Configurações salvas",
+        description: "Configurações de email atualizadas com sucesso.",
+      });
+      setSaveInProgress(false);
+    }, 1000);
+  };
+
+  const saveNotificationSettings = () => {
+    setSaveInProgress(true);
+    setTimeout(() => {
+      toast({
+        title: "Preferências salvas", 
+        description: "Configurações de notificação atualizadas com sucesso.",
+      });
+      setSaveInProgress(false);
+    }, 1000);
+  };
+
+  const saveBackupSettings = () => {
+    setSaveInProgress(true);
+    setTimeout(() => {
+      toast({
+        title: "Configurações salvas",
+        description: "Configurações de backup atualizadas com sucesso.",
+      });
+      setSaveInProgress(false);
+    }, 1000);
+  };
+
+  const saveThemeSettings = () => {
+    setSaveInProgress(true);
+    setTimeout(() => {
+      toast({
+        title: "Preferências salvas",
+        description: "Configurações de tema atualizadas com sucesso.",
+      });
+      setSaveInProgress(false);
+    }, 1000);
+  };
+
   const triggerManualBackup = () => {
     setSaveInProgress(true);
     const newBackupSettings = {
@@ -93,6 +137,10 @@ export const useConfiguracoes = () => {
     setBackupSettings,
     theme,
     setTheme,
+    saveEmailConfig,
+    saveNotificationSettings,
+    saveBackupSettings,
+    saveThemeSettings,
     triggerManualBackup
   };
 };

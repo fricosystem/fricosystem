@@ -371,41 +371,56 @@ const Dashboard = () => {
 
   // Dados para gráfico de dispersão (valor vs quantidade)
   const dadosValorQuantidade = () => {
-    return produtos.slice(0, 50).map(p => ({
-      x: Number(p.valor_unitario),
-      y: p.quantidade || 1,
-      z: 20, // Tamanho fixo para os pontos
-      name: p.nome || 'Produto sem nome'
-    }));
+    if (!produtos || produtos.length === 0) {
+      return [{ x: 0, y: 0, z: 20, name: 'Sem dados' }];
+    }
+    return produtos
+      .filter(p => p.valor_unitario && p.quantidade)
+      .slice(0, 50)
+      .map(p => ({
+        x: Number(p.valor_unitario) || 0,
+        y: p.quantidade || 1,
+        z: 20,
+        name: p.nome || 'Produto sem nome'
+      }));
   };
 
-  // Dados para gráfico de funil (produtos por unidade)
+  // Dados para gráfico de produtos por unidade (barras)
   const dadosProdutosPorUnidade = () => {
     const data = produtosPorUnidade();
-    const maxValue = Math.max(...data.map(item => item.value));
-    return data.map(item => ({
-      name: item.name,
-      value: item.value,
-      fill: COLORS[data.indexOf(item) % COLORS.length],
-      label: `${((item.value / maxValue) * 100).toFixed(0)}%`
+    if (!data || data.length === 0) {
+      return [{ name: 'Sem dados', value: 0 }];
+    }
+    return data.map((item, index) => ({
+      name: item.name || 'Unidade sem nome',
+      value: item.value || 0,
+      fill: COLORS[index % COLORS.length]
     }));
   };
 
   // Dados para gráfico composto (valor do estoque por unidade)
   const dadosValorEstoquePorUnidade = () => {
+    if (!produtos || produtos.length === 0) {
+      return [{ name: 'Sem dados', valor: 0, quantidade: 0 }];
+    }
+    
     const unidadeMap: Record<string, number> = {};
     
     produtos.forEach(produto => {
       if (produto.unidade) {
-        const valor = Number(produto.valor_unitario) * (produto.quantidade || 1);
+        const valor = Number(produto.valor_unitario || 0) * (produto.quantidade || 1);
         unidadeMap[produto.unidade] = (unidadeMap[produto.unidade] || 0) + valor;
       }
     });
     
+    if (Object.keys(unidadeMap).length === 0) {
+      return [{ name: 'Sem unidades', valor: 0, quantidade: 0 }];
+    }
+    
     return Object.entries(unidadeMap).map(([name, value]) => ({
-      name,
-      valor: value,
-      quantidade: produtos.filter(p => p.unidade === name).length
+      name: name || 'Unidade sem nome',
+      valor: value || 0,
+      quantidade: produtos.filter(p => p.unidade === name).length || 0
     }));
   };
 
@@ -708,7 +723,10 @@ const Dashboard = () => {
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <FunnelChart>
+                    <BarChart data={dadosProdutosPorUnidade()}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="name" />
+                      <YAxis />
                       <Tooltip 
                         contentStyle={{
                           background: 'hsl(var(--background))',
@@ -717,33 +735,8 @@ const Dashboard = () => {
                         }}
                         formatter={(value) => [`${value} produtos`, 'Quantidade']}
                       />
-                      <FunnelChart>
-                        <Tooltip 
-                          contentStyle={{
-                            background: 'hsl(var(--background))',
-                            borderColor: 'hsl(var(--border))',
-                            borderRadius: 'var(--radius)',
-                          }}
-                          formatter={(value) => [`${value} produtos`, 'Quantidade']}
-                        />
-                        <Funnel
-                          dataKey="value"
-                          data={dadosProdutosPorUnidade()}
-                          isAnimationActive
-                          nameKey="name"
-                          labelLine={false}
-                        >
-                          <Label
-                            position="center"
-                            fill="#fff"
-                            formatter={(entry: any) => entry.label}
-                          />
-                          {dadosProdutosPorUnidade().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Funnel>
-                      </FunnelChart>
-                    </FunnelChart>
+                      <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
@@ -781,8 +774,8 @@ const Dashboard = () => {
                         }}
                       />
                       <Legend />
-                      <Bar yAxisId="left" dataKey="valor" name="Valor" fill="#8884d8" />
-                      <Line yAxisId="right" dataKey="quantidade" name="Produtos" stroke="#82ca9d" />
+                      <Bar yAxisId="left" dataKey="valor" name="Valor" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                      <Bar yAxisId="right" dataKey="quantidade" name="Produtos" fill="#82ca9d" radius={[4, 4, 0, 0]} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>

@@ -67,7 +67,7 @@ interface SidebarCategory {
 const AppSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const { totalItens } = useCarrinho();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const { toast } = useToast();
@@ -263,14 +263,14 @@ const AppSidebar = () => {
   ];
 
   const handleSignOut = async () => {
-    await signOut();
+    await logout();
     navigate("/");
   };
 
   // Obter a primeira letra do nome do usuário ou do email
   const getUserInitial = () => {
-    if (user?.user_metadata?.nome) {
-      return user.user_metadata.nome.charAt(0).toUpperCase();
+    if (user?.displayName) {
+      return user.displayName.charAt(0).toUpperCase();
     } else if (user?.email) {
       return user.email.charAt(0).toUpperCase();
     }
@@ -279,8 +279,8 @@ const AppSidebar = () => {
 
   // Obter o nome de exibição
   const getDisplayName = () => {
-    if (user?.user_metadata?.nome) {
-      return user.user_metadata.nome;
+    if (user?.displayName) {
+      return user.displayName;
     } else if (user?.email) {
       return user.email.split('@')[0];
     }

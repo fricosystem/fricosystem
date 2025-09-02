@@ -49,7 +49,7 @@ import {
   Building2
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,6 +119,106 @@ const AppSidebar = () => {
     if (!user) return null;
     return user.email || null;
   };
+
+  // Função para filtrar categorias que tenham pelo menos um item válido
+  const filterCategoriesWithItems = (categories: SidebarCategory[]) => {
+    return categories
+      .map(category => ({
+        ...category,
+        items: filterItemsByPermission(category.items)
+      }))
+      .filter(category => category.items.length > 0); // Remove categorias vazias
+  };
+
+  const allSidebarCategories: SidebarCategory[] = useMemo(() => [
+    {
+      label: "Principal",
+      icon: Layers,
+      items: [
+        { to: "/dashboard", icon: Home, label: "Dashboard Geral", permission: "dashboard" },
+        { to: "/fornecedor-produtos", icon: ShoppingCart, label: "Ordens de Compra", permission: "ordens_compra" },
+      ],
+    },
+    {
+      label: "Estoque",
+      icon: Boxes,
+      items: [
+        { to: "/produtos", icon: Package, label: "Produtos", permission: "produtos" },
+        { to: "/inventario", icon: ClipboardList, label: "Inventário", permission: "inventario" },
+        { to: "/inventario-ciclico", icon: ListChecks, label: "Inventário Cíclico", permission: "inventario_ciclico" },
+        { to: "/entrada-manual", icon: PackagePlus, label: "Entrada Manual", permission: "entrada_manual" },
+        { to: "/notas-fiscais", icon: Receipt, label: "NF - Entrada XML", permission: "notas_fiscais" },
+        { to: "/transferencia", icon: Truck, label: "Transferência", permission: "transferencia" },
+        { to: "/enderecamento", icon: Warehouse, label: "Endereçamento", permission: "enderecamento" },
+        { to: "/medida-de-lenha", icon: Ruler, label: "Cubagem e medida de Lenha", permission: "medida_lenha" },
+        { to: "/relatorios", icon: FileSpreadsheet, label: "Relatórios", permission: "relatorios" },
+      ],
+    },
+    {
+      label: "Requisições",
+      icon: ClipboardList,
+      items: [
+        { to: "/requisicoes", icon: ClipboardList, label: "Requisições", badgeCount: pendingRequestsCount, permission: "requisicoes" },
+        { to: "/carrinho", icon: ShoppingCart, label: "Carrinho", permission: "carrinho" },
+        { to: "/ordensServico", icon: Wrench, label: "Ordens de Serviço", permission: "ordens_servico" },
+        { to: "/devolucao", icon: AlertTriangle, label: "Devoluções", permission: "devolucoes" },
+      ],
+    },
+    {
+      label: "Compras",
+      icon: ShoppingCart,
+      items: [
+        { to: "/compras", icon: ShoppingCart, label: "Compras", permission: "compras" },
+        { to: "/cotacoes-orcamentos", icon: FileText, label: "Cotações e Orçamentos", permission: "cotacoes_orcamentos" },
+        { to: "/rastreamento-entregas", icon: Truck, label: "Rastreamento de Entregas", permission: "rastreamento_entregas" },
+        { to: "/calendario-recebimento", icon: CalendarCheck, label: "Calendário de Recebimento", permission: "calendario_recebimento" },
+        { to: "/fornecedores", icon: Users, label: "Fornecedores", permission: "fornecedores" },
+      ],
+    },
+    {
+      label: "Financeiro",
+      icon: Wallet,
+      items: [
+        { to: "/notas-fiscais-lancamento", icon: TrendingUp, label: "NF - Lançamento", permission: "notas_fiscais_lancamento" },
+        { to: "/precificacao", icon: TrendingUp, label: "Precificação", permission: "precificacao" },
+        { to: "/relatorios-financeiros", icon: PieChart, label: "Relatórios Financeiros", permission: "relatorios_financeiros" },
+      ],
+    },
+    {
+      label: "Utilitários",
+      icon: FileText,
+      items: [
+        { to: "/importar-planilha", icon: FileText, label: "Importar dados", permission: "importar_dados" },
+        { to: "/exportacoes", icon: Download, label: "Exportar dados", permission: "exportar_dados" },
+        { to: "/backup-dados", icon: Database, label: "Backup/Restauração", permission: "backup_dados" },
+      ],
+    },
+    {
+      label: "Produção",
+      icon: Factory,
+      items: [
+        { to: "/pcp", icon: TrendingUp, label: "PCP", permission: "pcp" },
+      ],
+    },
+    ...(isAdmin ? [{
+      label: "Administrativo",
+      icon: Settings,
+      items: [
+        { to: "/gestao-usuarios", icon: Users, label: "Gestão de Usuários", permission: "gestao_usuarios" },
+        { to: "/configuracoes-sistema", icon: Settings, label: "Configurações do Sistema", permission: "configuracoes_sistema" },
+        { to: "/alertas-notificacoes", icon: Bell, label: "Alertas e Notificações", permission: "alertas_notificacoes" },
+        { to: "/sugestao-reabastecimento", icon: PackageSearch, label: "Sugestão de Reabastecimento", permission: "sugestao_reabastecimento" },
+        { to: "/integracoes", icon: Settings, label: "Integrações (ERP/API)", permission: "integracoes" },
+        { to: "/gestao-produtos", icon: Package, label: "Gestão de Produtos", permission: "gestao_produtos" },
+      ],
+    }] : []),
+  ], [pendingRequestsCount, isAdmin]);
+
+  // Aplicar filtro para mostrar apenas categorias que tenham itens válidos
+  const sidebarCategories = useMemo(() => 
+    filterCategoriesWithItems(allSidebarCategories), 
+    [allSidebarCategories, userData?.permissoes]
+  );
   
   useEffect(() => {
     const initialExpandedState: Record<string, boolean> = {};
@@ -129,7 +229,7 @@ const AppSidebar = () => {
     });
     
     setExpandedCategories(initialExpandedState);
-  }, [location.pathname]);
+  }, [location.pathname, sidebarCategories]);
 
   useEffect(() => {
     if (!user || !userData?.unidade) return;
@@ -273,89 +373,6 @@ const AppSidebar = () => {
     }));
   };
 
-  const sidebarCategories: SidebarCategory[] = [
-    {
-      label: "Principal",
-      icon: Layers,
-      items: filterItemsByPermission([
-        { to: "/dashboard", icon: Home, label: "Dashboard Geral", permission: "dashboard" },
-        { to: "/fornecedor-produtos", icon: ShoppingCart, label: "Ordens de Compra", permission: "ordens_compra" },
-      ]),
-    },
-    {
-      label: "Estoque",
-      icon: Boxes,
-      items: filterItemsByPermission([
-        { to: "/produtos", icon: Package, label: "Produtos", permission: "produtos" },
-        { to: "/inventario", icon: ClipboardList, label: "Inventário", permission: "inventario" },
-        { to: "/inventario-ciclico", icon: ListChecks, label: "Inventário Cíclico", permission: "inventario_ciclico" },
-        { to: "/entrada-manual", icon: PackagePlus, label: "Entrada Manual", permission: "entrada_manual" },
-        { to: "/notas-fiscais", icon: Receipt, label: "NF - Entrada XML", permission: "notas_fiscais" },
-        { to: "/transferencia", icon: Truck, label: "Transferência", permission: "transferencia" },
-        { to: "/enderecamento", icon: Warehouse, label: "Endereçamento", permission: "enderecamento" },
-        { to: "/medida-de-lenha", icon: Ruler, label: "Cubagem e medida de Lenha", permission: "medida_lenha" },
-        { to: "/relatorios", icon: FileSpreadsheet, label: "Relatórios", permission: "relatorios" },
-      ]),
-    },
-    {
-      label: "Requisições",
-      icon: ClipboardList,
-      items: filterItemsByPermission([
-        { to: "/requisicoes", icon: ClipboardList, label: "Requisições", badgeCount: pendingRequestsCount, permission: "requisicoes" },
-        { to: "/carrinho", icon: ShoppingCart, label: "Carrinho", permission: "carrinho" },
-        { to: "/ordensServico", icon: Wrench, label: "Ordens de Serviço", permission: "ordens_servico" },
-        { to: "/devolucao", icon: AlertTriangle, label: "Devoluções", permission: "devolucoes" },
-      ]),
-    },
-    {
-      label: "Compras",
-      icon: ShoppingCart,
-      items: filterItemsByPermission([
-        { to: "/compras", icon: ShoppingCart, label: "Compras", permission: "compras" },
-        { to: "/cotacoes-orcamentos", icon: FileText, label: "Cotações e Orçamentos", permission: "cotacoes_orcamentos" },
-        { to: "/rastreamento-entregas", icon: Truck, label: "Rastreamento de Entregas", permission: "rastreamento_entregas" },
-        { to: "/calendario-recebimento", icon: CalendarCheck, label: "Calendário de Recebimento", permission: "calendario_recebimento" },
-        { to: "/fornecedores", icon: Users, label: "Fornecedores", permission: "fornecedores" },
-      ]),
-    },
-    {
-      label: "Financeiro",
-      icon: Wallet,
-      items: filterItemsByPermission([
-        { to: "/notas-fiscais-lancamento", icon: TrendingUp, label: "NF - Lançamento", permission: "notas_fiscais_lancamento" },
-        { to: "/precificacao", icon: TrendingUp, label: "Precificação", permission: "precificacao" },
-        { to: "/relatorios-financeiros", icon: PieChart, label: "Relatórios Financeiros", permission: "relatorios_financeiros" },
-      ]),
-    },
-    {
-      label: "Utilitários",
-      icon: FileText,
-      items: filterItemsByPermission([
-        { to: "/importar-planilha", icon: FileText, label: "Importar dados", permission: "importar_dados" },
-        { to: "/exportacoes", icon: Download, label: "Exportar dados", permission: "exportar_dados" },
-        { to: "/backup-dados", icon: Database, label: "Backup/Restauração", permission: "backup_dados" },
-      ]),
-    },
-    {
-      label: "Produção",
-      icon: Factory,
-      items: filterItemsByPermission([
-        { to: "/pcp", icon: TrendingUp, label: "PCP", permission: "pcp" },
-      ]),
-    },
-    ...(isAdmin ? [{
-      label: "Administrativo",
-      icon: Settings,
-      items: filterItemsByPermission([
-        { to: "/gestao-usuarios", icon: Users, label: "Gestão de Usuários", permission: "gestao_usuarios" },
-        { to: "/configuracoes-sistema", icon: Settings, label: "Configurações do Sistema", permission: "configuracoes_sistema" },
-        { to: "/alertas-notificacoes", icon: Bell, label: "Alertas e Notificações", permission: "alertas_notificacoes" },
-        { to: "/sugestao-reabastecimento", icon: PackageSearch, label: "Sugestão de Reabastecimento", permission: "sugestao_reabastecimento" },
-        { to: "/integracoes", icon: Settings, label: "Integrações (ERP/API)", permission: "integracoes" },
-        { to: "/gestao-produtos", icon: Package, label: "Gestão de Produtos", permission: "gestao_produtos" },
-      ]),
-    }] : []),
-  ];
 
   const handleSignOut = async () => {
     try {
@@ -667,7 +684,7 @@ const AppSidebar = () => {
                       </div>
                     </div>
 
-                    <DropdownMenuItem onClick={() => navigate("/configuracoes")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
+                    <DropdownMenuItem onClick={() => navigate("/perfil")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       <UserRound className="mr-2 h-4 w-4" />
                       <span>Perfil</span>
                     </DropdownMenuItem>
@@ -681,7 +698,7 @@ const AppSidebar = () => {
                       <span>Mudar para tema {theme === "light" ? "escuro" : "claro"}</span>
                     </DropdownMenuItem>
                     
-                    <DropdownMenuItem onClick={() => navigate("/configuracoes")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
+                    <DropdownMenuItem onClick={() => navigate("/perfil")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Configurações</span>
                     </DropdownMenuItem>
