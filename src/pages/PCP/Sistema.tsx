@@ -20,12 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const configSchema = z.object({
-  meta_diaria_global: z.number().min(1, "Meta diária deve ser maior que 0"),
-  eficiencia_minima: z.number().min(1, "Eficiência mínima deve ser maior que 0").max(100, "Eficiência máxima é 100%"),
-  horario_turno1_inicio: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato inválido (HH:MM)"),
-  horario_turno1_fim: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato inválido (HH:MM)"),
-  horario_turno2_inicio: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato inválido (HH:MM)"),
-  horario_turno2_fim: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato inválido (HH:MM)"),
+  meta_minima_mensal: z.number().min(1, "Meta mínima mensal deve ser maior que 0"),
+  dias_uteis_mes: z.number().min(1, "Dias úteis deve ser maior que 0").max(31, "Máximo de 31 dias"),
 });
 
 type ConfigFormData = z.infer<typeof configSchema>;
@@ -45,15 +41,18 @@ const Sistema = () => {
   } = usePCPConfig();
   const { toast } = useToast();
 
+  const [diasTrabalhados, setDiasTrabalhados] = useState(0);
+  const [diasParaFecharMes, setDiasParaFecharMes] = useState(0);
+  const [totalProducao, setTotalProducao] = useState(0);
+  const [volumeDiasRestantes, setVolumeDiasRestantes] = useState(0);
+  const [metaDiariaRealizada, setMetaDiariaRealizada] = useState(0);
+  const [progressoMensal, setProgressoMensal] = useState(0);
+
   const form = useForm<ConfigFormData>({
     resolver: zodResolver(configSchema),
     defaultValues: {
-      meta_diaria_global: config.meta_diaria_global,
-      eficiencia_minima: config.eficiencia_minima,
-      horario_turno1_inicio: config.horario_turno1_inicio,
-      horario_turno1_fim: config.horario_turno1_fim,
-      horario_turno2_inicio: config.horario_turno2_inicio,
-      horario_turno2_fim: config.horario_turno2_fim,
+      meta_minima_mensal: 0,
+      dias_uteis_mes: 0,
     }
   });
 
@@ -61,12 +60,8 @@ const Sistema = () => {
   useEffect(() => {
     if (!loading && config) {
       form.reset({
-        meta_diaria_global: config.meta_diaria_global,
-        eficiencia_minima: config.eficiencia_minima,
-        horario_turno1_inicio: config.horario_turno1_inicio,
-        horario_turno1_fim: config.horario_turno1_fim,
-        horario_turno2_inicio: config.horario_turno2_inicio,
-        horario_turno2_fim: config.horario_turno2_fim,
+        meta_minima_mensal: config.meta_minima_mensal || 0,
+        dias_uteis_mes: config.dias_uteis_mes || 0,
       });
 
       // Carregar exceções para o calendário
@@ -74,6 +69,27 @@ const Sistema = () => {
       setSelectedDates(excecoes);
     }
   }, [config, loading, form]);
+
+  // Calcular valores derivados quando os inputs mudam
+  useEffect(() => {
+    const metaMinimaMensal = form.watch("meta_minima_mensal") || 0;
+    const diasUteisMes = form.watch("dias_uteis_mes") || 0;
+    
+    // Cálculos simplificados (ajuste conforme sua lógica de negócio)
+    const diasTrab = Math.min(diasUteisMes, 15); // Exemplo: assumindo que metade do mês já passou
+    const diasRestantes = Math.max(0, diasUteisMes - diasTrab);
+    const totalProd = metaMinimaMensal * 0.6; // Exemplo: 60% da meta já produzida
+    const volumeRestante = Math.max(0, metaMinimaMensal - totalProd);
+    const metaDiaria = diasUteisMes > 0 ? metaMinimaMensal / diasUteisMes : 0;
+    const progresso = metaMinimaMensal > 0 ? (totalProd / metaMinimaMensal) * 100 : 0;
+
+    setDiasTrabalhados(diasTrab);
+    setDiasParaFecharMes(diasRestantes);
+    setTotalProducao(totalProd);
+    setVolumeDiasRestantes(volumeRestante);
+    setMetaDiariaRealizada(metaDiaria);
+    setProgressoMensal(progresso);
+  }, [form.watch("meta_minima_mensal"), form.watch("dias_uteis_mes")]);
 
   const onSubmit = async (data: ConfigFormData) => {
     const selectedDatesStr = selectedDates.map(date => date.toISOString().split('T')[0]);
@@ -94,21 +110,6 @@ const Sistema = () => {
         description: "Não foi possível salvar as configurações.",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleGerarMeta = async () => {
-    setIsGeneratingMeta(true);
-    try {
-      const novaMeta = await gerarMetaMensal();
-      if (novaMeta) {
-        toast({
-          title: "Meta gerada",
-          description: `Meta mensal de ${novaMeta.meta_mensal_global.toLocaleString()} kg gerada para ${novaMeta.dias_uteis} dias úteis.`,
-        });
-      }
-    } finally {
-      setIsGeneratingMeta(false);
     }
   };
 
@@ -156,10 +157,10 @@ const Sistema = () => {
                 <div className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="meta_diaria_global"
+                    name="meta_minima_mensal"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Meta Diária Global (kg)</FormLabel>
+                        <FormLabel>Meta Mínima Mensal (KG)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -174,15 +175,15 @@ const Sistema = () => {
                   
                   <FormField
                     control={form.control}
-                    name="eficiencia_minima"
+                    name="dias_uteis_mes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Eficiência Mínima Aceitável (%)</FormLabel>
+                        <FormLabel>Dias Úteis no Mês</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
                             min="1"
-                            max="100"
+                            max="31"
                             {...field}
                             onChange={(e) => field.onChange(Number(e.target.value))}
                           />
@@ -195,65 +196,32 @@ const Sistema = () => {
                 
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-sm font-medium">Horário 1° Turno</Label>
-                    <div className="flex gap-2 mt-2">
-                      <FormField
-                        control={form.control}
-                        name="horario_turno1_inicio"
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <Input placeholder="06:00" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="horario_turno1_fim"
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <Input placeholder="14:00" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    <Label className="text-sm font-medium">Dias Trabalhados: {diasTrabalhados}</Label>
                   </div>
                   
                   <div>
-                    <Label className="text-sm font-medium">Horário 2° Turno</Label>
-                    <div className="flex gap-2 mt-2">
-                      <FormField
-                        control={form.control}
-                        name="horario_turno2_inicio"
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <Input placeholder="14:00" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="horario_turno2_fim"
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <Input placeholder="22:00" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    <Label className="text-sm font-medium">Dias para Fechar o Mês: {diasParaFecharMes}</Label>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Total Produção (KG): {totalProducao.toFixed(2)}</Label>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Volume dos Dias Restantes (KG): {volumeDiasRestantes.toFixed(2)}</Label>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Meta Diária Realizada (KG): {metaDiariaRealizada.toFixed(2)}</Label>
                   </div>
                 </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Progresso Mensal: {progressoMensal.toFixed(2)}%</Label>
+                <Progress value={progressoMensal} className="w-full" />
               </div>
             </CardContent>
           </Card>
@@ -313,74 +281,6 @@ const Sistema = () => {
           </div>
         </form>
       </Form>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5" />
-            Metas Mensais
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium">Mês Atual</Label>
-                <p className="text-lg font-semibold">{getCurrentMonthName()}</p>
-              </div>
-              
-              {metaMensal ? (
-                <>
-                  <div>
-                    <Label className="text-sm font-medium">Dias Úteis</Label>
-                    <p className="text-lg font-semibold">{metaMensal.dias_uteis} dias</p>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium">Meta Mensal</Label>
-                    <p className="text-lg font-semibold">
-                      {metaMensal.meta_mensal_global.toLocaleString()} kg
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium">Status</Label>
-                    <Badge variant="default" className="ml-2">Meta Configurada</Badge>
-                  </div>
-                </>
-              ) : (
-                <div className="md:col-span-2">
-                  <p className="text-muted-foreground">Nenhuma meta configurada para este mês</p>
-                </div>
-              )}
-            </div>
-
-            <Separator />
-
-            <div className="flex justify-between items-center">
-              <div>
-                <Label className="text-sm font-medium">Gerar/Recalcular Meta</Label>
-                <p className="text-sm text-muted-foreground">
-                  Calcula automaticamente a meta mensal baseada nos dias úteis e meta diária
-                </p>
-              </div>
-              
-              <Button 
-                onClick={handleGerarMeta} 
-                disabled={isGeneratingMeta}
-                className="flex items-center gap-2"
-              >
-                {isGeneratingMeta ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Calculator className="h-4 w-4" />
-                )}
-                {isGeneratingMeta ? "Calculando..." : "Gerar Meta do Mês"}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
