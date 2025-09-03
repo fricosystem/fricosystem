@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 
 export interface PCPConfig {
@@ -10,6 +10,9 @@ export interface PCPConfig {
   horario_turno2_inicio: string;
   horario_turno2_fim: string;
   calendario_excecoes: string[]; // Array de datas no formato YYYY-MM-DD
+  // Novos campos para a aba Sistema
+  meta_minima_mensal?: number;
+  dias_uteis_mes?: number;
   updatedAt: Date;
 }
 
@@ -38,11 +41,16 @@ export const usePCPConfig = () => {
   const [metaMensal, setMetaMensal] = useState<PCPMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Novos estados para a página Sistema
+  const [produtosProcessados, setProdutosProcessados] = useState<any[]>([]);
+  const [processamentos, setProcessamentos] = useState<any[]>([]);
+  const [documentosPCP, setDocumentosPCP] = useState<any[]>([]);
 
   // Carregar configuração
   const loadConfig = async () => {
     try {
-      const docRef = doc(db, 'PCP_config', 'global');
+      const docRef = doc(db, 'PCP_configuracoes', 'global');
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -70,7 +78,7 @@ export const usePCPConfig = () => {
         updatedAt: new Date()
       };
       
-      const docRef = doc(db, 'PCP_config', 'global');
+      const docRef = doc(db, 'PCP_configuracoes', 'global');
       await setDoc(docRef, configToSave);
       
       setConfig(configToSave);
@@ -160,7 +168,7 @@ export const usePCPConfig = () => {
 
   // Configurar listener em tempo real para config e meta atual
   const setupRealtimeListeners = () => {
-    const configRef = doc(db, 'PCP_config', 'global');
+    const configRef = doc(db, 'PCP_configuracoes', 'global');
     const metaRef = doc(db, 'PCP_metas', getCurrentMonth());
     
     const unsubscribeConfig = onSnapshot(configRef, (doc) => {
@@ -252,6 +260,76 @@ export const usePCPConfig = () => {
     return calcularDiasUteisOriginal(ano, mes);
   };
 
+  // Função para carregar produção total dos Resultados Finais
+  const carregarProducaoTotal = async () => {
+    try {
+      const processamentosCollection = collection(db, "PCP");
+      const q = query(processamentosCollection, orderBy("Processamento.timestamp", "desc"));
+      const querySnapshot = await getDocs(q);
+
+      let totalProducao = 0;
+      querySnapshot.forEach((doc) => {
+        const data = doc.data().Processamento;
+        if (data && data.kgTotal) {
+          totalProducao += data.kgTotal;
+        }
+      });
+
+      return totalProducao;
+    } catch (error) {
+      console.error('Erro ao carregar produção total:', error);
+      return 0;
+    }
+  };
+
+  // Função para carregar meta diária realizada (último processamento)
+  const carregarMetaDiariaRealizada = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const docRef = doc(db, "PCP", today);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists() && docSnap.data().Processamento) {
+        return docSnap.data().Processamento.kgTotal || 0;
+      }
+      return 0;
+    } catch (error) {
+      console.error('Erro ao carregar meta diária realizada:', error);
+      return 0;
+    }
+  };
+
+  // Função para contar documentos PCP criados
+  const contarDocumentosPCP = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "PCP"));
+      const documentosComData: string[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        // Assumindo que o ID do documento é a data (YYYY-MM-DD)
+        if (doc.id.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          documentosComData.push(doc.id);
+        }
+      });
+
+      return documentosComData.length;
+    } catch (error) {
+      console.error('Erro ao contar documentos PCP:', error);
+      return 0;
+    }
+  };
+
+  // Função para salvar configurações do sistema (consolidada)
+  const salvarConfigSistema = async (data: { meta_minima_mensal?: number; dias_uteis_mes?: number }) => {
+    try {
+      // Usar a função saveConfig existente para manter consistência
+      return await saveConfig(data);
+    } catch (error) {
+      console.error('Erro ao salvar configurações do sistema:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
@@ -277,6 +355,11 @@ export const usePCPConfig = () => {
     setupRealtimeListeners,
     calcularDiasUteis: calcularDiasUteisOverloaded,
     calcularProgressoMensal,
-    getCurrentMonth
+    getCurrentMonth,
+    // Novas funções para a página Sistema
+    carregarProducaoTotal,
+    carregarMetaDiariaRealizada,
+    contarDocumentosPCP,
+    salvarConfigSistema
   };
 };

@@ -26,6 +26,24 @@ const configSchema = z.object({
 
 type ConfigFormData = z.infer<typeof configSchema>;
 
+// Funções utilitárias para formatação brasileira
+const formatarNumero = (valor: number): string => {
+  return valor.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
+const formatarNumeroInput = (valor: number): string => {
+  return valor.toLocaleString('pt-BR');
+};
+
+const parseNumero = (valor: string): number => {
+  // Remove pontos (separadores de milhares) e substitui vírgula por ponto
+  const cleanValue = valor.replace(/\./g, '').replace(',', '.');
+  return parseFloat(cleanValue) || 0;
+};
+
 const Sistema = () => {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [isGeneratingMeta, setIsGeneratingMeta] = useState(false);
@@ -37,7 +55,11 @@ const Sistema = () => {
     saveConfig, 
     gerarMetaMensal, 
     calcularDiasUteis,
-    getCurrentMonth 
+    getCurrentMonth,
+    carregarProducaoTotal,
+    carregarMetaDiariaRealizada,
+    contarDocumentosPCP,
+    salvarConfigSistema
   } = usePCPConfig();
   const { toast } = useToast();
 
@@ -47,6 +69,10 @@ const Sistema = () => {
   const [volumeDiasRestantes, setVolumeDiasRestantes] = useState(0);
   const [metaDiariaRealizada, setMetaDiariaRealizada] = useState(0);
   const [progressoMensal, setProgressoMensal] = useState(0);
+
+  // Estados para controlar valores formatados dos inputs
+  const [metaMensalFormatada, setMetaMensalFormatada] = useState('0');
+  const [diasUteisFormatados, setDiasUteisFormatados] = useState('0');
 
   const form = useForm<ConfigFormData>({
     resolver: zodResolver(configSchema),
@@ -59,10 +85,17 @@ const Sistema = () => {
   // Atualizar form quando config carrega
   useEffect(() => {
     if (!loading && config) {
+      const metaMinima = config.meta_minima_mensal || 0;
+      const diasUteis = config.dias_uteis_mes || 0;
+      
       form.reset({
-        meta_minima_mensal: config.meta_minima_mensal || 0,
-        dias_uteis_mes: config.dias_uteis_mes || 0,
+        meta_minima_mensal: metaMinima,
+        dias_uteis_mes: diasUteis,
       });
+
+      // Atualizar valores formatados
+      setMetaMensalFormatada(formatarNumeroInput(metaMinima));
+      setDiasUteisFormatados(formatarNumeroInput(diasUteis));
 
       // Carregar exceções para o calendário
       const excecoes = config.calendario_excecoes.map(dateStr => new Date(dateStr));
@@ -70,39 +103,57 @@ const Sistema = () => {
     }
   }, [config, loading, form]);
 
+  // Carregar dados reais do sistema
+  useEffect(() => {
+    const carregarDadosReais = async () => {
+      try {
+        // Carregar produção total dos Resultados Finais
+        const producaoTotalReal = await carregarProducaoTotal();
+        setTotalProducao(producaoTotalReal);
+
+        // Carregar meta diária realizada do último processamento
+        const metaDiariaReal = await carregarMetaDiariaRealizada();
+        setMetaDiariaRealizada(metaDiariaReal);
+
+        // Contar documentos PCP criados (dias trabalhados)
+        const documentosCount = await contarDocumentosPCP();
+        setDiasTrabalhados(documentosCount);
+      } catch (error) {
+        console.error('Erro ao carregar dados reais:', error);
+      }
+    };
+
+    carregarDadosReais();
+  }, [carregarProducaoTotal, carregarMetaDiariaRealizada, contarDocumentosPCP]);
+
   // Calcular valores derivados quando os inputs mudam
   useEffect(() => {
     const metaMinimaMensal = form.watch("meta_minima_mensal") || 0;
     const diasUteisMes = form.watch("dias_uteis_mes") || 0;
     
-    // Cálculos simplificados (ajuste conforme sua lógica de negócio)
-    const diasTrab = Math.min(diasUteisMes, 15); // Exemplo: assumindo que metade do mês já passou
-    const diasRestantes = Math.max(0, diasUteisMes - diasTrab);
-    const totalProd = metaMinimaMensal * 0.6; // Exemplo: 60% da meta já produzida
-    const volumeRestante = Math.max(0, metaMinimaMensal - totalProd);
-    const metaDiaria = diasUteisMes > 0 ? metaMinimaMensal / diasUteisMes : 0;
-    const progresso = metaMinimaMensal > 0 ? (totalProd / metaMinimaMensal) * 100 : 0;
+    // Cálculos baseados nos dados reais
+    const diasRestantes = Math.max(0, diasUteisMes - diasTrabalhados);
+    const volumeRestante = Math.max(0, metaMinimaMensal - totalProducao);
+    const progresso = metaMinimaMensal > 0 ? (totalProducao / metaMinimaMensal) * 100 : 0;
 
-    setDiasTrabalhados(diasTrab);
     setDiasParaFecharMes(diasRestantes);
-    setTotalProducao(totalProd);
     setVolumeDiasRestantes(volumeRestante);
-    setMetaDiariaRealizada(metaDiaria);
     setProgressoMensal(progresso);
-  }, [form.watch("meta_minima_mensal"), form.watch("dias_uteis_mes")]);
+  }, [form.watch("meta_minima_mensal"), form.watch("dias_uteis_mes"), diasTrabalhados, totalProducao]);
 
   const onSubmit = async (data: ConfigFormData) => {
-    const selectedDatesStr = selectedDates.map(date => date.toISOString().split('T')[0]);
-    
-    const success = await saveConfig({
-      ...data,
-      calendario_excecoes: selectedDatesStr
-    });
+    // Converter valores formatados para números
+    const dataToSave = {
+      meta_minima_mensal: parseNumero(metaMensalFormatada),
+      dias_uteis_mes: parseNumero(diasUteisFormatados)
+    };
+
+    const success = await salvarConfigSistema(dataToSave);
 
     if (success) {
       toast({
         title: "Configurações salvas",
-        description: "As configurações do sistema foram atualizadas com sucesso!",
+        description: "As configurações do sistema foram salvas na coleção PCP_configuracoes!",
       });
     } else {
       toast({
@@ -163,9 +214,14 @@ const Sistema = () => {
                         <FormLabel>Meta Mínima Mensal (KG)</FormLabel>
                         <FormControl>
                           <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            type="text"
+                            value={metaMensalFormatada}
+                            onChange={(e) => {
+                              const valor = e.target.value;
+                              setMetaMensalFormatada(valor);
+                              field.onChange(parseNumero(valor));
+                            }}
+                            placeholder="Ex: 100.000"
                           />
                         </FormControl>
                         <FormMessage />
@@ -181,11 +237,14 @@ const Sistema = () => {
                         <FormLabel>Dias Úteis no Mês</FormLabel>
                         <FormControl>
                           <Input
-                            type="number"
-                            min="1"
-                            max="31"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            type="text"
+                            value={diasUteisFormatados}
+                            onChange={(e) => {
+                              const valor = e.target.value;
+                              setDiasUteisFormatados(valor);
+                              field.onChange(parseNumero(valor));
+                            }}
+                            placeholder="Ex: 22"
                           />
                         </FormControl>
                         <FormMessage />
@@ -196,23 +255,23 @@ const Sistema = () => {
                 
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-sm font-medium">Dias Trabalhados: {diasTrabalhados}</Label>
+                    <Label className="text-lg font-semibold">Dias Trabalhados: {diasTrabalhados}</Label>
                   </div>
                   
                   <div>
-                    <Label className="text-sm font-medium">Dias para Fechar o Mês: {diasParaFecharMes}</Label>
+                    <Label className="text-lg font-semibold">Dias para Fechar o Mês: {diasParaFecharMes}</Label>
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Total Produção (KG): {totalProducao.toFixed(2)}</Label>
+                    <Label className="text-lg font-semibold">Total Produção (KG): {formatarNumero(totalProducao)}</Label>
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Volume dos Dias Restantes (KG): {volumeDiasRestantes.toFixed(2)}</Label>
+                    <Label className="text-lg font-semibold">Volume dos Dias Restantes (KG): {formatarNumero(volumeDiasRestantes)}</Label>
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Meta Diária Realizada (KG): {metaDiariaRealizada.toFixed(2)}</Label>
+                    <Label className="text-lg font-semibold">Meta Diária Realizada (KG): {formatarNumero(metaDiariaRealizada)}</Label>
                   </div>
                 </div>
               </div>
@@ -226,52 +285,6 @@ const Sistema = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5" />
-                Calendário de Exceções
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Selecione as datas que não devem ser consideradas como dias úteis (feriados, manutenções, etc.)
-                </p>
-                
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="h-4 w-4 mr-2" />
-                      {selectedDates.length > 0 
-                        ? `${selectedDates.length} data(s) selecionada(s)`
-                        : "Selecionar datas de exceção"
-                      }
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="multiple"
-                      selected={selectedDates}
-                      onSelect={(dates) => setSelectedDates(dates || [])}
-                      disabled={(date) => date < new Date("1900-01-01")}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                {selectedDates.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDates.map((date, index) => (
-                      <Badge key={index} variant="secondary">
-                        {format(date, "dd/MM/yyyy", { locale: pt })}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
 
           <div className="flex justify-end">
             <Button type="submit" className="flex items-center gap-2">
