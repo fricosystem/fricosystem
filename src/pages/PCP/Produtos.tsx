@@ -164,17 +164,13 @@ const Produtos: React.FC = () => {
   };
 
   const filteredProdutos = produtos.filter((produto) => {
-    const searchLower = searchTerm;
+    const searchLower = searchTerm.toLowerCase();
     return (
-      produto.codigo.includes(searchLower) ||
-      produto.descricao_produto.includes(searchLower) ||
-      produto.maquina.includes(searchLower) ||
-      produto.embalagem.includes(searchLower) ||
-      produto.un_cx.includes(searchLower) ||
-      produto.cx_respectiva.includes(searchLower) ||
-      produto.peso_liq_unit_kg.includes(searchLower) ||
-      produto.batch_receita_kg.includes(searchLower) ||
-      produto.classificacao.includes(searchLower)
+      produto.codigo.toLowerCase().includes(searchLower) ||
+      produto.descricao_produto.toLowerCase().includes(searchLower) ||
+      produto.maquina.toLowerCase().includes(searchLower) ||
+      produto.embalagem.toLowerCase().includes(searchLower) ||
+      produto.classificacao.toLowerCase().includes(searchLower)
     );
   });
 

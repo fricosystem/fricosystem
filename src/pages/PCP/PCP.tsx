@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import AppLayout from "@/layouts/AppLayout";
@@ -61,7 +61,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatsCard } from "@/components/ui/StatsCard";
-import { usePCP } from "@/hooks/usePCP";
+import { usePCPOptimized } from "@/hooks/usePCPOptimized";
 
 // Importando os componentes das abas
 import PrimeiroTurno from "./1turno";
@@ -71,12 +71,43 @@ import ResultadosFinais from "./ResultadosFinais";
 import Produtos from "./Produtos";
 import Sistema from "./Sistema";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#A4DE6C", "#D0ED57"];
+// Importando os modais para produtos sem classificação
+import ProdutosSemClassificacaoModal from "@/components/PCP/ProdutosSemClassificacaoModal";
+import AdicionarProdutoModal from "@/components/PCP/AdicionarProdutoModal";
+
+const COLORS = [
+  "hsl(var(--primary))", 
+  "hsl(var(--success))", 
+  "hsl(var(--warning))", 
+  "hsl(var(--info))", 
+  "hsl(var(--secondary))", 
+  "hsl(var(--accent))", 
+  "hsl(var(--muted))"
+];
+
+// Cor específica para "Sem classificação"
+const getBarColor = (setor: string, index: number) => {
+  if (setor === "Sem classificação" || setor === "Não classificado") {
+    return "hsl(var(--destructive))"; // Cor vermelha
+  }
+  return COLORS[index % COLORS.length];
+};
+
+interface ProdutoSemClassificacao {
+  codigo: string;
+  nome: string;
+  quantidade_produzida: number;
+}
 
 const PCP = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
   const [period, setPeriod] = useState<"hoje" | "semana" | "mes" | "ano">("hoje");
+  
+  // Estados para os modais
+  const [showProdutosSemClassificacao, setShowProdutosSemClassificacao] = useState(false);
+  const [showAdicionarProduto, setShowAdicionarProduto] = useState(false);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoSemClassificacao | null>(null);
 
   // Hook personalizado para dados PCP
   const { 
@@ -88,7 +119,7 @@ const PCP = () => {
     setupRealtimeListener,
     getMetrics,
     getChartData 
-  } = usePCP();
+  } = usePCPOptimized();
 
   // Carregar dados baseado no período selecionado
   useEffect(() => {
@@ -126,9 +157,52 @@ const PCP = () => {
     }
   };
 
+  // Função para obter produtos sem classificação
+  const getProdutosSemClassificacao = (): ProdutoSemClassificacao[] => {
+    const produtosSemClassificacao: ProdutoSemClassificacao[] = [];
+    
+    pcpData.forEach((item) => {
+      if (item.classificacao === "Sem classificação" || item.classificacao === "Não classificado" || !item.classificacao) {
+        const existente = produtosSemClassificacao.find(p => p.codigo === item.codigo);
+        if (existente) {
+          existente.quantidade_produzida += item.quantidade_produzida || 0;
+        } else {
+          produtosSemClassificacao.push({
+            codigo: item.codigo || "N/A",
+            nome: item.produto_nome || "Nome não identificado",
+            quantidade_produzida: item.quantidade_produzida || 0
+          });
+        }
+      }
+    });
+    
+    return produtosSemClassificacao;
+  };
+
+  // Função para lidar com clique na barra "Sem classificação"
+  const handleBarClick = (data: any) => {
+    if (data && (data.setor === "Sem classificação" || data.setor === "Não classificado")) {
+      setShowProdutosSemClassificacao(true);
+    }
+  };
+
+  // Função para abrir modal de adicionar produto
+  const handleAdicionarProduto = (produto: ProdutoSemClassificacao) => {
+    setProdutoSelecionado(produto);
+    setShowAdicionarProduto(true);
+  };
+
+  // Função chamada após produto ser adicionado com sucesso
+  const handleProdutoAdicionado = () => {
+    // Recarregar dados PCP para refletir as mudanças
+    fetchPCPData(period);
+    setShowProdutosSemClassificacao(false);
+    setProdutoSelecionado(null);
+  };
+
   // Obter métricas e dados dos gráficos
   const metrics = getMetrics(period);
-  const chartData = getChartData();
+  const chartData = getChartData;
 
   return (
     <AppLayout title="Planejamento e Controle de Produção">
@@ -218,18 +292,7 @@ const PCP = () => {
               </Tabs>
             </div>
 
-            {isLoading ? (
-              <Card className="mb-6">
-                <div className="flex flex-col items-center justify-center p-8 space-y-4">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="text-lg font-medium">Carregando dados do dashboard...</p>
-                  <div className="w-full max-w-md">
-                    <Progress value={75} className="h-2" />
-                    <p className="text-sm text-muted-foreground text-center mt-2">Conectando ao Firebase...</p>
-                  </div>
-                </div>
-              </Card>
-            ) : error ? (
+            {error && (
               <Card className="mb-6">
                 <div className="flex flex-col items-center justify-center p-8 space-y-4">
                   <AlertTriangle className="h-12 w-12 text-red-500" />
@@ -241,66 +304,66 @@ const PCP = () => {
                   </Button>
                 </div>
               </Card>
-            ) : (
-              <>
-                {/* Cards de estatísticas */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                  <StatsCard
-                    title="Total de Ordens"
-                    value={metrics.totalOrdens.toString()}
-                    icon={<FileTextIcon className="h-4 w-4" />}
-                    trend={{
-                      value: (metrics.totalOrdens / 20) * 100,
-                      positive: true,
-                      label: `${((metrics.totalOrdens / 20) * 100).toFixed(0)}% da capacidade`
-                    }}
-                    description="Ordens de produção"
-                    className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
-                  />
-                  
-                  <StatsCard
-                    title="Em Produção"
-                    value={metrics.ordensEmProducao.toString()}
-                    icon={<Factory className="h-4 w-4" />}
-                    trend={{
-                      value: metrics.ordensCompletas > 0 ? (metrics.ordensCompletas / metrics.totalOrdens) * 100 : 0,
-                      positive: true,
-                      label: `${metrics.ordensCompletas} concluídas`
-                    }}
-                    description="Ordens ativas"
-                    className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
-                  />
-                  
-                  <StatsCard
-                    title="Eficiência Média"
-                    value={`${metrics.eficienciaMedia}%`}
-                    icon={<BarChart2 className="h-4 w-4" />}
-                    trend={{
-                      value: metrics.eficienciaMedia,
-                      positive: metrics.eficienciaMedia >= 85,
-                      label: metrics.eficienciaMedia >= 85 ? "Acima da meta" : "Abaixo da meta"
-                    }}
-                    description="Meta: 85%"
-                    className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
-                  />
+            )}
 
-                  <StatsCard
-                    title="Produção Total"
-                    value={metrics.producaoTotal.toLocaleString()}
-                    icon={<Package className="h-4 w-4" />}
-                    trend={{
-                      value: 15,
-                      positive: true,
-                      label: `${period === 'hoje' ? 'Hoje' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
-                    }}
-                    description="Unidades produzidas"
-                    className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10"
-                  />
-                </div>
+            {/* Cards de estatísticas */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+              <StatsCard
+                title="Produtos Sem Classificação"
+                value={metrics.produtosSemClassificacao.toString()}
+                icon={<Package className="h-4 w-4" />}
+                trend={{
+                  value: metrics.produtosCadastrados > 0 ? (metrics.produtosSemClassificacao / metrics.produtosCadastrados * 100) : 0,
+                  positive: metrics.produtosSemClassificacao === 0,
+                  label: metrics.produtosSemClassificacao === 0 ? "Todos classificados!" : "Precisam atenção"
+                }}
+                description="Produtos para classificar"
+                className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-900/10"
+              />
+              
+              <StatsCard
+                title="Total Cadastrados"
+                value={metrics.produtosCadastrados.toString()}
+                icon={<Boxes className="h-4 w-4" />}
+                trend={{
+                  value: metrics.produtosCadastrados > 0 ? ((metrics.produtosCadastrados - metrics.produtosSemClassificacao) / metrics.produtosCadastrados * 100) : 0,
+                  positive: true,
+                  label: `${metrics.produtosCadastrados - metrics.produtosSemClassificacao} com classificação`
+                }}
+                description="Total no sistema"
+                className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
+              />
+             
+              <StatsCard
+                title="Eficiência Média"
+                value={`${metrics.eficienciaMedia}%`}
+                icon={<BarChart2 className="h-4 w-4" />}
+                trend={{
+                  value: metrics.eficienciaMedia,
+                  positive: metrics.eficienciaMedia >= 85,
+                  label: metrics.eficienciaMedia >= 85 ? "Acima da meta" : "Abaixo da meta"
+                }}
+                description="Meta: 85%"
+                className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
+              />
 
-                {/* Gráficos */}
-                {chartData.turnosChart.length > 0 && (
-                  <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-6">
+              <StatsCard
+                title="Produção Total"
+                value={metrics.producaoTotal.toLocaleString()}
+                icon={<Package className="h-4 w-4" />}
+                trend={{
+                  value: 15,
+                  positive: true,
+                  label: `${period === 'hoje' ? 'Hoje' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
+                }}
+                description="Unidades produzidas"
+                className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10"
+              />
+            </div>
+
+            {/* Gráficos */}
+            {chartData.turnosChart.length > 0 && (
+              <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-6">
                     {/* Produção por Turno */}
                     <Card>
                       <CardHeader>
@@ -364,39 +427,46 @@ const PCP = () => {
                         <CardContent>
                           <div className="h-[300px]">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart
-                                data={chartData.setoresChart}
-                                layout="vertical"
-                                margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
-                              >
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                                <XAxis type="number" />
-                                <YAxis dataKey="setor" type="category" width={80} />
-                                <Tooltip 
-                                  contentStyle={{
-                                    background: 'hsl(var(--background))',
-                                    borderColor: 'hsl(var(--border))',
-                                    borderRadius: 'var(--radius)',
-                                    color: 'hsl(var(--foreground))',
-                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-                                  }}
-                                  labelStyle={{
-                                    color: 'hsl(var(--foreground))',
-                                    fontWeight: '500'
-                                  }}
-                                  itemStyle={{
-                                    color: 'hsl(var(--foreground))'
-                                  }}
-                                />
-                                <Bar 
-                                  dataKey="producao_real" 
-                                  name="Produção (un)"
-                                >
-                                  {chartData.setoresChart.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                  ))}
-                                </Bar>
-                              </BarChart>
+                             <BarChart
+                               data={chartData.setoresChart}
+                               layout="vertical"
+                               margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
+                               onClick={handleBarClick}
+                             >
+                               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                               <XAxis type="number" />
+                               <YAxis dataKey="setor" type="category" width={80} />
+                               <Tooltip 
+                                 contentStyle={{
+                                   background: 'hsl(var(--background))',
+                                   borderColor: 'hsl(var(--border))',
+                                   borderRadius: 'var(--radius)',
+                                   color: 'hsl(var(--foreground))',
+                                   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                                 }}
+                                 labelStyle={{
+                                   color: 'hsl(var(--foreground))',
+                                   fontWeight: '500'
+                                 }}
+                                 itemStyle={{
+                                   color: 'hsl(var(--foreground))'
+                                 }}
+                               />
+                               <Bar 
+                                 dataKey="producao_real" 
+                                 name="Produção (un)"
+                                 onClick={handleBarClick}
+                                 style={{ cursor: 'pointer' }}
+                               >
+                                 {chartData.setoresChart.map((entry, index) => (
+                                   <Cell 
+                                     key={`cell-${index}`} 
+                                     fill={getBarColor(entry.setor, index)}
+                                     style={{ cursor: 'pointer' }}
+                                   />
+                                 ))}
+                               </Bar>
+                             </BarChart>
                             </ResponsiveContainer>
                           </div>
                         </CardContent>
@@ -444,12 +514,12 @@ const PCP = () => {
                             <Bar 
                               dataKey="planejado" 
                               name="Planejado (kg)" 
-                              fill="#8884d8"
+                              fill="hsl(var(--primary))"
                             />
                             <Bar 
                               dataKey="produzido" 
                               name="Produzido (kg)" 
-                              fill="#82ca9d"
+                              fill="hsl(var(--success))"
                             />
                           </BarChart>
                         </ResponsiveContainer>
@@ -457,8 +527,6 @@ const PCP = () => {
                     </CardContent>
                   </Card>
                 )}
-              </>
-            )}
           </div>
         )}
 
@@ -468,6 +536,24 @@ const PCP = () => {
         {activeTab === "resultados" && <ResultadosFinais />}
         {activeTab === "produtos" && <Produtos />}
         {activeTab === "sistema" && <Sistema />}
+
+        {/* Modais para produtos sem classificação */}
+        <ProdutosSemClassificacaoModal
+          isOpen={showProdutosSemClassificacao}
+          onClose={() => setShowProdutosSemClassificacao(false)}
+          produtos={getProdutosSemClassificacao()}
+          onAdicionarProduto={handleAdicionarProduto}
+        />
+
+        <AdicionarProdutoModal
+          isOpen={showAdicionarProduto}
+          onClose={() => {
+            setShowAdicionarProduto(false);
+            setProdutoSelecionado(null);
+          }}
+          produto={produtoSelecionado}
+          onProdutoAdicionado={handleProdutoAdicionado}
+        />
       </div>
     </AppLayout>
   );

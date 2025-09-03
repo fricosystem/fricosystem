@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   collection, 
   query, 
@@ -82,6 +82,22 @@ export const usePCP = () => {
   const [pcpProdutos, setPcpProdutos] = useState<PCPProduto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Cache para otimizar performance
+  const cacheRef = useRef<{
+    pcpData: Map<string, PCPData[]>;
+    pcpProdutos: PCPProduto[] | null;
+    lastFetch: Map<string, number>;
+  }>({
+    pcpData: new Map(),
+    pcpProdutos: null,
+    lastFetch: new Map()
+  });
+  
+  // Debounce para listeners
+  const listenerTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
   // Função para calcular range de datas baseado no período
   const getDateRange = (period: PeriodFilter) => {

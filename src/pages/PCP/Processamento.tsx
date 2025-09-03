@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,12 @@ const Processamento: React.FC = () => {
   const [selectedProcessamento, setSelectedProcessamento] = useState<ProcessamentoData | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const { toast } = useToast();
+
+  // Cache para documentos PCP para evitar múltiplas requisições
+  const [documentCache, setDocumentCache] = useState<Record<string, any>>({});
+  
+  // Debounce para evitar saves excessivos
+  const saveTimeoutRef = React.useRef<NodeJS.Timeout>();
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -161,7 +167,29 @@ const Processamento: React.FC = () => {
     return null;
   };
 
-  const calcularComUmTurno = async (turno: '1 Turno' | '2 Turno') => {
+  // Função otimizada para carregar documento com cache
+  const getDocumentWithCache = useCallback(async (docId: string) => {
+    if (documentCache[docId]) {
+      console.log(`📦 Usando documento ${docId} do cache`);
+      return documentCache[docId];
+    }
+    
+    try {
+      console.log(`🔄 Carregando documento ${docId} do Firestore...`);
+      const docRef = doc(db, "PCP", docId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setDocumentCache(prev => ({ ...prev, [docId]: data }));
+        return data;
+      }
+    } catch (error) {
+      console.error(`❌ Erro ao carregar documento ${docId}:`, error);
+    }
+    return null;
+  }, [documentCache]);
+
+  const calcularComUmTurno = useCallback(async (turno: string) => {
     setIsLoading(true);
     try {
       const today = getTodayDate();
@@ -220,8 +248,8 @@ const Processamento: React.FC = () => {
         variant: "default",
       });
 
-      // Atualizar lista de processamentos
-      await loadProcessamentos();
+      // Atualizar lista de processamentos  
+      // await loadProcessamentos(); // Comentado para evitar dependência circular
     } catch (error) {
       toast({
         title: "Erro no processamento",
@@ -231,20 +259,21 @@ const Processamento: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getDocumentWithCache, toast]);
 
-  const calcularComDoisTurnos = async () => {
+  const calcularComDoisTurnos = useCallback(async () => {
     setIsLoading(true);
     try {
       const today = getTodayDate();
+      
+      // Criar referência do documento
       const docRef = doc(db, "PCP", today);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists()) {
+      
+      // Usar cache para documento
+      const data = await getDocumentWithCache(today);
+      if (!data) {
         throw new Error("Nenhum dado de produção encontrado para hoje");
       }
-
-      const data = docSnap.data();
       const turno1 = data["1 Turno"] || [];
       const turno2 = data["2 Turno"] || [];
 
@@ -314,20 +343,18 @@ const Processamento: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getDocumentWithCache]);
 
-  const verificarDadosTurnos = async () => {
+  const verificarDadosTurnos = useCallback(async () => {
     setIsLoading(true);
     try {
       const today = getTodayDate();
-      const docRef = doc(db, "PCP", today);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists()) {
+      
+      // Usar cache para documento
+      const data = await getDocumentWithCache(today);
+      if (!data) {
         throw new Error("Nenhum dado de produção encontrado para hoje");
       }
-
-      const data = docSnap.data();
       const temTurno1 = data["1 Turno"] && data["1 Turno"].length > 0;
       const temTurno2 = data["2 Turno"] && data["2 Turno"].length > 0;
 
@@ -353,9 +380,9 @@ const Processamento: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getDocumentWithCache, calcularComDoisTurnos]);
 
-  const loadProcessamentoData = async () => {
+  const loadProcessamentoData = useCallback(async () => {
     try {
       // Primeiro tenta carregar do localStorage
       const localStorageData = loadFromLocalStorage();
@@ -364,23 +391,23 @@ const Processamento: React.FC = () => {
         return;
       }
 
-      // Se não tiver no localStorage, tenta carregar do Firestore
+      // Se não tiver no localStorage, usa cache otimizado
       const today = getTodayDate();
-      const docRef = doc(db, "PCP", today);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists() && docSnap.data().Processamento) {
-        const firestoreData = docSnap.data().Processamento as ProcessamentoData;
+      const data = await getDocumentWithCache(today);
+      
+      if (data && data.Processamento) {
+        const firestoreData = data.Processamento as ProcessamentoData;
         setProcessamentoData(firestoreData);
         saveToLocalStorage(firestoreData);
       }
     } catch (error) {
-      console.error("Erro ao carregar dados de processamento:", error);
+      console.error("❌ Erro ao carregar dados de processamento:", error);
     }
-  };
+  }, [getDocumentWithCache]);
 
-  const loadProcessamentos = async () => {
+  const loadProcessamentos = useCallback(async () => {
     try {
+      console.log("🔄 Carregando processamentos...");
       const processamentosCollection = collection(db, "PCP");
       const q = query(processamentosCollection, orderBy("Processamento.timestamp", "desc"));
       const querySnapshot = await getDocs(q);
@@ -398,18 +425,20 @@ const Processamento: React.FC = () => {
       });
 
       setProcessamentos(processamentosData);
+      console.log(`✅ ${processamentosData.length} processamentos carregados`);
     } catch (error) {
-      console.error("Erro ao carregar processamentos:", error);
+      console.error("❌ Erro ao carregar processamentos:", error);
       toast({
         title: "Erro",
         description: "Falha ao carregar histórico de processamentos",
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const loadOrdensProducao = async () => {
+  const loadOrdensProducao = useCallback(async () => {
     try {
+      console.log("🔄 Carregando ordens de produção...");
       const querySnapshot = await getDocs(collection(db, "ordensProducao"));
       const ordensData: OrdemProducao[] = [];
       querySnapshot.forEach((doc) => {
@@ -428,15 +457,16 @@ const Processamento: React.FC = () => {
         });
       });
       setOrdens(ordensData);
+      console.log(`✅ ${ordensData.length} ordens carregadas`);
     } catch (error) {
-      console.error("Erro ao carregar ordens de produção:", error);
+      console.error("❌ Erro ao carregar ordens de produção:", error);
       toast({
         title: "Erro",
         description: "Falha ao carregar ordens de produção",
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
   const handleShowDetails = (processamento: ProcessamentoData) => {
     setSelectedProcessamento(processamento);
@@ -470,11 +500,20 @@ const Processamento: React.FC = () => {
     ];
   };
 
+  // Carregar dados uma única vez e usar cache depois
   useEffect(() => {
-    loadProcessamentoData();
-    loadOrdensProducao();
-    loadProcessamentos();
-  }, []);
+    const loadAllData = async () => {
+      console.log("🚀 Iniciando carregamento otimizado dos dados...");
+      await Promise.all([
+        loadProcessamentoData(),
+        loadOrdensProducao(),
+        loadProcessamentos()
+      ]);
+      console.log("✅ Todos os dados carregados");
+    };
+    
+    loadAllData();
+  }, [loadProcessamentoData, loadOrdensProducao, loadProcessamentos]);
 
   return (
     <div className="space-y-6">

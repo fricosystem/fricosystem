@@ -37,6 +37,7 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [importData, setImportData] = useState<Produto[]>([]);
   const [status, setStatus] = useState<"empty" | "loaded" | "saved">("empty");
+  const [editingValues, setEditingValues] = useState<{[key: number]: string}>({});
   const { toast } = useToast();
 
   // Get today's date in YYYY-MM-DD format
@@ -87,11 +88,16 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     loadData();
   }, [turno]);
 
-  // Parse número do formato brasileiro para number
+  // Parse número do formato brasileiro para number (melhorado para aceitar qualquer quantidade de dígitos)
   const parseNumber = (value: string | number): number => {
     if (typeof value === 'number') return value;
     if (!value) return 0;
-    const cleanValue = String(value).replace(/\./g, "").replace(",", ".");
+    
+    // Remove todos os pontos (separadores de milhar) e substitui vírgula por ponto
+    const cleanValue = String(value)
+      .replace(/\./g, "")  // Remove pontos (separadores de milhar)
+      .replace(",", ".");  // Substitui vírgula por ponto decimal
+    
     return parseFloat(cleanValue) || 0;
   };
 
@@ -101,6 +107,33 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(value);
+  };
+
+  // Formatar input durante a digitação (sem limitação de números)
+  const formatInputValue = (value: string): string => {
+    if (!value) return "";
+    
+    // Remove tudo que não é número
+    let numbers = value.replace(/\D/g, "");
+    
+    // Se não tem números, retorna vazio
+    if (!numbers) return "";
+    
+    // Converte para centavos (últimos 2 dígitos são decimais)
+    const length = numbers.length;
+    if (length === 1) {
+      return `0,0${numbers}`;
+    } else if (length === 2) {
+      return `0,${numbers}`;
+    } else {
+      const decimals = numbers.slice(-2);
+      const integers = numbers.slice(0, -2);
+      
+      // Adiciona pontos a cada 3 dígitos nos inteiros
+      const formattedIntegers = integers.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      
+      return `${formattedIntegers},${decimals}`;
+    }
   };
 
   // Importar arquivo XLS
@@ -153,8 +186,11 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     localStorage.setItem(localStorageKey, JSON.stringify(importData));
   };
 
-  // Atualizar planejamento
+  // Atualizar planejamento (melhorado para permitir edição livre)
   const handlePlanejamentoChange = (index: number, value: string) => {
+    // Store the raw editing value to allow free typing
+    setEditingValues(prev => ({ ...prev, [index]: value }));
+    
     const newProdutos = [...produtos];
     newProdutos[index].planejamento = parseNumber(value);
     setProdutos(newProdutos);
@@ -163,6 +199,24 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     const today = getTodayDate();
     const localStorageKey = `turno${turno}_${today}`;
     localStorage.setItem(localStorageKey, JSON.stringify(newProdutos));
+  };
+
+  // Handle when input gains focus (clear if zero value)
+  const handlePlanejamentoFocus = (index: number) => {
+    const currentValue = produtos[index].planejamento;
+    if (currentValue === 0) {
+      setEditingValues(prev => ({ ...prev, [index]: "" }));
+    }
+  };
+
+  // Handle when input loses focus (format the number)
+  const handlePlanejamentoBlur = (index: number) => {
+    // Clear the editing value when input loses focus to show formatted number
+    setEditingValues(prev => {
+      const newValues = { ...prev };
+      delete newValues[index];
+      return newValues;
+    });
   };
 
   // Limpar importação
@@ -175,6 +229,7 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     
     // Limpar estado
     setProdutos([]);
+    setEditingValues({});
     setStatus("empty");
     
     toast({
@@ -215,6 +270,7 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
       const localStorageKey = `turno${turno}_${today}`;
       localStorage.removeItem(localStorageKey);
       setProdutos([]);
+      setEditingValues({});
       setStatus("empty");
       
       toast({
@@ -321,8 +377,9 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
                           <TableCell>
                             <Input
                               type="text"
-                              value={formatNumber(produto.planejamento)}
+                              value={editingValues[index] !== undefined ? editingValues[index] : formatNumber(produto.planejamento)}
                               onChange={(e) => handlePlanejamentoChange(index, e.target.value)}
+                              onBlur={() => handlePlanejamentoBlur(index)}
                               className="text-right"
                               placeholder="Digite o valor"
                             />

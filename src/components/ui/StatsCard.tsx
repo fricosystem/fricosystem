@@ -12,6 +12,7 @@ interface StatsCardProps {
   };
   description?: string;
   className?: string;
+  onClick?: () => void;
 }
 
 export const StatsCard = ({
@@ -21,9 +22,13 @@ export const StatsCard = ({
   trend,
   description,
   className = "",
+  onClick,
 }: StatsCardProps) => {
   return (
-    <Card className={className}>
+    <Card 
+      className={`${className} ${onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <div className="h-4 w-4 text-muted-foreground">{icon}</div>

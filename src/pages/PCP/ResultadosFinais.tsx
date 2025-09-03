@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { doc, getDoc, collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useToast } from "@/components/ui/use-toast";
+import { RefreshCw } from "lucide-react";
 
 interface Produto {
   id: string;
@@ -56,6 +57,7 @@ const ResultadosFinais: React.FC = () => {
   const [processamentos, setProcessamentos] = useState<ProcessamentoData[]>([]);
   const [produtosProcessados, setProdutosProcessados] = useState<ProdutoProcessado[]>([]);
   const [expandedClassificacao, setExpandedClassificacao] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   // Cache para documentos já carregados
@@ -115,6 +117,7 @@ const ResultadosFinais: React.FC = () => {
 
   const loadProdutos = async () => {
     try {
+      console.log("🔄 Carregando produtos...");
       const querySnapshot = await getDocs(collection(db, "PCP_produtos"));
       const produtosData: Produto[] = [];
       querySnapshot.forEach((doc) => {
@@ -123,8 +126,10 @@ const ResultadosFinais: React.FC = () => {
           ...doc.data()
         } as Produto);
       });
+      console.log(`✅ ${produtosData.length} produtos carregados`);
       setProdutos(produtosData);
     } catch (error) {
+      console.error("❌ Erro ao carregar produtos:", error);
       toast({
         title: "Erro",
         description: "Falha ao carregar produtos",
@@ -135,6 +140,7 @@ const ResultadosFinais: React.FC = () => {
 
   const loadProcessamentos = async () => {
     try {
+      console.log("🔄 Carregando processamentos...");
       const processamentosCollection = collection(db, "PCP");
       const q = query(processamentosCollection, orderBy("Processamento.timestamp", "desc"));
       const querySnapshot = await getDocs(q);
@@ -157,8 +163,10 @@ const ResultadosFinais: React.FC = () => {
           });
         }
       });
+      console.log(`✅ ${processamentosData.length} processamentos carregados`);
       setProcessamentos(processamentosData);
     } catch (error) {
+      console.error("❌ Erro ao carregar processamentos:", error);
       toast({
         title: "Erro",
         description: "Falha ao carregar processamentos",
@@ -169,7 +177,7 @@ const ResultadosFinais: React.FC = () => {
 
   const mergeProdutosProcessados = async () => {
     try {
-      console.log("🔄 Iniciando merge de produtos processados...");
+      console.log("🔄 Iniciando merge otimizado de produtos processados...");
       
       // Validar dados básicos
       const produtosSemClassificacao = produtos.filter(p => !p.classificacao || p.classificacao.trim() === "");
@@ -180,10 +188,79 @@ const ResultadosFinais: React.FC = () => {
       const classificacoes = [...new Set(produtos.map(p => p.classificacao).filter(Boolean))];
       console.log(`📊 Total de classificações encontradas: ${classificacoes.length}`, classificacoes);
       
+      // OTIMIZAÇÃO: Carregar todos os documentos de uma vez em lote
+      console.log("🚀 Carregando todos os documentos PCP em lote...");
+      const allDocPromises = processamentos.map(processamento => getDocumentWithCache(processamento.id));
+      const allDocs = await Promise.all(allDocPromises);
+      console.log(`✅ ${allDocs.length} documentos carregados em lote`);
+
+      // OTIMIZAÇÃO: Criar um índice de todos os produtos de todos os turnos
+      const produtoIndex = new Map<string, {
+        kgTotal: number;
+        kgTurno1: number;
+        kgTurno2: number;
+        planejadoTurno1: number;
+        planejadoTurno2: number;
+        planoDiario: number;
+      }>();
+
+      console.log("🔄 Indexando produtos de todos os processamentos...");
+      allDocs.forEach((docData, index) => {
+        if (!docData) return;
+
+        const turno1 = docData["1 Turno"] || [];
+        const turno2 = docData["2 Turno"] || [];
+
+        // Processar turno 1
+        turno1.forEach((item: any) => {
+          const codigo = normalizeCode(item.codigo);
+          if (!codigo) return;
+          
+          const existing = produtoIndex.get(codigo) || {
+            kgTotal: 0, kgTurno1: 0, kgTurno2: 0,
+            planejadoTurno1: 0, planejadoTurno2: 0, planoDiario: 0
+          };
+          
+          const kg = parseFloat(item.kg || "0");
+          const planejamento = parseFloat(item.planejamento || "0");
+          
+          existing.kgTotal += kg;
+          existing.kgTurno1 += kg;
+          existing.planejadoTurno1 += planejamento;
+          existing.planoDiario += planejamento;
+          
+          produtoIndex.set(codigo, existing);
+        });
+
+        // Processar turno 2
+        turno2.forEach((item: any) => {
+          const codigo = normalizeCode(item.codigo);
+          if (!codigo) return;
+          
+          const existing = produtoIndex.get(codigo) || {
+            kgTotal: 0, kgTurno1: 0, kgTurno2: 0,
+            planejadoTurno1: 0, planejadoTurno2: 0, planoDiario: 0
+          };
+          
+          const kg = parseFloat(item.kg || "0");
+          const planejamento = parseFloat(item.planejamento || "0");
+          
+          existing.kgTotal += kg;
+          existing.kgTurno2 += kg;
+          existing.planejadoTurno2 += planejamento;
+          existing.planoDiario += planejamento;
+          
+          produtoIndex.set(codigo, existing);
+        });
+      });
+
+      console.log(`📝 ${produtoIndex.size} produtos únicos indexados`);
+
       const mergedData: ProdutoProcessado[] = [];
       let totalProdutosProcessados = 0;
       let produtosSemMatch = 0;
 
+      // OTIMIZAÇÃO: Processar por classificação usando o índice
       for (const classificacao of classificacoes) {
         const produtosDaClassificacao = produtos.filter(p => p.classificacao === classificacao);
         console.log(`🏷️ Processando classificação "${classificacao}" com ${produtosDaClassificacao.length} produtos`);
@@ -200,71 +277,61 @@ const ResultadosFinais: React.FC = () => {
         }[] = [];
 
         for (const produto of produtosDaClassificacao) {
-          // Usar cache para reduzir consultas ao Firestore
-          const processamentosComProduto = await Promise.all(
-            processamentos.map(async (processamento) => {
-              const docData = await getDocumentWithCache(processamento.id);
-              if (!docData) return null;
+          const codigoNormalizado = normalizeCode(produto.codigo);
+          const dadosProcessamento = produtoIndex.get(codigoNormalizado);
 
-              const turno1 = docData["1 Turno"] || [];
-              const turno2 = docData["2 Turno"] || [];
-              
-              // Usar função melhorada de match
-              const produtoNoTurno1 = turno1.find((item: any) => isProductMatch(item, produto));
-              const produtoNoTurno2 = turno2.find((item: any) => isProductMatch(item, produto));
-
-              if (produtoNoTurno1 || produtoNoTurno2) {
-                // Debug: log successful matches
-                if (produtoNoTurno1) {
-                  console.log(`✅ Match T1 - ${produto.codigo}: ${produtoNoTurno1.codigo} (${produtoNoTurno1.kg}kg)`);
-                }
-                if (produtoNoTurno2) {
-                  console.log(`✅ Match T2 - ${produto.codigo}: ${produtoNoTurno2.codigo} (${produtoNoTurno2.kg}kg)`);
-                }
-
-                return {
-                  kgTotal: (parseFloat(produtoNoTurno1?.kg || "0") + parseFloat(produtoNoTurno2?.kg || "0")),
-                  kgTurno1: parseFloat(produtoNoTurno1?.kg || "0"),
-                  kgTurno2: parseFloat(produtoNoTurno2?.kg || "0"),
-                  planejadoTurno1: parseFloat(produtoNoTurno1?.planejamento || "0"),
-                  planejadoTurno2: parseFloat(produtoNoTurno2?.planejamento || "0"),
-                  planoDiario: (parseFloat(produtoNoTurno1?.planejamento || "0") + 
-                              parseFloat(produtoNoTurno2?.planejamento || "0"))
-                };
-              }
-              return null;
-            })
-          );
-
-          // Somar todos os processamentos encontrados para este produto
-          const validProcessamentos = processamentosComProduto.filter(Boolean);
-          const total = validProcessamentos.reduce((acc, curr) => ({
-            kgTotal: acc.kgTotal + (curr?.kgTotal || 0),
-            kgTurno1: acc.kgTurno1 + (curr?.kgTurno1 || 0),
-            kgTurno2: acc.kgTurno2 + (curr?.kgTurno2 || 0),
-            planejadoTurno1: acc.planejadoTurno1 + (curr?.planejadoTurno1 || 0),
-            planejadoTurno2: acc.planejadoTurno2 + (curr?.planejadoTurno2 || 0),
-            planoDiario: acc.planoDiario + (curr?.planoDiario || 0)
-          }), {
-            kgTotal: 0,
-            kgTurno1: 0,
-            kgTurno2: 0,
-            planejadoTurno1: 0,
-            planejadoTurno2: 0,
-            planoDiario: 0
-          });
-
-          if (total.kgTotal > 0) {
+          if (dadosProcessamento && dadosProcessamento.kgTotal > 0) {
             produtosProcessadosData.push({
               descricao: produto.descricao_produto,
               codigo: produto.codigo,
-              ...total
+              ...dadosProcessamento
             });
             totalProdutosProcessados++;
+            console.log(`✅ Match encontrado - ${produto.codigo}: ${dadosProcessamento.kgTotal}kg`);
           } else {
-            // Debug: produtos sem match
-            console.warn(`❌ Produto sem match: ${produto.codigo} - ${produto.descricao_produto}`);
-            produtosSemMatch++;
+            // Tentativa de match por descrição (fallback)
+            let matchEncontrado = false;
+            for (const [indexCodigo, dadosIndex] of produtoIndex.entries()) {
+              // Buscar por match de descrição nos dados originais
+              let matchPorDescricao = false;
+              
+              allDocs.forEach(docData => {
+                if (!docData || matchPorDescricao) return;
+                
+                const turno1 = docData["1 Turno"] || [];
+                const turno2 = docData["2 Turno"] || [];
+                
+                const itemTurno1 = turno1.find((item: any) => 
+                  normalizeCode(item.codigo) === indexCodigo && 
+                  isProductMatch(item, produto)
+                );
+                const itemTurno2 = turno2.find((item: any) => 
+                  normalizeCode(item.codigo) === indexCodigo && 
+                  isProductMatch(item, produto)
+                );
+                
+                if (itemTurno1 || itemTurno2) {
+                  matchPorDescricao = true;
+                }
+              });
+              
+              if (matchPorDescricao && dadosIndex.kgTotal > 0) {
+                produtosProcessadosData.push({
+                  descricao: produto.descricao_produto,
+                  codigo: produto.codigo,
+                  ...dadosIndex
+                });
+                totalProdutosProcessados++;
+                matchEncontrado = true;
+                console.log(`✅ Match por descrição - ${produto.codigo}: ${dadosIndex.kgTotal}kg`);
+                break;
+              }
+            }
+            
+            if (!matchEncontrado) {
+              console.warn(`❌ Produto sem match: ${produto.codigo} - ${produto.descricao_produto}`);
+              produtosSemMatch++;
+            }
           }
         }
 
@@ -277,7 +344,7 @@ const ResultadosFinais: React.FC = () => {
       }
 
       // Logs de resumo
-      console.log(`📈 Resumo do processamento:
+      console.log(`📈 Resumo do processamento otimizado:
         - Produtos processados: ${totalProdutosProcessados}
         - Produtos sem match: ${produtosSemMatch}
         - Classificações com dados: ${mergedData.length}
@@ -299,8 +366,20 @@ const ResultadosFinais: React.FC = () => {
   };
 
   useEffect(() => {
-    loadProdutos();
-    loadProcessamentos();
+    const loadData = async () => {
+      console.log("🔄 Iniciando carregamento de dados...");
+      setLoading(true);
+      try {
+        await Promise.all([loadProdutos(), loadProcessamentos()]);
+        console.log("✅ Dados carregados com sucesso");
+      } catch (error) {
+        console.error("❌ Erro ao carregar dados:", error);
+      } finally {
+        setLoading(false);
+        console.log("🏁 Loading finalizado");
+      }
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -317,6 +396,22 @@ const ResultadosFinais: React.FC = () => {
     )
   );
 
+  console.log("🔍 Estado atual do loading:", loading);
+
+  if (loading) {
+    console.log("🔄 Exibindo tela de carregamento");
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold">Resultados Finais</h2>
+        <div className="flex items-center justify-center p-8">
+          <RefreshCw className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Carregando resultados finais...</span>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("✅ Exibindo dados dos resultados");
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Resultados Finais</h2>
