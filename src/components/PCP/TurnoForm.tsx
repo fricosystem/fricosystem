@@ -21,9 +21,9 @@ import { Trash2, Upload } from "lucide-react";
 interface Produto {
   codigo: string;
   textoBreve: string;
-  kg: number; // Mudado para number
-  cx: number; // Mudado para number
-  planejamento: number; // Mudado para number
+  kg: number;
+  cx: number;
+  planejamento: number;
 }
 
 interface TurnoFormProps {
@@ -40,19 +40,16 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
   const [editingValues, setEditingValues] = useState<{[key: number]: string}>({});
   const { toast } = useToast();
 
-  // Get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   };
 
-  // Load data from localStorage and Firestore on component mount
   useEffect(() => {
     const loadData = async () => {
       const today = getTodayDate();
       const localStorageKey = `turno${turno}_${today}`;
       
-      // Try to load from localStorage first
       const savedData = localStorage.getItem(localStorageKey);
       if (savedData) {
         const parsed = JSON.parse(savedData);
@@ -61,7 +58,6 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
         return;
       }
       
-      // If not in localStorage, try to load from Firestore
       try {
         const docRef = doc(db, "PCP", today);
         const docSnap = await getDoc(docRef);
@@ -77,7 +73,6 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
           
           setProdutos(firestoreData);
           setStatus("loaded");
-          // Save to localStorage for future use
           localStorage.setItem(localStorageKey, JSON.stringify(firestoreData));
         }
       } catch (error) {
@@ -88,7 +83,7 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     loadData();
   }, [turno]);
 
-  // Parse número do formato brasileiro para number (melhorado para aceitar qualquer quantidade de dígitos)
+  // Função para analisar o valor formatado e converter para número
   const parseNumber = (value: string | number): number => {
     if (typeof value === 'number') return value;
     if (!value) return 0;
@@ -101,7 +96,6 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     return parseFloat(cleanValue) || 0;
   };
 
-  // Formatar número para exibição brasileira
   const formatNumber = (value: number): string => {
     return new Intl.NumberFormat("pt-BR", {
       minimumFractionDigits: 2,
@@ -109,34 +103,46 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     }).format(value);
   };
 
-  // Formatar input durante a digitação (sem limitação de números)
+  // Formatar input durante a digitação com formatação automática de decimais
   const formatInputValue = (value: string): string => {
     if (!value) return "";
     
-    // Remove tudo que não é número
-    let numbers = value.replace(/\D/g, "");
+    // Remove todos os caracteres não numéricos
+    const cleanValue = value.replace(/[^\d]/g, "");
     
-    // Se não tem números, retorna vazio
-    if (!numbers) return "";
+    // Se o valor está vazio após limpeza, retorna vazio
+    if (!cleanValue) return "";
     
-    // Converte para centavos (últimos 2 dígitos são decimais)
-    const length = numbers.length;
-    if (length === 1) {
-      return `0,0${numbers}`;
-    } else if (length === 2) {
-      return `0,${numbers}`;
-    } else {
-      const decimals = numbers.slice(-2);
-      const integers = numbers.slice(0, -2);
-      
-      // Adiciona pontos a cada 3 dígitos nos inteiros
-      const formattedIntegers = integers.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-      
-      return `${formattedIntegers},${decimals}`;
+    // Se o valor é apenas zeros, retorna "0,00"
+    if (cleanValue.replace(/0/g, "") === "") {
+      return "0,00";
     }
+    
+    // Remove zeros à esquerda
+    const trimmedValue = cleanValue.replace(/^0+/, "");
+    
+    // Se após remover zeros à esquerda ficou vazio, retorna "0,00"
+    if (!trimmedValue) {
+      return "0,00";
+    }
+    
+    // Se o valor tem apenas 1 ou 2 dígitos, formata como decimal (0,XX)
+    if (trimmedValue.length <= 2) {
+      // Adiciona zeros à esquerda se necessário para ter 2 dígitos
+      const paddedValue = trimmedValue.padStart(2, "0");
+      return `0,${paddedValue}`;
+    }
+    
+    // Para valores com 3+ dígitos, separa parte inteira e decimal
+    const integerPart = trimmedValue.slice(0, -2);
+    const decimalPart = trimmedValue.slice(-2);
+    
+    // Formata a parte inteira com pontos de milhar
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    
+    return `${formattedInteger},${decimalPart}`;
   };
 
-  // Importar arquivo XLS
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
@@ -144,7 +150,6 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     }
   };
 
-  // Ler arquivo Excel
   const readExcelFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -173,7 +178,6 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     reader.readAsArrayBuffer(file);
   };
 
-  // Confirmar importação
   const confirmImport = () => {
     const today = getTodayDate();
     const localStorageKey = `turno${turno}_${today}`;
@@ -182,17 +186,22 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     setStatus("loaded");
     setIsModalOpen(false);
     
-    // Save to localStorage immediately
     localStorage.setItem(localStorageKey, JSON.stringify(importData));
   };
 
-  // Atualizar planejamento (melhorado para permitir edição livre)
+  // Função para lidar com a mudança no campo de planejamento
   const handlePlanejamentoChange = (index: number, value: string) => {
-    // Store the raw editing value to allow free typing
-    setEditingValues(prev => ({ ...prev, [index]: value }));
+    // Remove qualquer formatação existente para processar apenas números
+    const numericValue = value.replace(/[^\d]/g, "");
+    
+    // Aplica formatação automática durante a digitação
+    const formattedValue = formatInputValue(numericValue);
+    
+    // Store the formatted editing value to allow free typing
+    setEditingValues(prev => ({ ...prev, [index]: formattedValue }));
     
     const newProdutos = [...produtos];
-    newProdutos[index].planejamento = parseNumber(value);
+    newProdutos[index].planejamento = parseNumber(formattedValue);
     setProdutos(newProdutos);
     
     // Update localStorage on every change
@@ -201,33 +210,42 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     localStorage.setItem(localStorageKey, JSON.stringify(newProdutos));
   };
 
-  // Handle when input gains focus (clear if zero value)
   const handlePlanejamentoFocus = (index: number) => {
     const currentValue = produtos[index].planejamento;
+    
+    // Se o valor atual é zero, inicia com campo vazio para nova digitação
     if (currentValue === 0) {
       setEditingValues(prev => ({ ...prev, [index]: "" }));
+    } else {
+      // Para valores não zero, mostra o valor numérico sem formatação para edição
+      const numericValue = String(Math.round(currentValue * 100));
+      setEditingValues(prev => ({ ...prev, [index]: numericValue }));
     }
   };
 
-  // Handle when input loses focus (format the number)
+  // Função para quando o campo perde o foco (formata o número)
   const handlePlanejamentoBlur = (index: number) => {
-    // Clear the editing value when input loses focus to show formatted number
-    setEditingValues(prev => {
-      const newValues = { ...prev };
-      delete newValues[index];
-      return newValues;
-    });
+    const currentValue = produtos[index].planejamento;
+    
+    // Se o valor atual é zero, mantém vazio para facilitar nova digitação
+    if (currentValue === 0) {
+      setEditingValues(prev => ({ ...prev, [index]: "" }));
+    } else {
+      // Caso contrário, limpa o valor de edição para mostrar o valor formatado
+      setEditingValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[index];
+        return newValues;
+      });
+    }
   };
 
-  // Limpar importação
   const clearImportation = () => {
     const today = getTodayDate();
     const localStorageKey = `turno${turno}_${today}`;
     
-    // Limpar do localStorage
     localStorage.removeItem(localStorageKey);
     
-    // Limpar estado
     setProdutos([]);
     setEditingValues({});
     setStatus("empty");
@@ -238,7 +256,6 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     });
   };
 
-  // Salvar dados no Firestore
   const saveToFirestore = async () => {
     if (produtos.length === 0) {
       toast({
@@ -257,16 +274,15 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
         [`${turno}_turno`]: produtos.map(p => ({
           codigo: p.codigo,
           texto_breve: p.textoBreve,
-          kg: p.kg, // Salvar como number
-          cx: p.cx, // Salvar como number
-          planejamento: p.planejamento // Salvar como number
+          kg: p.kg,
+          cx: p.cx,
+          planejamento: p.planejamento
         })),
         timestamp: new Date()
       }, { merge: true });
 
       setStatus("saved");
       
-      // Limpar importação após salvar com sucesso
       const localStorageKey = `turno${turno}_${today}`;
       localStorage.removeItem(localStorageKey);
       setProdutos([]);
@@ -287,7 +303,6 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     }
   };
 
-  // Estilo do badge baseado no status
   const getBadgeVariant = () => {
     switch (status) {
       case "empty": return "destructive";
@@ -297,7 +312,6 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     }
   };
 
-  // Texto do badge baseado no status
   const getBadgeText = () => {
     switch (status) {
       case "empty": return "Apontamento não importado";
@@ -377,11 +391,12 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
                           <TableCell>
                             <Input
                               type="text"
-                              value={editingValues[index] !== undefined ? editingValues[index] : formatNumber(produto.planejamento)}
+                              value={editingValues[index] !== undefined ? editingValues[index] : (produto.planejamento === 0 ? "" : formatNumber(produto.planejamento))}
                               onChange={(e) => handlePlanejamentoChange(index, e.target.value)}
+                              onFocus={() => handlePlanejamentoFocus(index)}
                               onBlur={() => handlePlanejamentoBlur(index)}
                               className="text-right"
-                              placeholder="Digite o valor"
+                              placeholder="0,00"
                             />
                           </TableCell>
                         </TableRow>
@@ -413,7 +428,6 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
         </CardContent>
       </Card>
 
-      {/* Modal de Confirmação de Importação */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
           <DialogHeader>

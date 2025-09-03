@@ -43,14 +43,14 @@ const ProdutosSemClassificacaoModal: React.FC<ProdutosSemClassificacaoModalProps
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5 text-red-500" />
-            Produtos Sem Classificação
+            Produtos Não Cadastrados
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Badge variant="destructive" className="text-sm">
-              {produtos.length} produtos não classificados
+              {produtos.length} produtos não cadastrados
             </Badge>
           </div>
 

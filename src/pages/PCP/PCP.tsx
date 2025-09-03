@@ -85,9 +85,9 @@ const COLORS = [
   "hsl(var(--muted))"
 ];
 
-// Cor específica para "Sem classificação"
+// Cor específica para "NÃO CADASTRADO"
 const getBarColor = (setor: string, index: number) => {
-  if (setor === "Sem classificação" || setor === "Não classificado") {
+  if (setor === "NÃO CADASTRADO" || setor === "Sem classificação" || setor === "Não classificado" || setor === "Sem cadastro") {
     return "hsl(var(--destructive))"; // Cor vermelha
   }
   return COLORS[index % COLORS.length];
@@ -162,7 +162,7 @@ const PCP = () => {
     const produtosSemClassificacao: ProdutoSemClassificacao[] = [];
     
     pcpData.forEach((item) => {
-      if (item.classificacao === "Sem classificação" || item.classificacao === "Não classificado" || !item.classificacao) {
+      if (item.classificacao === "NÃO CADASTRADO" || item.classificacao === "Sem classificação" || item.classificacao === "Não classificado" || !item.classificacao) {
         const existente = produtosSemClassificacao.find(p => p.codigo === item.codigo);
         if (existente) {
           existente.quantidade_produzida += item.quantidade_produzida || 0;
@@ -179,9 +179,9 @@ const PCP = () => {
     return produtosSemClassificacao;
   };
 
-  // Função para lidar com clique na barra "Sem classificação"
+  // Função para lidar com clique na barra "NÃO CADASTRADO"
   const handleBarClick = (data: any) => {
-    if (data && (data.setor === "Sem classificação" || data.setor === "Não classificado")) {
+    if (data && (data.setor === "NÃO CADASTRADO" || data.setor === "Sem classificação" || data.setor === "Não classificado" || data.setor === "Sem cadastro")) {
       setShowProdutosSemClassificacao(true);
     }
   };
@@ -308,18 +308,29 @@ const PCP = () => {
 
             {/* Cards de estatísticas */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-              <StatsCard
-                title="Produtos Sem Classificação"
-                value={metrics.produtosSemClassificacao.toString()}
-                icon={<Package className="h-4 w-4" />}
-                trend={{
-                  value: metrics.produtosCadastrados > 0 ? (metrics.produtosSemClassificacao / metrics.produtosCadastrados * 100) : 0,
-                  positive: metrics.produtosSemClassificacao === 0,
-                  label: metrics.produtosSemClassificacao === 0 ? "Todos classificados!" : "Precisam atenção"
+              <div 
+                onClick={() => {
+                  setShowProdutosSemClassificacao(true);
                 }}
-                description="Produtos para classificar"
-                className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-900/10"
-              />
+                className="cursor-pointer hover:scale-105 transition-transform"
+              >
+                <StatsCard
+                  title="Produtos Sem cadastro"
+                  value={metrics.produtosSemClassificacao.toString()}
+                  icon={<Package className="h-4 w-4" />}
+                  trend={{
+                    value: metrics.produtosCadastrados > 0 ? (metrics.produtosSemClassificacao / metrics.produtosCadastrados * 100) : 0,
+                    positive: metrics.produtosSemClassificacao === 0,
+                    label: metrics.produtosSemClassificacao === 0 
+                      ? "Todos os produtos estão cadastrados" 
+                      : metrics.produtosSemClassificacao === 1 
+                        ? "Precisa de atenção" 
+                        : "Precisam de atenção"
+                  }}
+                  description="Importados mas não cadastrados no sistema"
+                  className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-900/10"
+                />
+              </div>
               
               <StatsCard
                 title="Total Cadastrados"
@@ -356,7 +367,7 @@ const PCP = () => {
                   positive: true,
                   label: `${period === 'hoje' ? 'Hoje' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
                 }}
-                description="Unidades produzidas"
+                description="KG produzidos"
                 className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10"
               />
             </div>
@@ -428,7 +439,10 @@ const PCP = () => {
                           <div className="h-[300px]">
                             <ResponsiveContainer width="100%" height="100%">
                              <BarChart
-                               data={chartData.setoresChart}
+                               data={chartData.setoresChart.map(item => ({
+                                 ...item,
+                                 setor: item.setor === "Sem classificação" || item.setor === "NÃO CADASTRADO" || item.setor === "Não classificado" ? "Sem cadastro" : item.setor
+                               }))}
                                layout="vertical"
                                margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
                                onClick={handleBarClick}
@@ -436,28 +450,29 @@ const PCP = () => {
                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                                <XAxis type="number" />
                                <YAxis dataKey="setor" type="category" width={80} />
-                               <Tooltip 
-                                 contentStyle={{
-                                   background: 'hsl(var(--background))',
-                                   borderColor: 'hsl(var(--border))',
-                                   borderRadius: 'var(--radius)',
-                                   color: 'hsl(var(--foreground))',
-                                   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-                                 }}
-                                 labelStyle={{
-                                   color: 'hsl(var(--foreground))',
-                                   fontWeight: '500'
-                                 }}
-                                 itemStyle={{
-                                   color: 'hsl(var(--foreground))'
-                                 }}
-                               />
-                               <Bar 
-                                 dataKey="producao_real" 
-                                 name="Produção (un)"
-                                 onClick={handleBarClick}
-                                 style={{ cursor: 'pointer' }}
-                               >
+                              <Tooltip 
+                                contentStyle={{
+                                  background: 'hsl(var(--background))',
+                                  borderColor: 'hsl(var(--border))',
+                                  borderRadius: 'var(--radius)',
+                                  color: 'hsl(var(--foreground))',
+                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                                }}
+                                labelStyle={{
+                                  color: 'hsl(var(--foreground))',
+                                  fontWeight: '500'
+                                }}
+                                itemStyle={{
+                                  color: 'hsl(var(--foreground))'
+                                }}
+                                formatter={(value: number) => value.toLocaleString()}
+                              />
+                                <Bar 
+                                  dataKey="producao_real" 
+                                  name="Produção (KG)"
+                                  onClick={handleBarClick}
+                                  style={{ cursor: 'pointer' }}
+                                >
                                  {chartData.setoresChart.map((entry, index) => (
                                    <Cell 
                                      key={`cell-${index}`} 
@@ -509,6 +524,7 @@ const PCP = () => {
                               itemStyle={{
                                 color: 'hsl(var(--foreground))'
                               }}
+                              formatter={(value: number) => value.toLocaleString()}
                             />
                             <Legend />
                             <Bar 

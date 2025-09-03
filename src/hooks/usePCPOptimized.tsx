@@ -414,12 +414,19 @@ export const usePCPOptimized = () => {
   const getMetrics = useCallback((period: PeriodFilter = 'hoje') => {
     // Métricas de produtos
     const produtosCadastrados = pcpProdutos.length;
-    const produtosSemClassificacao = pcpProdutos.filter(produto => 
-      !produto.classificacao || 
-      produto.classificacao === 'Sem classificação' || 
-      produto.classificacao === '' ||
-      produto.classificacao === 'Não classificado'
-    ).length;
+    // Basear a métrica no mesmo critério do modal: códigos únicos em pcpData sem classificação
+    const codigosSemCadastro = new Set(
+      pcpData
+        .filter(item =>
+          (!item.classificacao ||
+            item.classificacao === 'Sem classificação' ||
+            item.classificacao === '' ||
+            item.classificacao === 'Não classificado') &&
+          item.codigo // garantir que estamos contando por código
+        )
+        .map(item => item.codigo as string)
+    );
+    const produtosSemClassificacao = codigosSemCadastro.size;
     
     // Métricas de produção (mantidas)
     const totalOrdens = pcpData.length;
