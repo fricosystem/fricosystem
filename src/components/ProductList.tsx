@@ -85,8 +85,8 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
   const filteredCount = filteredProducts.length;
 
   const dropAreaClass = isOver && canDrop
-    ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 shadow-md'
-    : 'bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800';
+    ? 'border-primary shadow-md'
+    : 'border-border';
 
   return (
     <motion.div 
@@ -98,10 +98,10 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
       transition={{ duration: 0.5 }}
     >
       {/* Cabeçalho */}
-      <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 min-w-0">
+      <div className="p-3 sm:p-4 border-b min-w-0">
         <div className="flex items-center justify-between mb-3 min-w-0">
-          <h2 className="text-base sm:text-lg font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent flex items-center min-w-0 truncate">
-            <List className="mr-2 text-blue-500 dark:text-blue-400 flex-shrink-0" size={20} /> 
+          <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center min-w-0 truncate">
+            <List className="mr-2 text-primary flex-shrink-0" size={20} /> 
             <span className="truncate">Produtos</span>
           </h2>
           
@@ -116,28 +116,25 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
         </div>
         
         <div className="flex flex-wrap gap-1 sm:gap-2 mb-3 min-w-0">
-          <Badge variant="outline" className="bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-200 text-xs">
-            Total: {totalProducts}
+          <Badge variant="outline" className="text-primary border-primary/20 text-xs">
+            Endereçados: {withPositionCount}
           </Badge>
-          <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs">
-            End.: {withPositionCount}
-          </Badge>
-          <Badge variant="outline" className="bg-orange-50 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs">
-            Sem: {withoutPositionCount}
+          <Badge variant="outline" className="text-destructive border-destructive/20 text-xs">
+            Sem endereçamento: {withoutPositionCount}
           </Badge>
         </div>
         
         <div className="relative mb-3 min-w-0">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 z-10" size={16} />
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
           <Input
             placeholder="Buscar..."
-            className="pl-8 pr-8 text-sm transition-all duration-300 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring focus:ring-blue-200 dark:focus:ring-blue-700/30 w-full min-w-0"
+            className="pl-8 pr-8 text-sm w-full min-w-0"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           {searchTerm && (
             <button 
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 z-10"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground z-10"
               onClick={handleClearSearch}
             >
               <Trash2 size={14} />
@@ -150,10 +147,10 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
             value={filterOption}
             onValueChange={setFilterOption}
           >
-            <SelectTrigger className="flex-1 min-w-0 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-sm">
+            <SelectTrigger className="flex-1 min-w-0 text-sm">
               <SelectValue placeholder="Filtrar..." />
             </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 z-50">
+            <SelectContent className="z-50">
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="with-position">Com endereço</SelectItem>
               <SelectItem value="without-position">Sem endereço</SelectItem>
@@ -173,20 +170,20 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
         </div>
       </div>
       
-      <div className="p-3 bg-gray-50 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
+      <div className="p-3 border-b">
         <motion.div 
-          className="text-sm text-gray-700 dark:text-gray-300 rounded-md flex items-center justify-between"
+          className="text-sm text-muted-foreground rounded-md flex items-center justify-between"
           initial={{ opacity: 0, x: -5 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
           <div className="flex items-center">
-            <Package2 size={14} className="mr-1 text-blue-500 dark:text-blue-400" /> 
+            <Package2 size={14} className="mr-1 text-primary" /> 
             {filteredCount} produto(s) encontrado(s)
           </div>
           
           {isOver && canDrop && (
-            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+            <span className="text-xs text-primary font-medium">
               Solte para remover
             </span>
           )}
@@ -194,21 +191,21 @@ export function ProductList({ products, onRemoveShelf, currentStock }: ProductLi
       </div>
       
       {isOver && canDrop && (
-        <div className="mx-3 mt-3 text-center text-sm p-2 border border-dashed border-blue-400 dark:border-blue-500 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+        <div className="mx-3 mt-3 text-center text-sm p-2 border border-dashed border-primary rounded-md text-primary">
           Solte para remover endereçamento
         </div>
       )}
       
-      <ScrollArea className="flex-1 px-2 sm:px-3 pt-3 bg-white dark:bg-gray-950 overflow-hidden">
+      <ScrollArea className="flex-1 px-2 sm:px-3 pt-3 overflow-hidden">
         <AnimatePresence>
           {filteredProducts.length === 0 ? (
             <motion.div 
-              className="text-center text-gray-500 dark:text-gray-400 py-8 min-w-0"
+              className="text-center text-muted-foreground py-8 min-w-0"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <Package2 size={32} className="mx-auto mb-2 text-gray-400 dark:text-gray-600" />
+              <Package2 size={32} className="mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm">Nenhum produto encontrado</p>
               {(searchTerm || filterOption !== 'all') && (
                 <Button 

@@ -92,7 +92,7 @@ export function WarehouseGrid({ products, onUpdateProductPosition, currentStock 
           transition={{ delay: 0.1 * (andares - andar), duration: 0.3 }}
         >
           <div className="flex items-center justify-center">
-            <div className="bg-primary/20 text-primary px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-bold border">
+            <div className="text-primary px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-bold border border-primary/20">
               <span className="hidden sm:inline">ANDAR </span>A{andar}
             </div>
           </div>
@@ -116,11 +116,11 @@ export function WarehouseGrid({ products, onUpdateProductPosition, currentStock 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-2">
         <div className="flex items-center">
           <Warehouse className="mr-3 text-primary" size={20} />
-          <h2 className="text-xl font-bold">
+          <h2 className="text-xl font-bold text-foreground">
             {currentStock.replace('estoque', 'Estoque ').toUpperCase()}
           </h2>
         </div>
-        <div className="text-xs font-medium px-3 py-1.5 bg-muted rounded-lg border flex items-center">
+        <div className="text-xs font-medium px-3 py-1.5 text-muted-foreground rounded-lg border flex items-center">
           <Truck className="mr-2 text-primary" size={12} />
           <span className="hidden sm:inline">6 RUAS × 5 ANDARES × 5 PALETES</span>
           <span className="sm:hidden">6R × 5A × 5P</span>
@@ -149,12 +149,12 @@ export function WarehouseGrid({ products, onUpdateProductPosition, currentStock 
         </Select>
       </div>
       
-      <div className="bg-muted/50 rounded-lg p-4 border">
+      <div className="rounded-lg p-4 border">
         <div className="flex flex-col sm:flex-row sm:items-center mb-4 gap-2">
-          <h3 className="text-base font-bold">
+          <h3 className="text-base font-bold text-foreground">
             RUA {selectedRua.toString().padStart(2, '0')}
           </h3>
-          <span className="px-3 py-1 bg-primary/20 text-primary rounded-full text-xs font-bold w-fit">
+          <span className="px-3 py-1 text-primary rounded-full text-xs font-bold w-fit border border-primary/20">
             {productsInCurrentStock.filter(p => p.prateleira?.includes(`Rua ${selectedRua.toString().padStart(2, '0')}`)).length} PRODUTOS
           </span>
         </div>

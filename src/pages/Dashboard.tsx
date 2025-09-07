@@ -132,20 +132,43 @@ const Dashboard = () => {
         const baixoEstoque = produtosData.filter(p => p.quantidade && p.quantidade < 5);
         setProdutosBaixoEstoque(baixoEstoque);
 
-        // Calcular produtos deste mês
+        // Calcular produtos baseado no período selecionado
         const now = new Date();
-        const mesAtual = now.getMonth();
-        const anoAtual = now.getFullYear();
         
-        const produtosMes = produtosData.filter(produto => {
+        const produtosFiltrados = produtosData.filter(produto => {
           if (!produto.data_criacao) return false;
           
           const dataCriacao = new Date(produto.data_criacao);
-          return dataCriacao.getMonth() === mesAtual && 
-                 dataCriacao.getFullYear() === anoAtual;
+          
+          if (period === 'hoje') {
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const endOfDay = new Date(startOfDay);
+            endOfDay.setHours(23, 59, 59, 999);
+            return dataCriacao >= startOfDay && dataCriacao <= endOfDay;
+          } else if (period === 'semana') {
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay());
+            startOfWeek.setHours(0, 0, 0, 0);
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+            return dataCriacao >= startOfWeek && dataCriacao <= endOfWeek;
+          } else if (period === 'mes') {
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            endOfMonth.setHours(23, 59, 59, 999);
+            return dataCriacao >= startOfMonth && dataCriacao <= endOfMonth;
+          } else if (period === 'ano') {
+            const startOfYear = new Date(now.getFullYear(), 0, 1);
+            const endOfYear = new Date(now.getFullYear(), 11, 31);
+            endOfYear.setHours(23, 59, 59, 999);
+            return dataCriacao >= startOfYear && dataCriacao <= endOfYear;
+          }
+          
+          return false;
         }).length;
         
-        setProdutosEsteMes(produtosMes);
+        setProdutosEsteMes(produtosFiltrados);
 
         // 3. Carregar transferências
         setLoadingProgress(50);
@@ -194,13 +217,24 @@ const Dashboard = () => {
     };
     
     fetchData();
-  }, [toast]);
+  }, [period, toast]); // Recarregar quando o período mudar
 
   // Calcular porcentagem de usuários ativos
   const porcentagemAtivos = totalUsuarios > 0 ? (usuariosAtivos / totalUsuarios) * 100 : 0;
 
-  // Calcular porcentagem de produtos cadastrados este mês
-  const porcentagemProdutosEsteMes = totalProdutos > 0 ? (produtosEsteMes / totalProdutos) * 100 : 0;
+  // Calcular porcentagem de produtos cadastrados no período
+  const porcentagemProdutosPeriodo = totalProdutos > 0 ? (produtosEsteMes / totalProdutos) * 100 : 0;
+  
+  // Texto baseado no período
+  const getPeriodText = () => {
+    switch (period) {
+      case 'hoje': return 'hoje';
+      case 'semana': return 'esta semana';
+      case 'mes': return 'este mês';
+      case 'ano': return 'este ano';
+      default: return 'no período';
+    }
+  };
 
   // Preparar dados para gráficos
   const produtosPorFornecedor = () => {
@@ -253,61 +287,76 @@ const Dashboard = () => {
     let data: { name: string; transferencias: number }[] = [];
     
     if (period === "hoje") {
+      // Filtro mais preciso para hoje - considerar apenas o dia atual
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setHours(23, 59, 59, 999);
+      
       // Por hora hoje
       const hours = Array.from({ length: 24 }, (_, i) => i);
       data = hours.map(hour => ({
         name: `${hour}h`,
         transferencias: transferencias.filter(t => {
           const date = convertFirebaseTimestamp(t.data_transferencia);
-          return date.getDate() === now.getDate() && 
-                 date.getMonth() === now.getMonth() && 
-                 date.getFullYear() === now.getFullYear() && 
-                 date.getHours() === hour;
+          return date >= startOfDay && date <= endOfDay && date.getHours() === hour;
         }).reduce((sum, t) => sum + (t.quantidade || 0), 0)
       }));
     } else if (period === "semana") {
-      // Por dia na semana
+      // Por dia na semana - semana atual
       const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
       const startOfWeek = new Date(now);
       startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
       
       data = days.map((day, i) => {
         const dayDate = new Date(startOfWeek);
         dayDate.setDate(startOfWeek.getDate() + i);
+        const endOfDay = new Date(dayDate);
+        endOfDay.setHours(23, 59, 59, 999);
         
         return {
           name: day,
           transferencias: transferencias.filter(t => {
             const date = convertFirebaseTimestamp(t.data_transferencia);
-            return date.getDate() === dayDate.getDate() && 
-                   date.getMonth() === dayDate.getMonth() && 
-                   date.getFullYear() === dayDate.getFullYear();
+            return date >= dayDate && date <= endOfDay;
           }).reduce((sum, t) => sum + (t.quantidade || 0), 0)
         };
       });
     } else if (period === "mes") {
-      // Por dia no mês
-      const daysInMonth = getDaysInMonth(now.getMonth() + 1, now.getFullYear());
-      data = Array.from({ length: daysInMonth }, (_, i) => ({
-        name: `${i + 1}`,
-        transferencias: transferencias.filter(t => {
-          const date = convertFirebaseTimestamp(t.data_transferencia);
-          return date.getDate() === i + 1 && 
-                 date.getMonth() === now.getMonth() && 
-                 date.getFullYear() === now.getFullYear();
-        }).reduce((sum, t) => sum + (t.quantidade || 0), 0)
-      }));
+      // Por dia no mês atual
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const daysInMonth = endOfMonth.getDate();
+      
+      data = Array.from({ length: daysInMonth }, (_, i) => {
+        const dayDate = new Date(now.getFullYear(), now.getMonth(), i + 1);
+        const endOfDay = new Date(dayDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        return {
+          name: `${i + 1}`,
+          transferencias: transferencias.filter(t => {
+            const date = convertFirebaseTimestamp(t.data_transferencia);
+            return date >= dayDate && date <= endOfDay;
+          }).reduce((sum, t) => sum + (t.quantidade || 0), 0)
+        };
+      });
     } else {
-      // Por mês no ano
+      // Por mês no ano atual
       const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'];
-      data = months.map((month, i) => ({
-        name: month,
-        transferencias: transferencias.filter(t => {
-          const date = convertFirebaseTimestamp(t.data_transferencia);
-          return date.getMonth() === i && 
-                 date.getFullYear() === now.getFullYear();
-        }).reduce((sum, t) => sum + (t.quantidade || 0), 0)
-      }));
+      data = months.map((month, i) => {
+        const startOfMonth = new Date(now.getFullYear(), i, 1);
+        const endOfMonth = new Date(now.getFullYear(), i + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+        
+        return {
+          name: month,
+          transferencias: transferencias.filter(t => {
+            const date = convertFirebaseTimestamp(t.data_transferencia);
+            return date >= startOfMonth && date <= endOfMonth;
+          }).reduce((sum, t) => sum + (t.quantidade || 0), 0)
+        };
+      });
     }
     
     return data;

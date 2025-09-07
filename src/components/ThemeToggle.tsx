@@ -249,6 +249,7 @@ const AppSidebar = () => {
       items: [
         { to: "/financial", icon: Wallet, label: "Financeiro" },
         { to: "/cost-centers", icon: BarChart3, label: "Centros de Custo" },
+        { to: "/centro-custo", icon: BarChart3, label: "Centro de Custo" },
         { to: "/suppliers", icon: Users, label: "Fornecedores" },
         { to: "/relatorios", icon: Home, label: "Relatórios" },
       ],

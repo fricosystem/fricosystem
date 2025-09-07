@@ -76,13 +76,26 @@ import ProdutosSemClassificacaoModal from "@/components/PCP/ProdutosSemClassific
 import AdicionarProdutoModal from "@/components/PCP/AdicionarProdutoModal";
 
 const COLORS = [
-  "hsl(var(--primary))", 
-  "hsl(var(--success))", 
-  "hsl(var(--warning))", 
-  "hsl(var(--info))", 
-  "hsl(var(--secondary))", 
-  "hsl(var(--accent))", 
-  "hsl(var(--muted))"
+  "#3B82F6", // Azul vibrante
+  "#10B981", // Verde esmeralda
+  "#F59E0B", // Âmbar
+  "#EF4444", // Vermelho
+  "#8B5CF6", // Roxo
+  "#06B6D4", // Ciano
+  "#F97316", // Laranja
+  "#84CC16", // Lima
+  "#EC4899", // Rosa
+  "#6366F1", // Índigo
+  "#14B8A6", // Teal
+  "#F43F5E", // Rosa vermelho
+  "#A855F7", // Violeta
+  "#22C55E", // Verde
+  "#FB923C", // Laranja claro
+  "#38BDF8", // Azul céu
+  "#FBBF24", // Amarelo
+  "#F472B6", // Rosa claro
+  "#34D399", // Verde água
+  "#A78BFA"  // Lavanda
 ];
 
 // Cor específica para "NÃO CADASTRADO"
@@ -352,7 +365,7 @@ const PCP = () => {
                 trend={{
                   value: metrics.eficienciaMedia,
                   positive: metrics.eficienciaMedia >= 85,
-                  label: metrics.eficienciaMedia >= 85 ? "Acima da meta" : "Abaixo da meta"
+                  label: metrics.eficienciaMedia >= 85 ? "Acima da meta" : metrics.eficienciaMedia === 0 ? "Sem produção" : "Abaixo da meta"
                 }}
                 description="Meta: 85%"
                 className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
@@ -363,17 +376,38 @@ const PCP = () => {
                 value={metrics.producaoTotal.toLocaleString()}
                 icon={<Package className="h-4 w-4" />}
                 trend={{
-                  value: 15,
-                  positive: true,
-                  label: `${period === 'hoje' ? 'Hoje' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
+                  value: metrics.producaoTotal > 0 ? 15 : 0,
+                  positive: metrics.producaoTotal > 0,
+                  label: metrics.producaoTotal === 0 
+                    ? `Sem produção ${period === 'hoje' ? 'hoje' : period === 'semana' ? 'esta semana' : period === 'mes' ? 'este mês' : 'este ano'}`
+                    : `${period === 'hoje' ? 'Hoje' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
                 }}
                 description="KG produzidos"
                 className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10"
               />
             </div>
 
-            {/* Gráficos */}
-            {chartData.turnosChart.length > 0 && (
+            {/* Mensagem quando não há dados */}
+            {pcpData.length === 0 && !isLoading && (
+              <Card className="mb-6">
+                <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                  <Package className="h-12 w-12 text-muted-foreground" />
+                  <p className="text-lg font-medium text-muted-foreground">
+                    Nenhuma produção encontrada
+                  </p>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Não há dados de produção para o período de{" "}
+                    {period === 'hoje' ? 'hoje' : 
+                     period === 'semana' ? 'esta semana' : 
+                     period === 'mes' ? 'este mês' : 
+                     'este ano'}
+                  </p>
+                </div>
+              </Card>
+            )}
+
+            {/* Gráficos principais - Produção por Turno e Setores */}
+            {pcpData.length > 0 && chartData.turnosChart.length > 0 && (
               <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-6">
                     {/* Produção por Turno */}
                     <Card>
@@ -491,8 +525,8 @@ const PCP = () => {
                 )}
 
                 {/* Performance por Produto - ocupando toda a largura */}
-                {chartData.performanceChart.length > 0 && (
-                  <Card className="w-full">
+                {pcpData.length > 0 && chartData.performanceChart.length > 0 && (
+                  <Card className="w-full mb-6">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Package className="h-5 w-5" /> Performance por Produto
@@ -504,6 +538,60 @@ const PCP = () => {
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart
                             data={chartData.performanceChart}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Tooltip 
+                              contentStyle={{
+                                background: 'hsl(var(--background))',
+                                borderColor: 'hsl(var(--border))',
+                                borderRadius: 'var(--radius)',
+                                color: 'hsl(var(--foreground))',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                              }}
+                              labelStyle={{
+                                color: 'hsl(var(--foreground))',
+                                fontWeight: '500'
+                              }}
+                              itemStyle={{
+                                color: 'hsl(var(--foreground))'
+                              }}
+                              formatter={(value: number) => value.toLocaleString()}
+                            />
+                            <Legend />
+                            <Bar 
+                              dataKey="planejado" 
+                              name="Planejado (kg)" 
+                              fill="hsl(var(--primary))"
+                            />
+                            <Bar 
+                              dataKey="produzido" 
+                              name="Produzido (kg)" 
+                              fill="hsl(var(--success))"
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Performance por Classificação - ocupando toda a largura */}
+                {pcpData.length > 0 && chartData.performanceClassificacaoChart.length > 0 && (
+                  <Card className="w-full mb-6">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Layers className="h-5 w-5" /> Performance por Classificação
+                      </CardTitle>
+                      <CardDescription>Planejado vs Produzido por família de produto</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={chartData.performanceClassificacaoChart}
                             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />

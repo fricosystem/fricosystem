@@ -8,8 +8,8 @@ const ChatPage = () => {
   
   return (
     <ThemeProvider>
-      <div className="h-screen">
-          {user ? <Chat /> : <Login />}
+      <div className="h-screen w-full overflow-hidden">
+        {user ? <Chat /> : <Login />}
       </div>
     </ThemeProvider>
   );

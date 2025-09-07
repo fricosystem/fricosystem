@@ -35,10 +35,10 @@ export function ProductItem({ product, isCompact = false }: ProductItemProps) {
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
     >
-      <Card className={`mb-2 transition-all duration-200 border border-gray-700 bg-gray-800 hover:bg-gray-750
-        ${hasShelf ? 'hover:border-amber-400' : 'hover:border-blue-400'}`}>
+      <Card className={`mb-2 transition-all duration-200 border
+        ${hasShelf ? 'hover:border-primary' : 'hover:border-primary'}`}>
         <CardContent className="p-2 flex items-center gap-2">
-          <div className="w-10 h-10 rounded-md overflow-hidden bg-gray-700 flex-shrink-0 border border-gray-600">
+          <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 border">
             <img 
               src={product.imagem || '/placeholder.svg'} 
               alt={product.nome} 
@@ -53,31 +53,31 @@ export function ProductItem({ product, isCompact = false }: ProductItemProps) {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <h3 className="font-medium text-xs truncate text-gray-100">{product.nome}</h3>
+                  <h3 className="font-medium text-xs truncate">{product.nome}</h3>
                 </TooltipTrigger>
-                <TooltipContent className="bg-gray-800 border-gray-700 text-gray-100 text-xs p-2">
+                <TooltipContent className="text-xs p-2">
                   <div className="space-y-1">
-                    <p><strong className="text-amber-400">Código:</strong> {product.codigo_material}</p>
-                    <p><strong className="text-amber-400">Quantidade:</strong> {product.quantidade} {product.unidade_de_medida}</p>
-                    <p><strong className="text-amber-400">Valor:</strong> {formatCurrency(product.valor_unitario)}</p>
-                    {product.prateleira && <p><strong className="text-amber-400">Posição:</strong> {product.prateleira}</p>}
+                    <p><strong className="text-primary">Código:</strong> {product.codigo_material}</p>
+                    <p><strong className="text-primary">Quantidade:</strong> {product.quantidade} {product.unidade_de_medida}</p>
+                    <p><strong className="text-primary">Valor:</strong> {formatCurrency(product.valor_unitario)}</p>
+                    {product.prateleira && <p><strong className="text-primary">Posição:</strong> {product.prateleira}</p>}
                   </div>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
             
-            <p className="text-[11px] text-gray-400 truncate flex items-center mt-0.5">
-              <Tag size={10} className="mr-1 text-amber-400" /> {product.codigo_material}
+            <p className="text-[11px] text-muted-foreground truncate flex items-center mt-0.5">
+              <Tag size={10} className="mr-1 text-primary" /> {product.codigo_material}
             </p>
             
             <div className="flex items-center mt-1 gap-1.5">
               {product.prateleira && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] bg-gray-700 text-amber-400 border border-gray-600">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] text-primary border">
                   <Package size={10} className="mr-1" /> {product.prateleira.split(' - ').pop()}
                 </span>
               )}
               
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] bg-gray-700 text-gray-300 border border-gray-600">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] text-muted-foreground border">
                 {product.quantidade} {product.unidade_de_medida}
               </span>
             </div>

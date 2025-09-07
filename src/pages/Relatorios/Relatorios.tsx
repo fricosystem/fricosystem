@@ -78,15 +78,26 @@ interface Filtros {
 
 const Relatorios = () => {
   const { userData } = useAuth();
+  
+  // Estados principais
   const [todosRelatorios, setTodosRelatorios] = useState<Relatorio[]>([]);
   const [relatoriosFiltrados, setRelatoriosFiltrados] = useState<Relatorio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estados para filtros
   const [filtros, setFiltros] = useState<Filtros>({
     status: 'todos',
     tipo: 'todos',
     periodo: 'hoje'
   });
+  
+  // Estados para os valores dos inputs de data
+  const [dataInicioInput, setDataInicioInput] = useState('');
+  const [dataFimInput, setDataFimInput] = useState('');
+  const [filtroPersonalizadoAplicado, setFiltroPersonalizadoAplicado] = useState(false);
+  
+  // Opções para filtros
   const [opcoesFiltro, setOpcoesFiltro] = useState({
     solicitantes: [] as string[],
     cargos: [] as string[],
@@ -155,8 +166,11 @@ const Relatorios = () => {
 
   useEffect(() => {
     // Aplicar todos os filtros sempre que filtros ou searchTerm mudar
-    aplicarFiltros();
-  }, [todosRelatorios, filtros, searchTerm]);
+    // Exceto quando for período personalizado (só aplica quando botão for clicado)
+    if (filtros.periodo !== 'personalizado' || filtroPersonalizadoAplicado) {
+      aplicarFiltros();
+    }
+  }, [todosRelatorios, filtros, searchTerm, filtroPersonalizadoAplicado]);
 
   const aplicarFiltros = () => {
     let resultados = [...todosRelatorios];
@@ -275,6 +289,13 @@ const Relatorios = () => {
       dataInicio: undefined,
       dataFim: undefined
     }));
+    
+    // Limpa os inputs quando muda o período
+    if (periodo !== 'personalizado') {
+      setDataInicioInput('');
+      setDataFimInput('');
+      setFiltroPersonalizadoAplicado(false);
+    }
   };
   
   const handleFiltroChange = (key: keyof Filtros, value: any) => {
@@ -283,12 +304,58 @@ const Relatorios = () => {
       [key]: value
     }));
   };
-  
-  const handleDataChange = (key: 'dataInicio' | 'dataFim', value: string) => {
-    setFiltros(prev => ({
-      ...prev,
-      [key]: value ? new Date(value) : undefined
-    }));
+
+  const formatDateInput = (value: string) => {
+    // Remove tudo que não for número
+    const numbers = value.replace(/\D/g, '');
+    
+    // Aplica a máscara DD/MM/YYYY
+    if (numbers.length <= 2) {
+      return numbers;
+    } else if (numbers.length <= 4) {
+      return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
+    } else {
+      return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
+    }
+  };
+
+  const parseDateFromInput = (dateString: string): Date | undefined => {
+    if (!dateString || dateString.length !== 10) return undefined;
+    
+    const [day, month, year] = dateString.split('/').map(Number);
+    
+    // Validação básica
+    if (!day || !month || !year || day > 31 || month > 12 || year < 1900) {
+      return undefined;
+    }
+    
+    return new Date(year, month - 1, day);
+  };
+
+  const handleDataInicioChange = (value: string) => {
+    const formattedValue = formatDateInput(value);
+    setDataInicioInput(formattedValue);
+    // Não aplica filtro automaticamente durante digitação
+  };
+
+  const handleDataFimChange = (value: string) => {
+    const formattedValue = formatDateInput(value);
+    setDataFimInput(formattedValue);
+    // Não aplica filtro automaticamente durante digitação
+  };
+
+  const aplicarFiltroPersonalizado = () => {
+    const dataInicio = parseDateFromInput(dataInicioInput);
+    const dataFim = parseDateFromInput(dataFimInput);
+    
+    if (dataInicio && dataFim) {
+      setFiltros(prev => ({
+        ...prev,
+        dataInicio,
+        dataFim
+      }));
+      setFiltroPersonalizadoAplicado(true);
+    }
   };
   
   const resetFiltros = () => {
@@ -298,6 +365,9 @@ const Relatorios = () => {
       periodo: 'hoje'
     });
     setSearchTerm('');
+    setDataInicioInput('');
+    setDataFimInput('');
+    setFiltroPersonalizadoAplicado(false);
   };
 
   const formatCurrency = (value: number): string => {
@@ -421,21 +491,33 @@ const Relatorios = () => {
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium">Data Inicial</Label>
                   <Input
-                    type="date"
-                    placeholder="Data inicial"
-                    value={filtros.dataInicio ? format(filtros.dataInicio, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => handleDataChange('dataInicio', e.target.value)}
+                    type="text"
+                    placeholder="DD/MM/YYYY"
+                    value={dataInicioInput}
+                    onChange={(e) => handleDataInicioChange(e.target.value)}
+                    maxLength={10}
                   />
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium">Data Final</Label>
-                  <Input
-                    type="date"
-                    placeholder="Data final"
-                    value={filtros.dataFim ? format(filtros.dataFim, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => handleDataChange('dataFim', e.target.value)}
-                    disabled={!filtros.dataInicio}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="DD/MM/YYYY"
+                      value={dataFimInput}
+                      onChange={(e) => handleDataFimChange(e.target.value)}
+                      maxLength={10}
+                      disabled={!dataInicioInput || dataInicioInput.length < 10}
+                    />
+                    <Button 
+                      onClick={aplicarFiltroPersonalizado}
+                      disabled={!dataInicioInput || dataInicioInput.length < 10 || !dataFimInput || dataFimInput.length < 10}
+                      variant="default"
+                      size="sm"
+                    >
+                      Aplicar Filtro Personalizado
+                    </Button>
+                  </div>
                 </div>
               </>
             )}

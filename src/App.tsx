@@ -37,9 +37,13 @@ import TransferenciasET from "./pages/TransferenciasET";
 import Compras from "./pages/Compras";
 import GestaoProdutos from "./pages/GestaoProdutos";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
+import CentroCusto from "./pages/CentroCusto";
 
 // Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
+
+// Páginas de Inventário
+import Inventario from "./pages/Inventario";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -96,6 +100,7 @@ const AppContent = () => {
           <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
           <Route path="/bem-vindo" element={<AuthGuard><TelaBemVindo /></AuthGuard>} />
           <Route path="/produtos" element={<AuthGuard><Produtos /></AuthGuard>} />
+          <Route path="/inventario" element={<AuthGuard><Inventario /></AuthGuard>} />
           <Route path="/notas-fiscais" element={<AuthGuard><NotasFiscais /></AuthGuard>} />
           <Route path="/administrativo" element={<AuthGuard><Administrativo /></AuthGuard>} />
           <Route path="/perfil" element={<AuthGuard><Perfil /></AuthGuard>} />
@@ -111,6 +116,7 @@ const AppContent = () => {
           <Route path="/gestao-usuarios" element={<AuthGuard><GestaoUsuarios /></AuthGuard>} />
           <Route path="/fornecedor-produtos" element={<AuthGuard><FornecedorProdutos /></AuthGuard>} />
           <Route path="/notas-fiscais-lancamento" element={<AuthGuard><NotasFiscaisLancamento /></AuthGuard>} />
+          <Route path="/centro-custo" element={<AuthGuard><CentroCusto /></AuthGuard>} />
           <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
           <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
 

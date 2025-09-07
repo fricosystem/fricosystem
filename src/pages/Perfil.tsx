@@ -13,39 +13,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Building2, 
-  Briefcase, 
-  Calendar, 
-  Edit3, 
-  Camera, 
-  Save, 
-  Bell,
-  Lock,
-  Shield,
-  Moon,
-  Sun,
-  Palette,
-  Globe,
-  Clock,
-  MapPin,
-  FileText
-} from 'lucide-react';
+import { User, Mail, Phone, Building2, Briefcase, Calendar, Edit3, Camera, Save, Bell, Lock, Shield, Moon, Sun, Palette, Globe, Clock, MapPin, FileText } from 'lucide-react';
 import { doc, updateDoc, getFirestore } from 'firebase/firestore';
 import { updateProfile, updatePassword } from 'firebase/auth';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
-
 const Perfil = () => {
-  const { user, userData } = useAuth();
-  const { toast } = useToast();
+  const {
+    user,
+    userData
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [theme, setTheme] = useState('dark');
-  
+
   // Dados do perfil
   const [profileData, setProfileData] = useState({
     nome: userData?.nome || '',
@@ -87,9 +71,7 @@ const Perfil = () => {
     newPassword: '',
     confirmPassword: ''
   });
-
   const db = getFirestore();
-
   useEffect(() => {
     if (userData) {
       setProfileData(prev => ({
@@ -105,10 +87,8 @@ const Perfil = () => {
       }));
     }
   }, [userData]);
-
   const handleProfileUpdate = async () => {
     if (!user) return;
-    
     setLoading(true);
     try {
       // Atualizar perfil no Firebase Auth
@@ -127,55 +107,47 @@ const Perfil = () => {
         unidade: profileData.unidade,
         imagem_perfil: profileData.imagem_perfil
       });
-
       toast({
         title: "Perfil atualizado",
-        description: "Suas informações foram salvas com sucesso.",
+        description: "Suas informações foram salvas com sucesso."
       });
-      
       setIsEditing(false);
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o perfil. Tente novamente.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const handlePasswordChange = async () => {
     if (!user) return;
-    
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({
         title: "Erro",
         description: "As senhas não coincidem.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     if (passwordData.newPassword.length < 6) {
       toast({
-        title: "Erro", 
+        title: "Erro",
         description: "A nova senha deve ter pelo menos 6 caracteres.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setLoading(true);
     try {
       await updatePassword(user, passwordData.newPassword);
-      
       toast({
         title: "Senha alterada",
-        description: "Sua senha foi atualizada com sucesso.",
+        description: "Sua senha foi atualizada com sucesso."
       });
-      
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -186,22 +158,20 @@ const Perfil = () => {
       toast({
         title: "Erro",
         description: "Não foi possível alterar a senha. Tente novamente.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const getUserInitial = () => {
     return profileData.nome ? profileData.nome.charAt(0).toUpperCase() : 'U';
   };
-
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'Não disponível';
     try {
       let date: Date;
-      
+
       // Handle Firestore Timestamp
       if (timestamp.toDate && typeof timestamp.toDate === 'function') {
         date = timestamp.toDate();
@@ -214,21 +184,20 @@ const Perfil = () => {
       else {
         date = new Date(timestamp);
       }
-      
+
       // Validate the date
       if (isNaN(date.getTime())) {
         return 'Data inválida';
       }
-      
-      return format(date, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: pt });
+      return format(date, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
+        locale: pt
+      });
     } catch (error) {
       console.error('Error formatting date:', error, timestamp);
       return 'Data inválida';
     }
   };
-
-  return (
-    <AppLayout title="Meu Perfil">
+  return <AppLayout title="Meu Perfil">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header do Perfil */}
         <Card>
@@ -242,12 +211,7 @@ const Perfil = () => {
                     {getUserInitial()}
                   </AvatarFallback>
                 </Avatar>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="absolute -bottom-2 -right-2 h-8 w-8 p-0"
-                  onClick={() => setIsEditing(true)}
-                >
+                <Button size="sm" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 p-0" onClick={() => setIsEditing(true)}>
                   <Camera className="h-4 w-4" />
                 </Button>
               </div>
@@ -268,33 +232,31 @@ const Perfil = () => {
                     {profileData.email}
                   </div>
                   
-                  {profileData.unidade && (
-                    <div className="flex items-center gap-1">
+                  {profileData.unidade && <div className="flex items-center gap-1">
                       <Building2 className="h-4 w-4" />
                       {profileData.unidade}
-                    </div>
-                  )}
+                    </div>}
                   
-                  {userData?.data_registro && (
-                    <div className="flex items-center gap-1">
+                  {userData?.data_registro && <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       Membro desde {(() => {
-                        try {
-                          let date: Date;
-                          if (userData.data_registro.toDate && typeof userData.data_registro.toDate === 'function') {
-                            date = userData.data_registro.toDate();
-                          } else if (userData.data_registro.seconds) {
-                            date = new Date(userData.data_registro.seconds * 1000);
-                           } else {
-                             date = new Date(userData.data_registro as any);
-                           }
-                          return format(date, "MMMM 'de' yyyy", { locale: pt });
-                        } catch {
-                          return 'data não disponível';
-                        }
-                      })()}
-                    </div>
-                  )}
+                    try {
+                      let date: Date;
+                      if (userData.data_registro.toDate && typeof userData.data_registro.toDate === 'function') {
+                        date = userData.data_registro.toDate();
+                      } else if (userData.data_registro.seconds) {
+                        date = new Date(userData.data_registro.seconds * 1000);
+                      } else {
+                        date = new Date(userData.data_registro as any);
+                      }
+                      return format(date, "MMMM 'de' yyyy", {
+                        locale: pt
+                      });
+                    } catch {
+                      return 'data não disponível';
+                    }
+                  })()}
+                    </div>}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -303,24 +265,15 @@ const Perfil = () => {
                     <span className="text-sm text-muted-foreground">Online</span>
                   </div>
                   
-                  {userData?.ultimo_login && (
-                    <span className="text-sm text-muted-foreground">
+                  {userData?.ultimo_login && <span className="text-sm text-muted-foreground">
                       • Último acesso: {formatDate(userData.ultimo_login)}
-                    </span>
-                  )}
+                    </span>}
                 </div>
               </div>
 
               {/* Ações */}
               <div className="flex gap-2">
-                <Button
-                  variant={isEditing ? "default" : "outline"}
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="flex items-center gap-2"
-                >
-                  <Edit3 className="h-4 w-4" />
-                  {isEditing ? 'Cancelar' : 'Editar Perfil'}
-                </Button>
+                
               </div>
             </div>
           </CardContent>
@@ -364,23 +317,15 @@ const Perfil = () => {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="nome">Nome Completo</Label>
-                    <Input
-                      id="nome"
-                      value={profileData.nome}
-                      onChange={(e) => setProfileData({...profileData, nome: e.target.value})}
-                      disabled={!isEditing}
-                    />
+                    <Input id="nome" value={profileData.nome} onChange={e => setProfileData({
+                    ...profileData,
+                    nome: e.target.value
+                  })} disabled={!isEditing} />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={profileData.email}
-                      disabled
-                      className="bg-muted"
-                    />
+                    <Input id="email" type="email" value={profileData.email} disabled className="bg-muted" />
                     <p className="text-xs text-muted-foreground">
                       O email não pode ser alterado
                     </p>
@@ -389,76 +334,57 @@ const Perfil = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="cpf">CPF</Label>
-                      <Input
-                        id="cpf"
-                        value={profileData.cpf}
-                        onChange={(e) => setProfileData({...profileData, cpf: e.target.value})}
-                        disabled={!isEditing}
-                      />
+                      <Input id="cpf" value={profileData.cpf} onChange={e => setProfileData({
+                      ...profileData,
+                      cpf: e.target.value
+                    })} disabled={!isEditing} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="cnpj">CNPJ</Label>
-                      <Input
-                        id="cnpj"
-                        value={profileData.cnpj}
-                        onChange={(e) => setProfileData({...profileData, cnpj: e.target.value})}
-                        disabled={!isEditing}
-                      />
+                      <Input id="cnpj" value={profileData.cnpj} onChange={e => setProfileData({
+                      ...profileData,
+                      cnpj: e.target.value
+                    })} disabled={!isEditing} />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="cargo">Cargo</Label>
-                    <Input
-                      id="cargo"
-                      value={profileData.cargo}
-                      onChange={(e) => setProfileData({...profileData, cargo: e.target.value})}
-                      disabled={!isEditing}
-                    />
+                    <Input id="cargo" value={profileData.cargo} onChange={e => setProfileData({
+                    ...profileData,
+                    cargo: e.target.value
+                  })} disabled={!isEditing} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="centro_custo">Centro de Custo</Label>
-                      <Input
-                        id="centro_custo"
-                        value={profileData.centro_de_custo}
-                        onChange={(e) => setProfileData({...profileData, centro_de_custo: e.target.value})}
-                        disabled={!isEditing}
-                      />
+                      <Input id="centro_custo" value={profileData.centro_de_custo} onChange={e => setProfileData({
+                      ...profileData,
+                      centro_de_custo: e.target.value
+                    })} disabled={!isEditing} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="unidade">Unidade</Label>
-                      <Input
-                        id="unidade"
-                        value={profileData.unidade}
-                        onChange={(e) => setProfileData({...profileData, unidade: e.target.value})}
-                        disabled={!isEditing}
-                      />
+                      <Input id="unidade" value={profileData.unidade} onChange={e => setProfileData({
+                      ...profileData,
+                      unidade: e.target.value
+                    })} disabled={!isEditing} />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="imagem_perfil">URL da Foto de Perfil</Label>
-                    <Input
-                      id="imagem_perfil"
-                      value={profileData.imagem_perfil}
-                      onChange={(e) => setProfileData({...profileData, imagem_perfil: e.target.value})}
-                      disabled={!isEditing}
-                      placeholder="https://exemplo.com/sua-foto.jpg"
-                    />
+                    <Input id="imagem_perfil" value={profileData.imagem_perfil} onChange={e => setProfileData({
+                    ...profileData,
+                    imagem_perfil: e.target.value
+                  })} disabled={!isEditing} placeholder="https://exemplo.com/sua-foto.jpg" />
                   </div>
 
-                  {isEditing && (
-                    <Button 
-                      onClick={handleProfileUpdate} 
-                      disabled={loading}
-                      className="w-full"
-                    >
+                  {isEditing && <Button onClick={handleProfileUpdate} disabled={loading} className="w-full">
                       <Save className="h-4 w-4 mr-2" />
                       {loading ? 'Salvando...' : 'Salvar Alterações'}
-                    </Button>
-                  )}
+                    </Button>}
                 </CardContent>
               </Card>
 
@@ -478,21 +404,21 @@ const Perfil = () => {
                     <div className="text-center p-4 border rounded-lg">
                       <div className="text-2xl font-bold text-primary">
                         {(() => {
-                          if (!userData?.data_registro) return 0;
-                          try {
-                            let date: Date;
-                            if (userData.data_registro.toDate && typeof userData.data_registro.toDate === 'function') {
-                              date = userData.data_registro.toDate();
-                            } else if (userData.data_registro.seconds) {
-                              date = new Date(userData.data_registro.seconds * 1000);
-                             } else {
-                               date = new Date(userData.data_registro as any);
-                             }
-                            return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-                          } catch {
-                            return 0;
+                        if (!userData?.data_registro) return 0;
+                        try {
+                          let date: Date;
+                          if (userData.data_registro.toDate && typeof userData.data_registro.toDate === 'function') {
+                            date = userData.data_registro.toDate();
+                          } else if (userData.data_registro.seconds) {
+                            date = new Date(userData.data_registro.seconds * 1000);
+                          } else {
+                            date = new Date(userData.data_registro as any);
                           }
-                        })()}
+                          return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+                        } catch {
+                          return 0;
+                        }
+                      })()}
                       </div>
                       <div className="text-sm text-muted-foreground">Dias na plataforma</div>
                     </div>
@@ -529,18 +455,14 @@ const Perfil = () => {
                       </Badge>
                     </div>
 
-                    {userData?.permissoes && (
-                      <div className="space-y-2">
+                    {userData?.permissoes && <div className="space-y-2">
                         <span className="text-sm font-medium">Permissões:</span>
                         <div className="flex flex-wrap gap-1">
-                          {userData.permissoes.map((permissao, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
+                          {userData.permissoes.map((permissao, index) => <Badge key={index} variant="outline" className="text-xs">
                               {permissao}
-                            </Badge>
-                          ))}
+                            </Badge>)}
                         </div>
-                      </div>
-                    )}
+                      </div>}
                   </div>
                 </CardContent>
               </Card>
@@ -562,39 +484,29 @@ const Perfil = () => {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Senha Atual</Label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
-                  />
+                  <Input id="currentPassword" type="password" value={passwordData.currentPassword} onChange={e => setPasswordData({
+                  ...passwordData,
+                  currentPassword: e.target.value
+                })} />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">Nova Senha</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                  />
+                  <Input id="newPassword" type="password" value={passwordData.newPassword} onChange={e => setPasswordData({
+                  ...passwordData,
+                  newPassword: e.target.value
+                })} />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                  />
+                  <Input id="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={e => setPasswordData({
+                  ...passwordData,
+                  confirmPassword: e.target.value
+                })} />
                 </div>
 
-                <Button 
-                  onClick={handlePasswordChange} 
-                  disabled={loading || !passwordData.newPassword}
-                  className="w-full"
-                >
+                <Button onClick={handlePasswordChange} disabled={loading || !passwordData.newPassword} className="w-full">
                   <Lock className="h-4 w-4 mr-2" />
                   {loading ? 'Alterando...' : 'Alterar Senha'}
                 </Button>
@@ -616,29 +528,23 @@ const Perfil = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 {Object.entries({
-                  email_notifications: 'Notificações por email',
-                  push_notifications: 'Notificações push',
-                  system_updates: 'Atualizações do sistema',
-                  security_alerts: 'Alertas de segurança',
-                  marketing: 'Comunicações de marketing'
-                }).map(([key, label]) => (
-                  <div key={key} className="flex items-center justify-between">
+                email_notifications: 'Notificações por email',
+                push_notifications: 'Notificações push',
+                system_updates: 'Atualizações do sistema',
+                security_alerts: 'Alertas de segurança',
+                marketing: 'Comunicações de marketing'
+              }).map(([key, label]) => <div key={key} className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">{label}</div>
                       <div className="text-sm text-muted-foreground">
-                        {key === 'security_alerts' ? 'Recomendado para manter sua conta segura' : 
-                         key === 'marketing' ? 'Novidades e promoções da plataforma' :
-                         'Receber notificações sobre atividades relevantes'}
+                        {key === 'security_alerts' ? 'Recomendado para manter sua conta segura' : key === 'marketing' ? 'Novidades e promoções da plataforma' : 'Receber notificações sobre atividades relevantes'}
                       </div>
                     </div>
-                    <Switch
-                      checked={notificationSettings[key as keyof typeof notificationSettings]}
-                      onCheckedChange={(checked) => 
-                        setNotificationSettings(prev => ({ ...prev, [key]: checked }))
-                      }
-                    />
-                  </div>
-                ))}
+                    <Switch checked={notificationSettings[key as keyof typeof notificationSettings]} onCheckedChange={checked => setNotificationSettings(prev => ({
+                  ...prev,
+                  [key]: checked
+                }))} />
+                  </div>)}
               </CardContent>
             </Card>
           </TabsContent>
@@ -701,12 +607,10 @@ const Perfil = () => {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label>Visibilidade do perfil</Label>
-                    <Select 
-                      value={privacySettings.profile_visibility} 
-                      onValueChange={(value) => 
-                        setPrivacySettings(prev => ({ ...prev, profile_visibility: value }))
-                      }
-                    >
+                    <Select value={privacySettings.profile_visibility} onValueChange={value => setPrivacySettings(prev => ({
+                    ...prev,
+                    profile_visibility: value
+                  }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -721,22 +625,18 @@ const Perfil = () => {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Mostrar email</span>
-                      <Switch
-                        checked={privacySettings.show_email}
-                        onCheckedChange={(checked) => 
-                          setPrivacySettings(prev => ({ ...prev, show_email: checked }))
-                        }
-                      />
+                      <Switch checked={privacySettings.show_email} onCheckedChange={checked => setPrivacySettings(prev => ({
+                      ...prev,
+                      show_email: checked
+                    }))} />
                     </div>
                     
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Mostrar status online</span>
-                      <Switch
-                        checked={privacySettings.show_status}
-                        onCheckedChange={(checked) => 
-                          setPrivacySettings(prev => ({ ...prev, show_status: checked }))
-                        }
-                      />
+                      <Switch checked={privacySettings.show_status} onCheckedChange={checked => setPrivacySettings(prev => ({
+                      ...prev,
+                      show_status: checked
+                    }))} />
                     </div>
                   </div>
                 </CardContent>
@@ -745,8 +645,6 @@ const Perfil = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 };
-
 export default Perfil;

@@ -42,7 +42,7 @@ const ChatComponent = () => {
   const renderContent = () => {
     if (isMobile) {
       return (
-        <div className="h-full">
+        <div className="h-full flex flex-col">
           {!showChat ? (
             <ContactsList
               onSelectContact={handleSelectContact}
@@ -50,15 +50,15 @@ const ChatComponent = () => {
             />
           ) : (
             <div className="h-full flex flex-col">
-              <div className="p-2">
+              <div className="p-4 border-b bg-background">
                 <button
                   onClick={handleBackToContacts}
-                  className="text-sm font-semibold mb-2"
+                  className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   ← Voltar para contatos
                 </button>
               </div>
-              <div className="flex-grow">
+              <div className="flex-1 min-h-0">
                 {selectedContact && <ChatWindow selectedContact={selectedContact} />}
               </div>
             </div>
@@ -68,19 +68,37 @@ const ChatComponent = () => {
     }
     
     return (
-      <div className="h-full grid grid-cols-[300px_1fr] lg:grid-cols-[350px_1fr]">
-        <div className="h-full">
+      <div className="h-full flex">
+        <div className="w-80 border-r bg-background">
           <ContactsList
             onSelectContact={handleSelectContact}
             selectedContact={selectedContact}
           />
         </div>
-        <div className="h-full">
+        <div className="flex-1 min-w-0">
           {selectedContact ? (
             <ChatWindow selectedContact={selectedContact} />
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">Selecione um contato para começar a conversar</p>
+            <div className="flex items-center justify-center h-full bg-muted/20">
+              <div className="text-center space-y-2">
+                <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-muted-foreground"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-muted-foreground font-medium">Selecione um contato</p>
+                <p className="text-sm text-muted-foreground">Escolha uma conversa para começar a enviar mensagens</p>
+              </div>
             </div>
           )}
         </div>
@@ -90,7 +108,7 @@ const ChatComponent = () => {
 
   return (
     <AppLayout title="Chat">
-      <div className="h-[calc(100vh-64px)]"> {/* Ajuste para altura considerando o header */}
+      <div className="h-full -m-6 bg-background"> {/* Remove padding e usa toda altura */}
         {renderContent()}
       </div>
     </AppLayout>

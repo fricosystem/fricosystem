@@ -519,8 +519,9 @@ const Processamento: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Processamento</h2>
       
-      <div className="flex justify-between items-center">
-        <div className="relative w-full max-w-md">
+      {/* Header Responsivo */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="relative w-full sm:max-w-md">
           <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar ordens de produção..."
@@ -529,7 +530,7 @@ const Processamento: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button onClick={verificarDadosTurnos} disabled={isLoading}>
+        <Button onClick={verificarDadosTurnos} disabled={isLoading} className="w-full sm:w-auto">
           {isLoading ? (
             <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
           ) : (
@@ -626,55 +627,57 @@ const Processamento: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Turnos</TableHead>
-                <TableHead>KG Total</TableHead>
-                <TableHead>Planejado</TableHead>
-                <TableHead>Diferença</TableHead>
-                <TableHead>Eficiência</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {processamentos.map((processamento) => (
-                <TableRow key={processamento.id}>
-                  <TableCell>{formatShortDate(processamento.timestamp)}</TableCell>
-                  <TableCell>
-                    {processamento.turnosProcessados?.includes('1 Turno') && 
-                     processamento.turnosProcessados?.includes('2 Turno') 
-                     ? 'Ambos' 
-                     : processamento.turnosProcessados?.join(', ')}
-                  </TableCell>
-                  <TableCell>{processamento.kgTotal.toLocaleString('pt-BR')} kg</TableCell>
-                  <TableCell>{processamento.planoDiario.toLocaleString('pt-BR')} kg</TableCell>
-                  <TableCell>
-                    <span className={processamento.diferencaPR >= 0 ? "text-green-600" : "text-red-600"}>
-                      {processamento.diferencaPR >= 0 ? '+' : ''}{processamento.diferencaPR.toLocaleString('pt-BR')} kg
-                    </span>
-                  </TableCell>
-                  <TableCell>{processamento.ctptd.toFixed(1)}%</TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleShowDetails(processamento)}
-                    >
-                      <Info className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead className="hidden sm:table-cell">Turnos</TableHead>
+                  <TableHead>KG Total</TableHead>
+                  <TableHead className="hidden md:table-cell">Planejado</TableHead>
+                  <TableHead className="hidden lg:table-cell">Diferença</TableHead>
+                  <TableHead>Eficiência</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {processamentos.map((processamento) => (
+                  <TableRow key={processamento.id}>
+                    <TableCell>{formatShortDate(processamento.timestamp)}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {processamento.turnosProcessados?.includes('1 Turno') && 
+                      processamento.turnosProcessados?.includes('2 Turno') 
+                      ? 'Ambos' 
+                      : processamento.turnosProcessados?.join(', ')}
+                    </TableCell>
+                    <TableCell>{processamento.kgTotal.toLocaleString('pt-BR')} kg</TableCell>
+                    <TableCell className="hidden md:table-cell">{processamento.planoDiario.toLocaleString('pt-BR')} kg</TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <span className={processamento.diferencaPR >= 0 ? "text-green-600" : "text-red-600"}>
+                        {processamento.diferencaPR >= 0 ? '+' : ''}{processamento.diferencaPR.toLocaleString('pt-BR')} kg
+                      </span>
+                    </TableCell>
+                    <TableCell>{processamento.ctptd.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleShowDetails(processamento)}
+                      >
+                        <Info className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Dialog de Detalhes do Processamento */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="sm:max-w-[625px]">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Processamento</DialogTitle>
             <DialogDescription>
@@ -683,10 +686,10 @@ const Processamento: React.FC = () => {
           </DialogHeader>
           {selectedProcessamento && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h3 className="text-sm font-medium">ID:</h3>
-                  <p>{selectedProcessamento.id}</p>
+                  <p className="truncate">{selectedProcessamento.id}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium">Data/Hora:</h3>
@@ -704,7 +707,7 @@ const Processamento: React.FC = () => {
                 </div>
               </div>
 
-              <div className="h-80">
+              <div className="h-64 sm:h-80">
                 <h3 className="text-sm font-medium mb-4">Comparativo de Produção (kg)</h3>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -727,7 +730,7 @@ const Processamento: React.FC = () => {
                 </ResponsiveContainer>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="border rounded-lg p-4">
                   <h3 className="text-sm font-medium text-muted-foreground">1° Turno</h3>
                   <div className="mt-2 space-y-2">
@@ -748,7 +751,7 @@ const Processamento: React.FC = () => {
 
               <div className="border rounded-lg p-4">
                 <h3 className="text-sm font-medium text-muted-foreground">Resumo Total</h3>
-                <div className="mt-2 grid grid-cols-3 gap-4">
+                <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">KG Total</p>
                     <p className="text-xl font-bold">{selectedProcessamento.kgTotal.toLocaleString('pt-BR')} kg</p>

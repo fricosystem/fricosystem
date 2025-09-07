@@ -15,7 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Calendar as CalendarIcon, CheckCircle2, CircleAlert, Trash2, Check, Search, Loader2, Plus } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import { db } from "@/firebase/firebase";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, getDocs, addDoc, Timestamp } from "firebase/firestore";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Select,
   SelectContent,
@@ -65,6 +66,7 @@ import {
 
 const EntradaProdutosETContent = () => {
   const { adicionarProduto, atualizarProduto, buscarProdutoPorCodigo, buscarProdutoPorCodigoMaterial } = useProdutos();
+  const { userData } = useAuth();
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [listaProdutos, setListaProdutos] = useState<Produto[]>([]);
@@ -73,6 +75,7 @@ const EntradaProdutosETContent = () => {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [depositos, setDepositos] = useState([]);
   const [unidades, setUnidades] = useState([]);
+  const [loadingUnidades, setLoadingUnidades] = useState(false);
   const [loadingDepositos, setLoadingDepositos] = useState(false);
   const [depositoPopoverOpen, setDepositoPopoverOpen] = useState(false);
   const [produtoExistente, setProdutoExistente] = useState<Produto | null>(null);
@@ -135,6 +138,12 @@ const EntradaProdutosETContent = () => {
     criado_em?: Date;
   }
 
+  interface Unidade {
+    id: string;
+    nome: string;
+    cnpj?: string;
+  }
+
   const carregarDepositos = async () => {
     setLoadingDepositos(true);
     try {
@@ -162,6 +171,30 @@ const EntradaProdutosETContent = () => {
       console.error("Erro ao carregar depósitos:", error);
     } finally {
       setLoadingDepositos(false);
+    }
+  };
+
+  const carregarUnidades = async () => {
+    setLoadingUnidades(true);
+    try {
+      const unidadesRef = collection(db, "unidades");
+      const unidadesQuery = query(unidadesRef, orderBy("nome"));
+      const snapshot = await getDocs(unidadesQuery);
+      
+      const unidadesData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          nome: data.nome,
+          cnpj: data.cnpj
+        };
+      });
+      
+      setUnidades(unidadesData);
+    } catch (error) {
+      console.error("Erro ao carregar unidades:", error);
+    } finally {
+      setLoadingUnidades(false);
     }
   };
 
@@ -242,8 +275,8 @@ const EntradaProdutosETContent = () => {
           fornecedor_id: produtoExistente.fornecedor_id || "",
           data_vencimento: produtoExistente.data_vencimento 
             ? new Date(produtoExistente.data_vencimento) 
-            : null,
-          quantidade: produtoExistente.quantidade || 0,
+            : undefined,
+          quantidade: 0, // Reset quantity for new entry
           quantidade_minima: produtoExistente.quantidade_minima || 0,
           valor_unitario: produtoExistente.valor_unitario || 0,
           unidade: produtoExistente.unidade || "",
@@ -254,8 +287,7 @@ const EntradaProdutosETContent = () => {
           prateleira: produtoExistente.prateleira || "",
           unidade_de_medida: produtoExistente.unidade_de_medida || "",
           detalhes: produtoExistente.detalhes || "",
-          imagem: produtoExistente.imagem || "",
-          ...defaultValues
+          imagem: produtoExistente.imagem || ""
         });
         
         setProdutoExistente(produtoExistente);
@@ -267,23 +299,8 @@ const EntradaProdutosETContent = () => {
         });
       } else {
         form.reset({
-          codigo_estoque: "",
-          codigo_material: codigoMaterial,
-          nome: '',
-          fornecedor_nome: '',
-          fornecedor_cnpj: '',
-          fornecedor_id: '',
-          data_vencimento: null,
-          quantidade: 0,
-          quantidade_minima: 0,
-          valor_unitario: 0,
-          unidade: '',
-          deposito: '',
-          prateleira: '',
-          unidade_de_medida: '',
-          detalhes: '',
-          imagem: '',
-          ...defaultValues
+          ...defaultValues,
+          codigo_material: codigoMaterial
         });
         
         setProdutoExistente(null);
@@ -337,8 +354,8 @@ const EntradaProdutosETContent = () => {
           fornecedor_id: produtoExistente.fornecedor_id || "",
           data_vencimento: produtoExistente.data_vencimento 
             ? new Date(produtoExistente.data_vencimento) 
-            : null,
-          quantidade: produtoExistente.quantidade || 0,
+            : undefined,
+          quantidade: 0, // Reset quantity for new entry
           quantidade_minima: produtoExistente.quantidade_minima || 0,
           valor_unitario: produtoExistente.valor_unitario || 0,
           unidade: produtoExistente.unidade || "",
@@ -349,8 +366,7 @@ const EntradaProdutosETContent = () => {
           prateleira: produtoExistente.prateleira || "",
           unidade_de_medida: produtoExistente.unidade_de_medida || "",
           detalhes: produtoExistente.detalhes || "",
-          imagem: produtoExistente.imagem || "",
-          ...defaultValues
+          imagem: produtoExistente.imagem || ""
         });
         
         setProdutoExistente(produtoExistente);
@@ -362,23 +378,8 @@ const EntradaProdutosETContent = () => {
         });
       } else {
         form.reset({
-          codigo_estoque: codigo,
-          codigo_material: '',
-          nome: '',
-          fornecedor_nome: '',
-          fornecedor_cnpj: '',
-          fornecedor_id: '',
-          data_vencimento: null,
-          quantidade: 0,
-          quantidade_minima: 0,
-          valor_unitario: 0,
-          unidade: '',
-          deposito: '',
-          prateleira: '',
-          unidade_de_medida: '',
-          detalhes: '',
-          imagem: '',
-          ...defaultValues
+          ...defaultValues,
+          codigo_estoque: codigo
         });
         
         setProdutoExistente(null);
@@ -493,15 +494,50 @@ const EntradaProdutosETContent = () => {
       for (const produto of listaProdutos) {
         try {
           const produtoExistente = await buscarProdutoPorCodigo(produto.codigo_estoque);
+          let produtoId = "";
           
           if (produtoExistente) {
             await atualizarProduto(produtoExistente.id as string, {
               ...produtoExistente,
               quantidade: produtoExistente.quantidade + produto.quantidade,
             });
+            produtoId = produtoExistente.id as string;
           } else {
-            await adicionarProduto(produto);
+            produtoId = await adicionarProduto(produto);
           }
+
+          // Criar registro de relatório para a entrada manual
+          const relatorioData = {
+            requisicao_id: produtoId,
+            produto_id: produtoId,
+            codigo_material: produto.codigo_material,
+            nome_produto: produto.nome,
+            quantidade: produto.quantidade,
+            valor_unitario: produto.valor_unitario || 0,
+            valor_total: (produto.valor_unitario || 0) * produto.quantidade,
+            status: 'entrada',
+            tipo: "Entrada Manual",
+            solicitante: {
+              id: userData?.id || 'system',
+              nome: userData?.nome || 'Sistema',
+              cargo: userData?.cargo || 'Administrador'
+            },
+            usuario: {
+              id: userData?.id || 'system',
+              nome: userData?.nome || 'Sistema',
+              email: userData?.email || 'sistema@empresa.com'
+            },
+            deposito: produto.deposito,
+            prateleira: produto.prateleira || "Não endereçado",
+            centro_de_custo: produto.deposito,
+            unidade: produto.unidade,
+            data_saida: Timestamp.fromDate(new Date()),
+            data_registro: Timestamp.fromDate(new Date())
+          };
+
+          // Adicionar o relatório de entrada
+          await addDoc(collection(db, "relatorios"), relatorioData);
+
         } catch (error) {
           console.error(`Erro ao processar produto ${produto.codigo_estoque}:`, error);
         }
@@ -550,21 +586,83 @@ const EntradaProdutosETContent = () => {
         imagem: data.imagem || "",
       };
       
-      await adicionarProduto(formattedData);
+      // Verificar se o produto já existe pelo código de estoque
+      const produtoExistente = await buscarProdutoPorCodigo(data.codigo_estoque);
+      let produtoId = "";
+      
+      if (produtoExistente) {
+        // Se produto existe, incrementar a quantidade
+        const quantidadeExistente = isNaN(produtoExistente.quantidade) ? 0 : produtoExistente.quantidade;
+        const quantidadeAtualizada = quantidadeExistente + data.quantidade;
+        
+        await atualizarProduto(produtoExistente.id as string, {
+          ...produtoExistente,
+          quantidade: quantidadeAtualizada,
+          fornecedor_nome: data.fornecedor_nome,
+          fornecedor_cnpj: data.fornecedor_cnpj,
+          fornecedor_id: data.fornecedor_id || "",
+          valor_unitario: data.valor_unitario,
+        });
+        produtoId = produtoExistente.id as string;
+        
+        setAlertInfo({
+          isOpen: true,
+          title: "Quantidade atualizada",
+          message: `A quantidade do produto foi incrementada de ${quantidadeExistente} para ${quantidadeAtualizada}.`,
+          type: "success",
+        });
+      } else {
+        // Se produto não existe, criar novo
+        produtoId = await adicionarProduto(formattedData);
+        
+        setAlertInfo({
+          isOpen: true,
+          title: "Produto cadastrado",
+          message: "O produto foi cadastrado com sucesso no sistema.",
+          type: "success",
+        });
+      }
+
+      // Criar registro de relatório para a entrada manual
+      const relatorioData = {
+        requisicao_id: produtoId,
+        produto_id: produtoId,
+        codigo_material: data.codigo_material,
+        nome_produto: data.nome,
+        quantidade: data.quantidade,
+        valor_unitario: data.valor_unitario || 0,
+        valor_total: (data.valor_unitario || 0) * data.quantidade,
+        status: 'entrada',
+        tipo: "Entrada Manual",
+        solicitante: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          cargo: userData?.cargo || 'Administrador'
+        },
+        usuario: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          email: userData?.email || 'sistema@empresa.com'
+        },
+        deposito: formattedData.deposito,
+        prateleira: formattedData.prateleira || "Não endereçado",
+        centro_de_custo: formattedData.deposito,
+        unidade: formattedData.unidade,
+        data_saida: Timestamp.fromDate(new Date()),
+        data_registro: Timestamp.fromDate(new Date())
+      };
+
+      // Adicionar o relatório de entrada
+      await addDoc(collection(db, "relatorios"), relatorioData);
       
       form.reset(defaultValues);
-      setAlertInfo({
-        isOpen: true,
-        title: "Produto cadastrado",
-        message: "O produto foi cadastrado com sucesso no sistema.",
-        type: "success",
-      });
+      setProdutoExistente(null);
     } catch (error) {
-      console.error("Erro ao cadastrar produto:", error);
+      console.error("Erro ao processar produto:", error);
       setAlertInfo({
         isOpen: true,
         title: "Erro",
-        message: "Ocorreu um erro ao cadastrar o produto.",
+        message: "Ocorreu um erro ao processar o produto.",
         type: "error",
       });
     } finally {
@@ -588,6 +686,7 @@ const EntradaProdutosETContent = () => {
       const novaQuantidade = form.getValues().quantidade;
       const quantidadeExistente = isNaN(produtoExistente.quantidade) ? 0 : produtoExistente.quantidade;
       const quantidadeAtualizada = quantidadeExistente + novaQuantidade;
+      const valorUnitario = form.getValues().valor_unitario;
       
       await atualizarProduto(produtoExistente.id, {
         ...produtoExistente,
@@ -595,8 +694,40 @@ const EntradaProdutosETContent = () => {
         fornecedor_nome: form.getValues().fornecedor_nome,
         fornecedor_cnpj: form.getValues().fornecedor_cnpj,
         fornecedor_id: form.getValues().fornecedor_id || "",
-        valor_unitario: form.getValues().valor_unitario,
+        valor_unitario: valorUnitario,
       });
+
+      // Criar registro de relatório para a entrada manual
+      const relatorioData = {
+        requisicao_id: produtoExistente.id,
+        produto_id: produtoExistente.id,
+        codigo_material: produtoExistente.codigo_material,
+        nome_produto: produtoExistente.nome,
+        quantidade: novaQuantidade,
+        valor_unitario: valorUnitario || 0,
+        valor_total: (valorUnitario || 0) * novaQuantidade,
+        status: 'entrada',
+        tipo: "Entrada Manual",
+        solicitante: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          cargo: userData?.cargo || 'Administrador'
+        },
+        usuario: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          email: userData?.email || 'sistema@empresa.com'
+        },
+        deposito: produtoExistente.deposito,
+        prateleira: produtoExistente.prateleira || "Não endereçado",
+        centro_de_custo: produtoExistente.deposito,
+        unidade: produtoExistente.unidade,
+        data_saida: Timestamp.fromDate(new Date()),
+        data_registro: Timestamp.fromDate(new Date())
+      };
+
+      // Adicionar o relatório de entrada
+      await addDoc(collection(db, "relatorios"), relatorioData);
       
       setAlertInfo({
         isOpen: true,
@@ -624,6 +755,7 @@ const EntradaProdutosETContent = () => {
   useEffect(() => {
     buscarFornecedores();
     carregarDepositos();
+    carregarUnidades();
   }, []);
 
   return (
@@ -1030,12 +1162,25 @@ const EntradaProdutosETContent = () => {
                                 <SelectValue placeholder="Selecione a unidade" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                              {unidades.map((unidade) => (
-                                <SelectItem key={unidade} value={unidade}>
-                                  {unidade}
+                            <SelectContent className="bg-background border border-border shadow-lg z-50">
+                              {loadingUnidades ? (
+                                <SelectItem value="loading" disabled>
+                                  <div className="flex items-center">
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Carregando unidades...
+                                  </div>
                                 </SelectItem>
-                              ))}
+                              ) : unidades.length > 0 ? (
+                                unidades.map((unidade) => (
+                                  <SelectItem key={unidade.id} value={unidade.nome}>
+                                    {unidade.nome} {unidade.cnpj && `- ${unidade.cnpj}`}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no-units" disabled>
+                                  Nenhuma unidade encontrada
+                                </SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />

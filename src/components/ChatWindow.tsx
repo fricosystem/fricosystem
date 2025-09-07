@@ -127,89 +127,128 @@ const ChatWindow = ({ selectedContact }: ChatWindowProps) => {
   }
   
   return (
-    <Card className="h-[calc(100vh-150px)] border-r flex flex-col">
-      {/* Cabeçalho fixo */}
-      <CardHeader className="border-b p-4 flex-none">
-        <div className="flex items-center">
+    <div className="h-full flex flex-col bg-background">
+      {/* Header da conversa */}
+      <div className="p-4 border-b bg-background">
+        <div className="flex items-center gap-3">
           <div className="relative">
-            <Avatar className="h-10 w-10 mr-3">
-              <AvatarFallback>{getInitials(selectedContact.nome)}</AvatarFallback>
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                {getInitials(selectedContact.nome)}
+              </AvatarFallback>
             </Avatar>
-            <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ${
-              contactStatus === "online" ? "bg-green-500" : "bg-gray-400"
+            <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${
+              contactStatus === "online" ? "bg-green-500" : "bg-muted-foreground"
             }`} />
           </div>
-          <div>
-            <h2 className="font-semibold">{selectedContact.nome}</h2>
-            <p className="text-xs text-muted-foreground px-[5px]">
-              {contactStatus === "online" ? "Online" : "Offline"}
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold text-foreground">{selectedContact.nome}</h2>
+            <p className="text-xs text-muted-foreground">
+              {contactStatus === "online" ? "Online agora" : "Offline"}
             </p>
           </div>
         </div>
-      </CardHeader>
+      </div>
   
-      {/* Área de mensagens com scroll */}
-      <CardContent className="p-4 overflow-y-auto flex-1 min-h-0">
-        <div className="space-y-4 h-full">
-          {messages.length > 0 ? (
-            messages.map((message) => {
-              const isSentByMe = user && message.sender === user.uid;
-              
-              return (
-                <div
-                  key={message.id}
-                  className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
-                >
+      {/* Área de mensagens */}
+      <div className="flex-1 min-h-0 p-4">
+        <ScrollArea className="h-full">
+          <div className="space-y-4 pb-4">
+            {messages.length > 0 ? (
+              messages.map((message) => {
+                const isSentByMe = user && message.sender === user.uid;
+                
+                return (
                   <div
-                    className={`max-w-[70%] ${
-                      isSentByMe
-                        ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm"
-                        : "bg-secondary text-secondary-foreground rounded-2xl rounded-bl-sm"
-                    } px-4 py-2 relative`}
+                    key={message.id}
+                    className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
                   >
-                    <p>{message.text}</p>
-                    <div className={`flex items-center gap-1 mt-1 text-xs ${isSentByMe ? "justify-end" : "justify-start"}`}>
-                      <span className="opacity-70">
-                        {formatMessageTime(message.timestamp)}
-                      </span>
-                      {isSentByMe && (
-                        <span className="ml-1">
-                          {message.read ? (
-                            <CheckCheck className="h-3 w-3" />
-                          ) : (
-                            <Check className="h-3 w-3" />
-                          )}
-                        </span>
+                    <div className={`flex items-end gap-2 max-w-[75%] ${isSentByMe ? "flex-row-reverse" : "flex-row"}`}>
+                      {!isSentByMe && (
+                        <Avatar className="h-6 w-6 mb-1">
+                          <AvatarFallback className="text-xs bg-muted">
+                            {getInitials(selectedContact.nome)}
+                          </AvatarFallback>
+                        </Avatar>
                       )}
+                      <div
+                        className={`px-4 py-3 rounded-2xl ${
+                          isSentByMe
+                            ? "bg-primary text-primary-foreground rounded-br-md"
+                            : "bg-muted text-foreground rounded-bl-md"
+                        } shadow-sm`}
+                      >
+                        <p className="text-sm leading-relaxed">{message.text}</p>
+                        <div className={`flex items-center gap-1 mt-2 text-xs ${
+                          isSentByMe ? "justify-end text-primary-foreground/70" : "justify-start text-muted-foreground"
+                        }`}>
+                          <span>
+                            {formatMessageTime(message.timestamp)}
+                          </span>
+                          {isSentByMe && (
+                            <span className="ml-1">
+                              {message.read ? (
+                                <CheckCheck className="h-3 w-3" />
+                              ) : (
+                                <Check className="h-3 w-3" />
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
+                );
+              })
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center space-y-2">
+                  <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-8 h-8 text-muted-foreground"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-muted-foreground font-medium">Nenhuma mensagem ainda</p>
+                  <p className="text-sm text-muted-foreground">Envie a primeira mensagem para iniciar a conversa</p>
                 </div>
-              );
-            })
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">Nenhuma mensagem ainda. Inicie uma conversa!</p>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </CardContent>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+      </div>
   
-      {/* Rodapé fixo */}
-      <CardFooter className="p-4 flex-none border-t">
-        <form onSubmit={handleSendMessage} className="flex w-full gap-2">
+      {/* Input de mensagem */}
+      <div className="p-4 border-t bg-background">
+        <form onSubmit={handleSendMessage} className="flex gap-2">
           <Input
-            placeholder="Digite sua mensagem..."
+            placeholder="Escreva uma mensagem..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-grow"
+            className="flex-1 bg-muted/50 border-muted focus:bg-background"
+            autoComplete="off"
           />
-          <Button type="submit" size="icon" disabled={!newMessage.trim()}>
+          <Button 
+            type="submit" 
+            size="icon" 
+            disabled={!newMessage.trim()}
+            className="h-10 w-10"
+          >
             <ArrowRight className="h-4 w-4" />
           </Button>
         </form>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 };
 

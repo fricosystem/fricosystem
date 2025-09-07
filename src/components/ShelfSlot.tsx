@@ -64,8 +64,8 @@ export function ShelfSlot({ row, column, product, onProductDrop, positionLabel }
 
   // Determinar classes com base no estado de drop
   const getBgClass = () => {
-    if (isOver && canDrop) return 'bg-primary/10';
-    return 'bg-background';
+    if (isOver && canDrop) return '';
+    return '';
   };
 
   const getBorderClass = () => {

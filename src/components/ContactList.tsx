@@ -101,71 +101,96 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
   };
   
   return (
-    <Card className="h-[calc(100vh-150px)] border-r flex flex-col">
-      <div className="p-4">
+    <div className="h-full flex flex-col bg-background border-r">
+      {/* Header da lista de contatos */}
+      <div className="p-4 border-b bg-background">
+        <h2 className="text-lg font-semibold mb-3">Mensagens</h2>
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Buscar contatos"
-            className="pl-8"
+            placeholder="Buscar contatos..."
+            className="pl-9 bg-muted/50 border-muted"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
-      <CardContent className="p-0 flex-1">
-          <ScrollArea className="h-[500px]"> {/* Adicionada altura fixa */}
+      
+      {/* Lista de contatos com scroll */}
+      <div className="flex-1 min-h-0">
+        <ScrollArea className="h-full">
           {filteredContacts.length > 0 ? (
-            <div className="space-y-1 p-2">
+            <div className="p-2 space-y-1">
               {filteredContacts.map((contact) => (
                 <Button
                   key={contact.id}
                   variant="ghost"
-                  className={`w-full justify-start ${
-                    selectedContact?.id === contact.id ? "bg-accent" : ""
+                  className={`w-full justify-start p-3 h-auto ${
+                    selectedContact?.id === contact.id 
+                      ? "bg-primary/10 text-primary border-l-2 border-primary" 
+                      : "hover:bg-muted/50"
                   }`}
                   onClick={() => onSelectContact(contact)}
                 >
-                  <div className="flex items-center w-full">
+                  <div className="flex items-center w-full gap-3">
                     <div className="relative">
-                      <Avatar className="h-8 w-8 mr-2">
-                        <AvatarFallback>{getInitials(contact.nome)}</AvatarFallback>
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                          {getInitials(contact.nome)}
+                        </AvatarFallback>
                       </Avatar>
                       <span
-                        className={`absolute bottom-0 right-1 h-2 w-2 rounded-full ${
+                        className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${
                           onlineStatuses[contact.id] === "online"
                             ? "bg-green-500"
-                            : "bg-gray-400"
+                            : "bg-muted-foreground"
                         }`}
                       />
                     </div>
-                    <div className="flex flex-col text-left flex-grow">
-                      <span className="text-sm font-medium">{contact.nome}</span>
-                      <span className="text-xs text-muted-foreground truncate">
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium truncate">{contact.nome}</p>
+                        {unreadCounts[contact.id] > 0 && (
+                          <Badge 
+                            variant="destructive" 
+                            className="ml-2 rounded-full h-5 w-5 flex items-center justify-center p-0 text-xs"
+                          >
+                            {unreadCounts[contact.id] > 99 ? "99+" : unreadCounts[contact.id]}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
                         {contact.email}
-                      </span>
+                      </p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <div className={`h-2 w-2 rounded-full ${
+                          onlineStatuses[contact.id] === "online" ? "bg-green-500" : "bg-muted-foreground"
+                        }`} />
+                        <span className="text-xs text-muted-foreground">
+                          {onlineStatuses[contact.id] === "online" ? "Online" : "Offline"}
+                        </span>
+                      </div>
                     </div>
-                    {unreadCounts[contact.id] > 0 && (
-                      <Badge 
-                        variant="destructive" 
-                        className="ml-auto rounded-full h-5 w-5 flex items-center justify-center p-0"
-                      >
-                        {unreadCounts[contact.id]}
-                      </Badge>
-                    )}
                   </div>
                 </Button>
               ))}
             </div>
           ) : (
-            <div className="p-4 text-center text-muted-foreground">
-              Nenhum contato encontrado
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 mx-auto bg-muted rounded-full flex items-center justify-center">
+                  <Search className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery ? "Nenhum contato encontrado" : "Nenhum contato disponível"}
+                </p>
+              </div>
             </div>
           )}
         </ScrollArea>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

@@ -102,11 +102,11 @@ const Enderecamento = () => {
     }
 
     return (
-      <div className="space-y-6">
-        {/* Container principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[70vh]">
+      <div className="flex flex-col h-full space-y-4">
+        {/* Container principal com altura ajustada */}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
           {/* Lista de produtos */}
-          <div className="lg:col-span-3 xl:col-span-3">
+          <div className="lg:col-span-3 xl:col-span-3 flex flex-col min-h-0">
             <ProductList 
               products={filtrarProdutosPorEstoque(activeStock)} 
               onRemoveShelf={handleRemoveShelf}
@@ -115,33 +115,33 @@ const Enderecamento = () => {
           </div>
           
           {/* Grid de endereçamento */}
-          <div className="lg:col-span-9 xl:col-span-9">
+          <div className="lg:col-span-9 xl:col-span-9 flex flex-col min-h-0">
             <Tabs 
               defaultValue="estoque1" 
               value={activeStock}
               onValueChange={setActiveStock} 
-              className="h-full"
+              className="flex flex-col h-full"
             >
-              <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 w-full mb-6">
-                <TabsTrigger value="estoque1" className="text-xs sm:text-sm">
+              <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 w-full mb-4 h-auto p-1 flex-shrink-0">
+                <TabsTrigger value="estoque1" className="text-xs sm:text-sm px-2 py-2">
                   <span className="hidden sm:inline">Estoque </span>1
                 </TabsTrigger>
-                <TabsTrigger value="estoque2" className="text-xs sm:text-sm">
+                <TabsTrigger value="estoque2" className="text-xs sm:text-sm px-2 py-2">
                   <span className="hidden sm:inline">Estoque </span>2
                 </TabsTrigger>
-                <TabsTrigger value="estoque3" className="text-xs sm:text-sm">
+                <TabsTrigger value="estoque3" className="text-xs sm:text-sm px-2 py-2">
                   <span className="hidden sm:inline">Estoque </span>3
                 </TabsTrigger>
-                <TabsTrigger value="estoque4" className="text-xs sm:text-sm">
+                <TabsTrigger value="estoque4" className="text-xs sm:text-sm px-2 py-2">
                   <span className="hidden sm:inline">Estoque </span>4
                 </TabsTrigger>
-                <TabsTrigger value="estoque5" className="text-xs sm:text-sm">
+                <TabsTrigger value="estoque5" className="text-xs sm:text-sm px-2 py-2">
                   <span className="hidden sm:inline">Estoque </span>5
                 </TabsTrigger>
               </TabsList>
               
               {/* Conteúdo das tabs */}
-              <div className="h-full">
+              <div className="flex-1 min-h-0">
                 {["estoque1", "estoque2", "estoque3", "estoque4", "estoque5"].map((estoque) => (
                   <TabsContent key={estoque} value={estoque} className="h-full mt-0">
                     <WarehouseGrid 
@@ -157,8 +157,8 @@ const Enderecamento = () => {
           </div>
         </div>
         
-        {/* Instruções de uso - parte inferior */}
-        <div className="border rounded-lg p-4 bg-card/50 backdrop-blur-sm">
+        {/* Instruções de uso - sempre visível na parte inferior */}
+        <div className="border rounded-lg p-4 flex-shrink-0">
           <h3 className="font-semibold mb-3 text-base">📋 Como usar o sistema de endereçamento:</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="flex items-start space-x-2">

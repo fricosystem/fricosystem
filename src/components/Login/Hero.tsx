@@ -6,7 +6,7 @@ export function Hero() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   return (
-    <section className="relative min-h-screen bg-slate-950 flex items-center justify-center overflow-hidden pt-24 pb-16">
+    <section id="hero" className="relative min-h-screen bg-slate-950 flex items-center justify-center overflow-hidden pt-24 pb-16">
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-black opacity-90"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-frico-950/10 via-black to-black"></div>

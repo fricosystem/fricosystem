@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/firebase/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -7,7 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CENTROS_DE_CUSTO } from "@/firebase/constants";
+
+interface CentroCusto {
+  id: string;
+  nome: string;
+}
 
 export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const [name, setName] = useState("");
@@ -15,8 +19,36 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [centroDeCusto, setCentroDeCusto] = useState("");
+  const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingCentros, setLoadingCentros] = useState(true);
   const { toast } = useToast();
+
+  // Função para buscar centros de custo do Firestore
+  const buscarCentrosCusto = async () => {
+    try {
+      const centrosRef = collection(db, "centro_de_custo");
+      const snapshot = await getDocs(centrosRef);
+      const centros = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        nome: doc.data().nome
+      }));
+      setCentrosCusto(centros);
+    } catch (error) {
+      console.error("Erro ao buscar centros de custo:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os centros de custo",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingCentros(false);
+    }
+  };
+
+  useEffect(() => {
+    buscarCentrosCusto();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,14 +187,14 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
       
       <div className="space-y-2">
         <Label htmlFor="centroDeCusto">Centro de Custo</Label>
-        <Select onValueChange={setCentroDeCusto} required>
+        <Select onValueChange={setCentroDeCusto} required disabled={loadingCentros}>
           <SelectTrigger className="bg-[#1A1F2C]/[0.02] border-gray-700 text-white">
-            <SelectValue placeholder="Selecione" />
+            <SelectValue placeholder={loadingCentros ? "Carregando..." : "Selecione"} />
           </SelectTrigger>
-          <SelectContent>
-            {CENTROS_DE_CUSTO.map((centro) => (
-              <SelectItem key={centro} value={centro}>
-                {centro}
+          <SelectContent className="bg-gray-800 border-gray-700">
+            {centrosCusto.map((centro) => (
+              <SelectItem key={centro.id} value={centro.nome} className="text-white hover:bg-gray-700">
+                {centro.nome}
               </SelectItem>
             ))}
           </SelectContent>
