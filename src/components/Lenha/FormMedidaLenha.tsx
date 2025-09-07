@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/firebase/firebase";
-import { collection, addDoc, getDoc, doc } from "firebase/firestore";
+import { collection, addDoc, getDoc, doc, Timestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -147,7 +147,41 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       };
       
       // Salva no Firestore
-      await addDoc(collection(db, "medidas_lenha"), novaMedida);
+      const medidaRef = await addDoc(collection(db, "medidas_lenha"), novaMedida);
+      
+      // Salvar relatório da cubagem/lenha
+      const relatorioData = {
+        requisicao_id: medidaRef.id,
+        produto_id: medidaRef.id,
+        codigo_material: medidaRef.id, // Usando o ID como código para lenha
+        nome_produto: `Lenha - ${fornecedor}`,
+        quantidade: metrosCubicos,
+        valor_unitario: valorUnitario,
+        valor_total: valorTotal,
+        status: 'entrada',
+        tipo: 'Cubagem/Lenha',
+        solicitante: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          cargo: userData?.cargo || 'Administrador'
+        },
+        usuario: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          email: userData?.email || 'sistema@empresa.com'
+        },
+        deposito: fornecedor,
+        prateleira: "Cubagem de Lenha",
+        centro_de_custo: fornecedor,
+        unidade: 'm³',
+        data_saida: Timestamp.fromDate(new Date()),
+        data_registro: Timestamp.fromDate(new Date()),
+        nfe: nfe || null,
+        fornecedor: fornecedor,
+        responsavel: userData?.nome || "Usuário não identificado"
+      };
+
+      await addDoc(collection(db, "relatorios"), relatorioData);
       
       toast({
         title: "Registro salvo com sucesso!",

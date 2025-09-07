@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import AppLayout from "@/layouts/AppLayout";
 import { db } from "@/firebase/firebase";
-import { collection, getDocs, query, orderBy, doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, doc, updateDoc, setDoc, getDoc, addDoc, Timestamp } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import {
   Card,
@@ -51,6 +51,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProdutoProvider, useProdutos } from "@/pages/EntradaManualTransferencia/contexts/ProdutoContext";
 import { TransferenciaProvider, useTransferencias } from "@/pages/EntradaManualTransferencia/contexts/TransferenciaContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, ArrowRight, Check, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ProdutoTransferido } from "@/pages/EntradaManualTransferencia/types/types";
@@ -60,6 +61,7 @@ import { Button } from "@/components/ui/button";
 const TransferenciasETContent = () => {
   const { produtos, carregarProdutos, loading: produtosLoading } = useProdutos();
   const { transferencias, carregarTransferencias, realizarTransferencia, loading: transferenciasLoading } = useTransferencias();
+  const { userData } = useAuth();
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
   const [produtosTransferencia, setProdutosTransferencia] = useState<ProdutoTransferido[]>([]);
   const [pesquisaProduto, setPesquisaProduto] = useState("");
@@ -357,6 +359,69 @@ const TransferenciasETContent = () => {
             });
           }
         }
+
+        // Salvar relatório da transferência - SAÍDA da origem
+        const produtoOriginal = produtos.find(p => p.id === produto.id);
+        const relatorioSaidaData = {
+          requisicao_id: produto.id,
+          produto_id: produto.id,
+          codigo_material: produto.codigo_estoque,
+          nome_produto: produto.nome,
+          quantidade: produto.quantidade,
+          valor_unitario: produtoOriginal?.valor_unitario || 0,
+          valor_total: (produtoOriginal?.valor_unitario || 0) * produto.quantidade,
+          status: 'saida',
+          tipo: "Transferência",
+          solicitante: {
+            id: userData?.id || 'system',
+            nome: userData?.nome || 'Sistema',
+            cargo: userData?.cargo || 'Administrador'
+          },
+          usuario: {
+            id: userData?.id || 'system',
+            nome: userData?.nome || 'Sistema',
+            email: userData?.email || 'sistema@empresa.com'
+          },
+          deposito: origemTexto,
+          prateleira: produtoOriginal?.prateleira || "Não endereçado",
+          centro_de_custo: origemTexto,
+          unidade: produtoOriginal?.unidade || 'UN',
+          data_saida: Timestamp.fromDate(new Date()),
+          data_registro: Timestamp.fromDate(new Date())
+        };
+
+        // Salvar relatório da transferência - ENTRADA no destino
+        const relatorioEntradaData = {
+          requisicao_id: produto.id,
+          produto_id: produto.id,
+          codigo_material: produto.codigo_estoque,
+          nome_produto: produto.nome,
+          quantidade: produto.quantidade,
+          valor_unitario: produtoOriginal?.valor_unitario || 0,
+          valor_total: (produtoOriginal?.valor_unitario || 0) * produto.quantidade,
+          status: 'entrada',
+          tipo: "Transferência",
+          solicitante: {
+            id: userData?.id || 'system',
+            nome: userData?.nome || 'Sistema',
+            cargo: userData?.cargo || 'Administrador'
+          },
+          usuario: {
+            id: userData?.id || 'system',
+            nome: userData?.nome || 'Sistema',
+            email: userData?.email || 'sistema@empresa.com'
+          },
+          deposito: destinoTexto,
+          prateleira: produtoOriginal?.prateleira || "Não endereçado",
+          centro_de_custo: destinoTexto,
+          unidade: produtoOriginal?.unidade || 'UN',
+          data_saida: Timestamp.fromDate(new Date()),
+          data_registro: Timestamp.fromDate(new Date())
+        };
+
+        // Adicionar ambos os relatórios da transferência
+        await addDoc(collection(db, "relatorios"), relatorioSaidaData);
+        await addDoc(collection(db, "relatorios"), relatorioEntradaData);
       }
       
       setAlerta({

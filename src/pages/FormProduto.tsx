@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save, X, Upload } from "lucide-react";
+import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { db } from "@/firebase/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 
 import AppLayout from "@/layouts/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -28,23 +31,89 @@ import { useToast } from "@/components/ui/use-toast";
 const FormProduto = () => {
   const [loading, setLoading] = useState(false);
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    codigo: '',
+    nome: '',
+    centroCusto: '',
+    quantidadeAtual: '',
+    quantidadeMinima: '',
+    valorUnitario: '',
+    deposito: '',
+    descricao: ''
+  });
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { userData } = useAuth();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulação de envio
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Primeiro salva o produto na coleção produtos
+      const produtoData = {
+        codigo: formData.codigo,
+        nome: formData.nome,
+        centro_custo: formData.centroCusto,
+        quantidade: Number(formData.quantidadeAtual),
+        quantidade_minima: Number(formData.quantidadeMinima),
+        valor_unitario: Number(formData.valorUnitario),
+        deposito: formData.deposito,
+        descricao: formData.descricao,
+        imagem: imagemPreview || '',
+        createdAt: Timestamp.fromDate(new Date())
+      };
+      
+      const produtoRef = await addDoc(collection(db, "produtos"), produtoData);
+      
+      // Depois salva na coleção relatorios
+      const relatorioData = {
+        requisicao_id: produtoRef.id,
+        produto_id: produtoRef.id,
+        codigo_material: formData.codigo,
+        nome_produto: formData.nome,
+        quantidade: Number(formData.quantidadeAtual),
+        valor_unitario: Number(formData.valorUnitario),
+        valor_total: Number(formData.valorUnitario) * Number(formData.quantidadeAtual),
+        status: 'entrada',
+        tipo: 'Cadastro',
+        solicitante: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          cargo: userData?.cargo || 'Administrador'
+        },
+        usuario: {
+          id: userData?.id || 'system',
+          nome: userData?.nome || 'Sistema',
+          email: userData?.email || 'sistema@empresa.com'
+        },
+        deposito: formData.deposito,
+        prateleira: "Não endereçado",
+        centro_de_custo: formData.centroCusto,
+        unidade: 'UN',
+        data_saida: Timestamp.fromDate(new Date()),
+        data_registro: Timestamp.fromDate(new Date())
+      };
+      
+      await addDoc(collection(db, "relatorios"), relatorioData);
+      
       toast({
         title: "Produto salvo",
         description: "O produto foi salvo com sucesso.",
       });
       navigate("/produtos");
-    }, 1500);
+      
+    } catch (error) {
+      console.error("Erro ao salvar produto:", error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar o produto.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
   
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,7 +138,12 @@ const FormProduto = () => {
                 <FormItem>
                   <FormLabel>Código*</FormLabel>
                   <FormControl>
-                    <Input placeholder="Código do produto" required />
+                    <Input 
+                      placeholder="Código do produto" 
+                      required 
+                      value={formData.codigo}
+                      onChange={(e) => setFormData({...formData, codigo: e.target.value})}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -77,14 +151,22 @@ const FormProduto = () => {
                 <FormItem>
                   <FormLabel>Nome*</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome do produto" required />
+                    <Input 
+                      placeholder="Nome do produto" 
+                      required 
+                      value={formData.nome}
+                      onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
                 
                 <FormItem>
                   <FormLabel>Centro de Custo*</FormLabel>
-                  <Select>
+                  <Select 
+                    value={formData.centroCusto} 
+                    onValueChange={(value) => setFormData({...formData, centroCusto: value})}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o centro de custo" />
@@ -105,7 +187,13 @@ const FormProduto = () => {
                 <FormItem>
                   <FormLabel>Quantidade Atual*</FormLabel>
                   <FormControl>
-                    <Input type="number" min="0" required />
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      required 
+                      value={formData.quantidadeAtual}
+                      onChange={(e) => setFormData({...formData, quantidadeAtual: e.target.value})}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -113,7 +201,13 @@ const FormProduto = () => {
                 <FormItem>
                   <FormLabel>Quantidade Mínima*</FormLabel>
                   <FormControl>
-                    <Input type="number" min="0" required />
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      required 
+                      value={formData.quantidadeMinima}
+                      onChange={(e) => setFormData({...formData, quantidadeMinima: e.target.value})}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -121,7 +215,14 @@ const FormProduto = () => {
                 <FormItem>
                   <FormLabel>Valor Unitário*</FormLabel>
                   <FormControl>
-                    <Input type="number" min="0" step="0.01" required />
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      step="0.01" 
+                      required 
+                      value={formData.valorUnitario}
+                      onChange={(e) => setFormData({...formData, valorUnitario: e.target.value})}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -131,7 +232,10 @@ const FormProduto = () => {
               <div className="space-y-6">
                 <FormItem>
                   <FormLabel>Depósito/Localização*</FormLabel>
-                  <Select>
+                  <Select 
+                    value={formData.deposito} 
+                    onValueChange={(value) => setFormData({...formData, deposito: value})}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o depósito" />
@@ -149,7 +253,12 @@ const FormProduto = () => {
                 <FormItem>
                   <FormLabel>Descrição</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Descrição do produto" className="resize-none" />
+                    <Textarea 
+                      placeholder="Descrição do produto" 
+                      className="resize-none" 
+                      value={formData.descricao}
+                      onChange={(e) => setFormData({...formData, descricao: e.target.value})}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

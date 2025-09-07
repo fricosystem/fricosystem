@@ -22,6 +22,9 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProdutos } from "@/hooks/useProdutos";
+import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/firebase/firebase";
+import { collection, doc, updateDoc, addDoc, Timestamp } from "firebase/firestore";
 import {
   Select,
   SelectContent,
@@ -73,6 +76,7 @@ const Inventario = () => {
   const [depositoFilter, setDepositoFilter] = useState<string>("todos");
   const { produtos, loading, error } = useProdutos();
   const { toast } = useToast();
+  const { userData } = useAuth();
 
   // Modal states
   const [isContarModalOpen, setIsContarModalOpen] = useState(false);
@@ -271,15 +275,93 @@ const Inventario = () => {
     setIsSalvarContagemModalOpen(true);
   };
 
-  const confirmarSalvarContagem = () => {
-    // Aqui seria implementada a lógica para atualizar o estoque no banco de dados
-    // Por enquanto, apenas mostra uma mensagem de sucesso
+  const confirmarSalvarContagem = async () => {
     const itensContados = inventarioItems.filter(item => item.quantidade_contada !== undefined);
     
-    toast({
-      title: "Contagem salva",
-      description: `${itensContados.length} itens terão seus estoques atualizados.`,
-    });
+    if (itensContados.length === 0) {
+      toast({
+        title: "Nenhuma contagem encontrada",
+        description: "Não há itens contados para salvar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Atualizar cada produto no banco de dados e salvar relatório
+      for (const item of itensContados) {
+        if (item.quantidade_contada !== undefined && item.id) {
+          // Atualizar quantidade do produto
+          await updateDoc(doc(db, "produtos", item.id), {
+            quantidade: item.quantidade_contada
+          });
+
+          // Determinar se foi entrada ou saída
+          const diferenca = item.quantidade_contada - item.quantidade_sistema;
+          const status = diferenca >= 0 ? "entrada" : "saida";
+          const quantidadeMovimento = Math.abs(diferenca);
+
+          // Salvar relatório apenas se houve diferença
+          if (diferenca !== 0) {
+            const relatorioData = {
+              requisicao_id: item.id,
+              produto_id: item.id,
+              codigo_material: item.codigo_estoque,
+              nome_produto: item.nome,
+              quantidade: quantidadeMovimento,
+              valor_unitario: item.valor_unitario || 0,
+              valor_total: (item.valor_unitario || 0) * quantidadeMovimento,
+              status: status,
+              tipo: "Inventário",
+              solicitante: {
+                id: userData?.id || 'system',
+                nome: userData?.nome || 'Sistema',
+                cargo: userData?.cargo || 'Administrador'
+              },
+              usuario: {
+                id: userData?.id || 'system',
+                nome: userData?.nome || 'Sistema',
+                email: userData?.email || 'sistema@empresa.com'
+              },
+              deposito: item.deposito,
+              prateleira: item.prateleira || "Não endereçado",
+              centro_de_custo: item.deposito,
+              unidade: item.unidade_de_medida || 'UN',
+              data_saida: Timestamp.fromDate(new Date()),
+              data_registro: Timestamp.fromDate(new Date())
+            };
+
+            // Adicionar o relatório do inventário
+            await addDoc(collection(db, "relatorios"), relatorioData);
+          }
+        }
+      }
+      
+      toast({
+        title: "Contagem salva",
+        description: `${itensContados.length} itens tiveram seus estoques atualizados com sucesso.`,
+      });
+
+      // Atualizar estado local para refletir as mudanças
+      setInventarioItems(prev => prev.map(item => {
+        if (item.quantidade_contada !== undefined) {
+          return {
+            ...item,
+            quantidade_sistema: item.quantidade_contada,
+            status_inventario: "conferido" as const
+          };
+        }
+        return item;
+      }));
+
+    } catch (error) {
+      console.error("Erro ao salvar contagem:", error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar a contagem do inventário.",
+        variant: "destructive",
+      });
+    }
 
     setIsSalvarContagemModalOpen(false);
   };

@@ -65,7 +65,7 @@ interface ProdutoSelecionado extends Produto {
 }
 
 const NovaOrdemServico = () => {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
@@ -348,6 +348,44 @@ const NovaOrdemServico = () => {
         batch.update(produtoRef, {
           quantidade: produto.quantidade - produto.quantidadeSelecionada
         });
+      });
+
+      // Salvar relatórios para cada produto utilizado
+      produtosSelecionados.forEach(produto => {
+        const relatorioData = {
+          requisicao_id: ordemRef.id,
+          produto_id: produto.id,
+          codigo_material: produto.codigo_material || produto.codigo,
+          nome_produto: produto.nome,
+          quantidade: produto.quantidadeSelecionada,
+          valor_unitario: produto.valor_unitario,
+          valor_total: produto.valor_unitario * produto.quantidadeSelecionada,
+          status: 'saida',
+          tipo: 'Ordem de Serviço',
+          solicitante: {
+            id: userData?.id || user?.uid || 'system',
+            nome: userData?.nome || 'Sistema',
+            cargo: userData?.cargo || 'Administrador'
+          },
+          usuario: {
+            id: userData?.id || user?.uid || 'system',
+            nome: userData?.nome || 'Sistema',
+            email: userData?.email || user?.email || 'sistema@empresa.com'
+          },
+          deposito: produto.deposito || formData.setor,
+          prateleira: "Ordem de Serviço",
+          centro_de_custo: formData.setor,
+          unidade: produto.unidade || produto.unidade_de_medida || 'UN',
+          data_saida: Timestamp.fromDate(new Date()),
+          data_registro: Timestamp.fromDate(new Date()),
+          equipamento: formData.equipamento,
+          setor: formData.setor,
+          descricao_motivo: formData.descricaoMotivo,
+          responsavel_manutencao: formData.responsavelManutencao
+        };
+
+        const relatorioRef = doc(collection(db, "relatorios"));
+        batch.set(relatorioRef, relatorioData);
       });
       
       await batch.commit();

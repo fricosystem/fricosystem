@@ -23,7 +23,7 @@ export type User = {
   nome: string;
   email: string;
   online: 'online' | 'offline';
-  lastSeen?: Timestamp;
+  ultimo_login?: Timestamp;
   unreadMessages?: Record<string, number>;
 };
 
@@ -44,7 +44,7 @@ export type Chat = {
   };
 };
 
-// Função melhorada para atualizar status do usuário
+// Função simplificada para atualizar status do usuário (mantida para compatibilidade)
 export const updateUserOnlineStatus = async (userId: string, status: 'online' | 'offline'): Promise<void> => {
   if (!userId) {
     console.warn("Attempted to update status with empty userId");
@@ -53,173 +53,19 @@ export const updateUserOnlineStatus = async (userId: string, status: 'online' | 
 
   try {
     const userRef = doc(db, "usuarios", userId);
-    const updateData = {
+    const updateData: any = { 
       online: status,
-      lastSeen: status === 'offline' ? serverTimestamp() : null
+      ultimo_login: serverTimestamp()
     };
     
     await setDoc(userRef, updateData, { merge: true });
   } catch (error) {
     console.error("Error updating user status:", error);
-    setTimeout(() => {
-      updateUserOnlineStatus(userId, status).catch(e => 
-        console.error("Retry failed:", e)
-      );
-    }, 3000);
+    throw error;
   }
 };
 
-// Função para configurar listeners de status
-export const setupUserStatusListeners = (userId: string) => {
-  if (typeof window === 'undefined' || !userId) {
-    console.warn("Invalid environment or userId for status listeners");
-    return () => {};
-  }
-
-  let heartbeatInterval: NodeJS.Timeout;
-  let lastKnownStatus: 'online' | 'offline' = 'online';
-  let lastSuccessfulUpdate = Date.now();
-  
-  const updateStatus = async (status: 'online' | 'offline') => {
-    if (status === lastKnownStatus && Date.now() - lastSuccessfulUpdate < 10000) {
-      return;
-    }
-
-    try {
-      await updateUserOnlineStatus(userId, status);
-      lastKnownStatus = status;
-      lastSuccessfulUpdate = Date.now();
-    } catch (error) {
-      console.error(`Failed to update ${userId} status:`, error);
-    }
-  };
-
-  const startHeartbeat = () => {
-    clearInterval(heartbeatInterval);
-    heartbeatInterval = setInterval(async () => {
-      if (document.visibilityState !== 'hidden') {
-        try {
-          await updateUserOnlineStatus(userId, 'online');
-          lastSuccessfulUpdate = Date.now();
-        } catch (error) {
-          console.error("Heartbeat failed:", error);
-        }
-      }
-    }, 20000);
-  };
-
-  const performOfflineUpdate = async () => {
-    const offlineData = {
-      online: 'offline',
-      lastSeen: serverTimestamp()
-    };
-    
-    try {
-      const userRef = doc(db, "usuarios", userId);
-      await setDoc(userRef, offlineData, { merge: true });
-    } catch (error) {
-      console.error("Failed offline update:", error);
-      if (window.localStorage) {
-        window.localStorage.setItem('pendingOfflineStatus', JSON.stringify({
-          userId,
-          timestamp: Date.now()
-        }));
-      }
-    }
-  };
-
-  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-    performOfflineUpdate();
-    const confirmationMessage = "Changes you made may not be saved.";
-    event.returnValue = confirmationMessage;
-    return confirmationMessage;
-  };
-
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === 'hidden') {
-      clearInterval(heartbeatInterval);
-      updateStatus('offline');
-    } else {
-      updateStatus('online');
-      startHeartbeat();
-    }
-  };
-
-  const checkPendingOfflineStatus = () => {
-    if (window.localStorage) {
-      const pendingStatus = window.localStorage.getItem('pendingOfflineStatus');
-      if (pendingStatus) {
-        try {
-          const { userId: pendingUserId, timestamp } = JSON.parse(pendingStatus);
-          if (pendingUserId === userId && Date.now() - timestamp < 86400000) {
-            updateUserOnlineStatus(userId, 'offline').then(() => {
-              window.localStorage.removeItem('pendingOfflineStatus');
-            });
-          } else {
-            window.localStorage.removeItem('pendingOfflineStatus');
-          }
-        } catch (e) {
-          window.localStorage.removeItem('pendingOfflineStatus');
-        }
-      }
-    }
-  };
-
-  const handleOnline = () => {
-    updateStatus('online');
-    startHeartbeat();
-  };
-  
-  const handleOffline = () => {
-    clearInterval(heartbeatInterval);
-  };
-
-  checkPendingOfflineStatus();
-  
-  updateStatus('online');
-  startHeartbeat();
-  
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  window.addEventListener('online', handleOnline);
-  window.addEventListener('offline', handleOffline);
-
-  return () => {
-    clearInterval(heartbeatInterval);
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-    window.removeEventListener('online', handleOnline);
-    window.removeEventListener('offline', handleOffline);
-    updateStatus('offline').catch(e => console.error("Cleanup status update failed:", e));
-  };
-};
-
-export const initializeUserStatus = async (userId: string) => {
-  if (!userId) {
-    console.warn("Attempted to initialize status with empty userId");
-    return () => {};
-  }
-
-  try {
-    await updateUserOnlineStatus(userId, 'online');
-    
-    const cleanupListeners = setupUserStatusListeners(userId);
-    
-    return async () => {
-      cleanupListeners();
-      try {
-        await updateUserOnlineStatus(userId, 'offline');
-      } catch (error) {
-        console.error("Error cleaning up user status:", error);
-      }
-    };
-  } catch (error) {
-    console.error("Error initializing user status:", error);
-    return () => {};
-  }
-};
-
-// Restante das funções originais mantidas conforme o primeiro código
+// Função para buscar usuários (simplificada, já que o gerenciamento de status está no AuthContext)
 export const getUsers = async (currentUserId: string): Promise<User[]> => {
   try {
     const usersCollection = collection(db, "usuarios");
@@ -234,7 +80,7 @@ export const getUsers = async (currentUserId: string): Promise<User[]> => {
           nome: data.nome,
           email: data.email,
           online: data.online || 'offline',
-          lastSeen: data.lastSeen
+          ultimo_login: data.ultimo_login
         });
       }
     });

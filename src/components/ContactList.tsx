@@ -15,6 +15,8 @@ import {
 import { Sun, Moon, LogOut, Search } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ScrollArea } from "./ui/scroll-area";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface ContactsListProps {
   onSelectContact: (contact: User) => void;
@@ -110,7 +112,7 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
           <Input
             type="text"
             placeholder="Buscar contatos..."
-            className="pl-9 bg-muted/50 border-muted"
+            className="pl-9 border-muted"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -164,11 +166,11 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
                         {contact.email}
                       </p>
                       <div className="flex items-center gap-1 mt-1">
-                        <div className={`h-2 w-2 rounded-full ${
-                          onlineStatuses[contact.id] === "online" ? "bg-green-500" : "bg-muted-foreground"
-                        }`} />
                         <span className="text-xs text-muted-foreground">
-                          {onlineStatuses[contact.id] === "online" ? "Online" : "Offline"}
+                          {onlineStatuses[contact.id] === "online" 
+                            ? "Online agora"
+                            : `Offline ${contact.ultimo_login ? '• último acesso ' + formatDistanceToNow(contact.ultimo_login.toDate(), { locale: ptBR }) + ' atrás' : ''}`
+                          }
                         </span>
                       </div>
                     </div>

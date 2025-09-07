@@ -4,7 +4,7 @@ export interface Usuario {
     email: string;
     ativo: boolean;
     online?: boolean;
-    lastSeen?: Date;
+    ultimo_login?: Date;
   }
   
   export interface Mensagem {

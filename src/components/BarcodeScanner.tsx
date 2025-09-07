@@ -8,19 +8,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Smartphone, QrCode } from 'lucide-react';
+import { Smartphone, Barcode } from 'lucide-react';
 
-interface QrScannerProps {
+interface BarcodeScannerProps {
   isOpen: boolean;
   onClose: () => void;
   onCodeScanned: (code: string) => void;
 }
 
-const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned }) => {
+const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ isOpen, onClose, onCodeScanned }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const qrScannerRef = useRef<Html5Qrcode | null>(null);
-  const scannerDivId = 'qr-reader';
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerDivId = 'barcode-reader';
   const { toast } = useToast();
 
   useEffect(() => {
@@ -31,14 +31,14 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
     if (isOpen) {
       const timeoutId = setTimeout(() => {
         const scannerElement = document.getElementById(scannerDivId);
-        if (scannerElement && !qrScannerRef.current) {
+        if (scannerElement && !scannerRef.current) {
           try {
-            qrScannerRef.current = new Html5Qrcode(scannerDivId);
+            scannerRef.current = new Html5Qrcode(scannerDivId);
             startScannerInternal();
           } catch (error) {
             toast({
               title: "Erro ao inicializar scanner",
-              description: "Não foi possível inicializar o scanner de QR code.",
+              description: "Não foi possível inicializar o scanner de código de barras.",
               variant: "destructive"
             });
           }
@@ -53,14 +53,14 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
   }, [isOpen]);
 
   const stopScannerSafely = () => {
-    if (qrScannerRef.current) {
+    if (scannerRef.current) {
       try {
         if (isScanning) {
-          qrScannerRef.current.stop()
+          scannerRef.current.stop()
             .then(() => setIsScanning(false))
             .catch(() => setIsScanning(false));
         }
-        if (!isOpen) qrScannerRef.current = null;
+        if (!isOpen) scannerRef.current = null;
       } catch (err) {
         setIsScanning(false);
       }
@@ -68,9 +68,9 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
   };
 
   const startScannerInternal = () => {
-    if (!qrScannerRef.current || isScanning) return;
+    if (!scannerRef.current || isScanning) return;
 
-    const qrCodeSuccessCallback = (decodedText: string) => {
+    const codeSuccessCallback = (decodedText: string) => {
       stopScannerSafely();
       onCodeScanned(decodedText);
       onClose();
@@ -78,18 +78,19 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
 
     const config = { 
       fps: 10, 
-      qrbox: isMobile ? { width: 200, height: 200 } : { width: 250, height: 250 }
+      qrbox: isMobile ? { width: 250, height: 150 } : { width: 300, height: 180 },
+      formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8] // Suporte para diversos formatos de código de barras
     };
 
-    qrScannerRef.current.start(
+    scannerRef.current.start(
       { facingMode: "environment" },
       config,
-      qrCodeSuccessCallback,
+      codeSuccessCallback,
       undefined
     )
     .then(() => setIsScanning(true))
     .catch((err) => {
-      console.error('Error starting scanner:', err);
+      console.error('Error starting barcode scanner:', err);
       toast({
         title: "Erro ao iniciar câmera",
         description: "Verifique se você permitiu o acesso à câmera.",
@@ -99,7 +100,7 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
   };
 
   const startScanner = () => {
-    if (!qrScannerRef.current) {
+    if (!scannerRef.current) {
       toast({
         title: "Erro",
         description: "Scanner não inicializado corretamente.",
@@ -128,15 +129,15 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {isMobile ? <Smartphone className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
-            Escanear QR Code
+            {isMobile ? <Smartphone className="h-5 w-5" /> : <Barcode className="h-5 w-5" />}
+            Escanear Código de Barras
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
           <div className="text-center space-y-2">
             <p className="text-sm text-muted-foreground">
-              Posicione o QR Code dentro da área destacada para fazer a leitura
+              Posicione o código de barras (GTIN/EAN) dentro da área destacada
             </p>
           </div>
           
@@ -149,7 +150,7 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
             {!isScanning && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-lg">
                 <div className="text-center space-y-3">
-                  <QrCode className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <Barcode className="h-12 w-12 mx-auto text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     Clique para iniciar o scanner
                   </p>
@@ -165,7 +166,7 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
                 className="flex items-center gap-2 px-6"
                 size="lg"
               >
-                {isMobile ? <Smartphone className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
+                {isMobile ? <Smartphone className="h-5 w-5" /> : <Barcode className="h-5 w-5" />}
                 Iniciar Scanner
               </Button>
             ) : (
@@ -185,4 +186,4 @@ const QrScanner: React.FC<QrScannerProps> = ({ isOpen, onClose, onCodeScanned })
   );
 };
 
-export default QrScanner;
+export default BarcodeScanner;

@@ -197,7 +197,6 @@ const AppSidebar = () => {
       icon: Wallet,
       items: [
         { to: "/notas-fiscais-lancamento", icon: ReceiptText, label: "NF - Lançamento", permission: "notas_fiscais_lancamento" },
-        { to: "/precificacao", icon: Calculator, label: "Precificação", permission: "precificacao" },
         { to: "/centro-custo", icon: PieChart, label: "Centro de Custo", permission: "centro_custo" },
       ],
     },
@@ -223,6 +222,7 @@ const AppSidebar = () => {
       items: [
         { to: "/gestao-usuarios", icon: UserCheck, label: "Gestão de Usuários", permission: "gestao_usuarios" },
         { to: "/gestao-produtos", icon: Cog, label: "Gestão de Produtos", permission: "gestao_produtos" },
+        { to: "/unidades", icon: Building2, label: "Gestão de Unidades", permission: "gestao_unidades" },
       ],
     }] : []),
   ], [pendingRequestsCount, isAdmin]);

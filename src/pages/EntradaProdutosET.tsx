@@ -1309,19 +1309,6 @@ const EntradaProdutosETContent = () => {
                       )}
                     />
                     
-                    <FormField
-                      control={form.control}
-                      name="imagem"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>URL da Imagem (opcional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                     
                     <FormField
                       control={form.control}

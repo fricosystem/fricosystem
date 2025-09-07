@@ -355,7 +355,7 @@ const PCP = () => {
                   label: `${metrics.produtosCadastrados - metrics.produtosSemClassificacao} com classificação`
                 }}
                 description="Total no sistema"
-                className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
+                className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
               />
              
               <StatsCard
@@ -383,7 +383,7 @@ const PCP = () => {
                     : `${period === 'hoje' ? 'Hoje' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
                 }}
                 description="KG produzidos"
-                className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10"
+                className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-900/10"
               />
             </div>
 

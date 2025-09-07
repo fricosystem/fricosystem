@@ -38,6 +38,7 @@ import Compras from "./pages/Compras";
 import GestaoProdutos from "./pages/GestaoProdutos";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
 import CentroCusto from "./pages/CentroCusto";
+import Unidades from "./pages/Unidades";
 
 // Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
@@ -117,6 +118,7 @@ const AppContent = () => {
           <Route path="/fornecedor-produtos" element={<AuthGuard><FornecedorProdutos /></AuthGuard>} />
           <Route path="/notas-fiscais-lancamento" element={<AuthGuard><NotasFiscaisLancamento /></AuthGuard>} />
           <Route path="/centro-custo" element={<AuthGuard><CentroCusto /></AuthGuard>} />
+          <Route path="/unidades" element={<AuthGuard><Unidades /></AuthGuard>} />
           <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
           <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
 

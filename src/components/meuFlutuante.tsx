@@ -272,8 +272,8 @@ const FuturisticFloatingMenu = () => {
       icon: <Layers size={24} />,
       label: "Principal",
       items: filterItemsByPermission([
-        { id: "dashboard", icon: <LayoutDashboard size={20} />, label: "Dashboard Geral", path: "/dashboard", permission: "dashboard" },
-        { id: "fornecedor-produtos", icon: <ShoppingCart size={20} />, label: "Ordens de Compra", path: "/fornecedor-produtos", permission: "ordens_compra" },
+        { id: "dashboard", icon: <BarChart3 size={20} />, label: "Dashboard Geral", path: "/dashboard", permission: "dashboard" },
+        { id: "fornecedor-produtos", icon: <ShoppingBag size={20} />, label: "Ordens de Compra", path: "/fornecedor-produtos", permission: "ordens_compra" },
       ]),
     },
     {
@@ -281,12 +281,11 @@ const FuturisticFloatingMenu = () => {
       icon: <Boxes size={24} />,
       label: "Estoque",
       items: filterItemsByPermission([
-        { id: "produtos", icon: <Package size={20} />, label: "Produtos", path: "/produtos", permission: "produtos" },
-        { id: "inventario", icon: <ClipboardList size={20} />, label: "Inventário", path: "/inventario", permission: "inventario" },
-        { id: "inventario-ciclico", icon: <ListChecks size={20} />, label: "Inventário Cíclico", path: "/inventario-ciclico", permission: "inventario_ciclico" },
+        { id: "produtos", icon: <CheckSquare size={20} />, label: "Produtos", path: "/produtos", permission: "produtos" },
+        { id: "inventario", icon: <PackageSearch size={20} />, label: "Inventário", path: "/inventario", permission: "inventario" },
         { id: "entrada-manual", icon: <PackagePlus size={20} />, label: "Entrada Manual", path: "/entrada-manual", permission: "entrada_manual" },
-        { id: "notas-fiscais", icon: <Receipt size={20} />, label: "NF - Entrada XML", path: "/notas-fiscais", permission: "notas_fiscais" },
-        { id: "transferencia", icon: <Truck size={20} />, label: "Transferência", path: "/transferencia", permission: "transferencia" },
+        { id: "notas-fiscais", icon: <FileText size={20} />, label: "NF - Entrada XML", path: "/notas-fiscais", permission: "notas_fiscais" },
+        { id: "transferencia", icon: <ArrowLeftFromLine size={20} />, label: "Transferência", path: "/transferencia", permission: "transferencia" },
         { id: "enderecamento", icon: <Warehouse size={20} />, label: "Endereçamento", path: "/enderecamento", permission: "enderecamento" },
         { id: "medida-de-lenha", icon: <Ruler size={20} />, label: "Cubagem e medida de Lenha", path: "/medida-de-lenha", permission: "medida_lenha" },
         { id: "relatorios", icon: <FileSpreadsheet size={20} />, label: "Relatórios", path: "/relatorios", permission: "relatorios" },
@@ -297,10 +296,10 @@ const FuturisticFloatingMenu = () => {
       icon: <ClipboardList size={24} />,
       label: "Requisições",
       items: filterItemsByPermission([
-        { id: "requisicoes", icon: <ClipboardList size={20} />, label: "Requisições", path: "/requisicoes", badge: pendingRequestsCount > 0 ? pendingRequestsCount : null, permission: "requisicoes" },
+        { id: "requisicoes", icon: <ClipboardCheck size={20} />, label: "Requisições", path: "/requisicoes", badge: pendingRequestsCount > 0 ? pendingRequestsCount : null, permission: "requisicoes" },
         { id: "carrinho", icon: <ShoppingCart size={20} />, label: "Carrinho", path: "/carrinho", badge: totalItens > 0 ? totalItens : null, permission: "carrinho" },
         { id: "ordensServico", icon: <Wrench size={20} />, label: "Ordens de Serviço", path: "/ordensServico", permission: "ordens_servico" },
-        { id: "devolucao", icon: <AlertTriangle size={20} />, label: "Devoluções", path: "/devolucao", permission: "devolucoes" },
+        { id: "devolucao", icon: <ArchiveRestore size={20} />, label: "Devoluções", path: "/devolucao", permission: "devolucoes" },
       ]),
     },
     {
@@ -308,11 +307,8 @@ const FuturisticFloatingMenu = () => {
       icon: <ShoppingCart size={24} />,
       label: "Compras",
       items: filterItemsByPermission([
-        { id: "compras", icon: <ShoppingCart size={20} />, label: "Compras", path: "/compras", permission: "compras" },
-        { id: "cotacoes-orcamentos", icon: <FileText size={20} />, label: "Cotações e Orçamentos", path: "/cotacoes-orcamentos", permission: "cotacoes_orcamentos" },
-        { id: "rastreamento-entregas", icon: <Truck size={20} />, label: "Rastreamento de Entregas", path: "/rastreamento-entregas", permission: "rastreamento_entregas" },
-        { id: "calendario-recebimento", icon: <CalendarCheck size={20} />, label: "Calendário de Recebimento", path: "/calendario-recebimento", permission: "calendario_recebimento" },
-        { id: "fornecedores", icon: <Users size={20} />, label: "Fornecedores", path: "/fornecedores", permission: "fornecedores" },
+        { id: "compras", icon: <ShoppingBag size={20} />, label: "Compras", path: "/compras", permission: "compras" },
+        { id: "fornecedores", icon: <Building2 size={20} />, label: "Fornecedores", path: "/fornecedores", permission: "fornecedores" },
       ]),
     },
     {
@@ -320,9 +316,8 @@ const FuturisticFloatingMenu = () => {
       icon: <Wallet size={24} />,
       label: "Financeiro",
       items: filterItemsByPermission([
-        { id: "notas-fiscais-lancamento", icon: <TrendingUp size={20} />, label: "NF - Lançamento", path: "/notas-fiscais-lancamento", permission: "notas_fiscais_lancamento" },
-        { id: "precificacao", icon: <TrendingUp size={20} />, label: "Precificação", path: "/precificacao", permission: "precificacao" },
-        { id: "relatorios-financeiros", icon: <PieChart size={20} />, label: "Relatórios Financeiros", path: "/relatorios-financeiros", permission: "relatorios_financeiros" },
+        { id: "notas-fiscais-lancamento", icon: <Receipt size={20} />, label: "NF - Lançamento", path: "/notas-fiscais-lancamento", permission: "notas_fiscais_lancamento" },
+        { id: "centro-custo", icon: <PieChart size={20} />, label: "Centro de Custo", path: "/centro-custo", permission: "centro_custo" },
       ]),
     },
     {
@@ -330,7 +325,7 @@ const FuturisticFloatingMenu = () => {
       icon: <FileText size={24} />,
       label: "Utilitários",
       items: filterItemsByPermission([
-        { id: "importar-planilha", icon: <FileText size={20} />, label: "Importar dados", path: "/importar-planilha", permission: "importar_dados" },
+        { id: "importar-planilha", icon: <ArrowDownFromLine size={20} />, label: "Importar dados", path: "/importar-planilha", permission: "importar_dados" },
         { id: "exportacoes", icon: <Download size={20} />, label: "Exportar dados", path: "/exportacoes", permission: "exportar_dados" },
         { id: "backup-dados", icon: <Database size={20} />, label: "Backup/Restauração", path: "/backup-dados", permission: "backup_dados" },
       ]),
@@ -340,7 +335,7 @@ const FuturisticFloatingMenu = () => {
       icon: <Factory size={24} />,
       label: "Produção",
       items: filterItemsByPermission([
-        { id: "pcp", icon: <TrendingUp size={20} />, label: "PCP", path: "/pcp", permission: "pcp" },
+        { id: "pcp", icon: <HardHat size={20} />, label: "PCP", path: "/pcp", permission: "pcp" },
       ]),
     },
     ...(isAdmin ? [{

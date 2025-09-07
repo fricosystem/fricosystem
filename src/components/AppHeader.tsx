@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, ShoppingCart, MessageSquare, QrCode } from "lucide-react";
+import { Bell, ShoppingCart, MessageSquare, QrCode, Barcode, Scan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { subscribeToUserUnreadMessages, getUnreadMessagesCount } from "@/services/chatService";
 import QrScanner from "@/components/QRScanner";
+import BarcodeScanner from "@/components/BarcodeScanner";
 import ProductDetails, { Product } from "@/components/ProductDetails";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,6 +32,7 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
   const [cartItemsCount, setCartItemsCount] = useState(0);
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
@@ -154,15 +156,36 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
           <h1 className="text-2xl font-bold">{title}</h1>
         </div>
         <div className="flex items-center space-x-4">
-          {/* QR Code Scanner Button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setIsQrScannerOpen(true)}
-            title="Escanear QR Code"
-          >
-            <QrCode size={20} />
-          </Button>
+          {/* Scanner Options Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                title="Opções de Scanner"
+              >
+                <Scan size={20} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Opções de Scanner</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => setIsQrScannerOpen(true)}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <QrCode className="h-4 w-4" />
+                QR Code
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setIsBarcodeScannerOpen(true)}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <Barcode className="h-4 w-4" />
+                GTIN/EAN (Código de Barras)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Chat Button */}
           <Button 
@@ -234,6 +257,13 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
       <QrScanner 
         isOpen={isQrScannerOpen}
         onClose={() => setIsQrScannerOpen(false)}
+        onCodeScanned={handleCodeScanned}
+      />
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScanner 
+        isOpen={isBarcodeScannerOpen}
+        onClose={() => setIsBarcodeScannerOpen(false)}
         onCodeScanned={handleCodeScanned}
       />
 

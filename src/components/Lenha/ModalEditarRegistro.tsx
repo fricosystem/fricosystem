@@ -107,7 +107,7 @@ const ModalEditarRegistro = ({ medida, isOpen, onClose, onSaveSuccess }: ModalEd
       const valorTotal = data.metrosCubicos * data.valorUnitario;
       
       // Referência para o documento a ser atualizado
-      const registroRef = doc(db, "medidasLenha", medida.id);
+      const registroRef = doc(db, "medidas_lenha", medida.id);
       
       // Atualizar documento
       await updateDoc(registroRef, {

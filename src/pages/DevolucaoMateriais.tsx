@@ -342,8 +342,8 @@ const DevolucaoMateriais = () => {
         dataRegistro: serverTimestamp()
       });
 
-      // Registrar na coleção "Relatorios" com status "devolução"
-      await addDoc(collection(db, "Relatorios"), {
+      // Registrar na coleção "relatorios" com status "devolução"
+      await addDoc(collection(db, "relatorios"), {
         tipo: "devolucao",
         status: "devolução",
         requisicao_id: devolucao.requisicao_id,
