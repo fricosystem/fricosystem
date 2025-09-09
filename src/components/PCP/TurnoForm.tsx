@@ -5,6 +5,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -12,11 +13,27 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { doc, setDoc, getDoc, getDocs, collection } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Upload } from "lucide-react";
+import { Trash2, Upload, Search, Edit, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
+interface ProdutoPCP {
+  id: string;
+  codigo: string;
+  descricao_produto: string;
+  batch_receita_kg?: number;
+  classificacao?: string;
+}
 
 interface Produto {
   codigo: string;
@@ -24,6 +41,8 @@ interface Produto {
   kg: number;
   cx: number;
   planejamento: number;
+  descricao_produto?: string;
+  id?: string;
 }
 
 interface TurnoFormProps {
@@ -33,16 +52,84 @@ interface TurnoFormProps {
 
 const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtosPCP, setProdutosPCP] = useState<ProdutoPCP[]>([]);
+  const [produtosFiltrados, setProdutosFiltrados] = useState<Produto[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [importData, setImportData] = useState<Produto[]>([]);
   const [status, setStatus] = useState<"empty" | "loaded" | "saved">("empty");
   const [editingValues, setEditingValues] = useState<{[key: number]: string}>({});
+  const [editingKgValues, setEditingKgValues] = useState<{[key: number]: string}>({});
+  const [editingKgIndex, setEditingKgIndex] = useState<number | null>(null);
+  const [editingCxValues, setEditingCxValues] = useState<{[key: number]: string}>({});
+  const [editingCxIndex, setEditingCxIndex] = useState<number | null>(null);
+  const [planilhaImportada, setPlanilhaImportada] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const { toast } = useToast();
+
+  // Função para buscar produtos da coleção PCP_produtos
+  const fetchProdutosPCP = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "PCP_produtos"));
+      const produtosData: ProdutoPCP[] = [];
+      querySnapshot.forEach((doc) => {
+        produtosData.push({ id: doc.id, ...doc.data() } as ProdutoPCP);
+      });
+      setProdutosPCP(produtosData);
+      return produtosData;
+    } catch (error) {
+      console.error("Error fetching produtos PCP:", error);
+      return [];
+    }
+  };
+
+  // Função para mesclar dados da planilha com produtos PCP
+  const mergeImportWithPCPProducts = (importedData: Produto[], pcpProducts: ProdutoPCP[]) => {
+    const mergedProducts: Produto[] = pcpProducts.map(pcpProduto => {
+      const importedItem = importedData.find(item => item.codigo === pcpProduto.codigo);
+      
+      return {
+        codigo: pcpProduto.codigo,
+        textoBreve: pcpProduto.descricao_produto || "",
+        kg: importedItem?.kg || 0,
+        cx: importedItem?.cx || 0,
+        planejamento: 0,
+        descricao_produto: pcpProduto.descricao_produto,
+        id: pcpProduto.id
+      };
+    });
+    
+    return mergedProducts;
+  };
+
+  // Filtrar produtos baseado no termo de busca
+  const filterProducts = (products: Produto[], search: string) => {
+    if (!search.trim()) return products;
+    
+    const searchLower = search.toLowerCase();
+    return products.filter(produto => 
+      produto.codigo.toLowerCase().includes(searchLower) ||
+      produto.textoBreve.toLowerCase().includes(searchLower) ||
+      (produto.descricao_produto && produto.descricao_produto.toLowerCase().includes(searchLower))
+    );
+  };
+
+  // Atualizar produtos filtrados quando search term ou produtos mudarem
+  useEffect(() => {
+    const filtered = filterProducts(produtos, searchTerm);
+    setProdutosFiltrados(filtered);
+  }, [produtos, searchTerm]);
 
   const getTodayDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
+  };
+
+  const getSelectedDateString = () => {
+    return selectedDate.toISOString().split('T')[0];
   };
 
   useEffect(() => {
@@ -54,30 +141,12 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
       if (savedData) {
         const parsed = JSON.parse(savedData);
         setProdutos(parsed);
+        setPlanilhaImportada(true);
         setStatus("loaded");
         return;
       }
       
-      try {
-        const docRef = doc(db, "PCP", today);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists() && docSnap.data()[`${turno}_turno`]) {
-          const firestoreData = docSnap.data()[`${turno}_turno`].map((p: any) => ({
-            codigo: p.codigo,
-            textoBreve: p.texto_breve,
-            kg: parseFloat(p.kg || "0"),
-            cx: parseFloat(p.cx || "0"),
-            planejamento: parseFloat(p.planejamento || "0")
-          }));
-          
-          setProdutos(firestoreData);
-          setStatus("loaded");
-          localStorage.setItem(localStorageKey, JSON.stringify(firestoreData));
-        }
-      } catch (error) {
-        console.error("Error loading data from Firestore:", error);
-      }
+      // Não carrega automaticamente do Firestore - só após importação da planilha
     };
 
     loadData();
@@ -178,15 +247,148 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     reader.readAsArrayBuffer(file);
   };
 
-  const confirmImport = () => {
+  const confirmImport = async () => {
     const today = getTodayDate();
     const localStorageKey = `turno${turno}_${today}`;
     
-    setProdutos(importData);
-    setStatus("loaded");
-    setIsModalOpen(false);
+    // Buscar produtos PCP
+    const pcpProducts = await fetchProdutosPCP();
     
-    localStorage.setItem(localStorageKey, JSON.stringify(importData));
+    // Mesclar dados importados com produtos PCP
+    const mergedProducts = mergeImportWithPCPProducts(importData, pcpProducts);
+    
+    setProdutos(mergedProducts);
+    setStatus("loaded");
+    setPlanilhaImportada(true);
+    setIsModalOpen(false);
+    setShowDatePicker(true); // Mostrar seleção de data após importação
+    
+    localStorage.setItem(localStorageKey, JSON.stringify(mergedProducts));
+    
+    toast({
+      title: "Sucesso",
+      description: `Planilha importada e mesclada com ${pcpProducts.length} produtos do sistema!`,
+    });
+  };
+
+  // Função para iniciar a edição do CX
+  const startCxEditing = (index: number) => {
+    setEditingCxIndex(index);
+    handleCxFocus(index);
+  };
+
+  // Função para lidar com a mudança no campo de CX
+  const handleCxChange = (index: number, value: string) => {
+    // Remove qualquer formatação existente para processar apenas números
+    const numericValue = value.replace(/[^\d]/g, "");
+    
+    // Aplica formatação automática durante a digitação
+    const formattedValue = formatInputValue(numericValue);
+    
+    // Store the formatted editing value to allow free typing
+    setEditingCxValues(prev => ({ ...prev, [index]: formattedValue }));
+    
+    const newProdutos = [...produtos];
+    newProdutos[index].cx = parseNumber(formattedValue);
+    setProdutos(newProdutos);
+    
+    // Update localStorage on every change
+    const today = getTodayDate();
+    const localStorageKey = `turno${turno}_${today}`;
+    localStorage.setItem(localStorageKey, JSON.stringify(newProdutos));
+  };
+
+  const handleCxFocus = (index: number) => {
+    const currentValue = produtos[index].cx;
+    
+    // Se o valor atual é zero, inicia com campo vazio para nova digitação
+    if (currentValue === 0) {
+      setEditingCxValues(prev => ({ ...prev, [index]: "" }));
+    } else {
+      // Para valores não zero, mostra o valor numérico sem formatação para edição
+      const numericValue = String(Math.round(currentValue * 100));
+      setEditingCxValues(prev => ({ ...prev, [index]: numericValue }));
+    }
+  };
+
+  // Função para quando o campo CX perde o foco (formata o número)
+  const handleCxBlur = (index: number) => {
+    const currentValue = produtos[index].cx;
+    
+    // Se o valor atual é zero, mantém vazio para facilitar nova digitação
+    if (currentValue === 0) {
+      setEditingCxValues(prev => ({ ...prev, [index]: "" }));
+    } else {
+      // Caso contrário, limpa o valor de edição para mostrar o valor formatado
+      setEditingCxValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[index];
+        return newValues;
+      });
+    }
+    
+    // Sair do modo de edição
+    setEditingCxIndex(null);
+  };
+
+  // Função para iniciar a edição do KG
+  const startKgEditing = (index: number) => {
+    setEditingKgIndex(index);
+    handleKgFocus(index);
+  };
+
+  // Função para lidar com a mudança no campo de KG
+  const handleKgChange = (index: number, value: string) => {
+    // Remove qualquer formatação existente para processar apenas números
+    const numericValue = value.replace(/[^\d]/g, "");
+    
+    // Aplica formatação automática durante a digitação
+    const formattedValue = formatInputValue(numericValue);
+    
+    // Store the formatted editing value to allow free typing
+    setEditingKgValues(prev => ({ ...prev, [index]: formattedValue }));
+    
+    const newProdutos = [...produtos];
+    newProdutos[index].kg = parseNumber(formattedValue);
+    setProdutos(newProdutos);
+    
+    // Update localStorage on every change
+    const today = getTodayDate();
+    const localStorageKey = `turno${turno}_${today}`;
+    localStorage.setItem(localStorageKey, JSON.stringify(newProdutos));
+  };
+
+  const handleKgFocus = (index: number) => {
+    const currentValue = produtos[index].kg;
+    
+    // Se o valor atual é zero, inicia com campo vazio para nova digitação
+    if (currentValue === 0) {
+      setEditingKgValues(prev => ({ ...prev, [index]: "" }));
+    } else {
+      // Para valores não zero, mostra o valor numérico sem formatação para edição
+      const numericValue = String(Math.round(currentValue * 100));
+      setEditingKgValues(prev => ({ ...prev, [index]: numericValue }));
+    }
+  };
+
+  // Função para quando o campo KG perde o foco (formata o número)
+  const handleKgBlur = (index: number) => {
+    const currentValue = produtos[index].kg;
+    
+    // Se o valor atual é zero, mantém vazio para facilitar nova digitação
+    if (currentValue === 0) {
+      setEditingKgValues(prev => ({ ...prev, [index]: "" }));
+    } else {
+      // Caso contrário, limpa o valor de edição para mostrar o valor formatado
+      setEditingKgValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[index];
+        return newValues;
+      });
+    }
+    
+    // Sair do modo de edição
+    setEditingKgIndex(null);
   };
 
   // Função para lidar com a mudança no campo de planejamento
@@ -247,8 +449,18 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
     localStorage.removeItem(localStorageKey);
     
     setProdutos([]);
+    setProdutosFiltrados([]);
     setEditingValues({});
-    setStatus("empty");
+    setEditingKgValues({});
+    setEditingKgIndex(null);
+    setEditingCxValues({});
+    setEditingCxIndex(null);
+    setPlanilhaImportada(false);
+      setSearchTerm("");
+      setShowDatePicker(false);
+      setShowCalendar(false);
+      setSelectedDate(new Date());
+      setStatus("empty");
     
     toast({
       title: "Sucesso",
@@ -266,32 +478,58 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
       return;
     }
 
+    // Filtrar apenas produtos com planejamento > 0
+    const produtosComPlanejamento = produtos.filter(p => p.planejamento > 0);
+
+    if (produtosComPlanejamento.length === 0) {
+      toast({
+        title: "Aviso",
+        description: "Nenhum produto com planejamento definido para salvar!",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const today = getTodayDate();
-      const docRef = doc(db, "PCP", today);
+      const selectedDateString = getSelectedDateString();
+      const docRef = doc(db, "PCP", selectedDateString);
       
       await setDoc(docRef, {
-        [`${turno}_turno`]: produtos.map(p => ({
+        [`${turno}_turno`]: produtosComPlanejamento.map(p => ({
           codigo: p.codigo,
           texto_breve: p.textoBreve,
           kg: p.kg,
           cx: p.cx,
           planejamento: p.planejamento
         })),
+        date: selectedDateString,
         timestamp: new Date()
       }, { merge: true });
 
       setStatus("saved");
       
+      const today = getTodayDate();
       const localStorageKey = `turno${turno}_${today}`;
       localStorage.removeItem(localStorageKey);
       setProdutos([]);
+      setProdutosFiltrados([]);
       setEditingValues({});
+      setEditingKgValues({});
+      setEditingKgIndex(null);
+      setEditingCxValues({});
+      setEditingCxIndex(null);
+      setPlanilhaImportada(false);
+      setSearchTerm("");
+      setShowDatePicker(false);
+      setShowCalendar(false);
+      setSelectedDate(new Date());
       setStatus("empty");
+      
+      const dateFormatted = format(selectedDate, "dd/MM/yyyy", { locale: ptBR });
       
       toast({
         title: "Sucesso",
-        description: `Dados do ${titulo} salvos e importação limpa com sucesso!`,
+        description: `${produtosComPlanejamento.length} produtos do ${titulo} salvos para ${dateFormatted}!`,
       });
     } catch (error) {
       console.error("Erro ao salvar no Firestore:", error);
@@ -305,8 +543,8 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
 
   const getBadgeVariant = () => {
     switch (status) {
-      case "empty": return "destructive";
-      case "loaded": return "secondary";
+      case "empty": return "secondary";
+      case "loaded": return "default";
       case "saved": return "default";
       default: return "default";
     }
@@ -323,13 +561,75 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">{titulo}</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">{titulo}</h2>
+        {planilhaImportada && produtos.length > 0 && (
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCalendar(!showCalendar)}
+            className="flex items-center gap-2"
+          >
+            <CalendarIcon className="h-4 w-4" />
+            Lançamento Personalizado
+          </Button>
+        )}
+      </div>
       
-      <Card className="bg-card/95 backdrop-blur-sm border border-border/50">
+      {/* Calendário para seleção de data - exibido apenas quando solicitado */}
+      {showCalendar && (
+        <Card className="bg-card/95 backdrop-blur-sm border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Calendário de Produção
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col lg:flex-row gap-6 items-start">
+              <div className="w-fit">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  className="rounded-md border bg-card pointer-events-auto"
+                  locale={ptBR}
+                />
+              </div>
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h4 className="text-lg font-semibold mb-2">Data Selecionada</h4>
+                  <div className="p-4 bg-primary/10 rounded-lg border">
+                    <p className="text-lg font-medium">
+                      {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Esta será a data utilizada para salvar os lançamentos de produção
+                    </p>
+                  </div>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p>• Selecione uma data anterior ou posterior para lançamentos retroativos ou futuros</p>
+                  <p>• Por padrão, a data atual está selecionada</p>
+                  <p>• Esta data será aplicada ao salvar os dados no sistema</p>
+                  <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <p className="font-medium text-amber-800 dark:text-amber-200">⚠️ Importante:</p>
+                    <p className="text-amber-700 dark:text-amber-300">As datas personalizadas devem ser selecionadas tanto no 1° quanto no 2° Turno, pois a seleção é individual para cada turno.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      <Card className="bg-card/95 backdrop-blur-sm border">
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
             <span>Controle de Produção</span>
-            <Badge variant={getBadgeVariant()}>
+            <Badge 
+              variant="secondary"
+              className={status === "loaded" ? "bg-green-600 text-white hover:bg-green-700" : "bg-gray-500 text-white"}
+            >
               {getBadgeText()}
             </Badge>
           </CardTitle>
@@ -368,39 +668,105 @@ const TurnoForm: React.FC<TurnoFormProps> = ({ turno, titulo }) => {
               </div>
             )}
 
-            {produtos.length > 0 && (
+            {produtos.length > 0 && planilhaImportada && (
               <div className="mt-6">
+                {/* Barra de pesquisa */}
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      type="text"
+                      placeholder="Pesquisar por código ou descrição..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Exibindo {produtosFiltrados.length} de {produtos.length} produtos | 
+                    Planilha: {importData.length} produtos importados | 
+                    Cadastrados: {produtosPCP.length} produtos carregados
+                  </p>
+                </div>
+                
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Código</TableHead>
-                        <TableHead className="w-1/4">Texto breve</TableHead>
+                        <TableHead className="w-1/4">Descrição</TableHead>
                         <TableHead className="text-right">KG</TableHead>
                         <TableHead className="text-right">CX</TableHead>
                         <TableHead className="text-right">Planejamento</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {produtos.map((produto, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{produto.codigo}</TableCell>
-                          <TableCell className="truncate" title={produto.textoBreve}>{produto.textoBreve}</TableCell>
-                          <TableCell className="text-right">{formatNumber(produto.kg)}</TableCell>
-                          <TableCell className="text-right">{formatNumber(produto.cx)}</TableCell>
-                          <TableCell>
-                            <Input
-                              type="text"
-                              value={editingValues[index] !== undefined ? editingValues[index] : (produto.planejamento === 0 ? "" : formatNumber(produto.planejamento))}
-                              onChange={(e) => handlePlanejamentoChange(index, e.target.value)}
-                              onFocus={() => handlePlanejamentoFocus(index)}
-                              onBlur={() => handlePlanejamentoBlur(index)}
-                              className="text-right"
-                              placeholder="0,00"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {produtosFiltrados.map((produto, index) => {
+                        // Encontrar o índice original do produto na lista completa
+                        const originalIndex = produtos.findIndex(p => p.codigo === produto.codigo);
+                        
+                        return (
+                          <TableRow key={produto.codigo}>
+                            <TableCell className="font-mono">{produto.codigo}</TableCell>
+                            <TableCell className="truncate" title={produto.descricao_produto || produto.textoBreve}>
+                              {produto.descricao_produto || produto.textoBreve}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2 justify-end">
+                                {editingKgIndex === originalIndex ? (
+                                  <Input
+                                    type="text"
+                                    value={editingKgValues[originalIndex] !== undefined ? editingKgValues[originalIndex] : (produto.kg === 0 ? "" : formatNumber(produto.kg))}
+                                    onChange={(e) => handleKgChange(originalIndex, e.target.value)}
+                                    onBlur={() => handleKgBlur(originalIndex)}
+                                    className="text-right w-24"
+                                    placeholder="0,00"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span className="text-right w-24 inline-block">{formatNumber(produto.kg)}</span>
+                                )}
+                                <Edit 
+                                  className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary transition-colors" 
+                                  onClick={() => startKgEditing(originalIndex)}
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2 justify-end">
+                                {editingCxIndex === originalIndex ? (
+                                  <Input
+                                    type="text"
+                                    value={editingCxValues[originalIndex] !== undefined ? editingCxValues[originalIndex] : (produto.cx === 0 ? "" : formatNumber(produto.cx))}
+                                    onChange={(e) => handleCxChange(originalIndex, e.target.value)}
+                                    onBlur={() => handleCxBlur(originalIndex)}
+                                    className="text-right w-24"
+                                    placeholder="0,00"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span className="text-right w-24 inline-block">{formatNumber(produto.cx)}</span>
+                                )}
+                                <Edit 
+                                  className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary transition-colors" 
+                                  onClick={() => startCxEditing(originalIndex)}
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="text"
+                                value={editingValues[originalIndex] !== undefined ? editingValues[originalIndex] : (produto.planejamento === 0 ? "" : formatNumber(produto.planejamento))}
+                                onChange={(e) => handlePlanejamentoChange(originalIndex, e.target.value)}
+                                onFocus={() => handlePlanejamentoFocus(originalIndex)}
+                                onBlur={() => handlePlanejamentoBlur(originalIndex)}
+                                className="text-right"
+                                placeholder="0,00"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

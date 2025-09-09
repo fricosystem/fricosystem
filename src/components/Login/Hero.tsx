@@ -1,12 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AuthModal } from "@/components/Login/Auth/AuthModal";
-
 export function Hero() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
-
-  return (
-    <section id="hero" className="relative min-h-screen bg-slate-950 flex items-center justify-center overflow-hidden pt-24 pb-16">
+  return <section id="hero" className="relative min-h-screen bg-slate-950 flex items-center justify-center overflow-hidden pt-24 pb-16">
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-black opacity-90"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-frico-950/10 via-black to-black"></div>
@@ -23,30 +20,16 @@ export function Hero() {
         O FR Stock Manager transforma a gestão corporativa com soluções integradas para estoque, finanças, recursos humanos e muito mais. Fazemos com que a empresa alcançe a excelência operacional.
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-4 animate-fade-up" style={{animationDelay: "0.2s"}}>
-          <Button 
-            size="lg" 
-            className="bg-frico-600 hover:bg-frico-700 text-white px-8"
-            onClick={() => setAuthModalOpen(true)}
-          >
-            Comece Agora
-          </Button>
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="bg-white border-white text-black hover:bg-black hover:text-white"
-            asChild
-          >
+        <div className="flex flex-col sm:flex-row gap-4 animate-fade-up" style={{
+        animationDelay: "0.2s"
+      }}>
+          
+          <Button variant="outline" size="lg" className="bg-white border-white text-black hover:bg-black hover:text-white" asChild>
             <a href="#features">Saiba Mais</a>
           </Button>
         </div>
       </div>
 
-      <AuthModal 
-        isOpen={authModalOpen} 
-        onClose={() => setAuthModalOpen(false)}
-        defaultTab="register"
-      />
-    </section>
-  );
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} defaultTab="register" />
+    </section>;
 }

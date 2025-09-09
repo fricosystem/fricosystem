@@ -44,6 +44,7 @@ import {
   Layers,
   Calculator,
   Map,
+  Target,
 } from "lucide-react";
 import {
   BarChart,
@@ -62,6 +63,8 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { usePCPOptimized } from "@/hooks/usePCPOptimized";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 
 // Importando os componentes das abas
 import PrimeiroTurno from "./1turno";
@@ -69,7 +72,8 @@ import SegundoTurno from "./2turno";
 import Processamento from "./Processamento";
 import ResultadosFinais from "./ResultadosFinais";
 import Produtos from "./Produtos";
-import Sistema from "./Sistema";
+
+import Metas from "./Metas";
 
 // Importando os modais para produtos sem classificação
 import ProdutosSemClassificacaoModal from "@/components/PCP/ProdutosSemClassificacaoModal";
@@ -115,7 +119,11 @@ interface ProdutoSemClassificacao {
 const PCP = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
-  const [period, setPeriod] = useState<"hoje" | "semana" | "mes" | "ano">("hoje");
+  const [period, setPeriod] = useState<"hoje" | "semana" | "mes" | "ano" | "personalizado">("hoje");
+  const [customPeriod, setCustomPeriod] = useState<{
+    startDate?: Date;
+    endDate?: Date;
+  }>({});
   
   // Estados para os modais
   const [showProdutosSemClassificacao, setShowProdutosSemClassificacao] = useState(false);
@@ -136,14 +144,26 @@ const PCP = () => {
 
   // Carregar dados baseado no período selecionado
   useEffect(() => {
-    fetchPCPData(period);
-  }, [period]);
+    if (period === "personalizado" && customPeriod.startDate && customPeriod.endDate) {
+      // Para período personalizado, usar formato adequado
+      const customPeriodString = `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`;
+      fetchPCPData(customPeriodString as any);
+    } else if (period !== "personalizado") {
+      fetchPCPData(period);
+    }
+  }, [period, customPeriod]);
 
   // Configurar listener em tempo real
   useEffect(() => {
-    const unsubscribe = setupRealtimeListener(period);
-    return () => unsubscribe();
-  }, [period]);
+    if (period === "personalizado" && customPeriod.startDate && customPeriod.endDate) {
+      const customPeriodString = `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`;
+      const unsubscribe = setupRealtimeListener(customPeriodString as any);
+      return () => unsubscribe();
+    } else if (period !== "personalizado") {
+      const unsubscribe = setupRealtimeListener(period);
+      return () => unsubscribe();
+    }
+  }, [period, customPeriod]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -208,13 +228,22 @@ const PCP = () => {
   // Função chamada após produto ser adicionado com sucesso
   const handleProdutoAdicionado = () => {
     // Recarregar dados PCP para refletir as mudanças
-    fetchPCPData(period);
+    if (period === "personalizado" && customPeriod.startDate && customPeriod.endDate) {
+      const customPeriodString = `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`;
+      fetchPCPData(customPeriodString as any);
+    } else if (period !== "personalizado") {
+      fetchPCPData(period);
+    }
     setShowProdutosSemClassificacao(false);
     setProdutoSelecionado(null);
   };
 
   // Obter métricas e dados dos gráficos
-  const metrics = getMetrics(period);
+  const currentPeriod = period === "personalizado" && customPeriod.startDate && customPeriod.endDate
+    ? `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`
+    : period;
+    
+  const metrics = getMetrics(currentPeriod as any);
   const chartData = getChartData;
 
   return (
@@ -271,12 +300,12 @@ const PCP = () => {
             Produtos
           </Button>
           <Button
-            variant={activeTab === "sistema" ? "default" : "ghost"}
-            onClick={() => setActiveTab("sistema")}
+            variant={activeTab === "metas" ? "default" : "ghost"}
+            onClick={() => setActiveTab("metas")}
             className="flex items-center gap-2"
           >
-            <Settings className="h-4 w-4" />
-            Sistema
+            <Target className="h-4 w-4" />
+            Metas
           </Button>
         </div>
 
@@ -287,8 +316,8 @@ const PCP = () => {
             
             {/* Seletor de período */}
             <div className="mb-6">
-              <Tabs defaultValue="hoje" value={period} onValueChange={(v) => setPeriod(v as "hoje" | "semana" | "mes" | "ano")}>
-                <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800">
+              <Tabs defaultValue="hoje" value={period} onValueChange={(v) => setPeriod(v as "hoje" | "semana" | "mes" | "ano" | "personalizado")}>
+                <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800">
                   <TabsTrigger value="hoje" className="flex items-center gap-2">
                     <Clock className="h-4 w-4" /> Hoje
                   </TabsTrigger>
@@ -301,7 +330,41 @@ const PCP = () => {
                   <TabsTrigger value="ano" className="flex items-center gap-2">
                     <BarChart2 className="h-4 w-4" /> Ano
                   </TabsTrigger>
+                  <TabsTrigger value="personalizado" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" /> Personalizado
+                  </TabsTrigger>
                 </TabsList>
+                
+                <TabsContent value="personalizado" className="mt-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Data de Início</Label>
+                          <Input
+                            type="date"
+                            value={customPeriod.startDate ? format(customPeriod.startDate, 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const date = e.target.value ? new Date(e.target.value) : undefined;
+                              setCustomPeriod(prev => ({ ...prev, startDate: date }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label>Data de Fim</Label>
+                          <Input
+                            type="date"
+                            value={customPeriod.endDate ? format(customPeriod.endDate, 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const date = e.target.value ? new Date(e.target.value) : undefined;
+                              setCustomPeriod(prev => ({ ...prev, endDate: date }));
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               </Tabs>
             </div>
 
@@ -311,7 +374,14 @@ const PCP = () => {
                   <AlertTriangle className="h-12 w-12 text-red-500" />
                   <p className="text-lg font-medium text-red-600">Erro ao carregar dados</p>
                   <p className="text-sm text-muted-foreground text-center">{error}</p>
-                  <Button onClick={() => fetchPCPData(period)} className="mt-4">
+                  <Button onClick={() => {
+                    if (period === "personalizado" && customPeriod.startDate && customPeriod.endDate) {
+                      const customPeriodString = `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`;
+                      fetchPCPData(customPeriodString as any);
+                    } else if (period !== "personalizado") {
+                      fetchPCPData(period);
+                    }
+                  }} className="mt-4">
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Tentar Novamente
                   </Button>
@@ -323,51 +393,56 @@ const PCP = () => {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
               <div 
                 onClick={() => {
-                  setShowProdutosSemClassificacao(true);
+                  // Mostra informações detalhadas dos turnos
                 }}
                 className="cursor-pointer hover:scale-105 transition-transform"
               >
                 <StatsCard
-                  title="Produtos Sem cadastro"
-                  value={metrics.produtosSemClassificacao.toString()}
-                  icon={<Package className="h-4 w-4" />}
+                  title="Quantidade Produzida por Turnos"
+                  value={`${Object.values(metrics.producaoPorTurno).reduce((acc, turno) => acc + turno.quantidade, 0).toLocaleString()} KG`}
+                  icon={<Clock className="h-4 w-4" />}
                   trend={{
-                    value: metrics.produtosCadastrados > 0 ? (metrics.produtosSemClassificacao / metrics.produtosCadastrados * 100) : 0,
-                    positive: metrics.produtosSemClassificacao === 0,
-                    label: metrics.produtosSemClassificacao === 0 
-                      ? "Todos os produtos estão cadastrados" 
-                      : metrics.produtosSemClassificacao === 1 
-                        ? "Precisa de atenção" 
-                        : "Precisam de atenção"
+                    value: Object.keys(metrics.producaoPorTurno).length,
+                    positive: Object.keys(metrics.producaoPorTurno).length > 0,
+                    label: Object.keys(metrics.producaoPorTurno).length === 0 
+                      ? "Nenhum turno ativo" 
+                      : Object.keys(metrics.producaoPorTurno).length === 1
+                        ? "1 turno ativo"
+                        : `${Object.keys(metrics.producaoPorTurno).length} turnos ativos`
                   }}
-                  description="Importados mas não cadastrados no sistema"
-                  className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-900/10"
+                  description={`1° Turno: ${metrics.producaoPorTurno['1° Turno']?.quantidade.toLocaleString() || 0} KG | 2° Turno: ${metrics.producaoPorTurno['2° Turno']?.quantidade.toLocaleString() || 0} KG`}
+                  className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
                 />
               </div>
               
               <StatsCard
-                title="Total Cadastrados"
-                value={metrics.produtosCadastrados.toString()}
+                title="Total Geral em %"
+                value={`${metrics.eficienciaMedia}%`}
                 icon={<Boxes className="h-4 w-4" />}
                 trend={{
-                  value: metrics.produtosCadastrados > 0 ? ((metrics.produtosCadastrados - metrics.produtosSemClassificacao) / metrics.produtosCadastrados * 100) : 0,
-                  positive: true,
-                  label: `${metrics.produtosCadastrados - metrics.produtosSemClassificacao} com classificação`
+                  value: metrics.eficienciaMedia,
+                  positive: metrics.eficienciaMedia >= 80,
+                  label: metrics.eficienciaMedia >= 80 ? "Meta atingida" : metrics.eficienciaMedia === 0 ? "Sem dados" : "Abaixo da meta"
                 }}
-                description="Total no sistema"
+                description={`Meta: 80% | Produção total: ${metrics.producaoTotal.toLocaleString()} KG`}
                 className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
               />
              
               <StatsCard
-                title="Eficiência Média"
-                value={`${metrics.eficienciaMedia}%`}
+                title="Planejado x Realizado"
+                value={`${pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0).toLocaleString()} / ${metrics.producaoTotal.toLocaleString()}`}
                 icon={<BarChart2 className="h-4 w-4" />}
                 trend={{
-                  value: metrics.eficienciaMedia,
-                  positive: metrics.eficienciaMedia >= 85,
-                  label: metrics.eficienciaMedia >= 85 ? "Acima da meta" : metrics.eficienciaMedia === 0 ? "Sem produção" : "Abaixo da meta"
+                  value: pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0) > 0 
+                    ? Math.round((metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) * 100)
+                    : 0,
+                  positive: pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0) > 0 
+                    ? (metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) >= 0.85
+                    : false,
+                  label: pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0) === 0 ? "Sem planejamento" : 
+                    (metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) >= 0.85 ? "Meta atingida" : "Abaixo da meta"
                 }}
-                description="Meta: 85%"
+                description="KG Planejado / KG Realizado"
                 className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
               />
 
@@ -639,7 +714,8 @@ const PCP = () => {
         {activeTab === "processamento" && <Processamento />}
         {activeTab === "resultados" && <ResultadosFinais />}
         {activeTab === "produtos" && <Produtos />}
-        {activeTab === "sistema" && <Sistema />}
+        {activeTab === "metas" && <Metas />}
+        
 
         {/* Modais para produtos sem classificação */}
         <ProdutosSemClassificacaoModal
