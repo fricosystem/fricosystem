@@ -30,9 +30,3 @@ git pull origin main
 
 
 Esse comando git pull combina dois comandos: git fetch (baixa as mudanças) e git merge (integra as mudanças ao seu código local).
-
-Vercel e Github: fricoalimentossystem@gmail.com
-
-https://lovable.dev/projects/fb518902-64b4-4f77-a6cb-442d9b440af4          09/09/2025 às 22:12 em casa
-
-backup 100% funcional:  https://lovable.dev/projects/9997c970-4cd0-4d9d-86e7-78d52a4f58f2
