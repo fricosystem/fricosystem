@@ -9,27 +9,11 @@ import { SearchIcon, RefreshCw, Info } from "lucide-react";
 import { doc, getDoc, setDoc, collection, getDocs, query, orderBy, where, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ModalProcessarDatasAnteriores } from "@/components/PCP/ModalProcessarDatasAnteriores";
 import { format } from 'date-fns';
-
 interface ProcessamentoData {
   id?: string;
   ctp1: number;
@@ -48,7 +32,6 @@ interface ProcessamentoData {
   planejadoTurno1?: number;
   planejadoTurno2?: number;
 }
-
 interface OrdemProducao {
   id: string;
   ordem_id: string;
@@ -61,13 +44,11 @@ interface OrdemProducao {
   dataProcessamento: string;
   processamentoId: string;
 }
-
 interface DataNaoProcessada {
   id: string;
   date: string;
   turnos: string[];
 }
-
 const Processamento: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -81,14 +62,15 @@ const Processamento: React.FC = () => {
   const [showModalDatasNaoProcessadas, setShowModalDatasNaoProcessadas] = useState(false);
   const [datasNaoProcessadas, setDatasNaoProcessadas] = useState<DataNaoProcessada[]>([]);
   const [isProcessingDatas, setIsProcessingDatas] = useState(false);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // Cache para documentos PCP para evitar múltiplas requisições
   const [documentCache, setDocumentCache] = useState<Record<string, any>>({});
-  
+
   // Debounce para evitar saves excessivos
   const saveTimeoutRef = React.useRef<NodeJS.Timeout>();
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "concluído":
@@ -103,12 +85,7 @@ const Processamento: React.FC = () => {
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100";
     }
   };
-
-  const filteredOrdens = ordens.filter((ordem) =>
-    ordem.ordem_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ordem.produto.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
+  const filteredOrdens = ordens.filter(ordem => ordem.ordem_id.toLowerCase().includes(searchTerm.toLowerCase()) || ordem.produto.toLowerCase().includes(searchTerm.toLowerCase()));
   const getTodayDate = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -116,53 +93,97 @@ const Processamento: React.FC = () => {
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-
-  const formatDate = (dateInput: string | Date) => {
+  const formatDate = (dateInput: string | Date | any) => {
     if (!dateInput) return "N/A";
-    
     let date: Date;
-    if (dateInput instanceof Date) {
-      date = dateInput;
-    } else {
-      date = new Date(dateInput);
+    
+    try {
+      // Se já for uma instância de Date válida
+      if (dateInput instanceof Date) {
+        date = dateInput;
+      }
+      // Se for um objeto Firestore Timestamp
+      else if (dateInput && typeof dateInput.toDate === 'function') {
+        date = dateInput.toDate();
+      }
+      // Se for um número (timestamp em ms)
+      else if (typeof dateInput === 'number') {
+        date = new Date(dateInput);
+      }
+      // Se for string
+      else if (typeof dateInput === 'string') {
+        // Se for formato YYYY-MM-DD (apenas data), adicionar horário meio-dia para evitar timezone
+        if (dateInput.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          date = new Date(dateInput + 'T12:00:00');
+        }
+        // Se for formato DD-MM-YYYY, converter para YYYY-MM-DD
+        else if (dateInput.match(/^\d{2}-\d{2}-\d{4}$/)) {
+          const [day, month, year] = dateInput.split('-');
+          date = new Date(`${year}-${month}-${day}T12:00:00`);
+        }
+        // Para outros formatos de string
+        else {
+          date = new Date(dateInput);
+        }
+      } 
+      // Para outros tipos, tentar converter diretamente
+      else {
+        date = new Date(dateInput);
+      }
+      
+      // Verificar se a data é válida
+      if (isNaN(date.getTime())) return "N/A";
+      
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'America/Sao_Paulo'
+      });
+    } catch (error) {
+      console.error('Erro ao formatar data:', error, dateInput);
+      return "N/A";
     }
-    
-    if (isNaN(date.getTime())) return "N/A";
-    
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
-
   const formatShortDate = (dateInput: string | Date) => {
     if (!dateInput) return "N/A";
-    
     let date: Date;
     if (dateInput instanceof Date) {
       date = dateInput;
     } else {
-      date = new Date(dateInput);
+      // Se for string no formato DD-MM-YYYY ou YYYY-MM-DD, tratar adequadamente
+      if (typeof dateInput === 'string') {
+        // Se for formato YYYY-MM-DD, adicionar horário para evitar problema de timezone
+        if (dateInput.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          date = new Date(dateInput + 'T12:00:00');
+        }
+        // Se for formato DD-MM-YYYY, converter para YYYY-MM-DD
+        else if (dateInput.match(/^\d{2}-\d{2}-\d{4}$/)) {
+          const [day, month, year] = dateInput.split('-');
+          date = new Date(`${year}-${month}-${day}T12:00:00`);
+        }
+        // Outros formatos
+        else {
+          date = new Date(dateInput);
+        }
+      } else {
+        date = new Date(dateInput);
+      }
     }
-    
     if (isNaN(date.getTime())) return "N/A";
-    
     return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     });
   };
-
   const saveToLocalStorage = (data: ProcessamentoData) => {
     const today = getTodayDate();
     const key = `processamento_${today}`;
     localStorage.setItem(key, JSON.stringify(data));
   };
-
   const loadFromLocalStorage = () => {
     const today = getTodayDate();
     const key = `processamento_${today}`;
@@ -184,14 +205,16 @@ const Processamento: React.FC = () => {
       console.log(`📦 Usando documento ${docId} do cache`);
       return documentCache[docId];
     }
-    
     try {
       console.log(`🔄 Carregando documento ${docId} do Firestore...`);
       const docRef = doc(db, "PCP", docId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setDocumentCache(prev => ({ ...prev, [docId]: data }));
+        setDocumentCache(prev => ({
+          ...prev,
+          [docId]: data
+        }));
         return data;
       }
     } catch (error) {
@@ -199,22 +222,18 @@ const Processamento: React.FC = () => {
     }
     return null;
   }, [documentCache]);
-
   const calcularComUmTurno = useCallback(async (turno: string) => {
     setIsLoading(true);
     try {
       const today = getTodayDate();
       const docRef = doc(db, "PCP", today);
       const docSnap = await getDoc(docRef);
-
       if (!docSnap.exists()) {
         throw new Error("Nenhum dado de produção encontrado para hoje");
       }
-
       const data = docSnap.data();
       const turnoKey = turno === '1 Turno' ? '1_turno' : '2_turno';
       const turnoData = data[turnoKey] || [];
-
       if (turnoData.length === 0) {
         throw new Error(`Dados do ${turno} não encontrados`);
       }
@@ -223,10 +242,9 @@ const Processamento: React.FC = () => {
       const kgTotal = turnoData.reduce((sum: number, item: any) => sum + parseFloat(item.kg || "0"), 0);
       const cxTotal = turnoData.reduce((sum: number, item: any) => sum + parseFloat(item.cx || "0"), 0);
       const planoDiario = turnoData.reduce((sum: number, item: any) => sum + parseFloat(item.planejamento || "0"), 0);
-      const batchReceita = kgTotal > 0 ? (planoDiario / kgTotal) : 0;
+      const batchReceita = kgTotal > 0 ? planoDiario / kgTotal : 0;
       const diferencaPR = kgTotal - planoDiario;
-      const ctptd = planoDiario > 0 ? (kgTotal / planoDiario) * 100 : 0;
-
+      const ctptd = planoDiario > 0 ? kgTotal / planoDiario * 100 : 0;
       const processamentoResult: ProcessamentoData = {
         ctp1: turno === '1 Turno' ? parseFloat(ctptd.toFixed(1)) : 0,
         ctp2: turno === '2 Turno' ? parseFloat(ctptd.toFixed(1)) : 0,
@@ -249,16 +267,17 @@ const Processamento: React.FC = () => {
       await setDoc(docRef, {
         Processamento: processamentoResult,
         processado: "sim"
-      }, { merge: true });
+      }, {
+        merge: true
+      });
 
       // Salvar no localStorage
       saveToLocalStorage(processamentoResult);
-
       setProcessamentoData(processamentoResult);
       toast({
         title: "Processamento concluído",
         description: `Os dados foram calculados com base apenas no ${turno}`,
-        variant: "default",
+        variant: "default"
       });
 
       // Atualizar lista de processamentos  
@@ -267,21 +286,20 @@ const Processamento: React.FC = () => {
       toast({
         title: "Erro no processamento",
         description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   }, [getDocumentWithCache, toast]);
-
   const calcularComDoisTurnos = useCallback(async () => {
     setIsLoading(true);
     try {
       const today = getTodayDate();
-      
+
       // Criar referência do documento
       const docRef = doc(db, "PCP", today);
-      
+
       // Usar cache para documento
       const data = await getDocumentWithCache(today);
       if (!data) {
@@ -289,7 +307,6 @@ const Processamento: React.FC = () => {
       }
       const turno1 = data["1_turno"] || [];
       const turno2 = data["2_turno"] || [];
-
       if (turno1.length === 0 || turno2.length === 0) {
         throw new Error("Dados incompletos dos turnos");
       }
@@ -303,15 +320,14 @@ const Processamento: React.FC = () => {
       const planejadoTurno2 = turno2.reduce((sum: number, item: any) => sum + parseFloat(item.planejamento || "0"), 0);
 
       // Cálculos
-      const ctp1 = planejadoTurno1 > 0 ? (kgTurno1 / planejadoTurno1) * 100 : 0;
-      const ctp2 = planejadoTurno2 > 0 ? (kgTurno2 / planejadoTurno2) * 100 : 0;
+      const ctp1 = planejadoTurno1 > 0 ? kgTurno1 / planejadoTurno1 * 100 : 0;
+      const ctp2 = planejadoTurno2 > 0 ? kgTurno2 / planejadoTurno2 * 100 : 0;
       const kgTotal = kgTurno1 + kgTurno2;
       const cxTotal = cxTurno1 + cxTurno2;
       const planoDiario = planejadoTurno1 + planejadoTurno2;
-      const batchReceita = kgTotal > 0 ? (planoDiario / kgTotal) : 0;
+      const batchReceita = kgTotal > 0 ? planoDiario / kgTotal : 0;
       const diferencaPR = kgTotal - planoDiario;
-      const ctptd = planoDiario > 0 ? (kgTotal / planoDiario) * 100 : 0;
-
+      const ctptd = planoDiario > 0 ? kgTotal / planoDiario * 100 : 0;
       const processamentoResult: ProcessamentoData = {
         ctp1: parseFloat(ctp1.toFixed(1)),
         ctp2: parseFloat(ctp2.toFixed(1)),
@@ -334,16 +350,17 @@ const Processamento: React.FC = () => {
       await setDoc(docRef, {
         Processamento: processamentoResult,
         processado: "sim"
-      }, { merge: true });
+      }, {
+        merge: true
+      });
 
       // Salvar no localStorage
       saveToLocalStorage(processamentoResult);
-
       setProcessamentoData(processamentoResult);
       toast({
         title: "Processamento concluído",
         description: "Os dados foram calculados com ambos os turnos!",
-        variant: "default",
+        variant: "default"
       });
 
       // Atualizar lista de processamentos
@@ -352,34 +369,30 @@ const Processamento: React.FC = () => {
       toast({
         title: "Erro no processamento",
         description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   }, [getDocumentWithCache]);
-
   const verificarDatasNaoProcessadas = useCallback(async () => {
     try {
       console.log("🔍 Verificando datas não processadas...");
       const pcpCollection = collection(db, "PCP");
       const q = query(pcpCollection, where("processado", "==", "não"));
       const querySnapshot = await getDocs(q);
-
       const datasNaoProcessadasData: DataNaoProcessada[] = [];
       const dataAtual = format(new Date(), 'yyyy-MM-dd'); // Data atual no formato YYYY-MM-DD
-      
-      querySnapshot.forEach((doc) => {
+
+      querySnapshot.forEach(doc => {
         const data = doc.data();
         const turnos: string[] = [];
-        
         if (data["1_turno"]) turnos.push("1° Turno");
         if (data["2_turno"]) turnos.push("2° Turno");
-        
         if (turnos.length > 0) {
           // Priorizar o ID do documento que geralmente tem o formato YYYY-MM-DD
           let dataParaExibir = doc.id;
-          
+
           // Se o data.date existir e for diferente do ID, verificar qual usar
           if (data.date && data.date !== doc.id) {
             // Se data.date for uma string de data válida, usar ela
@@ -391,7 +404,7 @@ const Processamento: React.FC = () => {
               dataParaExibir = format(firebaseDate, 'yyyy-MM-dd');
             }
           }
-          
+
           // Só adicionar se não for a data atual
           if (dataParaExibir !== dataAtual) {
             datasNaoProcessadasData.push({
@@ -402,30 +415,25 @@ const Processamento: React.FC = () => {
           }
         }
       });
-
-      console.log(`📊 ${datasNaoProcessadasData.length} datas anteriores não processadas encontradas (excluindo data atual)`);
       return datasNaoProcessadasData;
     } catch (error) {
       console.error("❌ Erro ao verificar datas não processadas:", error);
       return [];
     }
   }, []);
-
   const verificarDadosTurnos = useCallback(async () => {
     setIsLoading(true);
     try {
       // Primeiro verificar se há datas não processadas
       const datasNaoProcessadasData = await verificarDatasNaoProcessadas();
-      
       if (datasNaoProcessadasData.length > 0) {
         setDatasNaoProcessadas(datasNaoProcessadasData);
         setShowModalDatasNaoProcessadas(true);
         setIsLoading(false);
         return;
       }
-
       const today = getTodayDate();
-      
+
       // Usar cache para documento
       const data = await getDocumentWithCache(today);
       if (!data) {
@@ -433,11 +441,9 @@ const Processamento: React.FC = () => {
       }
       const temTurno1 = data["1_turno"] && data["1_turno"].length > 0;
       const temTurno2 = data["2_turno"] && data["2_turno"].length > 0;
-
       if (!temTurno1 && !temTurno2) {
         throw new Error("Nenhum dado de turno encontrado para hoje");
       }
-
       if (temTurno1 && temTurno2) {
         await calcularComDoisTurnos();
       } else if (temTurno1) {
@@ -451,13 +457,12 @@ const Processamento: React.FC = () => {
       toast({
         title: "Erro na verificação",
         description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   }, [getDocumentWithCache, calcularComDoisTurnos, verificarDatasNaoProcessadas]);
-
   const loadProcessamentoData = useCallback(async () => {
     try {
       // Primeiro tenta carregar do localStorage
@@ -470,7 +475,6 @@ const Processamento: React.FC = () => {
       // Se não tiver no localStorage, usa cache otimizado
       const today = getTodayDate();
       const data = await getDocumentWithCache(today);
-      
       if (data && data.Processamento) {
         const firestoreData = data.Processamento as ProcessamentoData;
         setProcessamentoData(firestoreData);
@@ -488,10 +492,8 @@ const Processamento: React.FC = () => {
       const processamentosCollection = collection(db, "PCP");
       const q = query(processamentosCollection, where("processado", "==", "sim"));
       const querySnapshot = await getDocs(q);
-
       const dadosConsolidados: any[] = [];
-
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach(doc => {
         const data = doc.data();
         const documentId = doc.id;
 
@@ -511,7 +513,6 @@ const Processamento: React.FC = () => {
           let totalTurno1Kg = 0;
           let totalTurno1Cx = 0;
           let itensTurno1 = 0;
-
           if (data["1_turno"]) {
             const turno1 = Array.isArray(data["1_turno"]) ? data["1_turno"] : Object.values(data["1_turno"] || {});
             turno1.forEach((item: any) => {
@@ -523,12 +524,10 @@ const Processamento: React.FC = () => {
               }
             });
           }
-
           let totalTurno2Planejado = 0;
           let totalTurno2Kg = 0;
           let totalTurno2Cx = 0;
           let itensTurno2 = 0;
-
           if (data["2_turno"]) {
             const turno2 = Array.isArray(data["2_turno"]) ? data["2_turno"] : Object.values(data["2_turno"] || {});
             turno2.forEach((item: any) => {
@@ -546,12 +545,10 @@ const Processamento: React.FC = () => {
             const totalPlanejado = totalTurno1Planejado + totalTurno2Planejado;
             const totalProduzidoKg = totalTurno1Kg + totalTurno2Kg;
             const totalProduzidoCx = totalTurno1Cx + totalTurno2Cx;
-            const eficienciaGeral = totalPlanejado > 0 ? Math.round((totalProduzidoKg / totalPlanejado) * 100) : 0;
+            const eficienciaGeral = totalPlanejado > 0 ? Math.round(totalProduzidoKg / totalPlanejado * 100) : 0;
             const diferenca = totalProduzidoKg - totalPlanejado;
-
-            const ctp1 = totalTurno1Planejado > 0 ? (totalTurno1Kg / totalTurno1Planejado) * 100 : 0;
-            const ctp2 = totalTurno2Planejado > 0 ? (totalTurno2Kg / totalTurno2Planejado) * 100 : 0;
-
+            const ctp1 = totalTurno1Planejado > 0 ? totalTurno1Kg / totalTurno1Planejado * 100 : 0;
+            const ctp2 = totalTurno2Planejado > 0 ? totalTurno2Kg / totalTurno2Planejado * 100 : 0;
             dadosConsolidados.push({
               id: documentId,
               documentId,
@@ -570,17 +567,11 @@ const Processamento: React.FC = () => {
               kgTurno2: totalTurno2Kg,
               planejadoTurno1: totalTurno1Planejado,
               planejadoTurno2: totalTurno2Planejado,
-              turnosProcessados: [
-                ...(itensTurno1 > 0 ? ['1 Turno'] : []),
-                ...(itensTurno2 > 0 ? ['2 Turno'] : [])
-              ],
+              turnosProcessados: [...(itensTurno1 > 0 ? ['1 Turno'] : []), ...(itensTurno2 > 0 ? ['2 Turno'] : [])],
               // Informações extras
               itensTurno1,
               itensTurno2,
-              turnosAtivos: [
-                ...(itensTurno1 > 0 ? ['1° Turno'] : []),
-                ...(itensTurno2 > 0 ? ['2° Turno'] : [])
-              ].join(', ')
+              turnosAtivos: [...(itensTurno1 > 0 ? ['1° Turno'] : []), ...(itensTurno2 > 0 ? ['2° Turno'] : [])].join(', ')
             });
           }
         }
@@ -592,7 +583,6 @@ const Processamento: React.FC = () => {
         const dateB = new Date(b.dataProcessamento);
         return dateB.getTime() - dateA.getTime();
       });
-
       setProcessamentos(dadosConsolidados);
       console.log(`✅ ${dadosConsolidados.length} processamentos históricos consolidados carregados`);
     } catch (error) {
@@ -600,21 +590,17 @@ const Processamento: React.FC = () => {
       toast({
         title: "Erro",
         description: "Falha ao carregar histórico de processamentos",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   }, [toast]);
-
-
   const processarDatasAnteriores = useCallback(async () => {
     setIsProcessingDatas(true);
     try {
       console.log("🔄 Processando datas anteriores...");
-      
       for (const dataNaoProcessada of datasNaoProcessadas) {
         const docRef = doc(db, "PCP", dataNaoProcessada.id);
         const docSnap = await getDoc(docRef);
-        
         if (docSnap.exists()) {
           const data = docSnap.data();
           const turno1 = data["1_turno"] || [];
@@ -627,20 +613,17 @@ const Processamento: React.FC = () => {
           const cxTurno2 = Array.isArray(turno2) ? turno2.reduce((sum: number, item: any) => sum + parseFloat(item.cx || "0"), 0) : 0;
           const planejadoTurno1 = Array.isArray(turno1) ? turno1.reduce((sum: number, item: any) => sum + parseFloat(item.planejamento || "0"), 0) : 0;
           const planejadoTurno2 = Array.isArray(turno2) ? turno2.reduce((sum: number, item: any) => sum + parseFloat(item.planejamento || "0"), 0) : 0;
-
-          const ctp1 = planejadoTurno1 > 0 ? (kgTurno1 / planejadoTurno1) * 100 : 0;
-          const ctp2 = planejadoTurno2 > 0 ? (kgTurno2 / planejadoTurno2) * 100 : 0;
+          const ctp1 = planejadoTurno1 > 0 ? kgTurno1 / planejadoTurno1 * 100 : 0;
+          const ctp2 = planejadoTurno2 > 0 ? kgTurno2 / planejadoTurno2 * 100 : 0;
           const kgTotal = kgTurno1 + kgTurno2;
           const cxTotal = cxTurno1 + cxTurno2;
           const planoDiario = planejadoTurno1 + planejadoTurno2;
-          const batchReceita = kgTotal > 0 ? (planoDiario / kgTotal) : 0;
+          const batchReceita = kgTotal > 0 ? planoDiario / kgTotal : 0;
           const diferencaPR = kgTotal - planoDiario;
-          const ctptd = planoDiario > 0 ? (kgTotal / planoDiario) * 100 : 0;
-
+          const ctptd = planoDiario > 0 ? kgTotal / planoDiario * 100 : 0;
           const turnos = [];
           if (Array.isArray(turno1) && turno1.length > 0) turnos.push("1 Turno");
           if (Array.isArray(turno2) && turno2.length > 0) turnos.push("2 Turno");
-
           const processamentoResult: ProcessamentoData = {
             ctp1: parseFloat(ctp1.toFixed(1)),
             ctp2: parseFloat(ctp2.toFixed(1)),
@@ -664,40 +647,35 @@ const Processamento: React.FC = () => {
             processado: "sim",
             Processamento: processamentoResult
           });
-
           console.log(`✅ Data ${dataNaoProcessada.date} processada com sucesso`);
         }
       }
-
       toast({
         title: "Sucesso",
-        description: `${datasNaoProcessadas.length} datas anteriores processadas com sucesso!`,
+        description: `${datasNaoProcessadas.length} datas anteriores processadas com sucesso!`
       });
-
       setShowModalDatasNaoProcessadas(false);
       setDatasNaoProcessadas([]);
-      
+
       // Recarregar processamentos
       await loadProcessamentos();
-      
     } catch (error) {
       console.error("❌ Erro ao processar datas anteriores:", error);
       toast({
         title: "Erro",
         description: "Erro ao processar datas anteriores",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsProcessingDatas(false);
     }
   }, [datasNaoProcessadas, toast, loadProcessamentos]);
-
   const loadOrdensProducao = useCallback(async () => {
     try {
       console.log("🔄 Carregando ordens de produção...");
       const querySnapshot = await getDocs(collection(db, "ordensProducao"));
       const ordensData: OrdemProducao[] = [];
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach(doc => {
         const data = doc.data();
         ordensData.push({
           id: doc.id,
@@ -719,79 +697,56 @@ const Processamento: React.FC = () => {
       toast({
         title: "Erro",
         description: "Falha ao carregar ordens de produção",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   }, [toast]);
-
   const handleShowDetails = (processamento: ProcessamentoData) => {
     setSelectedProcessamento(processamento);
     setShowDetailsDialog(true);
   };
-
   const handleConfirmProcessing = () => {
     if (selectedTurno) {
       calcularComUmTurno(selectedTurno);
     }
     setShowConfirmDialog(false);
   };
-
   const prepareChartData = (processamento: ProcessamentoData) => {
-    return [
-      {
-        name: '1° Turno',
-        Produzido: processamento.kgTurno1 || 0,
-        Planejado: processamento.planejadoTurno1 || 0,
-      },
-      {
-        name: '2° Turno',
-        Produzido: processamento.kgTurno2 || 0,
-        Planejado: processamento.planejadoTurno2 || 0,
-      },
-      {
-        name: 'Total',
-        Produzido: (processamento.kgTurno1 || 0) + (processamento.kgTurno2 || 0),
-        Planejado: (processamento.planejadoTurno1 || 0) + (processamento.planejadoTurno2 || 0),
-      }
-    ];
+    return [{
+      name: '1° Turno',
+      Produzido: processamento.kgTurno1 || 0,
+      Planejado: processamento.planejadoTurno1 || 0
+    }, {
+      name: '2° Turno',
+      Produzido: processamento.kgTurno2 || 0,
+      Planejado: processamento.planejadoTurno2 || 0
+    }, {
+      name: 'Total',
+      Produzido: (processamento.kgTurno1 || 0) + (processamento.kgTurno2 || 0),
+      Planejado: (processamento.planejadoTurno1 || 0) + (processamento.planejadoTurno2 || 0)
+    }];
   };
 
   // Carregar dados uma única vez e usar cache depois
   useEffect(() => {
     const loadAllData = async () => {
       console.log("🚀 Iniciando carregamento otimizado dos dados...");
-      await Promise.all([
-        loadProcessamentoData(),
-        loadOrdensProducao(),
-        loadProcessamentos()
-      ]);
+      await Promise.all([loadProcessamentoData(), loadOrdensProducao(), loadProcessamentos()]);
       console.log("✅ Todos os dados carregados");
     };
-    
     loadAllData();
   }, [loadProcessamentoData, loadOrdensProducao, loadProcessamentos]);
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <h2 className="text-2xl font-bold">Processamento</h2>
       
       {/* Header Responsivo */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div className="relative w-full sm:max-w-md">
           <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por data..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <Input placeholder="Buscar por data..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
         <Button onClick={verificarDadosTurnos} disabled={isLoading} className="w-full sm:w-auto">
-          {isLoading ? (
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-2" />
-          )}
+          {isLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
           {isLoading ? "Processando..." : "Calcular Processamento"}
         </Button>
       </div>
@@ -802,9 +757,7 @@ const Processamento: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Atenção</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedTurno === '1 Turno' 
-                ? "Foi encontrado apenas dados do 1° Turno. Deseja prosseguir com o processamento usando apenas este turno?"
-                : "Foi encontrado apenas dados do 2° Turno. Deseja prosseguir com o processamento usando apenas este turno?"}
+              {selectedTurno === '1 Turno' ? "Foi encontrado apenas dados do 1° Turno. Deseja prosseguir com o processamento usando apenas este turno?" : "Foi encontrado apenas dados do 2° Turno. Deseja prosseguir com o processamento usando apenas este turno?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -817,8 +770,7 @@ const Processamento: React.FC = () => {
       </AlertDialog>
 
       {/* Card de Resultados do Processamento */}
-      {processamentoData && (
-        <Card>
+      {processamentoData && <Card>
           <CardHeader>
             <CardTitle>Resultados do Processamento</CardTitle>
             <CardDescription>
@@ -844,9 +796,7 @@ const Processamento: React.FC = () => {
               </div>
               <div className="border rounded-lg p-4">
                 <h3 className="text-sm font-medium text-muted-foreground">Diferença P/R</h3>
-                <p className={`text-2xl font-bold ${
-                  processamentoData.diferencaPR >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <p className={`text-2xl font-bold ${processamentoData.diferencaPR >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {processamentoData.diferencaPR >= 0 ? '+' : ''}{processamentoData.diferencaPR.toLocaleString('pt-BR')}
                 </p>
                 <p className="text-xs text-muted-foreground">Planejado vs Realizado (kg)</p>
@@ -858,8 +808,7 @@ const Processamento: React.FC = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
-      )}
+        </Card>}
 
       {/* Card de Histórico de Processamentos */}
       <Card>
@@ -875,7 +824,7 @@ const Processamento: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
-                  <TableHead>Turnos Ativos</TableHead>
+                  <TableHead>Turnos Enviados</TableHead>
                   <TableHead>Total Planejado (kg)</TableHead>
                   <TableHead>Total Produzido (kg)</TableHead>
                   <TableHead className="hidden md:table-cell">Total Produzido (cx)</TableHead>
@@ -885,89 +834,66 @@ const Processamento: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {processamentos.filter((item) => 
-                  (item.dataProcessamento && item.dataProcessamento.includes(searchTerm)) ||
-                  searchTerm === ""
-                ).map((processamento) => {
-                  // Calcular informações dos turnos ativos
-                  const turnosAtivos = [];
-                  if (processamento.kgTurno1 && processamento.kgTurno1 > 0) {
-                    turnosAtivos.push('1° Turno');
-                  }
-                  if (processamento.kgTurno2 && processamento.kgTurno2 > 0) {
-                    turnosAtivos.push('2° Turno');
-                  }
-                  
-                  return (
-                    <TableRow key={processamento.id || processamento.dataProcessamento}>
+                {processamentos.filter(item => item.dataProcessamento && item.dataProcessamento.includes(searchTerm) || searchTerm === "").map(processamento => {
+                // Calcular informações dos turnos ativos
+                const turnosAtivos = [];
+                if (processamento.kgTurno1 && processamento.kgTurno1 > 0) {
+                  turnosAtivos.push('1° Turno');
+                }
+                if (processamento.kgTurno2 && processamento.kgTurno2 > 0) {
+                  turnosAtivos.push('2° Turno');
+                }
+                return <TableRow key={processamento.id || processamento.dataProcessamento}>
                       <TableCell className="font-medium">{formatShortDate(processamento.dataProcessamento || processamento.timestamp)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
-                          {processamento.kgTurno1 && processamento.kgTurno1 > 0 && (
-                            <Badge variant="default" className="text-xs">
-                              1° Turno ({processamento.ctp1}%)
-                            </Badge>
-                          )}
-                          {processamento.kgTurno2 && processamento.kgTurno2 > 0 && (
-                            <Badge variant="secondary" className="text-xs">
-                              2° Turno ({processamento.ctp2}%)
-                            </Badge>
-                          )}
-                          {turnosAtivos.length === 0 && (
-                            <Badge variant="outline" className="text-xs">
+                          {processamento.kgTurno1 && processamento.kgTurno1 > 0 && <Badge variant="default" className="text-xs">
+                              1° Turno
+                            </Badge>}
+                          {processamento.kgTurno2 && processamento.kgTurno2 > 0 && <Badge variant="secondary" className="text-xs">
+                              2° Turno
+                            </Badge>}
+                          {turnosAtivos.length === 0 && <Badge variant="outline" className="text-xs">
                               Dados consolidados
-                            </Badge>
-                          )}
+                            </Badge>}
                         </div>
                       </TableCell>
-                      <TableCell>{(processamento.planoDiario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
-                      <TableCell>{(processamento.kgTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
-                      <TableCell className="hidden md:table-cell">{(processamento.cxTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell>{(processamento.planoDiario || 0).toLocaleString('pt-BR', {
+                      minimumFractionDigits: 2
+                    })}</TableCell>
+                      <TableCell>{(processamento.kgTotal || 0).toLocaleString('pt-BR', {
+                      minimumFractionDigits: 2
+                    })}</TableCell>
+                      <TableCell className="hidden md:table-cell">{(processamento.cxTotal || 0).toLocaleString('pt-BR', {
+                      minimumFractionDigits: 2
+                    })}</TableCell>
                       <TableCell>
-                        <span className={`font-medium ${
-                          (processamento.diferencaPR || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {(processamento.diferencaPR || 0) >= 0 ? '+' : ''}{(processamento.diferencaPR || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <span className={`font-medium ${(processamento.diferencaPR || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {(processamento.diferencaPR || 0) >= 0 ? '+' : ''}{(processamento.diferencaPR || 0).toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2
+                      })}
                         </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <span className={`font-medium ${
-                            (processamento.ctptd || 0) >= 100 ? 'text-green-600' : 
-                            (processamento.ctptd || 0) >= 80 ? 'text-yellow-600' : 
-                            'text-red-600'
-                          }`}>
+                          <span className={`font-medium ${(processamento.ctptd || 0) >= 100 ? 'text-green-600' : (processamento.ctptd || 0) >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
                             {(processamento.ctptd || 0).toFixed(1)}%
                           </span>
-                          <div className="text-xs text-muted-foreground">
-                            {processamento.kgTurno1 && processamento.kgTurno1 > 0 && `1°T: ${processamento.ctp1}%`}
-                            {processamento.kgTurno1 && processamento.kgTurno1 > 0 && processamento.kgTurno2 && processamento.kgTurno2 > 0 && ' | '}
-                            {processamento.kgTurno2 && processamento.kgTurno2 > 0 && `2°T: ${processamento.ctp2}%`}
-                          </div>
+                           
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleShowDetails(processamento)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleShowDetails(processamento)}>
                           <Info className="h-4 w-4" />
                         </Button>
                       </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {processamentos.filter((item) => 
-                  (item.dataProcessamento && item.dataProcessamento.includes(searchTerm)) ||
-                  searchTerm === ""
-                ).length === 0 && (
-                  <TableRow>
+                    </TableRow>;
+              })}
+                {processamentos.filter(item => item.dataProcessamento && item.dataProcessamento.includes(searchTerm) || searchTerm === "").length === 0 && <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {searchTerm ? 'Nenhum resultado encontrado para a busca' : 'Nenhum processamento encontrado'}
                     </TableCell>
-                  </TableRow>
-                )}
+                  </TableRow>}
               </TableBody>
             </Table>
           </div>
@@ -984,8 +910,7 @@ const Processamento: React.FC = () => {
               Informações completas sobre o processamento selecionado
             </DialogDescription>
           </DialogHeader>
-          {selectedProcessamento && (
-            <div className="space-y-6">
+          {selectedProcessamento && <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h3 className="text-sm font-medium">ID:</h3>
@@ -1010,15 +935,12 @@ const Processamento: React.FC = () => {
               <div className="h-64 sm:h-80">
                 <h3 className="text-sm font-medium mb-4">Comparativo de Produção (kg)</h3>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={prepareChartData(selectedProcessamento)}
-                    margin={{
-                      top: 5,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
+                  <BarChart data={prepareChartData(selectedProcessamento)} margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 5
+              }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
@@ -1068,21 +990,12 @@ const Processamento: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            </div>}
         </DialogContent>
         </Dialog>
 
         {/* Modal para Datas Não Processadas */}
-        <ModalProcessarDatasAnteriores
-          open={showModalDatasNaoProcessadas}
-          onOpenChange={setShowModalDatasNaoProcessadas}
-          datasNaoProcessadas={datasNaoProcessadas}
-          onProcessarDatas={processarDatasAnteriores}
-          isLoading={isProcessingDatas}
-        />
-      </div>
-    );
-  };
-  
-  export default Processamento;
+        <ModalProcessarDatasAnteriores open={showModalDatasNaoProcessadas} onOpenChange={setShowModalDatasNaoProcessadas} datasNaoProcessadas={datasNaoProcessadas} onProcessarDatas={processarDatasAnteriores} isLoading={isProcessingDatas} />
+      </div>;
+};
+export default Processamento;

@@ -160,15 +160,11 @@ export const usePCP = () => {
           turnoKey = '2_turno';
         }
         
-        console.log(`Processando ${key} como ${turnoKey}:`, turnoData);
-        
         // Verificar se turnoData é um objeto válido
         if (turnoData && typeof turnoData === 'object') {
           // Processar cada item do turno
           Object.keys(turnoData).forEach(itemKey => {
             const item = turnoData[itemKey];
-            
-            console.log(`Processando item ${itemKey}:`, item);
             
             if (item && typeof item === 'object') {
               // Converter os dados do formato Firebase para PCPData
@@ -196,9 +192,6 @@ export const usePCP = () => {
               const produtoEncontrado = produtos.find(p => p.codigo === item.codigo);
               const classificacao = produtoEncontrado?.classificacao || 'Sem classificação';
               
-              console.log(`Produto ${item.codigo} encontrado:`, produtoEncontrado);
-              console.log(`Classificação: ${classificacao}`);
-              
               // Determinar setor baseado na classificação do produto
               const produto_nome = item.texto_breve || 'Produto não identificado';
               
@@ -221,12 +214,9 @@ export const usePCP = () => {
                 classificacao // Adicionar classificação
               };
               
-              console.log('Item processado:', processedItem);
               processedData.push(processedItem);
             }
           });
-        } else {
-          console.log(`Turno ${key} não tem estrutura válida:`, turnoData);
         }
       }
     });
@@ -240,9 +230,7 @@ export const usePCP = () => {
       setLoading(true);
       setError(null);
 
-      console.log('Iniciando busca de dados PCP...', { period });
-
-      // Primeiro, carregar produtos PCP para ter as classificações disponíveis
+       // Primeiro, carregar produtos PCP para ter as classificações disponíveis
       const produtosCollectionSnapshot = await getDocs(collection(db, 'PCP_produtos'));
       let produtosArray: PCPProduto[] = [];
 
@@ -258,38 +246,19 @@ export const usePCP = () => {
         });
       }
 
-      console.log('Produtos PCP carregados:', produtosArray.length);
-      setPcpProdutos(produtosArray);
+       setPcpProdutos(produtosArray);
 
       // Calcular intervalo de datas para o período
       const dateRange = getDateRange(period);
-      console.log('Intervalo de datas para período', period, ':', {
-        start: dateRange.start.toDate(),
-        end: dateRange.end.toDate()
-      });
 
-      // Buscar documentos PCP - Por enquanto busca todos pois não temos campo de data consistente
-      // TODO: Quando os documentos PCP tiverem um campo de data consistente, adicionar filtro:
-      // const pcpQuery = query(
-      //   collection(db, 'PCP'),
-      //   where('data_criacao', '>=', dateRange.start),
-      //   where('data_criacao', '<=', dateRange.end),
-      //   orderBy('data_criacao', 'desc')
-      // );
       const pcpCollectionSnapshot = await getDocs(collection(db, 'PCP'));
-
-      console.log('Documentos encontrados:', {
-        pcp: pcpCollectionSnapshot.size,
-        produtos: produtosArray.length
-      });
 
       let pcpDataArray: PCPData[] = [];
 
       // Processar documentos PCP reais usando os produtos carregados
       if (!pcpCollectionSnapshot.empty) {
         pcpCollectionSnapshot.forEach((doc) => {
-          console.log('Processando documento PCP:', doc.id, doc.data());
-          const processedItems = processarDocumentoPCPComProdutos(doc.id, doc.data(), produtosArray);
+         const processedItems = processarDocumentoPCPComProdutos(doc.id, doc.data(), produtosArray);
           pcpDataArray.push(...processedItems);
         });
       }
@@ -302,12 +271,6 @@ export const usePCP = () => {
         const endDate = dateRange.end.toDate();
         
         return itemDate >= startDate && itemDate <= endDate;
-      });
-
-      console.log('Dados filtrados por período:', {
-        total: pcpDataArray.length,
-        filtrados: filteredData.length,
-        periodo: period
       });
 
       // Se não houver produtos na coleção PCP_produtos, criar baseado nos dados PCP
@@ -344,16 +307,8 @@ export const usePCP = () => {
         setPcpProdutos(produtosArray);
       }
 
-      console.log('Dados PCP processados:', {
-        pcpCount: pcpDataArray.length,
-        filtradosCount: filteredData.length,
-        produtosCount: produtosArray.length,
-        periodo: period,
-        amostraPCP: filteredData.slice(0, 2)
-      });
-
-      // Usar dados filtrados pelo período
-      setPcpData(filteredData);
+       // Usar dados filtrados pelo período
+       setPcpData(filteredData);
 
     } catch (err) {
       console.error('Erro ao buscar dados PCP:', err);
@@ -371,7 +326,6 @@ export const usePCP = () => {
       
       // Usar listener simples na coleção PCP para capturar mudanças
       const unsubscribe = onSnapshot(collection(db, 'PCP'), async (snapshot) => {
-        console.log('Listener PCP ativado, documentos:', snapshot.size);
         
         // Carregar produtos atualizados para o listener
         const produtosCollectionSnapshot = await getDocs(collection(db, 'PCP_produtos'));
@@ -392,7 +346,6 @@ export const usePCP = () => {
         const pcpDataArray: PCPData[] = [];
         
         snapshot.forEach((doc) => {
-          console.log('Processando documento no listener:', doc.id);
           const processedItems = processarDocumentoPCPComProdutos(doc.id, doc.data(), produtosArray);
           pcpDataArray.push(...processedItems);
         });
@@ -406,17 +359,8 @@ export const usePCP = () => {
           return itemDate >= startDate && itemDate <= endDate;
         });
         
-        console.log('Dados processados no listener:', {
-          total: pcpDataArray.length,
-          filtrados: filteredData.length,
-          periodo: period
-        });
-        
-        // Usar dados filtrados pelo período
         setPcpData(filteredData);
         setPcpProdutos(produtosArray);
-      }, (error) => {
-        console.error('Erro no listener PCP:', error);
       });
 
       return unsubscribe;
@@ -566,59 +510,39 @@ export const usePCP = () => {
       return acc;
     }, {} as Record<string, any>);
 
-    // Calcular performance (eficiência) para cada produto e pegar os top 10
     const performanceChart = Object.values(produtoPerformance)
-      .map((item: any) => {
-        const eficiencia = item.planejado > 0 ? (item.produzido / item.planejado) * 100 : 0;
-        return {
-          name: item.codigo,
-          produto: item.produto,
-          planejado: Math.round(item.planejado),
-          produzido: Math.round(item.produzido),
-          gap: Math.round(item.planejado - item.produzido),
-          eficiencia: Math.round(eficiencia)
-        };
-      })
-      .sort((a: any, b: any) => b.eficiencia - a.eficiencia) // Ordenar por performance (eficiência)
-      .slice(0, 10); // Top 10 produtos com melhor performance
+      .sort((a: any, b: any) => b.produzido - a.produzido)
+      .slice(0, 10)
+      .map((item: any) => ({
+        codigo: item.codigo,
+        produto: item.produto.substring(0, 20) + (item.produto.length > 20 ? '...' : ''),
+        planejado: Math.round(item.planejado),
+        produzido: Math.round(item.produzido),
+        eficiencia: item.planejado > 0 ? Math.round((item.produzido / item.planejado) * 100) : 0
+      }));
 
     // Gráfico de responsáveis por produção
-    const responsavelProducao = pcpData.reduce((acc, item) => {
-      const responsavel = item.responsavel || 'Não definido';
-      if (!acc[responsavel]) {
-        acc[responsavel] = {
-          total_produzido: 0,
-          total_planejado: 0,
-          ordens: 0
-        };
+    const responsaveisPerformance = pcpData.reduce((acc, item) => {
+      if (!acc[item.responsavel]) {
+        acc[item.responsavel] = { quantidade: 0, eficiencia: 0, count: 0 };
       }
-      acc[responsavel].total_produzido += item.quantidade_produzida;
-      acc[responsavel].total_planejado += item.quantidade_planejada;
-      acc[responsavel].ordens += 1;
+      acc[item.responsavel].quantidade += item.quantidade_produzida;
+      acc[item.responsavel].eficiencia += item.eficiencia || 0;
+      acc[item.responsavel].count += 1;
       return acc;
     }, {} as Record<string, any>);
 
-    const responsaveisChart = Object.entries(responsavelProducao)
-      .map(([nome, data]: [string, any]) => ({
-        name: nome,
-        produzido: Math.round(data.total_produzido),
-        ordens: data.ordens,
-        eficiencia: data.total_planejado > 0 ? 
-          Math.round((data.total_produzido / data.total_planejado) * 100) : 0
-      }))
-      .sort((a, b) => b.produzido - a.produzido)
-      .slice(0, 5);
+    const responsaveisChart = Object.entries(responsaveisPerformance).map(([nome, data]: [string, any]) => ({
+      name: nome,
+      quantidade: Math.round(data.quantidade),
+      eficiencia: data.count > 0 ? Math.round(data.eficiencia / data.count) : 0,
+      ordens: data.count
+    }));
 
-    // Gráfico de eficiência temporal (baseado em quando foram criados os registros)
+    // Gráfico de eficiência por período (últimos 7 dias)
     const eficienciaTemp = pcpData.reduce((acc, item) => {
-      // Usar a hora de criação para agrupar por período do dia
-      const hora = item.createdAt.toDate().getHours();
-      let periodo = '';
-      if (hora >= 6 && hora < 12) periodo = 'Manhã (6h-12h)';
-      else if (hora >= 12 && hora < 18) periodo = 'Tarde (12h-18h)';
-      else if (hora >= 18 && hora < 24) periodo = 'Noite (18h-24h)';
-      else periodo = 'Madrugada (0h-6h)';
-
+      const data = item.data_inicio.toDate();
+      const periodo = data.toLocaleDateString('pt-BR');
       if (!acc[periodo]) {
         acc[periodo] = {
           total_eficiencia: 0,

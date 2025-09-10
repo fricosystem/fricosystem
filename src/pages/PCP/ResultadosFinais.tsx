@@ -220,44 +220,71 @@ const ResultadosFinais: React.FC = () => {
     setExpandedClassificacao(expandedClassificacao === classificacao ? null : classificacao);
   };
 
-  // Atualizar período quando mudança ocorrer
-  useEffect(() => {
-    if (periodType !== "personalizado") {
-      const {
-        inicio,
-        fim
-      } = calculatePeriod(periodType);
-      setDataInicio(inicio);
-      setDataFim(fim);
-    }
-  }, [periodType]);
+  // Controla se é mudança iniciada pelo usuário para evitar duplo carregamento
+  const [isUpdatingPeriod, setIsUpdatingPeriod] = useState(false);
 
-  // Carregar dados do PCP
+  // Efeito combinado para atualizar período e carregar dados
   useEffect(() => {
-    const period = convertPeriodToFilter(periodType);
-    
-    if (periodType === "personalizado" && dataInicio && dataFim) {
+    const loadData = async () => {
+      // Atualizar datas se não for período personalizado
+      if (periodType !== "personalizado" && !isUpdatingPeriod) {
+        setIsUpdatingPeriod(true);
+        const { inicio, fim } = calculatePeriod(periodType);
+        setDataInicio(inicio);
+        setDataFim(fim);
+        
+        // Carregar dados com as novas datas
+        const period = convertPeriodToFilter(periodType);
+        await fetchPCPData(period, inicio, fim);
+        setIsUpdatingPeriod(false);
+        return;
+      }
+
+      // Para período personalizado, carregar apenas se tiver ambas as datas
+      if (periodType === "personalizado" && dataInicio && dataFim && !isUpdatingPeriod) {
+        const period = convertPeriodToFilter(periodType);
+        await fetchPCPData(period, dataInicio, dataFim);
+      }
+    };
+
+    loadData();
+  }, [periodType]); // Removido dataInicio e dataFim das dependências para evitar loop
+
+  // Efeito separado para período personalizado quando as datas mudam
+  useEffect(() => {
+    if (periodType === "personalizado" && dataInicio && dataFim && !isUpdatingPeriod) {
+      const period = convertPeriodToFilter(periodType);
       fetchPCPData(period, dataInicio, dataFim);
-    } else {
-      fetchPCPData(period);
     }
+  }, [dataInicio, dataFim]); // Só executa quando datas mudam no período personalizado
 
-    // Setup listener para atualizações em tempo real
+  // Setup do listener em tempo real
+  useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     
-    if (periodType === "personalizado" && dataInicio && dataFim) {
-      unsubscribe = setupRealtimeListener(period, dataInicio, dataFim);
-    } else {
-      unsubscribe = setupRealtimeListener(period);
-    }
+    const setupListener = () => {
+      const period = convertPeriodToFilter(periodType);
+      
+      if (periodType === "personalizado" && dataInicio && dataFim) {
+        unsubscribe = setupRealtimeListener(period, dataInicio, dataFim);
+      } else if (periodType !== "personalizado") {
+        const { inicio, fim } = calculatePeriod(periodType);
+        unsubscribe = setupRealtimeListener(period, inicio, fim);
+      }
+    };
+
+    // Delay para evitar setup múltiplo durante mudanças rápidas
+    const timeoutId = setTimeout(setupListener, 500);
     
     return () => {
+      clearTimeout(timeoutId);
       if (typeof unsubscribe === 'function') {
         unsubscribe();
       }
     };
-  }, [periodType, dataInicio, dataFim, fetchPCPData, setupRealtimeListener]);
-  if (loading) {
+  }, [periodType, dataInicio, dataFim, setupRealtimeListener]);
+  // Mostrar loading apenas se não há dados carregados
+  if (loading && pcpData.length === 0) {
     return <div className="space-y-6">
         <h2 className="text-2xl font-bold">Resultados Finais</h2>
         <div className="flex items-center justify-center p-8">
@@ -308,23 +335,21 @@ const ResultadosFinais: React.FC = () => {
           <CardTitle>Período de Análise</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-4">
             <div>
-              <Label htmlFor="period-select">Período</Label>
-              <Select value={periodType} onValueChange={(value: PeriodType) => setPeriodType(value)}>
-                <SelectTrigger id="period-select">
-                  <SelectValue placeholder="Selecionar período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dia">Dia</SelectItem>
-                  <SelectItem value="semana">Semana</SelectItem>
-                  <SelectItem value="mes">Mês</SelectItem>
-                  <SelectItem value="ano">Ano</SelectItem>
-                  <SelectItem value="personalizado">Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Período</Label>
+              <Tabs value={periodType} onValueChange={(value: PeriodType) => setPeriodType(value)} className="w-full">
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="dia">Dia</TabsTrigger>
+                  <TabsTrigger value="semana">Semana</TabsTrigger>
+                  <TabsTrigger value="mes">Mês</TabsTrigger>
+                  <TabsTrigger value="ano">Ano</TabsTrigger>
+                  <TabsTrigger value="personalizado">Personalizado</TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
             
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {periodType === "personalizado" && <>
                 <div>
                   <Label htmlFor="data-inicio">Data Início</Label>
@@ -367,12 +392,13 @@ const ResultadosFinais: React.FC = () => {
                 </div>
               </>}
             
-            <div className="flex items-end">
-              <div className="text-sm text-muted-foreground">
-                <p>Período selecionado:</p>
-                <p className="font-medium">
-                  {dataInicio && dataFim ? `${format(dataInicio, 'dd/MM/yyyy')} - ${format(dataFim, 'dd/MM/yyyy')}` : 'Selecionar datas'}
-                </p>
+              <div className="flex items-end">
+                <div className="text-sm text-muted-foreground">
+                  <p>Período selecionado:</p>
+                  <p className="font-medium">
+                    {dataInicio && dataFim ? `${format(dataInicio, 'dd/MM/yyyy')} - ${format(dataFim, 'dd/MM/yyyy')}` : 'Selecionar datas'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

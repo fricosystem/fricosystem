@@ -168,13 +168,6 @@ export const usePCPOptimized = () => {
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
         
-        console.log('🗓️ Filtro semanal configurado:', {
-          hoje: now.toLocaleDateString('pt-BR'),
-          diaSemanHoje: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][currentDayOfWeek],
-          inicioSemana: startOfWeek.toLocaleDateString('pt-BR'),
-          fimSemana: endOfWeek.toLocaleDateString('pt-BR')
-        });
-        
         return {
           start: Timestamp.fromDate(startOfWeek),
           end: Timestamp.fromDate(endOfWeek)
@@ -242,7 +235,6 @@ export const usePCPOptimized = () => {
       console.log(`✅ ${produtosArray.length} produtos carregados e cacheados`);
       return produtosArray;
     } catch (err) {
-      console.error('❌ Erro ao carregar produtos:', err);
       throw err;
     }
   }, [isCacheValid]);
@@ -251,7 +243,6 @@ export const usePCPOptimized = () => {
   const processarDocumentoPCPOptimized = useCallback((docId: string, docData: any, produtos: PCPProduto[]): PCPData[] => {
     // Validações de entrada
     if (!docId || !docData || !produtos) {
-      console.warn('⚠️ Dados inválidos para processamento:', { docId, docData: !!docData, produtos: produtos?.length });
       return [];
     }
 
@@ -279,7 +270,6 @@ export const usePCPOptimized = () => {
           console.log(`📅 Data extraída do ID do documento ${docId}: ${parsedDate.toLocaleDateString('pt-BR')}`);
         }
       } catch (error) {
-        console.warn(`⚠️ Erro ao processar data do ID ${docId}:`, error);
       }
     }
     
@@ -299,8 +289,6 @@ export const usePCPOptimized = () => {
           documentDate = docData.date;
         }
       } catch (error) {
-        console.warn(`⚠️ Erro ao processar data do documento ${docId}:`, error);
-        // Usar data atual como fallback
         documentDate = Timestamp.now();
       }
     }
@@ -329,7 +317,6 @@ export const usePCPOptimized = () => {
                 
                 // Validar se os valores são números válidos
                 if (isNaN(quantidade_planejada) || isNaN(quantidade_produzida)) {
-                  console.warn(`⚠️ Valores inválidos para item ${itemKey} em ${docId}:`, { quantidade_planejada, quantidade_produzida });
                   return;
                 }
                 
@@ -375,7 +362,6 @@ export const usePCPOptimized = () => {
                 
                 processedData.push(processedItem);
               } catch (itemError) {
-                console.warn(`⚠️ Erro ao processar item ${itemKey} em ${docId}:`, itemError);
               }
             }
            });
@@ -402,7 +388,6 @@ export const usePCPOptimized = () => {
     if (period !== 'personalizado') {
       const cachedData = cacheRef.current.pcpData.get(cacheKey);
       if (cachedData && isCacheValid(cachedData)) {
-        console.log(`📦 Usando dados PCP do cache para período ${period}`);
         setPcpData(cachedData.data);
         return;
       }
@@ -412,19 +397,12 @@ export const usePCPOptimized = () => {
       setLoading(true);
       setError(null);
 
-      console.log(`🔄 Carregando dados PCP para período ${period}...`);
-      if (period === 'personalizado') {
-        console.log(`📅 Datas personalizadas: ${customStart?.toLocaleDateString('pt-BR')} até ${customEnd?.toLocaleDateString('pt-BR')}`);
-      }
-
       // Carregar produtos de forma otimizada
       const produtosArray = await loadProdutosOptimized();
       setPcpProdutos(produtosArray);
 
       // Buscar documentos PCP
       const pcpCollectionSnapshot = await getDocs(collection(db, 'PCP'));
-      
-      console.log(`📄 ${pcpCollectionSnapshot.size} documentos PCP encontrados`);
 
       let pcpDataArray: PCPData[] = [];
 
@@ -464,11 +442,9 @@ export const usePCPOptimized = () => {
         });
       }
 
-      console.log(`✅ ${filteredData.length} registros PCP carregados para ${period}`);
       setPcpData(filteredData);
 
     } catch (err) {
-      console.error('❌ Erro ao buscar dados PCP:', err);
       setError(`Erro ao carregar dados do PCP: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
@@ -498,7 +474,17 @@ export const usePCPOptimized = () => {
     try {
       console.log(`🎧 Configurando listener otimizado para ${period}...`);
       
+      // Flag para pular o primeiro snapshot (evita duplo carregamento)
+      let isFirstSnapshot = true;
+      
       const unsubscribe = onSnapshot(collection(db, 'PCP'), (snapshot) => {
+        // Pular o primeiro snapshot para evitar duplo carregamento
+        if (isFirstSnapshot) {
+          isFirstSnapshot = false;
+          console.log(`🎧 Listener configurado para ${period}, pulando primeiro snapshot`);
+          return;
+        }
+        
         // Aplicar debounce para evitar updates excessivos
         if (debounceTimeoutRef.current) {
           clearTimeout(debounceTimeoutRef.current);
@@ -516,12 +502,10 @@ export const usePCPOptimized = () => {
             // Recarregar dados
             await fetchPCPData(period, customStart, customEnd);
           } catch (error) {
-            console.error(`❌ Erro no listener para ${period}:`, error);
           }
         }, DEBOUNCE_DELAY);
         
       }, (error) => {
-        console.error(`❌ Erro no listener PCP para ${period}:`, error);
         setError(`Erro no listener: ${error.message}`);
       });
 
@@ -539,7 +523,6 @@ export const usePCPOptimized = () => {
         }
       };
     } catch (err) {
-      console.error('❌ Erro ao configurar listener:', err);
       return () => {};
     }
   }, [fetchPCPData]);
@@ -680,7 +663,6 @@ export const usePCPOptimized = () => {
         clearTimeout(debounceTimeoutRef.current);
       }
       
-      console.log('🧹 Cache e listeners PCP limpos');
     };
   }, []);
 

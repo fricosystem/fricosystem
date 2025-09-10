@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { toast } from "@/hooks/use-toast";
 import { Target, Plus, Calendar, TrendingUp, Edit, Save, X, RefreshCw, Settings, BarChart3, AlertTriangle, CheckCircle2, Clock, Zap, Trophy } from "lucide-react";
 import { usePCPConfig } from "@/hooks/usePCPConfig";
-import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { doc, getDoc, collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
@@ -20,6 +20,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import usePCPOptimized from "@/hooks/usePCPOptimized";
 const configSchema = z.object({
   meta_minima_mensal: z.number().min(1, "Meta mínima mensal deve ser maior que 0"),
   dias_uteis_mes: z.number().min(1, "Dias úteis deve ser maior que 0").max(31, "Máximo de 31 dias")
@@ -75,6 +76,17 @@ const Metas = () => {
     calcularProgressoMensal,
     gerarMetaMensal
   } = usePCPConfig();
+
+  // Hook otimizado para dados PCP reais
+  const {
+    pcpData,
+    pcpProdutos,
+    loading: pcpLoading,
+    error: pcpError,
+    fetchPCPData,
+    setupRealtimeListener,
+    getMetrics
+  } = usePCPOptimized();
   
   // Estados principais
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -119,17 +131,47 @@ const Metas = () => {
   // Cache para documentos já carregados
   const [documentCache, setDocumentCache] = useState<Record<string, any>>({});
 
-  // Metas padrão baseadas na imagem
-  const metasPadrao = {
-    'FRESCAIS GROSSAS': 50000,
-    'FRESCAIS FINAS': 18000,
-    'FRESCAIS BANDEJAS': 3000,
-    'BACON': 5000,
-    'CALABRESA': 22000,
-    'MORTADELA': 8000,
-    'PRESUNTARIA': 16000,
-    'FATIADOS': 3000
-  };
+  // Metas padrão baseadas na configuração do sistema e dados reais
+  const metasPadrao = useMemo(() => {
+    const metaBase = config?.meta_minima_mensal || 100000;
+    
+    // Calcular distribuição baseada nos dados históricos reais
+    const producaoPorClassificacao = new Map<string, number>();
+    let totalProducaoHistorica = 0;
+
+    pcpData.forEach(item => {
+      const classificacao = item.classificacao || item.setor || 'Sem classificação';
+      const producao = item.quantidade_produzida || 0;
+      producaoPorClassificacao.set(
+        classificacao, 
+        (producaoPorClassificacao.get(classificacao) || 0) + producao
+      );
+      totalProducaoHistorica += producao;
+    });
+
+    // Se não há dados históricos, usar distribuição padrão
+    if (totalProducaoHistorica === 0) {
+      return {
+        'FRESCAIS GROSSAS': metaBase * 0.4,
+        'FRESCAIS FINAS': metaBase * 0.18,
+        'CALABRESA': metaBase * 0.22,
+        'PRESUNTARIA': metaBase * 0.16,
+        'MORTADELA': metaBase * 0.08,
+        'BACON': metaBase * 0.05,
+        'FRESCAIS BANDEJAS': metaBase * 0.03,
+        'FATIADOS': metaBase * 0.03
+      };
+    }
+
+    // Calcular metas proporcionais baseadas na produção histórica
+    const metasCalculadas: Record<string, number> = {};
+    producaoPorClassificacao.forEach((producao, classificacao) => {
+      const proporcao = producao / totalProducaoHistorica;
+      metasCalculadas[classificacao] = metaBase * proporcao;
+    });
+
+    return metasCalculadas;
+  }, [config, pcpData]);
 
   // Funções utilitárias para formatação brasileira
   const formatarNumero = (valor: number): string => {
@@ -262,61 +304,27 @@ const Metas = () => {
       });
     }
   };
-  const calcularRealizadoPorClassificacao = async (classificacao: string): Promise<number> => {
-    try {
-      // Carregar todos os documentos de uma vez em lote
-      const allDocPromises = processamentos.map(processamento => getDocumentWithCache(processamento.id));
-      const allDocs = await Promise.all(allDocPromises);
-
-      // Criar um índice de todos os produtos de todos os turnos
-      const produtoIndex = new Map<string, number>();
-      allDocs.forEach(docData => {
-        if (!docData) return;
-        const turno1 = docData["1 Turno"] || [];
-        const turno2 = docData["2 Turno"] || [];
-
-        // Processar turno 1
-        turno1.forEach((item: any) => {
-          const codigo = normalizeCode(item.codigo);
-          if (!codigo) return;
-          const kg = parseFloat(item.kg || "0");
-          produtoIndex.set(codigo, (produtoIndex.get(codigo) || 0) + kg);
-        });
-
-        // Processar turno 2
-        turno2.forEach((item: any) => {
-          const codigo = normalizeCode(item.codigo);
-          if (!codigo) return;
-          const kg = parseFloat(item.kg || "0");
-          produtoIndex.set(codigo, (produtoIndex.get(codigo) || 0) + kg);
-        });
-      });
-
-      // Calcular total para a classificação
-      const produtosDaClassificacao = produtos.filter(p => p.classificacao === classificacao);
-      let totalClassificacao = 0;
-      for (const produto of produtosDaClassificacao) {
-        const codigoNormalizado = normalizeCode(produto.codigo);
-        const kgProduto = produtoIndex.get(codigoNormalizado) || 0;
-        totalClassificacao += kgProduto;
-      }
-      return totalClassificacao;
-    } catch (error) {
-      console.error(`Erro ao calcular realizado para ${classificacao}:`, error);
-      return 0;
-    }
+  const calcularRealizadoPorClassificacao = (classificacao: string): number => {
+    // Usar dados PCP reais diretamente
+    return pcpData
+      .filter(item => (item.classificacao || item.setor || 'Sem classificação') === classificacao)
+      .reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
   };
-  const inicializarMetas = async () => {
-    if (produtos.length === 0 || processamentos.length === 0) return;
-    setLoading(true);
+  const inicializarMetas = () => {
+    if (pcpLoading) return;
 
-    // Obter classificações únicas dos produtos
-    const classificacoesUnicas = [...new Set(produtos.map(p => p.classificacao).filter(Boolean))];
+    // Obter classificações únicas dos dados PCP reais
+    const classificacoesUnicas = [...new Set(pcpData.map(item => 
+      item.classificacao || item.setor || 'Sem classificação'
+    ))].filter(Boolean);
+
     const metasComRealizado: MetaPorClassificacao[] = [];
+    
     for (const classificacao of classificacoesUnicas) {
-      const meta = metasPadrao[classificacao as keyof typeof metasPadrao] || 0;
-      const realizado = await calcularRealizadoPorClassificacao(classificacao);
+      const meta = metasPadrao[classificacao] || (config?.meta_minima_mensal || 0) * 0.1; // 10% como fallback
+      const realizado = calcularRealizadoPorClassificacao(classificacao);
       const percentual = meta > 0 ? realizado / meta * 100 : 0;
+      
       metasComRealizado.push({
         classificacao,
         meta,
@@ -324,8 +332,8 @@ const Metas = () => {
         percentual: Math.round(percentual * 100) / 100
       });
     }
-    setMetasPorClassificacao(metasComRealizado);
-    setLoading(false);
+    
+    setMetasPorClassificacao(metasComRealizado.filter(m => m.realizado > 0 || m.meta > 0));
   };
   const handlePeriodoChange = (tipo: string) => {
     const hoje = new Date();
@@ -445,12 +453,13 @@ const Metas = () => {
     }
   };
 
-  // Carregar dados dos parâmetros de produção
+  // Carregar dados dos parâmetros de produção usando dados PCP reais
   useEffect(() => {
     const carregarDadosReais = async () => {
       try {
-        // Carregar produção total dos Resultados Finais
-        const producaoTotalReal = await carregarProducaoTotal();
+        // Calcular produção total a partir dos dados PCP reais
+        const producaoTotalReal = pcpData.reduce((total, item) => 
+          total + (item.quantidade_produzida || 0), 0);
         setTotalProducao(producaoTotalReal);
 
         // Carregar meta diária realizada do último processamento
@@ -464,8 +473,11 @@ const Metas = () => {
         console.error('Erro ao carregar dados reais:', error);
       }
     };
-    carregarDadosReais();
-  }, [carregarProducaoTotal, carregarMetaDiariaRealizada, contarDocumentosPCP]);
+    
+    if (!pcpLoading && pcpData.length > 0) {
+      carregarDadosReais();
+    }
+  }, [pcpData, pcpLoading, carregarMetaDiariaRealizada, contarDocumentosPCP]);
 
   // Calcular valores derivados quando os parâmetros mudam
   useEffect(() => {
@@ -482,27 +494,27 @@ const Metas = () => {
     setProgressoMensal(progresso);
   }, [config, diasTrabalhados, totalProducao]);
 
-  // Carregar dados iniciais
+  // Carregar dados PCP reais
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        await Promise.all([loadProdutos(), loadProcessamentos()]);
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-      } finally {
-        setLoading(false);
+    fetchPCPData('mes'); // Carregar dados do mês atual
+    
+    // Setup listener para atualizações em tempo real
+    const unsubscribe = setupRealtimeListener('mes');
+    
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
       }
     };
-    loadData();
-  }, []);
+  }, [fetchPCPData, setupRealtimeListener]);
 
-  // Inicializar metas quando dados estiverem carregados
+  // Inicializar metas quando dados PCP estiverem carregados
   useEffect(() => {
-    if (produtos.length > 0 && processamentos.length > 0) {
+    if (!pcpLoading && pcpData.length > 0) {
       inicializarMetas();
+      setLoading(false);
     }
-  }, [produtos, processamentos, periodo]);
+  }, [pcpData, pcpLoading, metasPadrao]);
   const formatarKg = (valor: number) => {
     return new Intl.NumberFormat('pt-BR').format(valor);
   };
@@ -557,26 +569,53 @@ const Metas = () => {
       gap: Math.max(0, item.meta - item.realizado)
     }));
 
+    // Calcular tendência baseada nos dados PCP reais dos últimos 7 dias
     const tendenciaChart = Array.from({ length: 7 }, (_, i) => {
       const dia = new Date();
       dia.setDate(dia.getDate() - (6 - i));
+      const diaFormatado = format(dia, 'yyyy-MM-dd');
+      
+      // Filtrar dados PCP do dia específico
+      const dadosDia = pcpData.filter(item => {
+        const dataItem = item.data_inicio?.toDate() || item.createdAt?.toDate() || new Date();
+        return format(dataItem, 'yyyy-MM-dd') === diaFormatado;
+      });
+      
+      const realizadoDia = dadosDia.reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
+      const planejadoDia = dadosDia.reduce((total, item) => total + (item.quantidade_planejada || 0), 0);
+      const eficienciaDia = planejadoDia > 0 ? (realizadoDia / planejadoDia) * 100 : 0;
+      
       return {
         dia: format(dia, 'dd/MM'),
         meta: metricas.metaDiariaEsperada,
-        realizado: Math.random() * metricas.metaDiariaEsperada * 1.2, // Simulado - substituir por dados reais
-        eficiencia: 75 + Math.random() * 50
+        realizado: realizadoDia,
+        eficiencia: eficienciaDia
       };
     });
 
     return { classificacaoChart, tendenciaChart };
   }, [metasPorClassificacao, metricas]);
 
-  if (loading || configLoading) {
+  if (loading || configLoading || pcpLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <RefreshCw className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando metas e dados de produção...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (pcpError) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 mb-4">{pcpError}</p>
+          <Button onClick={() => fetchPCPData('mes')}>
+            Tentar novamente
+          </Button>
         </div>
       </div>
     );
@@ -595,7 +634,10 @@ const Metas = () => {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => inicializarMetas()}
+            onClick={() => {
+              fetchPCPData('mes');
+              inicializarMetas();
+            }}
             className="flex items-center gap-2"
           >
             <RefreshCw className="h-4 w-4" />
@@ -960,7 +1002,7 @@ const Metas = () => {
                   <TableHead>Classificação</TableHead>
                   <TableHead className="text-right">Meta (kg)</TableHead>
                   <TableHead className="text-right">Realizado (kg)</TableHead>
-                  <TableHead className="text-right">Gap (kg)</TableHead>
+                  <TableHead className="text-right">Diferença (Kg)</TableHead>
                   <TableHead className="text-right">Progresso</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-center">Ações</TableHead>

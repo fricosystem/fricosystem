@@ -186,13 +186,9 @@ const ResultadosFinais: React.FC = () => {
       }
 
       const classificacoes = [...new Set(produtos.map(p => p.classificacao).filter(Boolean))];
-      console.log(`📊 Total de classificações encontradas: ${classificacoes.length}`, classificacoes);
-      
       // OTIMIZAÇÃO: Carregar todos os documentos de uma vez em lote
-      console.log("🚀 Carregando todos os documentos PCP em lote...");
       const allDocPromises = processamentos.map(processamento => getDocumentWithCache(processamento.id));
       const allDocs = await Promise.all(allDocPromises);
-      console.log(`✅ ${allDocs.length} documentos carregados em lote`);
 
       // OTIMIZAÇÃO: Criar um índice de todos os produtos de todos os turnos
       const produtoIndex = new Map<string, {

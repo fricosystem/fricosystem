@@ -159,17 +159,23 @@ const PCP = () => {
     getChartData 
   } = usePCPOptimized();
 
-  // Carregar dados baseado no período selecionado
+  // Carregar dados baseado no período selecionado (apenas quando não está na aba Resultados)
   useEffect(() => {
+    // Não carregar dados se estiver na aba Resultados para evitar conflito
+    if (activeTab === 'resultados') return;
+    
     if (period === 'personalizado') {
       fetchPCPData(period, customStartDate, customEndDate);
     } else {
       fetchPCPData(period);
     }
-  }, [period, customStartDate, customEndDate, fetchPCPData]);
+  }, [period, customStartDate, customEndDate, fetchPCPData, activeTab]);
 
-  // Configurar listener em tempo real
+  // Configurar listener em tempo real (apenas quando não está na aba Resultados)
   useEffect(() => {
+    // Não configurar listener se estiver na aba Resultados para evitar conflito
+    if (activeTab === 'resultados') return;
+    
     let unsubscribe: (() => void) | undefined;
     
     if (period === 'personalizado') {
@@ -183,7 +189,7 @@ const PCP = () => {
         unsubscribe();
       }
     };
-  }, [period, customStartDate, customEndDate, setupRealtimeListener]);
+  }, [period, customStartDate, customEndDate, setupRealtimeListener, activeTab]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -534,29 +540,30 @@ const PCP = () => {
 
             {/* Cards de estatísticas */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-              <div 
+              <StatsCard
+                title="Produção por Turno"
+                value={
+                  <div className="space-y-1">
+                    <div>1° Turno: {((metrics.producaoPorTurno['1° Turno'] as any)?.quantidade || 0).toLocaleString()} KG</div>
+                    <div>2° Turno: {((metrics.producaoPorTurno['2° Turno'] as any)?.quantidade || 0).toLocaleString()} KG</div>
+                  </div>
+                }
+                icon={<Clock className="h-4 w-4" />}
+                trend={{
+                  value: Object.keys(metrics.producaoPorTurno).length,
+                  positive: Object.keys(metrics.producaoPorTurno).length > 0,
+                  label: Object.keys(metrics.producaoPorTurno).length === 0 
+                    ? "Nenhum turno ativo" 
+                    : Object.keys(metrics.producaoPorTurno).length === 1
+                      ? "1 turno ativo"
+                      : `${Object.keys(metrics.producaoPorTurno).length} turnos ativos`
+                }}
+                description="Turnos de Produção"
+                className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10 cursor-pointer hover:shadow-lg transition-all duration-200"
                 onClick={() => {
                   // Mostra informações detalhadas dos turnos
                 }}
-                className="cursor-pointer hover:scale-105 transition-transform"
-              >
-                <StatsCard
-                  title="Quantidade Produzida por Turnos"
-                  value={`${Object.values(metrics.producaoPorTurno).reduce((acc, turno: any) => acc + (turno?.quantidade || 0), 0).toLocaleString()} KG`}
-                  icon={<Clock className="h-4 w-4" />}
-                  trend={{
-                    value: Object.keys(metrics.producaoPorTurno).length,
-                    positive: Object.keys(metrics.producaoPorTurno).length > 0,
-                    label: Object.keys(metrics.producaoPorTurno).length === 0 
-                      ? "Nenhum turno ativo" 
-                      : Object.keys(metrics.producaoPorTurno).length === 1
-                        ? "1 turno ativo"
-                        : `${Object.keys(metrics.producaoPorTurno).length} turnos ativos`
-                  }}
-                  description={`1° Turno: ${(metrics.producaoPorTurno['1° Turno'] as any)?.quantidade?.toLocaleString() || 0} KG | 2° Turno: ${(metrics.producaoPorTurno['2° Turno'] as any)?.quantidade?.toLocaleString() || 0} KG`}
-                  className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
-                />
-              </div>
+              />
               
               <StatsCard
                 title="Total Geral em %"
@@ -636,45 +643,45 @@ const PCP = () => {
                         <CardDescription>Comparativo entre turnos</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-[300px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                           <BarChart 
-                             data={chartDataMemo.turnosChart}
-                             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                           >
-                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                             <XAxis dataKey="name" />
-                             <YAxis domain={[0, 100]} />
-                             <Tooltip 
-                               contentStyle={{
-                                 background: 'hsl(var(--background))',
-                                 borderColor: 'hsl(var(--border))',
-                                 borderRadius: 'var(--radius)',
-                                 color: 'hsl(var(--foreground))',
-                                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-                               }}
-                               labelStyle={{
-                                 color: 'hsl(var(--foreground))',
-                                 fontWeight: '500'
-                               }}
-                               itemStyle={{
-                                 color: 'hsl(var(--foreground))'
-                               }}
-                             />
-                             <Bar 
-                               dataKey="value" 
-                               name="Eficiência (%)"
-                             >
-                               {chartDataMemo.turnosChart.map((entry, index) => (
-                                 <Cell 
-                                   key={`cell-${index}`} 
-                                   fill={COLORS[index % COLORS.length]} 
-                                 />
-                               ))}
-                             </Bar>
-                           </BarChart>
-                          </ResponsiveContainer>
-                        </div>
+                         <div className="h-[300px]">
+                           <ResponsiveContainer width="100%" height="100%">
+                            <BarChart 
+                              data={chartDataMemo.turnosChart}
+                              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                              <XAxis dataKey="name" />
+                              <YAxis domain={[0, 100]} />
+                              <Tooltip 
+                                contentStyle={{
+                                  background: 'hsl(var(--background))',
+                                  borderColor: 'hsl(var(--border))',
+                                  borderRadius: 'var(--radius)',
+                                  color: 'hsl(var(--foreground))',
+                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                                }}
+                                labelStyle={{
+                                  color: 'hsl(var(--foreground))',
+                                  fontWeight: '500'
+                                }}
+                                itemStyle={{
+                                  color: 'hsl(var(--foreground))'
+                                }}
+                              />
+                              <Bar 
+                                dataKey="value" 
+                                name="Eficiência (%)"
+                              >
+                                {chartDataMemo.turnosChart.map((entry, index) => (
+                                  <Cell 
+                                    key={`cell-${index}`} 
+                                    fill={entry.name === "1° Turno" ? "#10B981" : "#3B82F6"} 
+                                  />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                           </ResponsiveContainer>
+                         </div>
                       </CardContent>
                     </Card>
 
