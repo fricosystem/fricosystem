@@ -74,6 +74,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { usePCPOptimized } from "@/hooks/usePCPOptimized";
 import { usePCPPageState } from "@/hooks/usePCPPageState";
+import { usePCPConfig } from "@/hooks/usePCPConfig";
 
 // Importando os componentes das abas
 import PrimeiroTurno from "./1turno";
@@ -158,6 +159,9 @@ const PCP = () => {
     getMetrics,
     getChartData 
   } = usePCPOptimized();
+
+  // Hook para configurações do PCP
+  const { config } = usePCPConfig();
 
   // Carregar dados baseado no período selecionado (apenas quando não está na aba Resultados)
   useEffect(() => {
@@ -549,15 +553,6 @@ const PCP = () => {
                   </div>
                 }
                 icon={<Clock className="h-4 w-4" />}
-                trend={{
-                  value: Object.keys(metrics.producaoPorTurno).length,
-                  positive: Object.keys(metrics.producaoPorTurno).length > 0,
-                  label: Object.keys(metrics.producaoPorTurno).length === 0 
-                    ? "Nenhum turno ativo" 
-                    : Object.keys(metrics.producaoPorTurno).length === 1
-                      ? "1 turno ativo"
-                      : `${Object.keys(metrics.producaoPorTurno).length} turnos ativos`
-                }}
                 description="Turnos de Produção"
                 className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10 cursor-pointer hover:shadow-lg transition-all duration-200"
                 onClick={() => {
@@ -574,7 +569,7 @@ const PCP = () => {
                   positive: metrics.eficienciaMedia >= 80,
                   label: metrics.eficienciaMedia >= 80 ? "Meta atingida" : metrics.eficienciaMedia === 0 ? "Sem dados" : "Abaixo da meta"
                 }}
-                description={`Meta: 80% | Produção total: ${metrics.producaoTotal.toLocaleString()} KG`}
+                description={`Meta: ${config?.meta_minima_mensal?.toLocaleString() || 0} KG | Produção total: ${metrics.producaoTotal.toLocaleString()} KG`}
                 className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
               />
              

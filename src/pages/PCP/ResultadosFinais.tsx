@@ -288,8 +288,10 @@ const ResultadosFinais: React.FC = () => {
     return <div className="space-y-6">
         <h2 className="text-2xl font-bold">Resultados Finais</h2>
         <div className="flex items-center justify-center p-8">
-          <RefreshCw className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Carregando resultados finais...</span>
+          <div className="text-center">
+            <RefreshCw className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando resultados finais...</p>
+          </div>
         </div>
       </div>;
   }
@@ -444,7 +446,7 @@ const ResultadosFinais: React.FC = () => {
       {/* Abas por Classificação */}
       <Card>
         <CardHeader>
-          <CardTitle>Produção por Família de Produto</CardTitle>
+          <CardTitle>Produção por Classificação de Produto</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs value={selectedClassificacao} onValueChange={setSelectedClassificacao} className="w-full">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { CalendarIcon, Settings, Calculator, Clock, Users, Save, RefreshCw } from "lucide-react";
+import { CalendarIcon, Settings, Calculator, Clock, Users, Save, RefreshCw, Edit, X, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { usePCPConfig } from "@/hooks/usePCPConfig";
@@ -73,6 +73,10 @@ const Sistema = () => {
   // Estados para controlar valores formatados dos inputs
   const [metaMensalFormatada, setMetaMensalFormatada] = useState('0');
   const [diasUteisFormatados, setDiasUteisFormatados] = useState('0');
+  
+  // Estados para edição
+  const [editandoMetaMensal, setEditandoMetaMensal] = useState(false);
+  const [editandoDiasUteis, setEditandoDiasUteis] = useState(false);
 
   const form = useForm<ConfigFormData>({
     resolver: zodResolver(configSchema),
@@ -196,91 +200,180 @@ const Sistema = () => {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card>
+          <Card className="border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                Parâmetros de Produção
+                Controle e Progresso da Meta Mensal
               </CardTitle>
+              <CardDescription>
+                Configure parâmetros e acompanhe o progresso em tempo real
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="meta_minima_mensal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Meta Mínima Mensal (KG)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            value={metaMensalFormatada}
-                            onChange={(e) => {
-                              const valor = e.target.value;
-                              setMetaMensalFormatada(valor);
-                              field.onChange(parseNumero(valor));
+            <CardContent className="space-y-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="meta_minima_mensal"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Meta Mínima Mensal (KG)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={metaMensalFormatada}
+                                onChange={(e) => {
+                                  setMetaMensalFormatada(e.target.value);
+                                  field.onChange(parseNumero(e.target.value));
+                                }}
+                                disabled={!editandoMetaMensal}
+                                className={editandoMetaMensal ? "border-primary" : ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="dias_uteis_mes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Dias Úteis do Mês</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={diasUteisFormatados}
+                                onChange={(e) => {
+                                  setDiasUteisFormatados(e.target.value);
+                                  field.onChange(parseNumero(e.target.value));
+                                }}
+                                disabled={!editandoDiasUteis}
+                                className={editandoDiasUteis ? "border-primary" : ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2 pt-4">
+                      {!editandoMetaMensal && !editandoDiasUteis && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setEditandoMetaMensal(true);
+                            setEditandoDiasUteis(true);
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Editar Configurações
+                        </Button>
+                      )}
+                      
+                      {(editandoMetaMensal || editandoDiasUteis) && (
+                        <>
+                          <Button type="submit" className="flex items-center gap-2">
+                            <Save className="h-4 w-4" />
+                            Salvar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setEditandoMetaMensal(false);
+                              setEditandoDiasUteis(false);
+                              if (config) {
+                                setMetaMensalFormatada(formatarNumeroInput(config.meta_minima_mensal || 0));
+                                setDiasUteisFormatados(formatarNumeroInput(config.dias_uteis_mes || 0));
+                              }
                             }}
-                            placeholder="Ex: 100.000"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="dias_uteis_mes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Dias Úteis no Mês</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            value={diasUteisFormatados}
-                            onChange={(e) => {
-                              const valor = e.target.value;
-                              setDiasUteisFormatados(valor);
-                              field.onChange(parseNumero(valor));
-                            }}
-                            placeholder="Ex: 22"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                            className="flex items-center gap-2"
+                          >
+                            <X className="h-4 w-4" />
+                            Cancelar
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </form>
+              </Form>
+              
+              <Separator />
+              
+              {/* Resumo do Progresso Mensal */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Resumo do Progresso Mensal
+                </h3>
                 
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-lg font-semibold">Dias Trabalhados: {diasTrabalhados}</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="p-3 bg-muted/50 rounded-lg text-center">
+                    <div className="text-lg font-bold text-blue-600">{diasTrabalhados}</div>
+                    <div className="text-xs text-muted-foreground">Dias Trabalhados</div>
                   </div>
                   
-                  <div>
-                    <Label className="text-lg font-semibold">Dias para Fechar o Mês: {diasParaFecharMes}</Label>
+                  <div className="p-3 bg-muted/50 rounded-lg text-center">
+                    <div className="text-lg font-bold text-orange-600">{diasParaFecharMes}</div>
+                    <div className="text-xs text-muted-foreground">Dias Restantes</div>
                   </div>
-
-                  <div>
-                    <Label className="text-lg font-semibold">Total Produção (KG): {formatarNumero(totalProducao)}</Label>
+                  
+                  <div className="p-3 bg-muted/50 rounded-lg text-center">
+                    <div className="text-lg font-bold text-green-600">{formatarNumero(totalProducao)}</div>
+                    <div className="text-xs text-muted-foreground">Total Produzido (kg)</div>
                   </div>
-
-                  <div>
-                    <Label className="text-lg font-semibold">Volume dos Dias Restantes (KG): {formatarNumero(volumeDiasRestantes)}</Label>
+                  
+                  <div className="p-3 bg-muted/50 rounded-lg text-center">
+                    <div className="text-lg font-bold text-red-600">{formatarNumero(volumeDiasRestantes)}</div>
+                    <div className="text-xs text-muted-foreground">Volume Restante (kg)</div>
                   </div>
-
-                  <div>
-                    <Label className="text-lg font-semibold">Meta Diária Realizada (KG): {formatarNumero(metaDiariaRealizada)}</Label>
+                  
+                  <div className="p-3 bg-muted/50 rounded-lg text-center">
+                    <div className="text-lg font-bold text-purple-600">{formatarNumero(metaDiariaRealizada)}</div>
+                    <div className="text-xs text-muted-foreground">Meta Diária Realizada (kg)</div>
+                  </div>
+                  
+                  <div className="p-3 bg-muted/50 rounded-lg text-center">
+                    <div className="text-lg font-bold text-teal-600">{progressoMensal.toFixed(1)}%</div>
+                    <div className="text-xs text-muted-foreground">Progresso Mensal</div>
                   </div>
                 </div>
               </div>
 
-              <Separator className="my-4" />
+              <Separator />
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Progresso Mensal: {progressoMensal.toFixed(2)}%</Label>
-                <Progress value={progressoMensal} className="w-full" />
+              {/* Progresso Visual */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  Progresso da Meta - {getCurrentMonthName()}
+                </h3>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Produção vs Meta</span>
+                  <span className="text-sm text-muted-foreground">
+                    {formatarNumero(totalProducao)} / {formatarNumero(parseNumero(metaMensalFormatada))} kg
+                  </span>
+                </div>
+                
+                <Progress value={progressoMensal} className="h-3" />
+                
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">0%</span>
+                  <Badge variant={progressoMensal >= 100 ? 'default' : progressoMensal >= 80 ? 'secondary' : progressoMensal >= 60 ? 'outline' : 'destructive'}>
+                    {progressoMensal.toFixed(1)}% da meta
+                  </Badge>
+                  <span className="text-muted-foreground">100%</span>
+                </div>
               </div>
             </CardContent>
           </Card>
