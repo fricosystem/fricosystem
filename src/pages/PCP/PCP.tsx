@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -6,6 +6,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import AppLayout from "@/layouts/AppLayout";
 import {
   CalendarIcon,
@@ -63,8 +73,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { usePCPOptimized } from "@/hooks/usePCPOptimized";
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
+import { usePCPPageState } from "@/hooks/usePCPPageState";
 
 // Importando os componentes das abas
 import PrimeiroTurno from "./1turno";
@@ -72,7 +81,7 @@ import SegundoTurno from "./2turno";
 import Processamento from "./Processamento";
 import ResultadosFinais from "./ResultadosFinais";
 import Produtos from "./Produtos";
-
+import Sistema from "./Sistema";
 import Metas from "./Metas";
 
 // Importando os modais para produtos sem classificação
@@ -117,18 +126,26 @@ interface ProdutoSemClassificacao {
 }
 
 const PCP = () => {
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [period, setPeriod] = useState<"hoje" | "semana" | "mes" | "ano" | "personalizado">("hoje");
-  const [customPeriod, setCustomPeriod] = useState<{
-    startDate?: Date;
-    endDate?: Date;
-  }>({});
-  
-  // Estados para os modais
-  const [showProdutosSemClassificacao, setShowProdutosSemClassificacao] = useState(false);
-  const [showAdicionarProduto, setShowAdicionarProduto] = useState(false);
-  const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoSemClassificacao | null>(null);
+  // Hook personalizado para gestão de estado da página
+  const {
+    activeTab,
+    searchTerm,
+    period,
+    customStartDate,
+    customEndDate,
+    showProdutosSemClassificacao,
+    showAdicionarProduto,
+    produtoSelecionado,
+    handleTabChange,
+    handlePeriodChange,
+    handleCustomStartDateChange,
+    handleCustomEndDateChange,
+    openProdutosSemClassificacao,
+    closeProdutosSemClassificacao,
+    openAdicionarProduto,
+    closeAdicionarProduto,
+    handleProdutoAdicionado,
+  } = usePCPPageState();
 
   // Hook personalizado para dados PCP
   const { 
@@ -144,26 +161,29 @@ const PCP = () => {
 
   // Carregar dados baseado no período selecionado
   useEffect(() => {
-    if (period === "personalizado" && customPeriod.startDate && customPeriod.endDate) {
-      // Para período personalizado, usar formato adequado
-      const customPeriodString = `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`;
-      fetchPCPData(customPeriodString as any);
-    } else if (period !== "personalizado") {
+    if (period === 'personalizado') {
+      fetchPCPData(period, customStartDate, customEndDate);
+    } else {
       fetchPCPData(period);
     }
-  }, [period, customPeriod]);
+  }, [period, customStartDate, customEndDate, fetchPCPData]);
 
   // Configurar listener em tempo real
   useEffect(() => {
-    if (period === "personalizado" && customPeriod.startDate && customPeriod.endDate) {
-      const customPeriodString = `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`;
-      const unsubscribe = setupRealtimeListener(customPeriodString as any);
-      return () => unsubscribe();
-    } else if (period !== "personalizado") {
-      const unsubscribe = setupRealtimeListener(period);
-      return () => unsubscribe();
+    let unsubscribe: (() => void) | undefined;
+    
+    if (period === 'personalizado') {
+      unsubscribe = setupRealtimeListener(period, customStartDate, customEndDate);
+    } else {
+      unsubscribe = setupRealtimeListener(period);
     }
-  }, [period, customPeriod]);
+    
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [period, customStartDate, customEndDate, setupRealtimeListener]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -192,10 +212,22 @@ const PCP = () => {
 
   // Função para obter produtos sem classificação
   const getProdutosSemClassificacao = (): ProdutoSemClassificacao[] => {
+    if (!pcpData || pcpData.length === 0) {
+      return [];
+    }
+
     const produtosSemClassificacao: ProdutoSemClassificacao[] = [];
     
     pcpData.forEach((item) => {
-      if (item.classificacao === "NÃO CADASTRADO" || item.classificacao === "Sem classificação" || item.classificacao === "Não classificado" || !item.classificacao) {
+      if (!item) return; // Validação adicional
+      
+      const classificacaoInvalida = !item.classificacao || 
+        item.classificacao === "NÃO CADASTRADO" || 
+        item.classificacao === "Sem classificação" || 
+        item.classificacao === "Não classificado" ||
+        item.classificacao === "Sem cadastro";
+        
+      if (classificacaoInvalida) {
         const existente = produtosSemClassificacao.find(p => p.codigo === item.codigo);
         if (existente) {
           existente.quantidade_produzida += item.quantidade_produzida || 0;
@@ -214,46 +246,88 @@ const PCP = () => {
 
   // Função para lidar com clique na barra "NÃO CADASTRADO"
   const handleBarClick = (data: any) => {
-    if (data && (data.setor === "NÃO CADASTRADO" || data.setor === "Sem classificação" || data.setor === "Não classificado" || data.setor === "Sem cadastro")) {
-      setShowProdutosSemClassificacao(true);
+    if (!data) return;
+    
+    const setoresInvalidos = ["NÃO CADASTRADO", "Sem classificação", "Não classificado", "Sem cadastro"];
+    if (data.setor && setoresInvalidos.includes(data.setor)) {
+      openProdutosSemClassificacao();
     }
-  };
-
-  // Função para abrir modal de adicionar produto
-  const handleAdicionarProduto = (produto: ProdutoSemClassificacao) => {
-    setProdutoSelecionado(produto);
-    setShowAdicionarProduto(true);
   };
 
   // Função chamada após produto ser adicionado com sucesso
-  const handleProdutoAdicionado = () => {
-    // Recarregar dados PCP para refletir as mudanças
-    if (period === "personalizado" && customPeriod.startDate && customPeriod.endDate) {
-      const customPeriodString = `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`;
-      fetchPCPData(customPeriodString as any);
-    } else if (period !== "personalizado") {
+  const handleProdutoAdicionadoWithReload = () => {
+    if (period === 'personalizado') {
+      fetchPCPData(period, customStartDate, customEndDate);
+    } else {
       fetchPCPData(period);
     }
-    setShowProdutosSemClassificacao(false);
-    setProdutoSelecionado(null);
+    handleProdutoAdicionado(); // Chama a função do hook que limpa os estados
   };
 
-  // Obter métricas e dados dos gráficos
-  const currentPeriod = period === "personalizado" && customPeriod.startDate && customPeriod.endDate
-    ? `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`
-    : period;
-    
-  const metrics = getMetrics(currentPeriod as any);
-  const chartData = getChartData;
+  // Obter métricas e dados dos gráficos com validação de erro
+  const metrics = useMemo(() => {
+    if (error || !getMetrics) {
+      return {
+        produtosCadastrados: 0,
+        produtosSemClassificacao: 0,
+        totalOrdens: 0,
+        ordensEmProducao: 0,
+        ordensCompletas: 0,
+        eficienciaMedia: 0,
+        producaoTotal: 0,
+        producaoPorTurno: {} as Record<string, { quantidade: number, eficiencia: number, count: number }>,
+        producaoPorSetor: {} as Record<string, number>
+      };
+    }
+    try {
+      return getMetrics(period);
+    } catch (err) {
+      console.error('Erro ao calcular métricas:', err);
+      return {
+        produtosCadastrados: 0,
+        produtosSemClassificacao: 0,
+        totalOrdens: 0,
+        ordensEmProducao: 0,
+        ordensCompletas: 0,
+        eficienciaMedia: 0,
+        producaoTotal: 0,
+        producaoPorTurno: {} as Record<string, { quantidade: number, eficiencia: number, count: number }>,
+        producaoPorSetor: {} as Record<string, number>
+      };
+    }
+  }, [error, getMetrics, period]);
+  
+  const chartDataMemo = useMemo(() => {
+    if (error || !getChartData) {
+      return {
+        turnosChart: [],
+        setoresChart: [],
+        performanceChart: [],
+        performanceClassificacaoChart: []
+      };
+    }
+    try {
+      return getChartData;
+    } catch (err) {
+      console.error('Erro ao gerar dados dos gráficos:', err);
+      return {
+        turnosChart: [],
+        setoresChart: [],
+        performanceChart: [],
+        performanceClassificacaoChart: []
+      };
+    }
+  }, [error, getChartData]);
 
   return (
-    <AppLayout title="Planejamento e Controle de Produção">
-      <div className="w-full h-full flex flex-col gap-6 p-4 md:p-6 flex-1 overflow-auto">
+    <ErrorBoundary>
+      <AppLayout title="Planejamento e Controle de Produção">
+        <div className="w-full h-full flex flex-col gap-6 p-4 md:p-6 flex-1 overflow-auto">
         {/* Abas do PCP */}
         <div className="flex flex-wrap gap-2 border-b pb-2">
           <Button
             variant={activeTab === "dashboard" ? "default" : "ghost"}
-            onClick={() => setActiveTab("dashboard")}
+            onClick={() => handleTabChange("dashboard")}
             className="flex items-center gap-2"
           >
             <BarChart2 className="h-4 w-4" />
@@ -261,7 +335,7 @@ const PCP = () => {
           </Button>
           <Button
             variant={activeTab === "turno1" ? "default" : "ghost"}
-            onClick={() => setActiveTab("turno1")}
+            onClick={() => handleTabChange("turno1")}
             className="flex items-center gap-2"
           >
             <Clock className="h-4 w-4" />
@@ -269,7 +343,7 @@ const PCP = () => {
           </Button>
           <Button
             variant={activeTab === "turno2" ? "default" : "ghost"}
-            onClick={() => setActiveTab("turno2")}
+            onClick={() => handleTabChange("turno2")}
             className="flex items-center gap-2"
           >
             <Clock className="h-4 w-4" />
@@ -277,7 +351,7 @@ const PCP = () => {
           </Button>
           <Button
             variant={activeTab === "processamento" ? "default" : "ghost"}
-            onClick={() => setActiveTab("processamento")}
+            onClick={() => handleTabChange("processamento")}
             className="flex items-center gap-2"
           >
             <Calculator className="h-4 w-4" />
@@ -285,7 +359,7 @@ const PCP = () => {
           </Button>
           <Button
             variant={activeTab === "resultados" ? "default" : "ghost"}
-            onClick={() => setActiveTab("resultados")}
+            onClick={() => handleTabChange("resultados")}
             className="flex items-center gap-2"
           >
             <ClipboardList className="h-4 w-4" />
@@ -293,7 +367,7 @@ const PCP = () => {
           </Button>
           <Button
             variant={activeTab === "produtos" ? "default" : "ghost"}
-            onClick={() => setActiveTab("produtos")}
+            onClick={() => handleTabChange("produtos")}
             className="flex items-center gap-2"
           >
             <Package className="h-4 w-4" />
@@ -301,11 +375,19 @@ const PCP = () => {
           </Button>
           <Button
             variant={activeTab === "metas" ? "default" : "ghost"}
-            onClick={() => setActiveTab("metas")}
+            onClick={() => handleTabChange("metas")}
             className="flex items-center gap-2"
           >
             <Target className="h-4 w-4" />
             Metas
+          </Button>
+          <Button
+            variant={activeTab === "sistema" ? "default" : "ghost"}
+            onClick={() => handleTabChange("sistema")}
+            className="flex items-center gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            Sistema
           </Button>
         </div>
 
@@ -316,7 +398,7 @@ const PCP = () => {
             
             {/* Seletor de período */}
             <div className="mb-6">
-              <Tabs defaultValue="hoje" value={period} onValueChange={(v) => setPeriod(v as "hoje" | "semana" | "mes" | "ano" | "personalizado")}>
+              <Tabs defaultValue="hoje" value={period} onValueChange={(v) => handlePeriodChange(v as "hoje" | "semana" | "mes" | "ano" | "personalizado")}>
                 <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800">
                   <TabsTrigger value="hoje" className="flex items-center gap-2">
                     <Clock className="h-4 w-4" /> Hoje
@@ -331,41 +413,103 @@ const PCP = () => {
                     <BarChart2 className="h-4 w-4" /> Ano
                   </TabsTrigger>
                   <TabsTrigger value="personalizado" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" /> Personalizado
+                    <CalendarIcon className="h-4 w-4" /> Personalizado
                   </TabsTrigger>
                 </TabsList>
-                
-                <TabsContent value="personalizado" className="mt-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Data de Início</Label>
-                          <Input
-                            type="date"
-                            value={customPeriod.startDate ? format(customPeriod.startDate, 'yyyy-MM-dd') : ''}
-                            onChange={(e) => {
-                              const date = e.target.value ? new Date(e.target.value) : undefined;
-                              setCustomPeriod(prev => ({ ...prev, startDate: date }));
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <Label>Data de Fim</Label>
-                          <Input
-                            type="date"
-                            value={customPeriod.endDate ? format(customPeriod.endDate, 'yyyy-MM-dd') : ''}
-                            onChange={(e) => {
-                              const date = e.target.value ? new Date(e.target.value) : undefined;
-                              setCustomPeriod(prev => ({ ...prev, endDate: date }));
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
               </Tabs>
+              
+              {/* Seletor de datas personalizadas */}
+              {period === 'personalizado' && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Período Personalizado</CardTitle>
+                    <CardDescription>Selecione o intervalo de datas para análise</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="start-date">Data de Início</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !customStartDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {customStartDate ? (
+                                format(customStartDate, "PPP", { locale: ptBR })
+                              ) : (
+                                <span>Selecione a data de início</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={customStartDate}
+                              onSelect={handleCustomStartDateChange}
+                              disabled={(date) =>
+                                date > new Date() || date < new Date("2020-01-01")
+                              }
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="end-date">Data de Fim</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !customEndDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {customEndDate ? (
+                                format(customEndDate, "PPP", { locale: ptBR })
+                              ) : (
+                                <span>Selecione a data de fim</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={customEndDate}
+                              onSelect={handleCustomEndDateChange}
+                              disabled={(date) => {
+                                const today = new Date();
+                                const startLimit = customStartDate || new Date("2020-01-01");
+                                return date > today || date < startLimit;
+                              }}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                    
+                    {customStartDate && customEndDate && (
+                      <div className="mt-4 p-3 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          <strong>Período selecionado:</strong> 
+                          {format(customStartDate, " dd/MM/yyyy", { locale: ptBR })} até 
+                          {format(customEndDate, " dd/MM/yyyy", { locale: ptBR })}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {error && (
@@ -375,10 +519,9 @@ const PCP = () => {
                   <p className="text-lg font-medium text-red-600">Erro ao carregar dados</p>
                   <p className="text-sm text-muted-foreground text-center">{error}</p>
                   <Button onClick={() => {
-                    if (period === "personalizado" && customPeriod.startDate && customPeriod.endDate) {
-                      const customPeriodString = `${format(customPeriod.startDate, 'yyyy-MM-dd')}_${format(customPeriod.endDate, 'yyyy-MM-dd')}`;
-                      fetchPCPData(customPeriodString as any);
-                    } else if (period !== "personalizado") {
+                    if (period === 'personalizado') {
+                      fetchPCPData(period, customStartDate, customEndDate);
+                    } else {
                       fetchPCPData(period);
                     }
                   }} className="mt-4">
@@ -399,7 +542,7 @@ const PCP = () => {
               >
                 <StatsCard
                   title="Quantidade Produzida por Turnos"
-                  value={`${Object.values(metrics.producaoPorTurno).reduce((acc, turno) => acc + turno.quantidade, 0).toLocaleString()} KG`}
+                  value={`${Object.values(metrics.producaoPorTurno).reduce((acc, turno: any) => acc + (turno?.quantidade || 0), 0).toLocaleString()} KG`}
                   icon={<Clock className="h-4 w-4" />}
                   trend={{
                     value: Object.keys(metrics.producaoPorTurno).length,
@@ -410,7 +553,7 @@ const PCP = () => {
                         ? "1 turno ativo"
                         : `${Object.keys(metrics.producaoPorTurno).length} turnos ativos`
                   }}
-                  description={`1° Turno: ${metrics.producaoPorTurno['1° Turno']?.quantidade.toLocaleString() || 0} KG | 2° Turno: ${metrics.producaoPorTurno['2° Turno']?.quantidade.toLocaleString() || 0} KG`}
+                  description={`1° Turno: ${(metrics.producaoPorTurno['1° Turno'] as any)?.quantidade?.toLocaleString() || 0} KG | 2° Turno: ${(metrics.producaoPorTurno['2° Turno'] as any)?.quantidade?.toLocaleString() || 0} KG`}
                   className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
                 />
               </div>
@@ -482,7 +625,7 @@ const PCP = () => {
             )}
 
             {/* Gráficos principais - Produção por Turno e Setores */}
-            {pcpData.length > 0 && chartData.turnosChart.length > 0 && (
+            {pcpData.length > 0 && chartDataMemo.turnosChart.length > 0 && (
               <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-6">
                     {/* Produção por Turno */}
                     <Card>
@@ -495,48 +638,48 @@ const PCP = () => {
                       <CardContent>
                         <div className="h-[300px]">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart 
-                              data={chartData.turnosChart}
-                              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                              <XAxis dataKey="name" />
-                              <YAxis domain={[0, 100]} />
-                              <Tooltip 
-                                contentStyle={{
-                                  background: 'hsl(var(--background))',
-                                  borderColor: 'hsl(var(--border))',
-                                  borderRadius: 'var(--radius)',
-                                  color: 'hsl(var(--foreground))',
-                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-                                }}
-                                labelStyle={{
-                                  color: 'hsl(var(--foreground))',
-                                  fontWeight: '500'
-                                }}
-                                itemStyle={{
-                                  color: 'hsl(var(--foreground))'
-                                }}
-                              />
-                              <Bar 
-                                dataKey="value" 
-                                name="Eficiência (%)"
-                              >
-                                {chartData.turnosChart.map((entry, index) => (
-                                  <Cell 
-                                    key={`cell-${index}`} 
-                                    fill={COLORS[index % COLORS.length]} 
-                                  />
-                                ))}
-                              </Bar>
-                            </BarChart>
+                           <BarChart 
+                             data={chartDataMemo.turnosChart}
+                             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                           >
+                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                             <XAxis dataKey="name" />
+                             <YAxis domain={[0, 100]} />
+                             <Tooltip 
+                               contentStyle={{
+                                 background: 'hsl(var(--background))',
+                                 borderColor: 'hsl(var(--border))',
+                                 borderRadius: 'var(--radius)',
+                                 color: 'hsl(var(--foreground))',
+                                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                               }}
+                               labelStyle={{
+                                 color: 'hsl(var(--foreground))',
+                                 fontWeight: '500'
+                               }}
+                               itemStyle={{
+                                 color: 'hsl(var(--foreground))'
+                               }}
+                             />
+                             <Bar 
+                               dataKey="value" 
+                               name="Eficiência (%)"
+                             >
+                               {chartDataMemo.turnosChart.map((entry, index) => (
+                                 <Cell 
+                                   key={`cell-${index}`} 
+                                   fill={COLORS[index % COLORS.length]} 
+                                 />
+                               ))}
+                             </Bar>
+                           </BarChart>
                           </ResponsiveContainer>
                         </div>
                       </CardContent>
                     </Card>
 
-                    {/* Setores mais produtivos */}
-                    {chartData.setoresChart.length > 0 && (
+                     {/* Setores mais produtivos */}
+                     {chartDataMemo.setoresChart.length > 0 && (
                       <Card>
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
@@ -546,52 +689,52 @@ const PCP = () => {
                         </CardHeader>
                         <CardContent>
                           <div className="h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                             <BarChart
-                               data={chartData.setoresChart.map(item => ({
-                                 ...item,
-                                 setor: item.setor === "Sem classificação" || item.setor === "NÃO CADASTRADO" || item.setor === "Não classificado" ? "Sem cadastro" : item.setor
-                               }))}
-                               layout="vertical"
-                               margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
-                               onClick={handleBarClick}
-                             >
-                               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                               <XAxis type="number" />
-                               <YAxis dataKey="setor" type="category" width={80} />
-                              <Tooltip 
-                                contentStyle={{
-                                  background: 'hsl(var(--background))',
-                                  borderColor: 'hsl(var(--border))',
-                                  borderRadius: 'var(--radius)',
-                                  color: 'hsl(var(--foreground))',
-                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-                                }}
-                                labelStyle={{
-                                  color: 'hsl(var(--foreground))',
-                                  fontWeight: '500'
-                                }}
-                                itemStyle={{
-                                  color: 'hsl(var(--foreground))'
-                                }}
-                                formatter={(value: number) => value.toLocaleString()}
-                              />
-                                <Bar 
-                                  dataKey="producao_real" 
-                                  name="Produção (KG)"
-                                  onClick={handleBarClick}
-                                  style={{ cursor: 'pointer' }}
-                                >
-                                 {chartData.setoresChart.map((entry, index) => (
-                                   <Cell 
-                                     key={`cell-${index}`} 
-                                     fill={getBarColor(entry.setor, index)}
-                                     style={{ cursor: 'pointer' }}
-                                   />
-                                 ))}
-                               </Bar>
-                             </BarChart>
-                            </ResponsiveContainer>
+                             <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={chartDataMemo.setoresChart.map(item => ({
+                                  ...item,
+                                  setor: item.setor === "Sem classificação" || item.setor === "NÃO CADASTRADO" || item.setor === "Não classificado" ? "Sem cadastro" : item.setor
+                                }))}
+                                layout="vertical"
+                                margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
+                                onClick={handleBarClick}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                <XAxis type="number" />
+                                <YAxis dataKey="setor" type="category" width={80} />
+                               <Tooltip 
+                                 contentStyle={{
+                                   background: 'hsl(var(--background))',
+                                   borderColor: 'hsl(var(--border))',
+                                   borderRadius: 'var(--radius)',
+                                   color: 'hsl(var(--foreground))',
+                                   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                                 }}
+                                 labelStyle={{
+                                   color: 'hsl(var(--foreground))',
+                                   fontWeight: '500'
+                                 }}
+                                 itemStyle={{
+                                   color: 'hsl(var(--foreground))'
+                                 }}
+                                 formatter={(value: number) => value.toLocaleString()}
+                               />
+                                 <Bar 
+                                   dataKey="producao_real" 
+                                   name="Produção (KG)"
+                                   onClick={handleBarClick}
+                                   style={{ cursor: 'pointer' }}
+                                 >
+                                  {chartDataMemo.setoresChart.map((entry, index) => (
+                                    <Cell 
+                                      key={`cell-${index}`} 
+                                      fill={getBarColor(entry.setor, index)}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                             </ResponsiveContainer>
                           </div>
                         </CardContent>
                       </Card>
@@ -599,8 +742,8 @@ const PCP = () => {
                   </div>
                 )}
 
-                {/* Performance por Produto - ocupando toda a largura */}
-                {pcpData.length > 0 && chartData.performanceChart.length > 0 && (
+                 {/* Performance por Produto - ocupando toda a largura */}
+                 {pcpData.length > 0 && chartDataMemo.performanceChart.length > 0 && (
                   <Card className="w-full mb-6">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -610,11 +753,11 @@ const PCP = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={chartData.performanceChart}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                          >
+                         <ResponsiveContainer width="100%" height="100%">
+                           <BarChart
+                             data={chartDataMemo.performanceChart}
+                             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                           >
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                             <XAxis dataKey="name" />
                             <YAxis />
@@ -653,8 +796,8 @@ const PCP = () => {
                   </Card>
                 )}
 
-                {/* Performance por Classificação - ocupando toda a largura */}
-                {pcpData.length > 0 && chartData.performanceClassificacaoChart.length > 0 && (
+                 {/* Performance por Classificação - ocupando toda a largura */}
+                 {pcpData.length > 0 && chartDataMemo.performanceClassificacaoChart.length > 0 && (
                   <Card className="w-full mb-6">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -664,11 +807,11 @@ const PCP = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={chartData.performanceClassificacaoChart}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                          >
+                         <ResponsiveContainer width="100%" height="100%">
+                           <BarChart
+                             data={chartDataMemo.performanceClassificacaoChart}
+                             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                           >
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                             <XAxis dataKey="name" />
                             <YAxis />
@@ -709,33 +852,59 @@ const PCP = () => {
           </div>
         )}
 
-        {activeTab === "turno1" && <PrimeiroTurno />}
-        {activeTab === "turno2" && <SegundoTurno />}
-        {activeTab === "processamento" && <Processamento />}
-        {activeTab === "resultados" && <ResultadosFinais />}
-        {activeTab === "produtos" && <Produtos />}
-        {activeTab === "metas" && <Metas />}
-        
+        {activeTab === "turno1" && (
+          <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <PrimeiroTurno />
+          </React.Suspense>
+        )}
+        {activeTab === "turno2" && (
+          <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <SegundoTurno />
+          </React.Suspense>
+        )}
+        {activeTab === "processamento" && (
+          <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <Processamento />
+          </React.Suspense>
+        )}
+        {activeTab === "resultados" && (
+          <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <ResultadosFinais />
+          </React.Suspense>
+        )}
+        {activeTab === "produtos" && (
+          <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <Produtos />
+          </React.Suspense>
+        )}
+        {activeTab === "metas" && (
+          <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <Metas />
+          </React.Suspense>
+        )}
+        {activeTab === "sistema" && (
+          <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <Sistema />
+          </React.Suspense>
+        )}
 
         {/* Modais para produtos sem classificação */}
         <ProdutosSemClassificacaoModal
           isOpen={showProdutosSemClassificacao}
-          onClose={() => setShowProdutosSemClassificacao(false)}
+          onClose={closeProdutosSemClassificacao}
           produtos={getProdutosSemClassificacao()}
-          onAdicionarProduto={handleAdicionarProduto}
+          onAdicionarProduto={openAdicionarProduto}
         />
 
         <AdicionarProdutoModal
           isOpen={showAdicionarProduto}
-          onClose={() => {
-            setShowAdicionarProduto(false);
-            setProdutoSelecionado(null);
-          }}
+          onClose={closeAdicionarProduto}
           produto={produtoSelecionado}
-          onProdutoAdicionado={handleProdutoAdicionado}
+          onProdutoAdicionado={handleProdutoAdicionadoWithReload}
         />
-      </div>
-    </AppLayout>
+        </div>
+      </AppLayout>
+    </ErrorBoundary>
   );
 };
 

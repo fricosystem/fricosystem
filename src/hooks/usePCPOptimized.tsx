@@ -73,7 +73,7 @@ interface PCPProduto {
   updatedAt?: Timestamp;
 }
 
-type PeriodFilter = 'hoje' | 'semana' | 'mes' | 'ano';
+type PeriodFilter = 'hoje' | 'semana' | 'mes' | 'ano' | 'personalizado';
 
 interface CacheEntry {
   data: any;
@@ -114,7 +114,31 @@ export const usePCPOptimized = () => {
   }, []);
 
   // Função otimizada para calcular range de datas
-  const getDateRange = useCallback((period: PeriodFilter) => {
+  const getDateRange = useCallback((period: PeriodFilter, customStart?: Date, customEnd?: Date) => {
+    // Para período personalizado, usar as datas fornecidas
+    if (period === 'personalizado') {
+      if (!customStart || !customEnd) {
+        // Se não há datas personalizadas, usar hoje como fallback
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfDay = new Date(startOfDay);
+        endOfDay.setHours(23, 59, 59, 999);
+        return {
+          start: Timestamp.fromDate(startOfDay),
+          end: Timestamp.fromDate(endOfDay)
+        };
+      }
+      
+      const startOfCustomDay = new Date(customStart.getFullYear(), customStart.getMonth(), customStart.getDate());
+      const endOfCustomDay = new Date(customEnd.getFullYear(), customEnd.getMonth(), customEnd.getDate());
+      endOfCustomDay.setHours(23, 59, 59, 999);
+      
+      return {
+        start: Timestamp.fromDate(startOfCustomDay),
+        end: Timestamp.fromDate(endOfCustomDay)
+      };
+    }
+
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
@@ -128,11 +152,29 @@ export const usePCPOptimized = () => {
         };
       
       case 'semana':
-        const startOfWeek = new Date(startOfDay);
-        startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay()); // Domingo
+        // Corrigir lógica semanal: começar no domingo anterior
+        const currentDayOfWeek = now.getDay(); // 0 = domingo, 1 = segunda, etc.
+        
+        // Se hoje é domingo, usar hoje como início
+        // Caso contrário, voltar para o domingo anterior
+        const daysToSubtract = currentDayOfWeek;
+        
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - daysToSubtract);
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        // Próximo sábado (6 dias após o domingo)
         const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6); // Sábado
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
+        
+        console.log('🗓️ Filtro semanal configurado:', {
+          hoje: now.toLocaleDateString('pt-BR'),
+          diaSemanHoje: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][currentDayOfWeek],
+          inicioSemana: startOfWeek.toLocaleDateString('pt-BR'),
+          fimSemana: endOfWeek.toLocaleDateString('pt-BR')
+        });
+        
         return {
           start: Timestamp.fromDate(startOfWeek),
           end: Timestamp.fromDate(endOfWeek)
@@ -207,6 +249,12 @@ export const usePCPOptimized = () => {
 
   // Função otimizada para processar documentos PCP
   const processarDocumentoPCPOptimized = useCallback((docId: string, docData: any, produtos: PCPProduto[]): PCPData[] => {
+    // Validações de entrada
+    if (!docId || !docData || !produtos) {
+      console.warn('⚠️ Dados inválidos para processamento:', { docId, docData: !!docData, produtos: produtos?.length });
+      return [];
+    }
+
     const cacheKey = `${docId}_${produtos.length}`;
     
     // Verificar cache de documento processado
@@ -273,15 +321,22 @@ export const usePCPOptimized = () => {
           Object.keys(turnoData).forEach(itemKey => {
             const item = turnoData[itemKey];
             
-            if (item && typeof item === 'object') {
-              const quantidade_planejada = parseFloat(item.planejamento?.toString().replace(',', '.') || '0');
-              const quantidade_kg = parseFloat(item.kg?.toString().replace(',', '.') || '0');
-              const quantidade_produzida = quantidade_kg;
-              
-              // Só processar se há produção real (quantidade > 0)
-              if (quantidade_produzida <= 0 && quantidade_planejada <= 0) {
-                return; // Pular este item se não há produção nem planejamento
-              }
+            if (item && typeof item === 'object' && item.codigo) {
+              try {
+                const quantidade_planejada = parseFloat(item.planejamento?.toString().replace(',', '.') || '0');
+                const quantidade_kg = parseFloat(item.kg?.toString().replace(',', '.') || '0');
+                const quantidade_produzida = quantidade_kg;
+                
+                // Validar se os valores são números válidos
+                if (isNaN(quantidade_planejada) || isNaN(quantidade_produzida)) {
+                  console.warn(`⚠️ Valores inválidos para item ${itemKey} em ${docId}:`, { quantidade_planejada, quantidade_produzida });
+                  return;
+                }
+                
+                // Só processar se há produção real (quantidade > 0)
+                if (quantidade_produzida <= 0 && quantidade_planejada <= 0) {
+                  return; // Pular este item se não há produção nem planejamento
+                }
               
               const eficiencia = quantidade_planejada > 0 
                 ? Math.round((quantidade_produzida / quantidade_planejada) * 100)
@@ -294,33 +349,36 @@ export const usePCPOptimized = () => {
                 status = 'concluido';
               }
               
-              const produtoEncontrado = produtos.find(p => p.codigo === item.codigo);
-              const classificacao = produtoEncontrado?.classificacao || 'Sem classificação';
-              
-              const produto_nome = item.texto_breve || 'Produto não identificado';
-              
-              const processedItem: PCPData = {
-                id: `${docId}_${turnoKey}_${itemKey}`,
-                ordem_id: `${docId}_${itemKey}`,
-                produto_nome,
-                quantidade_planejada,
-                quantidade_produzida,
-                status,
-                data_inicio: documentDate, // Usar a data real do documento
-                turno: turnoKey,
-                setor: classificacao,
-                localizacao: `Linha ${parseInt(itemKey) + 1}`,
-                responsavel: `Operador ${turnoKey.replace('_', ' ')}`,
-                eficiencia,
-                observacoes: `Código: ${item.codigo}`,
-                createdAt: documentDate, // Usar a data real do documento
-                codigo: item.codigo,
-                classificacao
-              };
-              
-              processedData.push(processedItem);
+                const produtoEncontrado = produtos.find(p => p.codigo === item.codigo);
+                const classificacao = produtoEncontrado?.classificacao || 'Sem classificação';
+                
+                const produto_nome = item.texto_breve || 'Produto não identificado';
+                
+                const processedItem: PCPData = {
+                  id: `${docId}_${turnoKey}_${itemKey}`,
+                  ordem_id: `${docId}_${itemKey}`,
+                  produto_nome,
+                  quantidade_planejada,
+                  quantidade_produzida,
+                  status,
+                  data_inicio: documentDate, // Usar a data real do documento
+                  turno: turnoKey,
+                  setor: classificacao,
+                  localizacao: `Linha ${parseInt(itemKey) + 1}`,
+                  responsavel: `Operador ${turnoKey.replace('_', ' ')}`,
+                  eficiencia,
+                  observacoes: `Código: ${item.codigo}`,
+                  createdAt: documentDate, // Usar a data real do documento
+                  codigo: item.codigo,
+                  classificacao
+                };
+                
+                processedData.push(processedItem);
+              } catch (itemError) {
+                console.warn(`⚠️ Erro ao processar item ${itemKey} em ${docId}:`, itemError);
+              }
             }
-          });
+           });
         }
       }
     });
@@ -335,15 +393,19 @@ export const usePCPOptimized = () => {
   }, [isCacheValid]);
 
   // Função principal otimizada para buscar dados PCP
-  const fetchPCPData = useCallback(async (period: PeriodFilter = 'hoje') => {
-    const cacheKey = `pcp_${period}`;
+  const fetchPCPData = useCallback(async (period: PeriodFilter = 'hoje', customStart?: Date, customEnd?: Date) => {
+    const cacheKey = period === 'personalizado' 
+      ? `pcp_${period}_${customStart?.getTime()}_${customEnd?.getTime()}`
+      : `pcp_${period}`;
     
-    // Verificar cache primeiro
-    const cachedData = cacheRef.current.pcpData.get(cacheKey);
-    if (cachedData && isCacheValid(cachedData)) {
-      console.log(`📦 Usando dados PCP do cache para período ${period}`);
-      setPcpData(cachedData.data);
-      return;
+    // Verificar cache primeiro (pular cache para período personalizado para garantir dados atualizados)
+    if (period !== 'personalizado') {
+      const cachedData = cacheRef.current.pcpData.get(cacheKey);
+      if (cachedData && isCacheValid(cachedData)) {
+        console.log(`📦 Usando dados PCP do cache para período ${period}`);
+        setPcpData(cachedData.data);
+        return;
+      }
     }
 
     try {
@@ -351,6 +413,9 @@ export const usePCPOptimized = () => {
       setError(null);
 
       console.log(`🔄 Carregando dados PCP para período ${period}...`);
+      if (period === 'personalizado') {
+        console.log(`📅 Datas personalizadas: ${customStart?.toLocaleDateString('pt-BR')} até ${customEnd?.toLocaleDateString('pt-BR')}`);
+      }
 
       // Carregar produtos de forma otimizada
       const produtosArray = await loadProdutosOptimized();
@@ -372,14 +437,14 @@ export const usePCPOptimized = () => {
       }
 
       // Aplicar filtro por período
-      const dateRange = getDateRange(period);
+      const dateRange = getDateRange(period, customStart, customEnd);
       const filteredData = pcpDataArray.filter(item => {
         const itemDate = item.createdAt.toDate();
         const startDate = dateRange.start.toDate();
         const endDate = dateRange.end.toDate();
         
         // Log para debug
-        if (period === 'hoje') {
+        if (period === 'hoje' || period === 'semana' || period === 'personalizado') {
           console.log(`🔍 Filtrando ${period}:`, {
             itemDate: itemDate.toLocaleString('pt-BR'),
             startDate: startDate.toLocaleString('pt-BR'),
@@ -391,13 +456,15 @@ export const usePCPOptimized = () => {
         return itemDate >= startDate && itemDate <= endDate;
       });
 
-      // Cachear resultado
-      cacheRef.current.pcpData.set(cacheKey, {
-        data: filteredData,
-        timestamp: Date.now()
-      });
+      // Cachear resultado (exceto para personalizado)
+      if (period !== 'personalizado') {
+        cacheRef.current.pcpData.set(cacheKey, {
+          data: filteredData,
+          timestamp: Date.now()
+        });
+      }
 
-      console.log(`✅ ${filteredData.length} registros PCP carregados e cacheados para ${period}`);
+      console.log(`✅ ${filteredData.length} registros PCP carregados para ${period}`);
       setPcpData(filteredData);
 
     } catch (err) {
@@ -409,8 +476,10 @@ export const usePCPOptimized = () => {
   }, [loadProdutosOptimized, processarDocumentoPCPOptimized, getDateRange, isCacheValid]);
 
   // Listener otimizado em tempo real com debounce
-  const setupRealtimeListener = useCallback((period: PeriodFilter = 'hoje') => {
-    const listenerKey = `listener_${period}`;
+  const setupRealtimeListener = useCallback((period: PeriodFilter = 'hoje', customStart?: Date, customEnd?: Date) => {
+    const listenerKey = period === 'personalizado' 
+      ? `listener_${period}_${customStart?.getTime()}_${customEnd?.getTime()}`
+      : `listener_${period}`;
     
     // Limpar listener anterior se existir
     const existingUnsubscribe = unsubscribeFunctionsRef.current.get(listenerKey);
@@ -440,10 +509,12 @@ export const usePCPOptimized = () => {
             console.log(`⚡ Listener ativado para ${period}, ${snapshot.size} documentos`);
             
             // Invalidar cache para forçar reload
-            cacheRef.current.pcpData.delete(`pcp_${period}`);
+            if (period !== 'personalizado') {
+              cacheRef.current.pcpData.delete(`pcp_${period}`);
+            }
             
             // Recarregar dados
-            await fetchPCPData(period);
+            await fetchPCPData(period, customStart, customEnd);
           } catch (error) {
             console.error(`❌ Erro no listener para ${period}:`, error);
           }

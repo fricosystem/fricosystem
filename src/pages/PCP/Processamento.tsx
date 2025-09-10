@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SearchIcon, RefreshCw, Info } from "lucide-react";
-import { doc, getDoc, setDoc, collection, getDocs, query, orderBy } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, query, orderBy, where, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -27,6 +27,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ModalProcessarDatasAnteriores } from "@/components/PCP/ModalProcessarDatasAnteriores";
+import { format } from 'date-fns';
 
 interface ProcessamentoData {
   id?: string;
@@ -60,6 +62,12 @@ interface OrdemProducao {
   processamentoId: string;
 }
 
+interface DataNaoProcessada {
+  id: string;
+  date: string;
+  turnos: string[];
+}
+
 const Processamento: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +78,9 @@ const Processamento: React.FC = () => {
   const [processamentos, setProcessamentos] = useState<ProcessamentoData[]>([]);
   const [selectedProcessamento, setSelectedProcessamento] = useState<ProcessamentoData | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showModalDatasNaoProcessadas, setShowModalDatasNaoProcessadas] = useState(false);
+  const [datasNaoProcessadas, setDatasNaoProcessadas] = useState<DataNaoProcessada[]>([]);
+  const [isProcessingDatas, setIsProcessingDatas] = useState(false);
   const { toast } = useToast();
 
   // Cache para documentos PCP para evitar múltiplas requisições
@@ -201,7 +212,8 @@ const Processamento: React.FC = () => {
       }
 
       const data = docSnap.data();
-      const turnoData = data[turno] || [];
+      const turnoKey = turno === '1 Turno' ? '1_turno' : '2_turno';
+      const turnoData = data[turnoKey] || [];
 
       if (turnoData.length === 0) {
         throw new Error(`Dados do ${turno} não encontrados`);
@@ -235,7 +247,8 @@ const Processamento: React.FC = () => {
 
       // Salvar no Firestore
       await setDoc(docRef, {
-        Processamento: processamentoResult
+        Processamento: processamentoResult,
+        processado: "sim"
       }, { merge: true });
 
       // Salvar no localStorage
@@ -249,7 +262,7 @@ const Processamento: React.FC = () => {
       });
 
       // Atualizar lista de processamentos  
-      // await loadProcessamentos(); // Comentado para evitar dependência circular
+      await loadProcessamentos();
     } catch (error) {
       toast({
         title: "Erro no processamento",
@@ -274,8 +287,8 @@ const Processamento: React.FC = () => {
       if (!data) {
         throw new Error("Nenhum dado de produção encontrado para hoje");
       }
-      const turno1 = data["1 Turno"] || [];
-      const turno2 = data["2 Turno"] || [];
+      const turno1 = data["1_turno"] || [];
+      const turno2 = data["2_turno"] || [];
 
       if (turno1.length === 0 || turno2.length === 0) {
         throw new Error("Dados incompletos dos turnos");
@@ -319,7 +332,8 @@ const Processamento: React.FC = () => {
 
       // Salvar no Firestore
       await setDoc(docRef, {
-        Processamento: processamentoResult
+        Processamento: processamentoResult,
+        processado: "sim"
       }, { merge: true });
 
       // Salvar no localStorage
@@ -345,9 +359,71 @@ const Processamento: React.FC = () => {
     }
   }, [getDocumentWithCache]);
 
+  const verificarDatasNaoProcessadas = useCallback(async () => {
+    try {
+      console.log("🔍 Verificando datas não processadas...");
+      const pcpCollection = collection(db, "PCP");
+      const q = query(pcpCollection, where("processado", "==", "não"));
+      const querySnapshot = await getDocs(q);
+
+      const datasNaoProcessadasData: DataNaoProcessada[] = [];
+      const dataAtual = format(new Date(), 'yyyy-MM-dd'); // Data atual no formato YYYY-MM-DD
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const turnos: string[] = [];
+        
+        if (data["1_turno"]) turnos.push("1° Turno");
+        if (data["2_turno"]) turnos.push("2° Turno");
+        
+        if (turnos.length > 0) {
+          // Priorizar o ID do documento que geralmente tem o formato YYYY-MM-DD
+          let dataParaExibir = doc.id;
+          
+          // Se o data.date existir e for diferente do ID, verificar qual usar
+          if (data.date && data.date !== doc.id) {
+            // Se data.date for uma string de data válida, usar ela
+            if (typeof data.date === 'string' && data.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              dataParaExibir = data.date;
+            } else if (data.date.toDate && typeof data.date.toDate === 'function') {
+              // Se for um Timestamp do Firebase
+              const firebaseDate = data.date.toDate();
+              dataParaExibir = format(firebaseDate, 'yyyy-MM-dd');
+            }
+          }
+          
+          // Só adicionar se não for a data atual
+          if (dataParaExibir !== dataAtual) {
+            datasNaoProcessadasData.push({
+              id: doc.id,
+              date: dataParaExibir,
+              turnos
+            });
+          }
+        }
+      });
+
+      console.log(`📊 ${datasNaoProcessadasData.length} datas anteriores não processadas encontradas (excluindo data atual)`);
+      return datasNaoProcessadasData;
+    } catch (error) {
+      console.error("❌ Erro ao verificar datas não processadas:", error);
+      return [];
+    }
+  }, []);
+
   const verificarDadosTurnos = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Primeiro verificar se há datas não processadas
+      const datasNaoProcessadasData = await verificarDatasNaoProcessadas();
+      
+      if (datasNaoProcessadasData.length > 0) {
+        setDatasNaoProcessadas(datasNaoProcessadasData);
+        setShowModalDatasNaoProcessadas(true);
+        setIsLoading(false);
+        return;
+      }
+
       const today = getTodayDate();
       
       // Usar cache para documento
@@ -355,8 +431,8 @@ const Processamento: React.FC = () => {
       if (!data) {
         throw new Error("Nenhum dado de produção encontrado para hoje");
       }
-      const temTurno1 = data["1 Turno"] && data["1 Turno"].length > 0;
-      const temTurno2 = data["2 Turno"] && data["2 Turno"].length > 0;
+      const temTurno1 = data["1_turno"] && data["1_turno"].length > 0;
+      const temTurno2 = data["2_turno"] && data["2_turno"].length > 0;
 
       if (!temTurno1 && !temTurno2) {
         throw new Error("Nenhum dado de turno encontrado para hoje");
@@ -380,7 +456,7 @@ const Processamento: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [getDocumentWithCache, calcularComDoisTurnos]);
+  }, [getDocumentWithCache, calcularComDoisTurnos, verificarDatasNaoProcessadas]);
 
   const loadProcessamentoData = useCallback(async () => {
     try {
@@ -405,29 +481,122 @@ const Processamento: React.FC = () => {
     }
   }, [getDocumentWithCache]);
 
+  // Função para carregar dados consolidados dos processamentos
   const loadProcessamentos = useCallback(async () => {
     try {
-      console.log("🔄 Carregando processamentos...");
+      console.log("🔄 Carregando histórico consolidado de processamentos...");
       const processamentosCollection = collection(db, "PCP");
-      const q = query(processamentosCollection, orderBy("Processamento.timestamp", "desc"));
+      const q = query(processamentosCollection, where("processado", "==", "sim"));
       const querySnapshot = await getDocs(q);
 
-      const processamentosData: ProcessamentoData[] = [];
+      const dadosConsolidados: any[] = [];
+
       querySnapshot.forEach((doc) => {
-        const data = doc.data().Processamento;
-        if (data) {
-          processamentosData.push({
-            id: doc.id,
-            ...data,
-            timestamp: data.timestamp.toDate()
-          });
+        const data = doc.data();
+        const documentId = doc.id;
+
+        // Se já tem o processamento salvo, usar ele
+        if (data.Processamento) {
+          const processamentoComData = {
+            ...data.Processamento,
+            id: documentId,
+            documentId: documentId,
+            dataProcessamento: data.date || documentId,
+            dataUltimaAtualizacao: data.updatedAt || data.timestamp
+          };
+          dadosConsolidados.push(processamentoComData);
+        } else {
+          // Caso contrário, calcular na hora (dados consolidados)
+          let totalTurno1Planejado = 0;
+          let totalTurno1Kg = 0;
+          let totalTurno1Cx = 0;
+          let itensTurno1 = 0;
+
+          if (data["1_turno"]) {
+            const turno1 = Array.isArray(data["1_turno"]) ? data["1_turno"] : Object.values(data["1_turno"] || {});
+            turno1.forEach((item: any) => {
+              if (item && item.codigo) {
+                totalTurno1Planejado += parseFloat(item.planejamento || '0');
+                totalTurno1Kg += parseFloat(item.kg || '0');
+                totalTurno1Cx += parseFloat(item.cx || '0');
+                itensTurno1++;
+              }
+            });
+          }
+
+          let totalTurno2Planejado = 0;
+          let totalTurno2Kg = 0;
+          let totalTurno2Cx = 0;
+          let itensTurno2 = 0;
+
+          if (data["2_turno"]) {
+            const turno2 = Array.isArray(data["2_turno"]) ? data["2_turno"] : Object.values(data["2_turno"] || {});
+            turno2.forEach((item: any) => {
+              if (item && item.codigo) {
+                totalTurno2Planejado += parseFloat(item.planejamento || '0');
+                totalTurno2Kg += parseFloat(item.kg || '0');
+                totalTurno2Cx += parseFloat(item.cx || '0');
+                itensTurno2++;
+              }
+            });
+          }
+
+          // Só adicionar se houver dados
+          if (itensTurno1 > 0 || itensTurno2 > 0) {
+            const totalPlanejado = totalTurno1Planejado + totalTurno2Planejado;
+            const totalProduzidoKg = totalTurno1Kg + totalTurno2Kg;
+            const totalProduzidoCx = totalTurno1Cx + totalTurno2Cx;
+            const eficienciaGeral = totalPlanejado > 0 ? Math.round((totalProduzidoKg / totalPlanejado) * 100) : 0;
+            const diferenca = totalProduzidoKg - totalPlanejado;
+
+            const ctp1 = totalTurno1Planejado > 0 ? (totalTurno1Kg / totalTurno1Planejado) * 100 : 0;
+            const ctp2 = totalTurno2Planejado > 0 ? (totalTurno2Kg / totalTurno2Planejado) * 100 : 0;
+
+            dadosConsolidados.push({
+              id: documentId,
+              documentId,
+              dataProcessamento: data.date || documentId,
+              timestamp: new Date(),
+              // Dados consolidados
+              planoDiario: totalPlanejado,
+              kgTotal: totalProduzidoKg,
+              cxTotal: totalProduzidoCx,
+              diferencaPR: diferenca,
+              ctptd: eficienciaGeral,
+              ctp1: Math.round(ctp1 * 10) / 10,
+              ctp2: Math.round(ctp2 * 10) / 10,
+              // Detalhes dos turnos
+              kgTurno1: totalTurno1Kg,
+              kgTurno2: totalTurno2Kg,
+              planejadoTurno1: totalTurno1Planejado,
+              planejadoTurno2: totalTurno2Planejado,
+              turnosProcessados: [
+                ...(itensTurno1 > 0 ? ['1 Turno'] : []),
+                ...(itensTurno2 > 0 ? ['2 Turno'] : [])
+              ],
+              // Informações extras
+              itensTurno1,
+              itensTurno2,
+              turnosAtivos: [
+                ...(itensTurno1 > 0 ? ['1° Turno'] : []),
+                ...(itensTurno2 > 0 ? ['2° Turno'] : [])
+              ].join(', ')
+            });
+          }
         }
       });
 
-      setProcessamentos(processamentosData);
-      console.log(`✅ ${processamentosData.length} processamentos carregados`);
+      // Ordenar por data decrescente
+      dadosConsolidados.sort((a, b) => {
+        const dateA = new Date(a.dataProcessamento);
+        const dateB = new Date(b.dataProcessamento);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      setProcessamentos(dadosConsolidados);
+      console.log(`✅ ${dadosConsolidados.length} processamentos históricos consolidados carregados`);
     } catch (error) {
-      console.error("❌ Erro ao carregar processamentos:", error);
+      console.error("❌ Erro ao carregar processamentos consolidados:", error);
       toast({
         title: "Erro",
         description: "Falha ao carregar histórico de processamentos",
@@ -435,6 +604,93 @@ const Processamento: React.FC = () => {
       });
     }
   }, [toast]);
+
+
+  const processarDatasAnteriores = useCallback(async () => {
+    setIsProcessingDatas(true);
+    try {
+      console.log("🔄 Processando datas anteriores...");
+      
+      for (const dataNaoProcessada of datasNaoProcessadas) {
+        const docRef = doc(db, "PCP", dataNaoProcessada.id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const turno1 = data["1_turno"] || [];
+          const turno2 = data["2_turno"] || [];
+
+          // Calcular métricas similar ao processamento normal
+          const kgTurno1 = Array.isArray(turno1) ? turno1.reduce((sum: number, item: any) => sum + parseFloat(item.kg || "0"), 0) : 0;
+          const kgTurno2 = Array.isArray(turno2) ? turno2.reduce((sum: number, item: any) => sum + parseFloat(item.kg || "0"), 0) : 0;
+          const cxTurno1 = Array.isArray(turno1) ? turno1.reduce((sum: number, item: any) => sum + parseFloat(item.cx || "0"), 0) : 0;
+          const cxTurno2 = Array.isArray(turno2) ? turno2.reduce((sum: number, item: any) => sum + parseFloat(item.cx || "0"), 0) : 0;
+          const planejadoTurno1 = Array.isArray(turno1) ? turno1.reduce((sum: number, item: any) => sum + parseFloat(item.planejamento || "0"), 0) : 0;
+          const planejadoTurno2 = Array.isArray(turno2) ? turno2.reduce((sum: number, item: any) => sum + parseFloat(item.planejamento || "0"), 0) : 0;
+
+          const ctp1 = planejadoTurno1 > 0 ? (kgTurno1 / planejadoTurno1) * 100 : 0;
+          const ctp2 = planejadoTurno2 > 0 ? (kgTurno2 / planejadoTurno2) * 100 : 0;
+          const kgTotal = kgTurno1 + kgTurno2;
+          const cxTotal = cxTurno1 + cxTurno2;
+          const planoDiario = planejadoTurno1 + planejadoTurno2;
+          const batchReceita = kgTotal > 0 ? (planoDiario / kgTotal) : 0;
+          const diferencaPR = kgTotal - planoDiario;
+          const ctptd = planoDiario > 0 ? (kgTotal / planoDiario) * 100 : 0;
+
+          const turnos = [];
+          if (Array.isArray(turno1) && turno1.length > 0) turnos.push("1 Turno");
+          if (Array.isArray(turno2) && turno2.length > 0) turnos.push("2 Turno");
+
+          const processamentoResult: ProcessamentoData = {
+            ctp1: parseFloat(ctp1.toFixed(1)),
+            ctp2: parseFloat(ctp2.toFixed(1)),
+            planoDiario: parseFloat(planoDiario.toFixed(2)),
+            batchReceita: parseFloat(batchReceita.toFixed(2)),
+            kgTotal: parseFloat(kgTotal.toFixed(2)),
+            cxTotal: parseFloat(cxTotal.toFixed(2)),
+            diferencaPR: parseFloat(diferencaPR.toFixed(2)),
+            ctptd: parseFloat(ctptd.toFixed(1)),
+            timestamp: new Date(),
+            turnosProcessados: turnos,
+            dataProcessamento: dataNaoProcessada.date,
+            kgTurno1,
+            kgTurno2,
+            planejadoTurno1,
+            planejadoTurno2
+          };
+
+          // Atualizar documento com processamento e marcar como processado
+          await updateDoc(docRef, {
+            processado: "sim",
+            Processamento: processamentoResult
+          });
+
+          console.log(`✅ Data ${dataNaoProcessada.date} processada com sucesso`);
+        }
+      }
+
+      toast({
+        title: "Sucesso",
+        description: `${datasNaoProcessadas.length} datas anteriores processadas com sucesso!`,
+      });
+
+      setShowModalDatasNaoProcessadas(false);
+      setDatasNaoProcessadas([]);
+      
+      // Recarregar processamentos
+      await loadProcessamentos();
+      
+    } catch (error) {
+      console.error("❌ Erro ao processar datas anteriores:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao processar datas anteriores",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingDatas(false);
+    }
+  }, [datasNaoProcessadas, toast, loadProcessamentos]);
 
   const loadOrdensProducao = useCallback(async () => {
     try {
@@ -524,7 +780,7 @@ const Processamento: React.FC = () => {
         <div className="relative w-full sm:max-w-md">
           <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar ordens de produção..."
+            placeholder="Buscar por data..."
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -570,26 +826,11 @@ const Processamento: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-muted-foreground">CTP1</h3>
-                <p className="text-2xl font-bold">{processamentoData.ctp1}%</p>
-                <p className="text-xs text-muted-foreground">Eficiência 1° Turno</p>
-              </div>
-              <div className="border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-muted-foreground">CTP2</h3>
-                <p className="text-2xl font-bold">{processamentoData.ctp2}%</p>
-                <p className="text-xs text-muted-foreground">Eficiência 2° Turno</p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="border rounded-lg p-4">
                 <h3 className="text-sm font-medium text-muted-foreground">Plano Diário</h3>
                 <p className="text-2xl font-bold">{processamentoData.planoDiario.toLocaleString('pt-BR')}</p>
                 <p className="text-xs text-muted-foreground">Total planejado (kg)</p>
-              </div>
-              <div className="border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-muted-foreground">Batch Receita</h3>
-                <p className="text-2xl font-bold">{processamentoData.batchReceita.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">Índice de eficiência</p>
               </div>
               <div className="border rounded-lg p-4">
                 <h3 className="text-sm font-medium text-muted-foreground">KG Total</h3>
@@ -603,13 +844,15 @@ const Processamento: React.FC = () => {
               </div>
               <div className="border rounded-lg p-4">
                 <h3 className="text-sm font-medium text-muted-foreground">Diferença P/R</h3>
-                <p className="text-2xl font-bold">
+                <p className={`text-2xl font-bold ${
+                  processamentoData.diferencaPR >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
                   {processamentoData.diferencaPR >= 0 ? '+' : ''}{processamentoData.diferencaPR.toLocaleString('pt-BR')}
                 </p>
                 <p className="text-xs text-muted-foreground">Planejado vs Realizado (kg)</p>
               </div>
               <div className="border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-muted-foreground">CTPTD</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">Eficiência</h3>
                 <p className="text-2xl font-bold">{processamentoData.ctptd}%</p>
                 <p className="text-xs text-muted-foreground">Eficiência Total</p>
               </div>
@@ -621,9 +864,9 @@ const Processamento: React.FC = () => {
       {/* Card de Histórico de Processamentos */}
       <Card>
         <CardHeader>
-          <CardTitle>Histórico de Processamentos</CardTitle>
+          <CardTitle>Histórico de Processamentos - Dados Consolidados</CardTitle>
           <CardDescription>
-            Lista de todos os processamentos realizados
+            Resultados consolidados por data processada - totais de produção e eficiência
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -632,48 +875,105 @@ const Processamento: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
-                  <TableHead className="hidden sm:table-cell">Turnos</TableHead>
-                  <TableHead>KG Total</TableHead>
-                  <TableHead className="hidden md:table-cell">Planejado</TableHead>
-                  <TableHead className="hidden lg:table-cell">Diferença</TableHead>
-                  <TableHead>Eficiência</TableHead>
+                  <TableHead>Turnos Ativos</TableHead>
+                  <TableHead>Total Planejado (kg)</TableHead>
+                  <TableHead>Total Produzido (kg)</TableHead>
+                  <TableHead className="hidden md:table-cell">Total Produzido (cx)</TableHead>
+                  <TableHead>Diferença (kg)</TableHead>
+                  <TableHead>Eficiência Geral</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {processamentos.map((processamento) => (
-                  <TableRow key={processamento.id}>
-                    <TableCell>{formatShortDate(processamento.timestamp)}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {processamento.turnosProcessados?.includes('1 Turno') && 
-                      processamento.turnosProcessados?.includes('2 Turno') 
-                      ? 'Ambos' 
-                      : processamento.turnosProcessados?.join(', ')}
-                    </TableCell>
-                    <TableCell>{processamento.kgTotal.toLocaleString('pt-BR')} kg</TableCell>
-                    <TableCell className="hidden md:table-cell">{processamento.planoDiario.toLocaleString('pt-BR')} kg</TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <span className={processamento.diferencaPR >= 0 ? "text-green-600" : "text-red-600"}>
-                        {processamento.diferencaPR >= 0 ? '+' : ''}{processamento.diferencaPR.toLocaleString('pt-BR')} kg
-                      </span>
-                    </TableCell>
-                    <TableCell>{processamento.ctptd.toFixed(1)}%</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleShowDetails(processamento)}
-                      >
-                        <Info className="h-4 w-4" />
-                      </Button>
+                {processamentos.filter((item) => 
+                  (item.dataProcessamento && item.dataProcessamento.includes(searchTerm)) ||
+                  searchTerm === ""
+                ).map((processamento) => {
+                  // Calcular informações dos turnos ativos
+                  const turnosAtivos = [];
+                  if (processamento.kgTurno1 && processamento.kgTurno1 > 0) {
+                    turnosAtivos.push('1° Turno');
+                  }
+                  if (processamento.kgTurno2 && processamento.kgTurno2 > 0) {
+                    turnosAtivos.push('2° Turno');
+                  }
+                  
+                  return (
+                    <TableRow key={processamento.id || processamento.dataProcessamento}>
+                      <TableCell className="font-medium">{formatShortDate(processamento.dataProcessamento || processamento.timestamp)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 flex-wrap">
+                          {processamento.kgTurno1 && processamento.kgTurno1 > 0 && (
+                            <Badge variant="default" className="text-xs">
+                              1° Turno ({processamento.ctp1}%)
+                            </Badge>
+                          )}
+                          {processamento.kgTurno2 && processamento.kgTurno2 > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              2° Turno ({processamento.ctp2}%)
+                            </Badge>
+                          )}
+                          {turnosAtivos.length === 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              Dados consolidados
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{(processamento.planoDiario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell>{(processamento.kgTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="hidden md:table-cell">{(processamento.cxTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell>
+                        <span className={`font-medium ${
+                          (processamento.diferencaPR || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {(processamento.diferencaPR || 0) >= 0 ? '+' : ''}{(processamento.diferencaPR || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className={`font-medium ${
+                            (processamento.ctptd || 0) >= 100 ? 'text-green-600' : 
+                            (processamento.ctptd || 0) >= 80 ? 'text-yellow-600' : 
+                            'text-red-600'
+                          }`}>
+                            {(processamento.ctptd || 0).toFixed(1)}%
+                          </span>
+                          <div className="text-xs text-muted-foreground">
+                            {processamento.kgTurno1 && processamento.kgTurno1 > 0 && `1°T: ${processamento.ctp1}%`}
+                            {processamento.kgTurno1 && processamento.kgTurno1 > 0 && processamento.kgTurno2 && processamento.kgTurno2 > 0 && ' | '}
+                            {processamento.kgTurno2 && processamento.kgTurno2 > 0 && `2°T: ${processamento.ctp2}%`}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleShowDetails(processamento)}
+                        >
+                          <Info className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {processamentos.filter((item) => 
+                  (item.dataProcessamento && item.dataProcessamento.includes(searchTerm)) ||
+                  searchTerm === ""
+                ).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      {searchTerm ? 'Nenhum resultado encontrado para a busca' : 'Nenhum processamento encontrado'}
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
+
 
       {/* Dialog de Detalhes do Processamento */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
@@ -771,9 +1071,18 @@ const Processamento: React.FC = () => {
             </div>
           )}
         </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
+        </Dialog>
 
-export default Processamento;
+        {/* Modal para Datas Não Processadas */}
+        <ModalProcessarDatasAnteriores
+          open={showModalDatasNaoProcessadas}
+          onOpenChange={setShowModalDatasNaoProcessadas}
+          datasNaoProcessadas={datasNaoProcessadas}
+          onProcessarDatas={processarDatasAnteriores}
+          isLoading={isProcessingDatas}
+        />
+      </div>
+    );
+  };
+  
+  export default Processamento;

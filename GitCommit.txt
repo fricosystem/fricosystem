@@ -30,5 +30,3 @@ git pull origin main
 
 
 Esse comando git pull combina dois comandos: git fetch (baixa as mudanças) e git merge (integra as mudanças ao seu código local).
-
-último edit na fricó: https://lovable.dev/projects/8a2d224b-cac8-48e5-9230-50de091be8e2
