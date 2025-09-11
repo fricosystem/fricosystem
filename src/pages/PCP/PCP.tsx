@@ -683,11 +683,11 @@ const PCP = () => {
                      {/* Setores mais produtivos */}
                      {chartDataMemo.setoresChart.length > 0 && (
                       <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Boxes className="h-5 w-5" /> Setores mais produtivos
-                          </CardTitle>
-                          <CardDescription>Frescais vs Embutidos por turno</CardDescription>
+                         <CardHeader>
+                           <CardTitle className="flex items-center gap-2">
+                             <Boxes className="h-5 w-5" /> Avaliação de Setores
+                           </CardTitle>
+                           <CardDescription>Métricas de produtividade dos setores</CardDescription>
                         </CardHeader>
                         <CardContent>
                           <div className="h-[300px]">

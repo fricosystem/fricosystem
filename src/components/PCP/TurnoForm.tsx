@@ -507,12 +507,12 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
       return;
     }
 
-    // Filtrar apenas produtos com planejamento > 0
-    const produtosComPlanejamento = produtos.filter(p => p.planejamento > 0);
-    if (produtosComPlanejamento.length === 0) {
+    // Filtrar apenas produtos que tenham dados em KG, CX ou Planejamento (excluir apenas os que estão zerados em todas as colunas)
+    const produtosComDados = produtos.filter(p => p.kg > 0 || p.cx > 0 || p.planejamento > 0);
+    if (produtosComDados.length === 0) {
       toast({
         title: "Aviso",
-        description: "Nenhum produto com planejamento definido para salvar!",
+        description: "Nenhum produto com dados para salvar! Preencha pelo menos uma das colunas: KG, CX ou Planejamento.",
         variant: "destructive"
       });
       return;
@@ -521,7 +521,7 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
       const selectedDateString = getSelectedDateString();
       const docRef = doc(db, "PCP", selectedDateString);
       await setDoc(docRef, {
-        [`${turno}_turno`]: produtosComPlanejamento.map(p => ({
+        [`${turno}_turno`]: produtosComDados.map(p => ({
           codigo: p.codigo,
           texto_breve: p.textoBreve,
           kg: p.kg,
@@ -556,7 +556,7 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
       });
       toast({
         title: "Sucesso",
-        description: `${produtosComPlanejamento.length} produtos do ${titulo} salvos para ${dateFormatted}!`
+        description: `${produtosComDados.length} produtos do ${titulo} salvos para ${dateFormatted}!`
       });
     } catch (error) {
       console.error("Erro ao salvar no Firestore:", error);
@@ -611,7 +611,22 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
           <CardContent>
             <div className="flex flex-col lg:flex-row gap-6 items-start">
               <div className="w-fit">
-                <Calendar mode="single" selected={selectedDate} onSelect={date => date && setSelectedDate(date)} className="rounded-md border bg-card pointer-events-auto" locale={ptBR} />
+                <Calendar 
+                  mode="single" 
+                  selected={selectedDate} 
+                  onSelect={date => date && setSelectedDate(date)} 
+                  className="rounded-md border bg-card pointer-events-auto p-3" 
+                  locale={ptBR}
+                  classNames={{
+                    day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary focus:text-primary-foreground",
+                    day_today: "bg-accent text-accent-foreground font-semibold border border-primary/20",
+                    day: "h-9 w-9 text-center font-normal hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
+                    head_cell: "text-muted-foreground w-9 font-normal text-[0.8rem] text-center",
+                    cell: "text-center p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                    nav_button: "hover:bg-accent hover:text-accent-foreground",
+                    caption: "flex justify-center pt-1 relative items-center"
+                  }}
+                />
               </div>
               <div className="flex-1 space-y-4">
                 <div>

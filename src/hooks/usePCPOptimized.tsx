@@ -602,11 +602,13 @@ export const usePCPOptimized = () => {
   const getChartData = useMemo(() => {
     const metrics = getMetrics();
     
-    const turnosChart = Object.entries(metrics.producaoPorTurno).map(([turno, data]) => ({
-      name: turno,
-      value: data.eficiencia,
-      quantidade: data.quantidade
-    }));
+    const turnosChart = Object.entries(metrics.producaoPorTurno)
+      .sort(([a], [b]) => a.localeCompare(b)) // Ordena para garantir 1° Turno antes de 2° Turno
+      .map(([turno, data]) => ({
+        name: turno,
+        value: data.eficiencia,
+        quantidade: data.quantidade
+      }));
 
     const setoresChart = Object.entries(metrics.producaoPorSetor).map(([setor, producao], index) => ({
       setor,

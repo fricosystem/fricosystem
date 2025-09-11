@@ -847,13 +847,13 @@ const Processamento: React.FC = () => {
                       <TableCell className="font-medium">{formatShortDate(processamento.dataProcessamento || processamento.timestamp)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
-                          {processamento.kgTurno1 && processamento.kgTurno1 > 0 && <Badge variant="default" className="text-xs">
+                          {processamento.kgTurno1 > 0 && <Badge variant="default" className="text-xs">
                               1° Turno
                             </Badge>}
-                          {processamento.kgTurno2 && processamento.kgTurno2 > 0 && <Badge variant="secondary" className="text-xs">
+                          {processamento.kgTurno2 > 0 && <Badge variant="secondary" className="text-xs">
                               2° Turno
                             </Badge>}
-                          {turnosAtivos.length === 0 && <Badge variant="outline" className="text-xs">
+                          {(!processamento.kgTurno1 || processamento.kgTurno1 === 0) && (!processamento.kgTurno2 || processamento.kgTurno2 === 0) && <Badge variant="outline" className="text-xs">
                               Dados consolidados
                             </Badge>}
                         </div>
