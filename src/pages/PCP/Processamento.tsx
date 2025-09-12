@@ -5,12 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SearchIcon, RefreshCw, Info } from "lucide-react";
+import { SearchIcon, RefreshCw, Info, Settings, Edit, Trash2, Save, X } from "lucide-react";
 import { doc, getDoc, setDoc, collection, getDocs, query, orderBy, where, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useToast } from "@/components/ui/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ModalProcessarDatasAnteriores } from "@/components/PCP/ModalProcessarDatasAnteriores";
 import { format } from 'date-fns';
@@ -62,6 +63,15 @@ const Processamento: React.FC = () => {
   const [showModalDatasNaoProcessadas, setShowModalDatasNaoProcessadas] = useState(false);
   const [datasNaoProcessadas, setDatasNaoProcessadas] = useState<DataNaoProcessada[]>([]);
   const [isProcessingDatas, setIsProcessingDatas] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProcessamento, setEditingProcessamento] = useState<ProcessamentoData | null>(null);
+  const [editedTurno1Data, setEditedTurno1Data] = useState<any[]>([]);
+  const [editedTurno2Data, setEditedTurno2Data] = useState<any[]>([]);
+  const [activeEditTab, setActiveEditTab] = useState<'1' | '2'>('1');
+  const [isSaving, setIsSaving] = useState(false);
+  const [searchTurno1, setSearchTurno1] = useState('');
+  const [searchTurno2, setSearchTurno2] = useState('');
   const {
     toast
   } = useToast();
@@ -705,6 +715,168 @@ const Processamento: React.FC = () => {
     setSelectedProcessamento(processamento);
     setShowDetailsDialog(true);
   };
+
+  const handleShowEditModal = async (processamento: ProcessamentoData) => {
+    setEditingProcessamento(processamento);
+    setShowActionMenu(null);
+    
+    // Carregar dados dos turnos do Firestore
+    try {
+      const docData = await getDocumentWithCache(processamento.dataProcessamento);
+      if (docData) {
+        setEditedTurno1Data(docData["1_turno"] || []);
+        setEditedTurno2Data(docData["2_turno"] || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados dos turnos:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar dados dos turnos",
+        variant: "destructive"
+      });
+    }
+    
+    setShowEditModal(true);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!editingProcessamento) return;
+    
+    setIsSaving(true);
+    try {
+      const docRef = doc(db, "PCP", editingProcessamento.dataProcessamento);
+      
+      // Atualizar os dados dos turnos
+      await updateDoc(docRef, {
+        "1_turno": editedTurno1Data,
+        "2_turno": editedTurno2Data
+      });
+      
+      // Recalcular o processamento
+      await recalcularProcessamento(editingProcessamento.dataProcessamento);
+      
+      toast({
+        title: "Sucesso",
+        description: "Alterações salvas com sucesso!",
+        variant: "default"
+      });
+      
+      setShowEditModal(false);
+      await loadProcessamentos();
+    } catch (error) {
+      console.error("Erro ao salvar alterações:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar alterações",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteTurno = async (turno: '1' | '2') => {
+    if (!editingProcessamento) return;
+    
+    try {
+      const docRef = doc(db, "PCP", editingProcessamento.dataProcessamento);
+      const updateData = turno === '1' ? { "1_turno": [] } : { "2_turno": [] };
+      
+      await updateDoc(docRef, updateData);
+      
+      if (turno === '1') {
+        setEditedTurno1Data([]);
+      } else {
+        setEditedTurno2Data([]);
+      }
+      
+      toast({
+        title: "Sucesso",
+        description: `${turno}° Turno excluído com sucesso!`,
+        variant: "default"
+      });
+      
+      await recalcularProcessamento(editingProcessamento.dataProcessamento);
+      await loadProcessamentos();
+    } catch (error) {
+      console.error("Erro ao excluir turno:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir turno",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const recalcularProcessamento = async (dataProcessamento: string) => {
+    try {
+      const docRef = doc(db, "PCP", dataProcessamento);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const turno1 = data["1_turno"] || [];
+        const turno2 = data["2_turno"] || [];
+        
+        // Recalcular métricas
+        const kgTurno1 = Array.isArray(turno1) ? turno1.reduce((sum, item) => sum + parseFloat(item.kg || "0"), 0) : 0;
+        const kgTurno2 = Array.isArray(turno2) ? turno2.reduce((sum, item) => sum + parseFloat(item.kg || "0"), 0) : 0;
+        const cxTurno1 = Array.isArray(turno1) ? turno1.reduce((sum, item) => sum + parseFloat(item.cx || "0"), 0) : 0;
+        const cxTurno2 = Array.isArray(turno2) ? turno2.reduce((sum, item) => sum + parseFloat(item.cx || "0"), 0) : 0;
+        const planejadoTurno1 = Array.isArray(turno1) ? turno1.reduce((sum, item) => sum + parseFloat(item.planejamento || "0"), 0) : 0;
+        const planejadoTurno2 = Array.isArray(turno2) ? turno2.reduce((sum, item) => sum + parseFloat(item.planejamento || "0"), 0) : 0;
+        
+        const ctp1 = planejadoTurno1 > 0 ? kgTurno1 / planejadoTurno1 * 100 : 0;
+        const ctp2 = planejadoTurno2 > 0 ? kgTurno2 / planejadoTurno2 * 100 : 0;
+        const kgTotal = kgTurno1 + kgTurno2;
+        const cxTotal = cxTurno1 + cxTurno2;
+        const planoDiario = planejadoTurno1 + planejadoTurno2;
+        const batchReceita = kgTotal > 0 ? planoDiario / kgTotal : 0;
+        const diferencaPR = kgTotal - planoDiario;
+        const ctptd = planoDiario > 0 ? kgTotal / planoDiario * 100 : 0;
+        
+        const turnos = [];
+        if (Array.isArray(turno1) && turno1.length > 0) turnos.push("1 Turno");
+        if (Array.isArray(turno2) && turno2.length > 0) turnos.push("2 Turno");
+        
+        const processamentoResult = {
+          ctp1: parseFloat(ctp1.toFixed(1)),
+          ctp2: parseFloat(ctp2.toFixed(1)),
+          planoDiario: parseFloat(planoDiario.toFixed(2)),
+          batchReceita: parseFloat(batchReceita.toFixed(2)),
+          kgTotal: parseFloat(kgTotal.toFixed(2)),
+          cxTotal: parseFloat(cxTotal.toFixed(2)),
+          diferencaPR: parseFloat(diferencaPR.toFixed(2)),
+          ctptd: parseFloat(ctptd.toFixed(1)),
+          timestamp: new Date(),
+          turnosProcessados: turnos,
+          dataProcessamento,
+          kgTurno1,
+          kgTurno2,
+          planejadoTurno1,
+          planejadoTurno2
+        };
+        
+        await updateDoc(docRef, {
+          Processamento: processamentoResult
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao recalcular processamento:", error);
+    }
+  };
+
+  const updateTurnoField = (turno: '1' | '2', index: number, field: 'kg' | 'cx' | 'planejamento', value: string) => {
+    if (turno === '1') {
+      const newData = [...editedTurno1Data];
+      newData[index] = { ...newData[index], [field]: value };
+      setEditedTurno1Data(newData);
+    } else {
+      const newData = [...editedTurno2Data];
+      newData[index] = { ...newData[index], [field]: value };
+      setEditedTurno2Data(newData);
+    }
+  };
   const handleConfirmProcessing = () => {
     if (selectedTurno) {
       calcularComUmTurno(selectedTurno);
@@ -736,6 +908,21 @@ const Processamento: React.FC = () => {
     };
     loadAllData();
   }, [loadProcessamentoData, loadOrdensProducao, loadProcessamentos]);
+
+  // Fechar menu de ações ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.relative')) {
+        setShowActionMenu(null);
+      }
+    };
+
+    if (showActionMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showActionMenu]);
   return <div className="space-y-6">
       <h2 className="text-2xl font-bold">Processamento</h2>
       
@@ -883,9 +1070,39 @@ const Processamento: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => handleShowDetails(processamento)}>
-                          <Info className="h-4 w-4" />
-                        </Button>
+                        <div className="relative">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setShowActionMenu(showActionMenu === processamento.id ? null : processamento.id)}
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                          
+                          {showActionMenu === processamento.id && (
+                            <div className="absolute right-0 top-8 z-10 bg-background border rounded-md shadow-lg min-w-[150px]">
+                              <Button
+                                variant="ghost"
+                                className="w-full justify-start text-left px-3 py-2 text-sm"
+                                onClick={() => {
+                                  handleShowDetails(processamento);
+                                  setShowActionMenu(null);
+                                }}
+                              >
+                                <Info className="h-4 w-4 mr-2" />
+                                Detalhes
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className="w-full justify-start text-left px-3 py-2 text-sm"
+                                onClick={() => handleShowEditModal(processamento)}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Modificar Processamento
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>;
               })}
@@ -996,6 +1213,249 @@ const Processamento: React.FC = () => {
 
         {/* Modal para Datas Não Processadas */}
         <ModalProcessarDatasAnteriores open={showModalDatasNaoProcessadas} onOpenChange={setShowModalDatasNaoProcessadas} datasNaoProcessadas={datasNaoProcessadas} onProcessarDatas={processarDatasAnteriores} isLoading={isProcessingDatas} />
+
+        {/* Modal de Edição de Processamento - Lado Direito */}
+        {showEditModal && (
+          <div className="fixed inset-0 z-50 flex">
+            {/* Overlay */}
+            <div 
+              className="absolute inset-0 bg-black/50 animate-fade-in" 
+              onClick={() => setShowEditModal(false)}
+            />
+            
+            {/* Modal Content */}
+            <div className="relative ml-auto h-full w-1/2 min-w-[600px] bg-background shadow-xl animate-slide-in-right border-l-2 border-border">
+              <div className="flex h-full flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b p-6">
+                  <div>
+                    <h2 className="text-lg font-semibold">Modificar Processamento</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Data: {formatShortDate(editingProcessamento?.dataProcessamento)}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowEditModal(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Tabs */}
+                <div className="border-b">
+                  <div className="flex">
+                    <Button
+                      variant={activeEditTab === '1' ? 'default' : 'ghost'}
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground"
+                      onClick={() => setActiveEditTab('1')}
+                    >
+                      1° Turno ({editedTurno1Data.length} produtos)
+                    </Button>
+                    <Button
+                      variant={activeEditTab === '2' ? 'default' : 'ghost'}
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground"
+                      onClick={() => setActiveEditTab('2')}
+                    >
+                      2° Turno ({editedTurno2Data.length} produtos)
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  {activeEditTab === '1' && (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-md font-medium">Produtos do 1° Turno</h3>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteTurno('1')}
+                          disabled={editedTurno1Data.length === 0}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir Turno
+                        </Button>
+                      </div>
+
+                      {/* Barra de pesquisa para o 1° Turno */}
+                      <div className="relative">
+                        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                          placeholder="Buscar por descrição ou código..."
+                          value={searchTurno1}
+                          onChange={(e) => setSearchTurno1(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      
+                      {editedTurno1Data.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">
+                          Nenhum produto encontrado no 1° Turno
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {editedTurno1Data
+                            .filter(produto => {
+                              const searchLower = searchTurno1.toLowerCase();
+                              const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || '').toLowerCase();
+                              const codigo = (produto.codigo || '').toLowerCase();
+                              return descricao.includes(searchLower) || codigo.includes(searchLower);
+                            })
+                            .map((produto, index) => (
+                            <div key={index} className="border rounded-lg p-4">
+                              <div className="mb-3">
+                                <div className="text-base font-medium text-foreground">Descrição: {produto.texto_breve || produto.descricao || produto.nome || produto.produto || 'Sem descrição'}</div>
+                                <div className="text-sm text-muted-foreground">Código: {produto.codigo}</div>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium">KG:</label>
+                                  <Input
+                                    type="number"
+                                    value={produto.kg || '0'}
+                                    onChange={(e) => updateTurnoField('1', index, 'kg', e.target.value)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium">CX:</label>
+                                  <Input
+                                    type="number"
+                                    value={produto.cx || '0'}
+                                    onChange={(e) => updateTurnoField('1', index, 'cx', e.target.value)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium">Planejado:</label>
+                                  <Input
+                                    type="number"
+                                    value={produto.planejamento || '0'}
+                                    onChange={(e) => updateTurnoField('1', index, 'planejamento', e.target.value)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                              </div>
+                             </div>
+                           ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeEditTab === '2' && (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-md font-medium">Produtos do 2° Turno</h3>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteTurno('2')}
+                          disabled={editedTurno2Data.length === 0}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir Turno
+                        </Button>
+                      </div>
+
+                      {/* Barra de pesquisa para o 2° Turno */}
+                      <div className="relative">
+                        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                          placeholder="Buscar por descrição ou código..."
+                          value={searchTurno2}
+                          onChange={(e) => setSearchTurno2(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      
+                      {editedTurno2Data.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">
+                          Nenhum produto encontrado no 2° Turno
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {editedTurno2Data
+                            .filter(produto => {
+                              const searchLower = searchTurno2.toLowerCase();
+                              const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || '').toLowerCase();
+                              const codigo = (produto.codigo || '').toLowerCase();
+                              return descricao.includes(searchLower) || codigo.includes(searchLower);
+                            })
+                            .map((produto, index) => (
+                             <div key={index} className="border rounded-lg p-4">
+                               <div className="mb-3">
+                                  <div className="text-base font-medium text-foreground">Descrição: {produto.texto_breve || produto.descricao || produto.nome || produto.produto || 'Sem descrição'}</div>
+                                  <div className="text-sm text-muted-foreground">Código: {produto.codigo}</div>
+                               </div>
+                               
+                               <div className="grid grid-cols-3 gap-4">
+                                 <div>
+                                   <label className="text-sm font-medium">KG:</label>
+                                   <Input
+                                     type="number"
+                                     value={produto.kg || '0'}
+                                     onChange={(e) => updateTurnoField('2', index, 'kg', e.target.value)}
+                                     className="mt-1"
+                                   />
+                                 </div>
+                                 <div>
+                                   <label className="text-sm font-medium">CX:</label>
+                                   <Input
+                                     type="number"
+                                     value={produto.cx || '0'}
+                                     onChange={(e) => updateTurnoField('2', index, 'cx', e.target.value)}
+                                     className="mt-1"
+                                   />
+                                 </div>
+                                 <div>
+                                   <label className="text-sm font-medium">Planejado:</label>
+                                   <Input
+                                     type="number"
+                                     value={produto.planejamento || '0'}
+                                     onChange={(e) => updateTurnoField('2', index, 'planejamento', e.target.value)}
+                                     className="mt-1"
+                                   />
+                                 </div>
+                               </div>
+                              </div>
+                           ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="border-t p-6">
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowEditModal(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleSaveChanges}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Salvar Alterações
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>;
 };
 export default Processamento;

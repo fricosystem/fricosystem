@@ -616,12 +616,89 @@ export const usePCPOptimized = () => {
       fill: `hsl(${(index * 60) % 360}, 70%, 50%)`
     }));
 
-    const performanceChart = pcpData.slice(0, 10).map((item) => ({
-      name: item.codigo || item.ordem_id.slice(-6),
-      produzido: item.quantidade_produzida,
-      planejado: item.quantidade_planejada,
-      eficiencia: item.eficiencia || 0
-    }));
+    // Performance por Produto - 2 melhores produtos de cada classificação (sem repetir)
+    const performanceChart = (() => {
+      // Agrupar produtos por classificação
+      const produtosPorClassificacao = pcpData.reduce((acc, item) => {
+        const classificacao = item.classificacao || 'Sem classificação';
+        if (!acc[classificacao]) {
+          acc[classificacao] = [];
+        }
+        acc[classificacao].push(item);
+        return acc;
+      }, {} as Record<string, typeof pcpData>);
+
+      // Gerar array com cores aleatórias para cada classificação
+      const cores = [
+        '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
+        '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6366F1',
+        '#14B8A6', '#F43F5E', '#A855F7', '#22C55E', '#FB923C',
+        '#38BDF8', '#FBBF24', '#F472B6', '#34D399', '#A78BFA'
+      ];
+
+      // Para cada classificação, pegar os 2 melhores produtos únicos (por eficiência e depois por produção)
+      const dadosComSeparadores: any[] = [];
+      
+      Object.entries(produtosPorClassificacao)
+        .sort(([a], [b]) => a.localeCompare(b)) // Ordenar classificações alfabeticamente
+        .forEach(([classificacao, produtos], classIndex) => {
+          // Adicionar separador visual (exceto para a primeira classificação)
+          if (classIndex > 0) {
+            dadosComSeparadores.push({
+              name: '─────────',
+              produzido: 0,
+              planejado: 0,
+              eficiencia: 0,
+              isSeparator: true,
+              classificacao: null
+            });
+          }
+
+          // Agrupar produtos por código para evitar repetições
+          const produtosUnicosPorCodigo = produtos.reduce((acc, item) => {
+            const codigo = item.codigo || item.ordem_id.slice(-6);
+            if (!acc[codigo] || (item.eficiencia || 0) > (acc[codigo].eficiencia || 0)) {
+              acc[codigo] = item;
+            }
+            return acc;
+          }, {} as Record<string, typeof produtos[0]>);
+
+          // Ordenar produtos únicos por eficiência (melhor performance) e depois por produção
+          const produtosOrdenados = Object.values(produtosUnicosPorCodigo)
+            .sort((a, b) => {
+              const eficienciaA = a.eficiencia || 0;
+              const eficienciaB = b.eficiencia || 0;
+              
+              // Primeiro critério: eficiência
+              if (eficienciaB !== eficienciaA) {
+                return eficienciaB - eficienciaA;
+              }
+              
+              // Segundo critério: quantidade produzida
+              return (b.quantidade_produzida || 0) - (a.quantidade_produzida || 0);
+            })
+            .slice(0, 2); // Pegar apenas os 2 melhores
+          
+          const isUnicoProduto = produtosOrdenados.length === 1;
+          
+          produtosOrdenados.forEach((item, prodIndex) => {
+            dadosComSeparadores.push({
+              name: `${item.codigo || item.ordem_id.slice(-6)}`,
+              produzido: item.quantidade_produzida || 0,
+              planejado: item.quantidade_planejada || 0,
+              eficiencia: item.eficiencia || 0,
+              isSeparator: false,
+              classificacao: classificacao,
+              posicao: prodIndex + 1, // 1º ou 2º melhor
+              produto_nome: item.produto_nome,
+              cor: cores[classIndex % cores.length], // Cor aleatória baseada na classificação
+              isUnicoProduto: isUnicoProduto
+            });
+          });
+        });
+
+      return dadosComSeparadores;
+    })();
 
     // Novo gráfico de Performance por Classificação
     const performanceClassificacaoChart = Object.entries(

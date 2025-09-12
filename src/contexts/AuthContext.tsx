@@ -242,6 +242,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       console.log("🔧 AuthContext: onAuthStateChanged triggered", currentUser ? "com usuário" : "sem usuário");
+      console.log("🔧 AuthContext: loading state antes:", loading);
       
       if (currentUser) {
         try {
@@ -282,6 +283,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       
       setUser(currentUser);
+      console.log("🔧 AuthContext: setLoading(false) executado");
       setLoading(false);
     });
 

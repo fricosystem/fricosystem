@@ -561,16 +561,18 @@ const PCP = () => {
               />
               
               <StatsCard
-                title="Total Geral em %"
-                value={`${metrics.eficienciaMedia}%`}
-                icon={<Boxes className="h-4 w-4" />}
+                title="Produção Total"
+                value={metrics.producaoTotal.toLocaleString()}
+                icon={<Package className="h-4 w-4" />}
                 trend={{
-                  value: metrics.eficienciaMedia,
-                  positive: metrics.eficienciaMedia >= 80,
-                  label: metrics.eficienciaMedia >= 80 ? "Meta atingida" : metrics.eficienciaMedia === 0 ? "Sem dados" : "Abaixo da meta"
+                  value: metrics.producaoTotal > 0 ? 15 : 0,
+                  positive: metrics.producaoTotal > 0,
+                  label: metrics.producaoTotal === 0 
+                    ? `Sem produção ${period === 'hoje' ? 'hoje' : period === 'semana' ? 'esta semana' : period === 'mes' ? 'este mês' : 'este ano'}`
+                    : `${period === 'hoje' ? 'Hoje' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
                 }}
-                description={`Meta: ${config?.meta_minima_mensal?.toLocaleString() || 0} KG | Produção total: ${metrics.producaoTotal.toLocaleString()} KG`}
-                className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
+                description="KG produzidos"
+                className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-900/10"
               />
              
               <StatsCard
@@ -585,25 +587,37 @@ const PCP = () => {
                     ? (metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) >= 0.85
                     : false,
                   label: pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0) === 0 ? "Sem planejamento" : 
-                    (metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) >= 0.85 ? "Meta atingida" : "Abaixo da meta"
+                    (metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) >= 0.85 
+                      ? period === 'hoje' ? "Meta de Hoje atingida" 
+                        : period === 'semana' ? "Meta Semanal atingida"
+                        : period === 'mes' ? "Meta Mensal atingida"
+                        : period === 'ano' ? "Meta Anual atingida"
+                        : "Meta Personalizada atingida"
+                      : "Abaixo da meta"
                 }}
                 description="KG Planejado / KG Realizado"
                 className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
               />
 
               <StatsCard
-                title="Produção Total"
-                value={metrics.producaoTotal.toLocaleString()}
-                icon={<Package className="h-4 w-4" />}
+                title="Total Geral em %"
+                value={`${config?.meta_minima_mensal && config.meta_minima_mensal > 0 
+                  ? Math.round((metrics.producaoTotal / config.meta_minima_mensal) * 100) 
+                  : 0}%`}
+                icon={<Boxes className="h-4 w-4" />}
                 trend={{
-                  value: metrics.producaoTotal > 0 ? 15 : 0,
-                  positive: metrics.producaoTotal > 0,
-                  label: metrics.producaoTotal === 0 
-                    ? `Sem produção ${period === 'hoje' ? 'hoje' : period === 'semana' ? 'esta semana' : period === 'mes' ? 'este mês' : 'este ano'}`
-                    : `${period === 'hoje' ? 'Hoje' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
+                  value: config?.meta_minima_mensal && config.meta_minima_mensal > 0 
+                    ? Math.round((metrics.producaoTotal / config.meta_minima_mensal) * 100) 
+                    : 0,
+                  positive: config?.meta_minima_mensal && config.meta_minima_mensal > 0 
+                    ? (metrics.producaoTotal / config.meta_minima_mensal) * 100 >= 80 
+                    : false,
+                  label: config?.meta_minima_mensal && config.meta_minima_mensal > 0 
+                    ? ((metrics.producaoTotal / config.meta_minima_mensal) * 100 >= 80 ? "Meta atingida" : "Abaixo da meta")
+                    : "Sem meta definida"
                 }}
-                description="KG produzidos"
-                className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-900/10"
+                description={`Meta: ${config?.meta_minima_mensal?.toLocaleString() || 0} KG | Produção total: ${metrics.producaoTotal.toLocaleString()} KG`}
+                className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
               />
             </div>
 
@@ -744,60 +758,6 @@ const PCP = () => {
                   </div>
                 )}
 
-                 {/* Performance por Produto - ocupando toda a largura */}
-                 {pcpData.length > 0 && chartDataMemo.performanceChart.length > 0 && (
-                  <Card className="w-full mb-6">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Package className="h-5 w-5" /> Performance por Produto
-                      </CardTitle>
-                      <CardDescription>Planejado vs Produzido por código</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-[300px]">
-                         <ResponsiveContainer width="100%" height="100%">
-                           <BarChart
-                             data={chartDataMemo.performanceChart}
-                             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                           >
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip 
-                              contentStyle={{
-                                background: 'hsl(var(--background))',
-                                borderColor: 'hsl(var(--border))',
-                                borderRadius: 'var(--radius)',
-                                color: 'hsl(var(--foreground))',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-                              }}
-                              labelStyle={{
-                                color: 'hsl(var(--foreground))',
-                                fontWeight: '500'
-                              }}
-                              itemStyle={{
-                                color: 'hsl(var(--foreground))'
-                              }}
-                              formatter={(value: number) => value.toLocaleString()}
-                            />
-                            <Legend />
-                            <Bar 
-                              dataKey="planejado" 
-                              name="Planejado (kg)" 
-                              fill="hsl(var(--primary))"
-                            />
-                            <Bar 
-                              dataKey="produzido" 
-                              name="Produzido (kg)" 
-                              fill="hsl(var(--success))"
-                            />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
                  {/* Performance por Classificação - ocupando toda a largura */}
                  {pcpData.length > 0 && chartDataMemo.performanceClassificacaoChart.length > 0 && (
                   <Card className="w-full mb-6">
@@ -849,6 +809,111 @@ const PCP = () => {
                         </ResponsiveContainer>
                       </div>
                     </CardContent>
+                  </Card>
+                )}
+
+                 {/* Performance por Produto - ocupando toda a largura */}
+                 {pcpData.length > 0 && chartDataMemo.performanceChart.length > 0 && (
+                  <Card className="w-full mb-6">
+                     <CardHeader>
+                       <CardTitle className="flex items-center gap-2">
+                         <Package className="h-5 w-5" /> Performance por Produto
+                       </CardTitle>
+                       <CardDescription>Top 2 melhores produtos por classificação (ordenado por eficiência)</CardDescription>
+                     </CardHeader>
+                     <CardContent>
+                       <div className="h-[300px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={chartDataMemo.performanceChart}
+                              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                            >
+                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                             <XAxis 
+                               dataKey="name" 
+                               tick={{fontSize: 12}}
+                               interval={0}
+                               angle={-45}
+                               textAnchor="end"
+                               height={80}
+                             />
+                             <YAxis />
+                             <Tooltip 
+                               contentStyle={{
+                                 background: 'hsl(var(--background))',
+                                 borderColor: 'hsl(var(--border))',
+                                 borderRadius: 'var(--radius)',
+                                 color: 'hsl(var(--foreground))',
+                                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                               }}
+                               labelStyle={{
+                                 color: 'hsl(var(--foreground))',
+                                 fontWeight: '500'
+                               }}
+                               itemStyle={{
+                                 color: 'hsl(var(--foreground))'
+                               }}
+                               content={(props) => {
+                                 if (!props.active || !props.payload || !props.payload[0]) return null;
+                                 
+                                 const data = props.payload[0].payload;
+                                 
+                                 // Não mostrar tooltip para separadores
+                                 if (data.isSeparator) return null;
+                                 
+                                 return (
+                                   <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                                     <p className="font-semibold text-foreground mb-1">
+                                       {data.classificacao}
+                                     </p>
+                                     <p className="text-sm text-foreground mb-1">
+                                       {data.produto_nome}
+                                     </p>
+                                     <p className="text-sm text-muted-foreground mb-1">
+                                       Código: {data.name}
+                                     </p>
+                                     <p className="text-sm text-muted-foreground mb-2">
+                                       {data.isUnicoProduto 
+                                         ? `Único melhor com ${data.produzido.toLocaleString()} kg`
+                                         : `${data.posicao}° melhor da classificação`
+                                       }
+                                     </p>
+                                     <div className="space-y-1 text-sm">
+                                       <p className="text-green-600">
+                                         <span className="font-medium">Produzido:</span> {data.produzido.toLocaleString()} kg
+                                       </p>
+                                       <p className="text-blue-600">
+                                         <span className="font-medium">Planejado:</span> {data.planejado.toLocaleString()} kg
+                                       </p>
+                                       <p className="text-purple-600">
+                                         <span className="font-medium">Eficiência:</span> {data.eficiencia}%
+                                       </p>
+                                     </div>
+                                   </div>
+                                 );
+                               }}
+                             />
+                             <Legend />
+                             <Bar 
+                               dataKey="planejado" 
+                               name="Planejado (kg)" 
+                               fill="hsl(var(--primary))"
+                             />
+                             <Bar 
+                               dataKey="produzido" 
+                               name="Produzido (kg)"
+                             >
+                               {chartDataMemo.performanceChart.map((entry, index) => (
+                                 <Cell 
+                                   key={`cell-${index}`} 
+                                   fill={entry.cor || "hsl(var(--success))"} 
+                                 />
+                               ))}
+                             </Bar>
+                           </BarChart>
+                         </ResponsiveContainer>
+                       </div>
+                     </CardContent>
                   </Card>
                 )}
           </div>

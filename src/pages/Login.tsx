@@ -7,6 +7,7 @@ import { Contact } from "@/components/Login/Contact";
 import { Footer } from "@/components/Login/Footer";
 
 const Login = () => {
+  console.log("Login component rendering");
   return (
     <div className="min-h-screen w-screen max-w-full overflow-x-hidden bg-green-100 dark:bg-gray-900/90 text-white flex flex-col">
       <Header />

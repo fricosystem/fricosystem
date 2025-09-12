@@ -14,8 +14,8 @@ git push origin main
 
 
 
-executar antes de subir pro Vercel e colocar no build dele: npm install --force
 
+executar antes de subir pro Vercel e colocar no build dele: npm install --force
 
 
 

@@ -14,7 +14,7 @@ import { Target, Plus, Calendar, TrendingUp, Edit, Save, X, RefreshCw, Settings,
 import { usePCPConfig } from "@/hooks/usePCPConfig";
 import { format, startOfMonth, endOfMonth, isWithinInterval, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { doc, getDoc, collection, getDocs, query, orderBy, where } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, orderBy, where, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -191,12 +191,18 @@ const Metas = () => {
   const calcularRealizadoPorClassificacao = (classificacao: string): number => {
     return pcpData.filter(item => (item.classificacao || item.setor || 'Sem classificação') === classificacao).reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
   };
-  const inicializarMetas = () => {
+  const inicializarMetas = async () => {
     if (pcpLoading) return;
+    
+    // Tentar carregar metas salvas do Firestore primeiro
+    const metasSalvas = await carregarMetasDoFirestore();
+    
     const classificacoesUnicas = [...new Set(pcpData.map(item => item.classificacao || item.setor || 'Sem classificação'))].filter(Boolean);
     const metasComRealizado: MetaPorClassificacao[] = [];
+    
     for (const classificacao of classificacoesUnicas) {
-      const meta = metasPadrao[classificacao] || (config?.meta_minima_mensal || 0) * 0.1;
+      // Usar meta salva se existir, senão usar padrão
+      const meta = metasSalvas?.[classificacao] || metasPadrao[classificacao] || (config?.meta_minima_mensal || 0) * 0.1;
       const realizado = calcularRealizadoPorClassificacao(classificacao);
       const percentual = meta > 0 ? realizado / meta * 100 : 0;
       metasComRealizado.push({
@@ -212,21 +218,76 @@ const Metas = () => {
     setEditandoMeta(classificacao);
     setNovaMetaTemp(metaAtual);
   };
-  const handleSalvarMeta = (classificacao: string) => {
-    setMetasPorClassificacao(prev => prev.map(meta => meta.classificacao === classificacao ? {
-      ...meta,
-      meta: novaMetaTemp,
-      percentual: novaMetaTemp > 0 ? meta.realizado / novaMetaTemp * 100 : 0
-    } : meta));
-    setEditandoMeta(null);
-    toast({
-      title: "Meta atualizada",
-      description: `Meta para ${classificacao} atualizada para ${novaMetaTemp.toLocaleString()} kg`
-    });
+  const handleSalvarMeta = async (classificacao: string) => {
+    try {
+      // Atualizar estado local
+      const novasMetasLocal = metasPorClassificacao.map(meta => meta.classificacao === classificacao ? {
+        ...meta,
+        meta: novaMetaTemp,
+        percentual: novaMetaTemp > 0 ? meta.realizado / novaMetaTemp * 100 : 0
+      } : meta);
+      
+      setMetasPorClassificacao(novasMetasLocal);
+      
+      // Salvar no Firestore
+      await salvarMetasNoFirestore(novasMetasLocal);
+      
+      setEditandoMeta(null);
+      toast({
+        title: "Meta atualizada",
+        description: `Meta para ${classificacao} atualizada para ${novaMetaTemp.toLocaleString()} kg e salva no banco de dados`
+      });
+    } catch (error) {
+      console.error("Erro ao salvar meta:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a meta. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
   const handleCancelarEdicao = () => {
     setEditandoMeta(null);
     setNovaMetaTemp(0);
+  };
+
+  // Função para salvar metas no Firestore
+  const salvarMetasNoFirestore = async (metas: MetaPorClassificacao[]) => {
+    try {
+      const metasParaSalvar: Record<string, number> = {};
+      metas.forEach(meta => {
+        metasParaSalvar[meta.classificacao] = meta.meta;
+      });
+
+      const docRef = doc(db, "PCP_configuracoes", "metas");
+      await setDoc(docRef, {
+        metas: metasParaSalvar,
+        dataAtualizacao: new Date(),
+        metaMensalTotal: config?.meta_minima_mensal || 0
+      }, { merge: true });
+
+      console.log("Metas salvas com sucesso no Firestore");
+    } catch (error) {
+      console.error("Erro ao salvar metas no Firestore:", error);
+      throw error;
+    }
+  };
+
+  // Função para carregar metas do Firestore
+  const carregarMetasDoFirestore = async (): Promise<Record<string, number> | null> => {
+    try {
+      const docRef = doc(db, "PCP_configuracoes", "metas");
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return data.metas || null;
+      }
+      return null;
+    } catch (error) {
+      console.error("Erro ao carregar metas do Firestore:", error);
+      return null;
+    }
   };
 
   // Carregar dados dos parâmetros de produção usando dados PCP reais

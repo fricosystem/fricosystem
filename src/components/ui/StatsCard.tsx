@@ -35,7 +35,7 @@ export const StatsCard = ({
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        {trend && (
+        {trend && trend.label && (
           <div className="flex items-center pt-1">
             <span
               className={`text-sm font-medium ${
@@ -46,7 +46,7 @@ export const StatsCard = ({
             </span>
           </div>
         )}
-        {description && (
+        {description && description.trim() && (
           <p className="text-xs text-muted-foreground pt-1">{description}</p>
         )}
       </CardContent>

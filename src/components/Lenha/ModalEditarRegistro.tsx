@@ -64,22 +64,16 @@ type FormValues = z.infer<typeof formSchema>;
 const ModalEditarRegistro = ({ medida, isOpen, onClose, onSaveSuccess }: ModalEditarRegistroProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Inicializar o formulário com valores da medida selecionada
+  // Inicializar o formulário sem valores padrão iniciais
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      data: medida.data,
-      metrosCubicos: medida.metrosCubicos,
-      fornecedor: medida.fornecedor,
-      nfe: medida.nfe || "",
-      responsavel: medida.responsavel,
-      valorUnitario: medida.valorUnitario,
-    },
   });
   
   // Atualizar valores do formulário quando a medida mudar
   useEffect(() => {
-    if (medida) {
+    if (medida && isOpen) {
+      console.log("Atualizando formulário com dados:", medida);
+      // Reset completo do formulário com os novos valores
       form.reset({
         data: medida.data,
         metrosCubicos: medida.metrosCubicos,
@@ -89,7 +83,14 @@ const ModalEditarRegistro = ({ medida, isOpen, onClose, onSaveSuccess }: ModalEd
         valorUnitario: medida.valorUnitario,
       });
     }
-  }, [medida, form]);
+  }, [medida, isOpen, form]);
+
+  // Limpar formulário quando o modal for fechado
+  useEffect(() => {
+    if (!isOpen) {
+      form.reset();
+    }
+  }, [isOpen, form]);
   
   // Calcular valor total baseado no volume e valor unitário
   const valorTotal = (
@@ -129,10 +130,12 @@ const ModalEditarRegistro = ({ medida, isOpen, onClose, onSaveSuccess }: ModalEd
         description: "O registro foi atualizado com sucesso",
       });
       
-      onClose();
+      // Primeiro chama onSaveSuccess para atualizar os dados
       if (onSaveSuccess) {
         onSaveSuccess();
       }
+      // Depois fecha o modal
+      onClose();
     } catch (error) {
       console.error("Erro ao atualizar registro:", error);
       toast({
