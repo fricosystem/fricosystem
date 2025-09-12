@@ -382,8 +382,6 @@ const Relatorios = () => {
   };
 
   const handleExportar = () => {
-    // Implementar lógica de exportação para CSV ou Excel
-    console.log("Exportar relatórios");
   };
 
   return (

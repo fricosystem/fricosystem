@@ -72,7 +72,6 @@ const ModalEditarRegistro = ({ medida, isOpen, onClose, onSaveSuccess }: ModalEd
   // Atualizar valores do formulário quando a medida mudar
   useEffect(() => {
     if (medida && isOpen) {
-      console.log("Atualizando formulário com dados:", medida);
       // Reset completo do formulário com os novos valores
       form.reset({
         data: medida.data,

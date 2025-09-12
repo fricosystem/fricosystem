@@ -119,7 +119,6 @@ export const useCentroCustoCalculos = () => {
         });
       }
 
-      console.log("Centros de custo atualizados com sucesso!");
     } catch (error) {
       console.error("Erro ao atualizar centros de custo:", error);
     }

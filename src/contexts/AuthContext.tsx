@@ -78,19 +78,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const updateOnlineStatus = async (status: 'online' | 'offline', updateLastLogin: boolean = false) => {
     if (!user) return;
     
-    console.log(`🔄 AuthContext: Atualizando status para ${status}, updateLastLogin: ${updateLastLogin}`);
-    
     try {
       const userDocRef = doc(db, "usuarios", user.uid);
       const updateData: any = { online: status };
       
       if (updateLastLogin || status === 'offline') {
         updateData.ultimo_login = serverTimestamp();
-        console.log("⏰ AuthContext: Atualizando ultimo_login");
       }
       
       await updateDoc(userDocRef, updateData);
-      console.log(`✅ AuthContext: Status atualizado para: ${status}`);
     } catch (error) {
       console.error("❌ AuthContext: Erro ao atualizar status online:", error);
       
@@ -103,7 +99,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           updateLastLogin
         };
         localStorage.setItem('pendingStatusUpdate', JSON.stringify(backupData));
-        console.log("💾 AuthContext: Status salvo no localStorage para retry");
       }
     }
   };
@@ -241,8 +236,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let cleanupStatusListeners: (() => void) | null = null;
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      console.log("🔧 AuthContext: onAuthStateChanged triggered", currentUser ? "com usuário" : "sem usuário");
-      console.log("🔧 AuthContext: loading state antes:", loading);
       
       if (currentUser) {
         try {
@@ -251,7 +244,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           
           if (userDoc.exists()) {
             const userData = userDoc.data() as UserData;
-            console.log("👤 AuthContext: Dados do usuário carregados", { online: userData.online, ativo: userData.ativo });
             
             setUserData({
               ...userData,
@@ -259,21 +251,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
             });
             
             if (userData.ativo === "sim") {
-              console.log("✅ AuthContext: Usuário ativo, processando status...");
               
               // Processa atualizações pendentes primeiro
               await processPendingStatusUpdates();
               
               // Configura listeners de status
               cleanupStatusListeners = setupStatusListeners(currentUser.uid);
-              console.log("🎧 AuthContext: Status listeners configurados");
             }
           }
         } catch (error) {
           console.error("❌ AuthContext: Erro ao buscar dados do usuário:", error);
         }
       } else {
-        console.log("👋 AuthContext: Usuário deslogado, limpando listeners");
         // Limpa listeners quando desautenticar
         if (cleanupStatusListeners) {
           cleanupStatusListeners();
@@ -283,7 +272,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       
       setUser(currentUser);
-      console.log("🔧 AuthContext: setLoading(false) executado");
       setLoading(false);
     });
 

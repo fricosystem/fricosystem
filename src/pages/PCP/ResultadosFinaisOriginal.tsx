@@ -117,7 +117,6 @@ const ResultadosFinais: React.FC = () => {
 
   const loadProdutos = async () => {
     try {
-      console.log("🔄 Carregando produtos...");
       const querySnapshot = await getDocs(collection(db, "PCP_produtos"));
       const produtosData: Produto[] = [];
       querySnapshot.forEach((doc) => {
@@ -126,7 +125,6 @@ const ResultadosFinais: React.FC = () => {
           ...doc.data()
         } as Produto);
       });
-      console.log(`✅ ${produtosData.length} produtos carregados`);
       setProdutos(produtosData);
     } catch (error) {
       console.error("❌ Erro ao carregar produtos:", error);
@@ -140,7 +138,6 @@ const ResultadosFinais: React.FC = () => {
 
   const loadProcessamentos = async () => {
     try {
-      console.log("🔄 Carregando processamentos...");
       const processamentosCollection = collection(db, "PCP");
       const q = query(processamentosCollection, orderBy("Processamento.timestamp", "desc"));
       const querySnapshot = await getDocs(q);
@@ -163,7 +160,6 @@ const ResultadosFinais: React.FC = () => {
           });
         }
       });
-      console.log(`✅ ${processamentosData.length} processamentos carregados`);
       setProcessamentos(processamentosData);
     } catch (error) {
       console.error("❌ Erro ao carregar processamentos:", error);
@@ -177,7 +173,6 @@ const ResultadosFinais: React.FC = () => {
 
   const mergeProdutosProcessados = async () => {
     try {
-      console.log("🔄 Iniciando merge otimizado de produtos processados...");
       
       // Validar dados básicos
       const produtosSemClassificacao = produtos.filter(p => !p.classificacao || p.classificacao.trim() === "");
@@ -200,7 +195,6 @@ const ResultadosFinais: React.FC = () => {
         planoDiario: number;
       }>();
 
-      console.log("🔄 Indexando produtos de todos os processamentos...");
       allDocs.forEach((docData, index) => {
         if (!docData) return;
 
@@ -250,7 +244,6 @@ const ResultadosFinais: React.FC = () => {
         });
       });
 
-      console.log(`📝 ${produtoIndex.size} produtos únicos indexados`);
 
       const mergedData: ProdutoProcessado[] = [];
       let totalProdutosProcessados = 0;
@@ -259,7 +252,6 @@ const ResultadosFinais: React.FC = () => {
       // OTIMIZAÇÃO: Processar por classificação usando o índice
       for (const classificacao of classificacoes) {
         const produtosDaClassificacao = produtos.filter(p => p.classificacao === classificacao);
-        console.log(`🏷️ Processando classificação "${classificacao}" com ${produtosDaClassificacao.length} produtos`);
         
         const produtosProcessadosData: {
           descricao: string;
@@ -283,7 +275,6 @@ const ResultadosFinais: React.FC = () => {
               ...dadosProcessamento
             });
             totalProdutosProcessados++;
-            console.log(`✅ Match encontrado - ${produto.codigo}: ${dadosProcessamento.kgTotal}kg`);
           } else {
             // Tentativa de match por descrição (fallback)
             let matchEncontrado = false;
@@ -319,7 +310,6 @@ const ResultadosFinais: React.FC = () => {
                 });
                 totalProdutosProcessados++;
                 matchEncontrado = true;
-                console.log(`✅ Match por descrição - ${produto.codigo}: ${dadosIndex.kgTotal}kg`);
                 break;
               }
             }
@@ -339,13 +329,6 @@ const ResultadosFinais: React.FC = () => {
         }
       }
 
-      // Logs de resumo
-      console.log(`📈 Resumo do processamento otimizado:
-        - Produtos processados: ${totalProdutosProcessados}
-        - Produtos sem match: ${produtosSemMatch}
-        - Classificações com dados: ${mergedData.length}
-        - Cache hits: ${Object.keys(documentCache).length} documentos`);
-
       setProdutosProcessados(mergedData);
     } catch (error) {
       console.error("❌ Erro ao mesclar dados de produção:", error);
@@ -363,16 +346,13 @@ const ResultadosFinais: React.FC = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      console.log("🔄 Iniciando carregamento de dados...");
       setLoading(true);
       try {
         await Promise.all([loadProdutos(), loadProcessamentos()]);
-        console.log("✅ Dados carregados com sucesso");
       } catch (error) {
         console.error("❌ Erro ao carregar dados:", error);
       } finally {
         setLoading(false);
-        console.log("🏁 Loading finalizado");
       }
     };
     loadData();
@@ -392,10 +372,7 @@ const ResultadosFinais: React.FC = () => {
     )
   );
 
-  console.log("🔍 Estado atual do loading:", loading);
-
   if (loading) {
-    console.log("🔄 Exibindo tela de carregamento");
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Resultados Finais</h2>
@@ -407,7 +384,6 @@ const ResultadosFinais: React.FC = () => {
     );
   }
 
-  console.log("✅ Exibindo dados dos resultados");
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Resultados Finais</h2>

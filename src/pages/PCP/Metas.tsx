@@ -266,7 +266,6 @@ const Metas = () => {
         metaMensalTotal: config?.meta_minima_mensal || 0
       }, { merge: true });
 
-      console.log("Metas salvas com sucesso no Firestore");
     } catch (error) {
       console.error("Erro ao salvar metas no Firestore:", error);
       throw error;

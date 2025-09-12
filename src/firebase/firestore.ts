@@ -25,7 +25,6 @@ const uploadBatch = async <T>(
       if ((i + 1) % BATCH_LIMIT === 0 || i === items.length - 1) {
         await batch.commit();
         committedOperations += (i + 1) - committedOperations;
-        console.log(`Batch commit: ${committedOperations}/${items.length} items`);
       }
     }
     return true;

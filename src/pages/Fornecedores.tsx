@@ -168,10 +168,8 @@ const SupplierPage = () => {
 
   const fetchCNPJData = (cnpj: string) => {
     const cnpjNumeros = cnpj.replace(/[^\d]/g, '');
-    console.log('CNPJ enviado para API:', cnpjNumeros);
     
     if (cnpjNumeros.length !== 14) {
-      console.log('CNPJ não tem 14 dígitos:', cnpjNumeros.length);
       toast.warning("CNPJ deve conter 14 dígitos");
       return;
     }
@@ -184,8 +182,6 @@ const SupplierPage = () => {
     window.handleCNPJResponse = (data: CNPJResponse) => {
       document.body.removeChild(script);
       delete window.handleCNPJResponse;
-      
-      console.log('Dados retornados:', data);
       
       if (data.error) {
         toast.error(data.error);

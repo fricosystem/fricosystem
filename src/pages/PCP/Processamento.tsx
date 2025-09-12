@@ -212,11 +212,9 @@ const Processamento: React.FC = () => {
   // Função otimizada para carregar documento com cache
   const getDocumentWithCache = useCallback(async (docId: string) => {
     if (documentCache[docId]) {
-      console.log(`📦 Usando documento ${docId} do cache`);
       return documentCache[docId];
     }
     try {
-      console.log(`🔄 Carregando documento ${docId} do Firestore...`);
       const docRef = doc(db, "PCP", docId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
@@ -387,7 +385,6 @@ const Processamento: React.FC = () => {
   }, [getDocumentWithCache]);
   const verificarDatasNaoProcessadas = useCallback(async () => {
     try {
-      console.log("🔍 Verificando datas não processadas...");
       const pcpCollection = collection(db, "PCP");
       const q = query(pcpCollection, where("processado", "==", "não"));
       const querySnapshot = await getDocs(q);
@@ -498,7 +495,6 @@ const Processamento: React.FC = () => {
   // Função para carregar dados consolidados dos processamentos
   const loadProcessamentos = useCallback(async () => {
     try {
-      console.log("🔄 Carregando histórico consolidado de processamentos...");
       const processamentosCollection = collection(db, "PCP");
       const q = query(processamentosCollection, where("processado", "==", "sim"));
       const querySnapshot = await getDocs(q);
@@ -594,7 +590,6 @@ const Processamento: React.FC = () => {
         return dateB.getTime() - dateA.getTime();
       });
       setProcessamentos(dadosConsolidados);
-      console.log(`✅ ${dadosConsolidados.length} processamentos históricos consolidados carregados`);
     } catch (error) {
       console.error("❌ Erro ao carregar processamentos consolidados:", error);
       toast({
@@ -607,7 +602,6 @@ const Processamento: React.FC = () => {
   const processarDatasAnteriores = useCallback(async () => {
     setIsProcessingDatas(true);
     try {
-      console.log("🔄 Processando datas anteriores...");
       for (const dataNaoProcessada of datasNaoProcessadas) {
         const docRef = doc(db, "PCP", dataNaoProcessada.id);
         const docSnap = await getDoc(docRef);
@@ -657,7 +651,6 @@ const Processamento: React.FC = () => {
             processado: "sim",
             Processamento: processamentoResult
           });
-          console.log(`✅ Data ${dataNaoProcessada.date} processada com sucesso`);
         }
       }
       toast({
@@ -682,7 +675,6 @@ const Processamento: React.FC = () => {
   }, [datasNaoProcessadas, toast, loadProcessamentos]);
   const loadOrdensProducao = useCallback(async () => {
     try {
-      console.log("🔄 Carregando ordens de produção...");
       const querySnapshot = await getDocs(collection(db, "ordensProducao"));
       const ordensData: OrdemProducao[] = [];
       querySnapshot.forEach(doc => {
@@ -701,7 +693,6 @@ const Processamento: React.FC = () => {
         });
       });
       setOrdens(ordensData);
-      console.log(`✅ ${ordensData.length} ordens carregadas`);
     } catch (error) {
       console.error("❌ Erro ao carregar ordens de produção:", error);
       toast({
@@ -761,6 +752,7 @@ const Processamento: React.FC = () => {
         variant: "default"
       });
       
+      // FECHAR O MODAL APÓS SALVAR
       setShowEditModal(false);
       await loadProcessamentos();
     } catch (error) {
@@ -770,6 +762,8 @@ const Processamento: React.FC = () => {
         description: "Erro ao salvar alterações",
         variant: "destructive"
       });
+      // FECHAR MODAL MESMO EM CASO DE ERRO
+      setShowEditModal(false);
     } finally {
       setIsSaving(false);
     }
@@ -902,9 +896,7 @@ const Processamento: React.FC = () => {
   // Carregar dados uma única vez e usar cache depois
   useEffect(() => {
     const loadAllData = async () => {
-      console.log("🚀 Iniciando carregamento otimizado dos dados...");
       await Promise.all([loadProcessamentoData(), loadOrdensProducao(), loadProcessamentos()]);
-      console.log("✅ Todos os dados carregados");
     };
     loadAllData();
   }, [loadProcessamentoData, loadOrdensProducao, loadProcessamentos]);

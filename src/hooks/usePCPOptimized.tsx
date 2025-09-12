@@ -205,12 +205,10 @@ export const usePCPOptimized = () => {
   const loadProdutosOptimized = useCallback(async (): Promise<PCPProduto[]> => {
     // Verificar cache primeiro
     if (cacheRef.current.pcpProdutos && isCacheValid(cacheRef.current.pcpProdutos)) {
-      console.log('📦 Usando produtos do cache');
       return cacheRef.current.pcpProdutos.data;
     }
 
     try {
-      console.log('🔄 Carregando produtos do Firestore...');
       const produtosCollectionSnapshot = await getDocs(collection(db, 'PCP_produtos'));
       let produtosArray: PCPProduto[] = [];
 
@@ -232,7 +230,6 @@ export const usePCPOptimized = () => {
         timestamp: Date.now()
       };
 
-      console.log(`✅ ${produtosArray.length} produtos carregados e cacheados`);
       return produtosArray;
     } catch (err) {
       throw err;
@@ -251,7 +248,6 @@ export const usePCPOptimized = () => {
     // Verificar cache de documento processado
     const cachedResult = cacheRef.current.documentCache.get(cacheKey);
     if (cachedResult && isCacheValid(cachedResult)) {
-      console.log(`📦 Usando documento ${docId} do cache`);
       return cachedResult.data;
     }
 
@@ -267,7 +263,6 @@ export const usePCPOptimized = () => {
         const parsedDate = new Date(dateFromId[1] + 'T00:00:00');
         if (!isNaN(parsedDate.getTime())) {
           documentDate = Timestamp.fromDate(parsedDate);
-          console.log(`📅 Data extraída do ID do documento ${docId}: ${parsedDate.toLocaleDateString('pt-BR')}`);
         }
       } catch (error) {
       }
@@ -421,16 +416,6 @@ export const usePCPOptimized = () => {
         const startDate = dateRange.start.toDate();
         const endDate = dateRange.end.toDate();
         
-        // Log para debug
-        if (period === 'hoje' || period === 'semana' || period === 'personalizado') {
-          console.log(`🔍 Filtrando ${period}:`, {
-            itemDate: itemDate.toLocaleString('pt-BR'),
-            startDate: startDate.toLocaleString('pt-BR'),
-            endDate: endDate.toLocaleString('pt-BR'),
-            included: itemDate >= startDate && itemDate <= endDate
-          });
-        }
-        
         return itemDate >= startDate && itemDate <= endDate;
       });
 
@@ -467,12 +452,10 @@ export const usePCPOptimized = () => {
 
     // Evitar múltiplos listeners para o mesmo período
     if (activeListenersRef.current.has(listenerKey)) {
-      console.log(`⚡ Listener já ativo para ${period}`);
       return () => {};
     }
 
     try {
-      console.log(`🎧 Configurando listener otimizado para ${period}...`);
       
       // Flag para pular o primeiro snapshot (evita duplo carregamento)
       let isFirstSnapshot = true;
@@ -481,7 +464,6 @@ export const usePCPOptimized = () => {
         // Pular o primeiro snapshot para evitar duplo carregamento
         if (isFirstSnapshot) {
           isFirstSnapshot = false;
-          console.log(`🎧 Listener configurado para ${period}, pulando primeiro snapshot`);
           return;
         }
         
@@ -492,7 +474,6 @@ export const usePCPOptimized = () => {
         
         debounceTimeoutRef.current = setTimeout(async () => {
           try {
-            console.log(`⚡ Listener ativado para ${period}, ${snapshot.size} documentos`);
             
             // Invalidar cache para forçar reload
             if (period !== 'personalizado') {

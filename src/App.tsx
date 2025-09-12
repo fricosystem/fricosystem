@@ -70,8 +70,6 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
 const NoAuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  
-  console.log("NoAuthGuard - user:", user, "loading:", loading);
 
   // Show loading when auth state is being determined
   if (loading) {
@@ -90,7 +88,6 @@ const NoAuthGuard = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppContent = () => {
-  console.log("AppContent rendering");
   return (
     <TooltipProvider>
       <Toaster />
