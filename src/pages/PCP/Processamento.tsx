@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SearchIcon, RefreshCw, Info, Settings, Edit, Trash2, Save, X } from "lucide-react";
-import { doc, getDoc, setDoc, collection, getDocs, query, orderBy, where, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, query, orderBy, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useToast } from "@/components/ui/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -14,9 +14,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ModalProcessarDatasAnteriores } from "@/components/PCP/ModalProcessarDatasAnteriores";
+import ModificarProcessamentoModal from "@/components/PCP/ModificarProcessamentoModal";
 import { format } from 'date-fns';
+
 interface ProcessamentoData {
   id?: string;
+  documentId?: string;
   ctp1: number;
   ctp2: number;
   planoDiario: number;
@@ -66,18 +69,25 @@ const Processamento: React.FC = () => {
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProcessamento, setEditingProcessamento] = useState<ProcessamentoData | null>(null);
-  const [editedTurno1Data, setEditedTurno1Data] = useState<any[]>([]);
-  const [editedTurno2Data, setEditedTurno2Data] = useState<any[]>([]);
-  const [activeEditTab, setActiveEditTab] = useState<'1' | '2'>('1');
-  const [isSaving, setIsSaving] = useState(false);
-  const [searchTurno1, setSearchTurno1] = useState('');
-  const [searchTurno2, setSearchTurno2] = useState('');
+  const [originalProcessamentoDate, setOriginalProcessamentoDate] = useState<string>('');
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [processamentoToDelete, setProcessamentoToDelete] = useState<ProcessamentoData | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    x: number;
+    y: number;
+  }>({
+    x: 0,
+    y: 0
+  });
+  const [selectedProcessamentoForMenu, setSelectedProcessamentoForMenu] = useState<ProcessamentoData | null>(null);
   const {
     toast
   } = useToast();
 
   // Cache para documentos PCP para evitar múltiplas requisições
   const [documentCache, setDocumentCache] = useState<Record<string, any>>({});
+
+  // Cache para documentos PCP para evitar múltiplas requisições
 
   // Debounce para evitar saves excessivos
   const saveTimeoutRef = React.useRef<NodeJS.Timeout>();
@@ -106,7 +116,6 @@ const Processamento: React.FC = () => {
   const formatDate = (dateInput: string | Date | any) => {
     if (!dateInput) return "N/A";
     let date: Date;
-    
     try {
       // Se já for uma instância de Date válida
       if (dateInput instanceof Date) {
@@ -135,15 +144,14 @@ const Processamento: React.FC = () => {
         else {
           date = new Date(dateInput);
         }
-      } 
+      }
       // Para outros tipos, tentar converter diretamente
       else {
         date = new Date(dateInput);
       }
-      
+
       // Verificar se a data é válida
       if (isNaN(date.getTime())) return "N/A";
-      
       return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
@@ -424,7 +432,6 @@ const Processamento: React.FC = () => {
       });
       return datasNaoProcessadasData;
     } catch (error) {
-      console.error("❌ Erro ao verificar datas não processadas:", error);
       return [];
     }
   }, []);
@@ -462,7 +469,7 @@ const Processamento: React.FC = () => {
       }
     } catch (error) {
       toast({
-        title: "Erro na verificação",
+        title: "Nenhuma produção encontrada",
         description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido",
         variant: "destructive"
       });
@@ -488,7 +495,6 @@ const Processamento: React.FC = () => {
         saveToLocalStorage(firestoreData);
       }
     } catch (error) {
-      console.error("❌ Erro ao carregar dados de processamento:", error);
     }
   }, [getDocumentWithCache]);
 
@@ -591,7 +597,6 @@ const Processamento: React.FC = () => {
       });
       setProcessamentos(dadosConsolidados);
     } catch (error) {
-      console.error("❌ Erro ao carregar processamentos consolidados:", error);
       toast({
         title: "Erro",
         description: "Falha ao carregar histórico de processamentos",
@@ -663,7 +668,6 @@ const Processamento: React.FC = () => {
       // Recarregar processamentos
       await loadProcessamentos();
     } catch (error) {
-      console.error("❌ Erro ao processar datas anteriores:", error);
       toast({
         title: "Erro",
         description: "Erro ao processar datas anteriores",
@@ -694,7 +698,6 @@ const Processamento: React.FC = () => {
       });
       setOrdens(ordensData);
     } catch (error) {
-      console.error("❌ Erro ao carregar ordens de produção:", error);
       toast({
         title: "Erro",
         description: "Falha ao carregar ordens de produção",
@@ -706,112 +709,70 @@ const Processamento: React.FC = () => {
     setSelectedProcessamento(processamento);
     setShowDetailsDialog(true);
   };
-
   const handleShowEditModal = async (processamento: ProcessamentoData) => {
     setEditingProcessamento(processamento);
+    setOriginalProcessamentoDate(processamento.dataProcessamento);
     setShowActionMenu(null);
-    
-    // Carregar dados dos turnos do Firestore
-    try {
-      const docData = await getDocumentWithCache(processamento.dataProcessamento);
-      if (docData) {
-        setEditedTurno1Data(docData["1_turno"] || []);
-        setEditedTurno2Data(docData["2_turno"] || []);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar dados dos turnos:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar dados dos turnos",
-        variant: "destructive"
-      });
-    }
-    
     setShowEditModal(true);
   };
-
-  const handleSaveChanges = async () => {
-    if (!editingProcessamento) return;
-    
-    setIsSaving(true);
-    try {
-      const docRef = doc(db, "PCP", editingProcessamento.dataProcessamento);
-      
-      // Atualizar os dados dos turnos
-      await updateDoc(docRef, {
-        "1_turno": editedTurno1Data,
-        "2_turno": editedTurno2Data
-      });
-      
-      // Recalcular o processamento
-      await recalcularProcessamento(editingProcessamento.dataProcessamento);
-      
-      toast({
-        title: "Sucesso",
-        description: "Alterações salvas com sucesso!",
-        variant: "default"
-      });
-      
-      // FECHAR O MODAL APÓS SALVAR
-      setShowEditModal(false);
-      await loadProcessamentos();
-    } catch (error) {
-      console.error("Erro ao salvar alterações:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar alterações",
-        variant: "destructive"
-      });
-      // FECHAR MODAL MESMO EM CASO DE ERRO
-      setShowEditModal(false);
-    } finally {
-      setIsSaving(false);
-    }
+  const handleShowDeleteConfirm = (processamento: ProcessamentoData) => {
+    setProcessamentoToDelete(processamento);
+    setShowActionMenu(null);
+    setShowDeleteConfirmDialog(true);
   };
-
-  const handleDeleteTurno = async (turno: '1' | '2') => {
-    if (!editingProcessamento) return;
-    
+  const handleDeleteProcessamento = async () => {
+    if (!processamentoToDelete) return;
     try {
-      const docRef = doc(db, "PCP", editingProcessamento.dataProcessamento);
-      const updateData = turno === '1' ? { "1_turno": [] } : { "2_turno": [] };
-      
-      await updateDoc(docRef, updateData);
-      
-      if (turno === '1') {
-        setEditedTurno1Data([]);
-      } else {
-        setEditedTurno2Data([]);
+      const docRef = doc(db, "PCP", processamentoToDelete.dataProcessamento);
+      const today = getTodayDate();
+
+      // Sempre remover o documento completo do Firestore
+      await deleteDoc(docRef);
+
+      // Se for do dia atual, também remover do localStorage
+      if (processamentoToDelete.dataProcessamento === today) {
+        const localStorageKey = `processamento_${today}`;
+        localStorage.removeItem(localStorageKey);
+
+        // Limpar o estado local do processamento atual
+        setProcessamentoData(null);
       }
-      
       toast({
         title: "Sucesso",
-        description: `${turno}° Turno excluído com sucesso!`,
+        description: "Documento removido completamente do Firestore!",
         variant: "default"
       });
-      
-      await recalcularProcessamento(editingProcessamento.dataProcessamento);
+
+      // Limpar estados e recarregar
+      setShowDeleteConfirmDialog(false);
+      setProcessamentoToDelete(null);
+
+      // Limpar cache para esta data
+      setDocumentCache(prev => {
+        const newCache = {
+          ...prev
+        };
+        delete newCache[processamentoToDelete.dataProcessamento];
+        return newCache;
+      });
       await loadProcessamentos();
     } catch (error) {
-      console.error("Erro ao excluir turno:", error);
       toast({
         title: "Erro",
-        description: "Erro ao excluir turno",
+        description: "Erro ao remover processamento",
         variant: "destructive"
       });
     }
   };
-
   const recalcularProcessamento = async (dataProcessamento: string) => {
     try {
       const docRef = doc(db, "PCP", dataProcessamento);
       const docSnap = await getDoc(docRef);
-      
       if (docSnap.exists()) {
         const data = docSnap.data();
         const turno1 = data["1_turno"] || [];
         const turno2 = data["2_turno"] || [];
-        
+
         // Recalcular métricas
         const kgTurno1 = Array.isArray(turno1) ? turno1.reduce((sum, item) => sum + parseFloat(item.kg || "0"), 0) : 0;
         const kgTurno2 = Array.isArray(turno2) ? turno2.reduce((sum, item) => sum + parseFloat(item.kg || "0"), 0) : 0;
@@ -819,7 +780,6 @@ const Processamento: React.FC = () => {
         const cxTurno2 = Array.isArray(turno2) ? turno2.reduce((sum, item) => sum + parseFloat(item.cx || "0"), 0) : 0;
         const planejadoTurno1 = Array.isArray(turno1) ? turno1.reduce((sum, item) => sum + parseFloat(item.planejamento || "0"), 0) : 0;
         const planejadoTurno2 = Array.isArray(turno2) ? turno2.reduce((sum, item) => sum + parseFloat(item.planejamento || "0"), 0) : 0;
-        
         const ctp1 = planejadoTurno1 > 0 ? kgTurno1 / planejadoTurno1 * 100 : 0;
         const ctp2 = planejadoTurno2 > 0 ? kgTurno2 / planejadoTurno2 * 100 : 0;
         const kgTotal = kgTurno1 + kgTurno2;
@@ -828,11 +788,9 @@ const Processamento: React.FC = () => {
         const batchReceita = kgTotal > 0 ? planoDiario / kgTotal : 0;
         const diferencaPR = kgTotal - planoDiario;
         const ctptd = planoDiario > 0 ? kgTotal / planoDiario * 100 : 0;
-        
         const turnos = [];
         if (Array.isArray(turno1) && turno1.length > 0) turnos.push("1 Turno");
         if (Array.isArray(turno2) && turno2.length > 0) turnos.push("2 Turno");
-        
         const processamentoResult = {
           ctp1: parseFloat(ctp1.toFixed(1)),
           ctp2: parseFloat(ctp2.toFixed(1)),
@@ -850,27 +808,14 @@ const Processamento: React.FC = () => {
           planejadoTurno1,
           planejadoTurno2
         };
-        
         await updateDoc(docRef, {
           Processamento: processamentoResult
         });
       }
     } catch (error) {
-      console.error("Erro ao recalcular processamento:", error);
     }
   };
-
-  const updateTurnoField = (turno: '1' | '2', index: number, field: 'kg' | 'cx' | 'planejamento', value: string) => {
-    if (turno === '1') {
-      const newData = [...editedTurno1Data];
-      newData[index] = { ...newData[index], [field]: value };
-      setEditedTurno1Data(newData);
-    } else {
-      const newData = [...editedTurno2Data];
-      newData[index] = { ...newData[index], [field]: value };
-      setEditedTurno2Data(newData);
-    }
-  };
+  // updateTurnoField moved to ModificarProcessamentoModal
   const handleConfirmProcessing = () => {
     if (selectedTurno) {
       calcularComUmTurno(selectedTurno);
@@ -905,11 +850,10 @@ const Processamento: React.FC = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (!target.closest('.relative')) {
+      if (showActionMenu && !target.closest('[data-menu-content]')) {
         setShowActionMenu(null);
       }
     };
-
     if (showActionMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -926,7 +870,7 @@ const Processamento: React.FC = () => {
         </div>
         <Button onClick={verificarDadosTurnos} disabled={isLoading} className="w-full sm:w-auto">
           {isLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          {isLoading ? "Processando..." : "Calcular Processamento"}
+          {isLoading ? "Processando..." : "Verificar / Processar"}
         </Button>
       </div>
 
@@ -992,7 +936,7 @@ const Processamento: React.FC = () => {
       {/* Card de Histórico de Processamentos */}
       <Card>
         <CardHeader>
-          <CardTitle>Histórico de Processamentos - Dados Consolidados</CardTitle>
+          <CardTitle>Histórico de Processamentos</CardTitle>
           <CardDescription>
             Resultados consolidados por data processada - totais de produção e eficiência
           </CardDescription>
@@ -1029,7 +973,7 @@ const Processamento: React.FC = () => {
                           {processamento.kgTurno1 > 0 && <Badge variant="default" className="text-xs">
                               1° Turno
                             </Badge>}
-                          {processamento.kgTurno2 > 0 && <Badge variant="secondary" className="text-xs">
+                          {processamento.kgTurno2 > 0 && <Badge variant="default" className="text-xs">
                               2° Turno
                             </Badge>}
                           {(!processamento.kgTurno1 || processamento.kgTurno1 === 0) && (!processamento.kgTurno2 || processamento.kgTurno2 === 0) && <Badge variant="outline" className="text-xs">
@@ -1062,39 +1006,19 @@ const Processamento: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="relative">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setShowActionMenu(showActionMenu === processamento.id ? null : processamento.id)}
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                          
-                          {showActionMenu === processamento.id && (
-                            <div className="absolute right-0 top-8 z-10 bg-background border rounded-md shadow-lg min-w-[150px]">
-                              <Button
-                                variant="ghost"
-                                className="w-full justify-start text-left px-3 py-2 text-sm"
-                                onClick={() => {
-                                  handleShowDetails(processamento);
-                                  setShowActionMenu(null);
-                                }}
-                              >
-                                <Info className="h-4 w-4 mr-2" />
-                                Detalhes
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                className="w-full justify-start text-left px-3 py-2 text-sm"
-                                onClick={() => handleShowEditModal(processamento)}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Modificar Processamento
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                        <Button variant="ghost" size="sm" onClick={e => {
+                      e.stopPropagation();
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setMenuPosition({
+                        x: rect.right - 150,
+                        y: rect.bottom + 5
+                      });
+                      setSelectedProcessamentoForMenu(processamento);
+                      const idKey = processamento.id || processamento.dataProcessamento;
+                      setShowActionMenu(prev => prev === idKey ? null : idKey);
+                    }}>
+                          <Settings className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>;
               })}
@@ -1206,248 +1130,86 @@ const Processamento: React.FC = () => {
         {/* Modal para Datas Não Processadas */}
         <ModalProcessarDatasAnteriores open={showModalDatasNaoProcessadas} onOpenChange={setShowModalDatasNaoProcessadas} datasNaoProcessadas={datasNaoProcessadas} onProcessarDatas={processarDatasAnteriores} isLoading={isProcessingDatas} />
 
-        {/* Modal de Edição de Processamento - Lado Direito */}
-        {showEditModal && (
-          <div className="fixed inset-0 z-50 flex">
-            {/* Overlay */}
-            <div 
-              className="absolute inset-0 bg-black/50 animate-fade-in" 
-              onClick={() => setShowEditModal(false)}
-            />
+        {/* Dialog de Confirmação de Remoção */}
+        <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remover Processamento</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja remover o processamento da data {processamentoToDelete ? formatShortDate(processamentoToDelete.dataProcessamento) : ''}? 
+                Esta ação irá marcar a data como "não processada" e remover todos os cálculos de processamento.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteProcessamento} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Remover
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+
+
+        
+        {/* Modal Modificar Processamento */}
+        <ModificarProcessamentoModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingProcessamento(null);
+            setOriginalProcessamentoDate('');
+          }}
+          editingProcessamento={editingProcessamento}
+          originalProcessamentoDate={originalProcessamentoDate}
+          onProcessamentoUpdated={loadProcessamentos}
+          recalcularProcessamento={recalcularProcessamento}
+          documentCache={documentCache}
+          setDocumentCache={setDocumentCache}
+        />
+        
+        
+        {/* Menu de Ações - Renderizado fora da tabela */}
+        {showActionMenu && selectedProcessamentoForMenu && <>
+            {/* Overlay para fechar o menu */}
+            <div className="fixed inset-0 z-40" onClick={() => {
+        setShowActionMenu(null);
+        setSelectedProcessamentoForMenu(null);
+      }} />
             
-            {/* Modal Content */}
-            <div className="relative ml-auto h-full w-1/2 min-w-[600px] bg-background shadow-xl animate-slide-in-right border-l-2 border-border">
-              <div className="flex h-full flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b p-6">
-                  <div>
-                    <h2 className="text-lg font-semibold">Modificar Processamento</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Data: {formatShortDate(editingProcessamento?.dataProcessamento)}
-                    </p>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setShowEditModal(false)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Tabs */}
-                <div className="border-b">
-                  <div className="flex">
-                    <Button
-                      variant={activeEditTab === '1' ? 'default' : 'ghost'}
-                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground"
-                      onClick={() => setActiveEditTab('1')}
-                    >
-                      1° Turno ({editedTurno1Data.length} produtos)
-                    </Button>
-                    <Button
-                      variant={activeEditTab === '2' ? 'default' : 'ghost'}
-                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground"
-                      onClick={() => setActiveEditTab('2')}
-                    >
-                      2° Turno ({editedTurno2Data.length} produtos)
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6">
-                  {activeEditTab === '1' && (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-md font-medium">Produtos do 1° Turno</h3>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteTurno('1')}
-                          disabled={editedTurno1Data.length === 0}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir Turno
-                        </Button>
-                      </div>
-
-                      {/* Barra de pesquisa para o 1° Turno */}
-                      <div className="relative">
-                        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                          placeholder="Buscar por descrição ou código..."
-                          value={searchTurno1}
-                          onChange={(e) => setSearchTurno1(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                      
-                      {editedTurno1Data.length === 0 ? (
-                        <p className="text-center text-muted-foreground py-8">
-                          Nenhum produto encontrado no 1° Turno
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {editedTurno1Data
-                            .filter(produto => {
-                              const searchLower = searchTurno1.toLowerCase();
-                              const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || '').toLowerCase();
-                              const codigo = (produto.codigo || '').toLowerCase();
-                              return descricao.includes(searchLower) || codigo.includes(searchLower);
-                            })
-                            .map((produto, index) => (
-                            <div key={index} className="border rounded-lg p-4">
-                              <div className="mb-3">
-                                <div className="text-base font-medium text-foreground">Descrição: {produto.texto_breve || produto.descricao || produto.nome || produto.produto || 'Sem descrição'}</div>
-                                <div className="text-sm text-muted-foreground">Código: {produto.codigo}</div>
-                              </div>
-                              
-                              <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                  <label className="text-sm font-medium">KG:</label>
-                                  <Input
-                                    type="number"
-                                    value={produto.kg || '0'}
-                                    onChange={(e) => updateTurnoField('1', index, 'kg', e.target.value)}
-                                    className="mt-1"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium">CX:</label>
-                                  <Input
-                                    type="number"
-                                    value={produto.cx || '0'}
-                                    onChange={(e) => updateTurnoField('1', index, 'cx', e.target.value)}
-                                    className="mt-1"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium">Planejado:</label>
-                                  <Input
-                                    type="number"
-                                    value={produto.planejamento || '0'}
-                                    onChange={(e) => updateTurnoField('1', index, 'planejamento', e.target.value)}
-                                    className="mt-1"
-                                  />
-                                </div>
-                              </div>
-                             </div>
-                           ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {activeEditTab === '2' && (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-md font-medium">Produtos do 2° Turno</h3>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteTurno('2')}
-                          disabled={editedTurno2Data.length === 0}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir Turno
-                        </Button>
-                      </div>
-
-                      {/* Barra de pesquisa para o 2° Turno */}
-                      <div className="relative">
-                        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                          placeholder="Buscar por descrição ou código..."
-                          value={searchTurno2}
-                          onChange={(e) => setSearchTurno2(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                      
-                      {editedTurno2Data.length === 0 ? (
-                        <p className="text-center text-muted-foreground py-8">
-                          Nenhum produto encontrado no 2° Turno
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {editedTurno2Data
-                            .filter(produto => {
-                              const searchLower = searchTurno2.toLowerCase();
-                              const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || '').toLowerCase();
-                              const codigo = (produto.codigo || '').toLowerCase();
-                              return descricao.includes(searchLower) || codigo.includes(searchLower);
-                            })
-                            .map((produto, index) => (
-                             <div key={index} className="border rounded-lg p-4">
-                               <div className="mb-3">
-                                  <div className="text-base font-medium text-foreground">Descrição: {produto.texto_breve || produto.descricao || produto.nome || produto.produto || 'Sem descrição'}</div>
-                                  <div className="text-sm text-muted-foreground">Código: {produto.codigo}</div>
-                               </div>
-                               
-                               <div className="grid grid-cols-3 gap-4">
-                                 <div>
-                                   <label className="text-sm font-medium">KG:</label>
-                                   <Input
-                                     type="number"
-                                     value={produto.kg || '0'}
-                                     onChange={(e) => updateTurnoField('2', index, 'kg', e.target.value)}
-                                     className="mt-1"
-                                   />
-                                 </div>
-                                 <div>
-                                   <label className="text-sm font-medium">CX:</label>
-                                   <Input
-                                     type="number"
-                                     value={produto.cx || '0'}
-                                     onChange={(e) => updateTurnoField('2', index, 'cx', e.target.value)}
-                                     className="mt-1"
-                                   />
-                                 </div>
-                                 <div>
-                                   <label className="text-sm font-medium">Planejado:</label>
-                                   <Input
-                                     type="number"
-                                     value={produto.planejamento || '0'}
-                                     onChange={(e) => updateTurnoField('2', index, 'planejamento', e.target.value)}
-                                     className="mt-1"
-                                   />
-                                 </div>
-                               </div>
-                              </div>
-                           ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer */}
-                <div className="border-t p-6">
-                  <div className="flex gap-2 justify-end">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowEditModal(false)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      onClick={handleSaveChanges}
-                      disabled={isSaving}
-                    >
-                      {isSaving ? (
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4 mr-2" />
-                      )}
-                      Salvar Alterações
-                    </Button>
-                  </div>
-                </div>
+            {/* Menu de ações */}
+            <div className="fixed z-50 bg-background border rounded-md shadow-lg min-w-[200px]" data-menu-content onMouseDown={e => e.stopPropagation()} style={{
+        left: `${menuPosition.x}px`,
+        top: `${menuPosition.y}px`
+      }}>
+              <div className="py-1">
+                <button className="w-full flex items-center justify-start text-left px-4 py-2 text-sm hover:bg-muted cursor-pointer" onClick={() => {
+            handleShowDetails(selectedProcessamentoForMenu);
+            setShowActionMenu(null);
+            setSelectedProcessamentoForMenu(null);
+          }}>
+                  <Info className="h-4 w-4 mr-2" />
+                  Detalhes
+                </button>
+                <button className="w-full flex items-center justify-start text-left px-4 py-2 text-sm hover:bg-muted cursor-pointer" onClick={() => {
+            handleShowEditModal(selectedProcessamentoForMenu);
+            setShowActionMenu(null);
+            setSelectedProcessamentoForMenu(null);
+          }}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Modificar Processamento
+                </button>
+                <button className="w-full flex items-center justify-start text-left px-4 py-2 text-sm text-destructive hover:bg-muted hover:text-destructive cursor-pointer" onClick={() => {
+            handleShowDeleteConfirm(selectedProcessamentoForMenu);
+            setShowActionMenu(null);
+            setSelectedProcessamentoForMenu(null);
+          }}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remover Processamento
+                </button>
               </div>
             </div>
-          </div>
-        )}
+          </>}
       </div>;
 };
 export default Processamento;

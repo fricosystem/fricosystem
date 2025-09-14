@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -777,6 +777,17 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
                     <TableCell className="text-right">{formatNumber(item.cx)}</TableCell>
                   </TableRow>)}
               </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={2} className="font-semibold text-right">Total:</TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatNumber(importData.reduce((sum, item) => sum + item.kg, 0))}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatNumber(importData.reduce((sum, item) => sum + item.cx, 0))}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
             </Table>
           </div>
 

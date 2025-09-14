@@ -213,7 +213,7 @@ const AppSidebar = () => {
       label: "Produção",
       icon: Factory,
       items: [
-        { to: "/pcp", icon: Gavel, label: "PCP", permission: "pcp" },
+        { to: "/pcp", icon: TrendingUp, label: "PCP", permission: "pcp" },
       ],
     },
     ...(isAdmin ? [{
@@ -644,7 +644,7 @@ const AppSidebar = () => {
                           </div>
                         )}
                         <div className="flex flex-col items-start min-w-0">
-                          <span className={`font-medium text-xs text-gray-300 truncate w-full ${firebaseClasses.text.small}`}>{getDisplayName()}</span>
+                          <span className={`font-medium text-xs text-gray-300 truncate w-full uppercase ${firebaseClasses.text.small}`}>{getDisplayName()}</span>
                           {getUserCargo() && (
                             <span className={`text-xs text-gray-400 truncate w-full ${firebaseClasses.text.tiny}`}>
                               {getUserCargo()}
@@ -655,8 +655,8 @@ const AppSidebar = () => {
                       </div>
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className={`w-64 bg-[#2c384a] border-[#3e4a5e] text-gray-300 ${firebaseClasses.text.normal}`}>
-                    <div className="p-2 border-b border-[#3e4a5e]">
+                  <DropdownMenuContent align="end" className={`w-64 bg-card border-border text-card-foreground ${firebaseClasses.text.normal}`}>
+                    <div className="p-2 border-b border-border">
                       <div className="flex items-center space-x-3">
                         {userData?.imagem_perfil ? (
                           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
@@ -673,7 +673,7 @@ const AppSidebar = () => {
                         )}
                         <div className="space-y-1">
                           <p className="font-bold text-sm">{getDisplayName()}</p>
-                          <p className="text-xs text-gray-400 flex items-start">
+                          <p className="text-xs text-muted-foreground flex items-start">
                             <UserRound className="h-3 w-3 mr-1.5 mt-0.5 flex-shrink-0" />
                             <span className="truncate">{user?.email || ""}</span>
                           </p>
@@ -681,15 +681,15 @@ const AppSidebar = () => {
                           <div className="flex flex-wrap gap-y-1">
                             {getUserCargo() && (
                               <div className="flex items-center mr-3">
-                                <Briefcase className="h-3 w-3 mr-1 text-gray-400" />
-                                <span className="text-xs text-gray-400">{getUserCargo()}</span>
+                                <Briefcase className="h-3 w-3 mr-1 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">{getUserCargo()}</span>
                               </div>
                             )}
                             
                             {getUserUnidade() && (
                               <div className="flex items-center">
-                                <Building2 className="h-3 w-3 mr-1 text-gray-400" />
-                                <span className="text-xs text-gray-400">{getUserUnidade()}</span>
+                                <Building2 className="h-3 w-3 mr-1 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">{getUserUnidade()}</span>
                               </div>
                             )}
                           </div>
@@ -697,12 +697,12 @@ const AppSidebar = () => {
                       </div>
                     </div>
 
-                    <DropdownMenuItem onClick={() => navigate("/perfil")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
+                    <DropdownMenuItem onClick={() => navigate("/perfil")} className="hover:bg-muted focus:bg-muted p-2">
                       <UserRound className="mr-2 h-4 w-4" />
                       <span>Perfil</span>
                     </DropdownMenuItem>
 
-                    <DropdownMenuItem onClick={toggleTheme} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
+                    <DropdownMenuItem onClick={toggleTheme} className="hover:bg-muted focus:bg-muted p-2">
                       {theme === "light" ? (
                         <Moon className="mr-2 h-4 w-4" />
                       ) : (
@@ -711,14 +711,14 @@ const AppSidebar = () => {
                       <span>Mudar para tema {theme === "light" ? "escuro" : "claro"}</span>
                     </DropdownMenuItem>
                     
-                    <DropdownMenuItem onClick={() => navigate("/perfil")} className="hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
+                    <DropdownMenuItem onClick={() => navigate("/perfil")} className="hover:bg-muted focus:bg-muted p-2">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Configurações</span>
                     </DropdownMenuItem>
                     
-                    <DropdownMenuSeparator className="bg-[#3e4a5e]" />
+                    <DropdownMenuSeparator className="bg-border" />
                     
-                    <DropdownMenuItem onClick={handleSignOut} className="text-[#ff7a59] hover:bg-[#3e4a5e] focus:bg-[#3e4a5e] p-2">
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive hover:bg-muted focus:bg-muted p-2">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Sair</span>
                     </DropdownMenuItem>

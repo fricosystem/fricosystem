@@ -18,6 +18,7 @@ import { doc, updateDoc, getFirestore } from 'firebase/firestore';
 import { updateProfile, updatePassword } from 'firebase/auth';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import CameraModal from '@/components/CameraModal';
 const Perfil = () => {
   const {
     user,
@@ -29,6 +30,7 @@ const Perfil = () => {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [theme, setTheme] = useState('dark');
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
 
   // Dados do perfil
   const [profileData, setProfileData] = useState({
@@ -167,6 +169,16 @@ const Perfil = () => {
   const getUserInitial = () => {
     return profileData.nome ? profileData.nome.charAt(0).toUpperCase() : 'U';
   };
+
+  const handlePhotoTaken = (imageUrl: string) => {
+    setProfileData(prev => ({
+      ...prev,
+      imagem_perfil: imageUrl
+    }));
+    
+    // Auto-save the profile when photo is taken
+    handleProfileUpdate();
+  };
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'Não disponível';
     try {
@@ -211,7 +223,7 @@ const Perfil = () => {
                     {getUserInitial()}
                   </AvatarFallback>
                 </Avatar>
-                <Button size="sm" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 p-0" onClick={() => setIsEditing(true)}>
+                <Button size="sm" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 p-0" onClick={() => setIsCameraModalOpen(true)}>
                   <Camera className="h-4 w-4" />
                 </Button>
               </div>
@@ -644,6 +656,13 @@ const Perfil = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Camera Modal */}
+        <CameraModal
+          isOpen={isCameraModalOpen}
+          onClose={() => setIsCameraModalOpen(false)}
+          onPhotoTaken={handlePhotoTaken}
+        />
       </div>
     </AppLayout>;
 };

@@ -5,6 +5,7 @@ import {
   orderBy, 
   getDocs, 
   onSnapshot,
+  where,
   Timestamp 
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
@@ -396,8 +397,12 @@ export const usePCPOptimized = () => {
       const produtosArray = await loadProdutosOptimized();
       setPcpProdutos(produtosArray);
 
-      // Buscar documentos PCP
-      const pcpCollectionSnapshot = await getDocs(collection(db, 'PCP'));
+      // Buscar documentos PCP apenas com processado = "sim"
+      const pcpCollectionQuery = query(
+        collection(db, 'PCP'),
+        where('processado', '==', 'sim')
+      );
+      const pcpCollectionSnapshot = await getDocs(pcpCollectionQuery);
 
       let pcpDataArray: PCPData[] = [];
 
@@ -460,7 +465,8 @@ export const usePCPOptimized = () => {
       // Flag para pular o primeiro snapshot (evita duplo carregamento)
       let isFirstSnapshot = true;
       
-      const unsubscribe = onSnapshot(collection(db, 'PCP'), (snapshot) => {
+      const pcpQuery = query(collection(db, 'PCP'), where('processado', '==', 'sim'));
+      const unsubscribe = onSnapshot(pcpQuery, (snapshot) => {
         // Pular o primeiro snapshot para evitar duplo carregamento
         if (isFirstSnapshot) {
           isFirstSnapshot = false;
@@ -645,7 +651,9 @@ export const usePCPOptimized = () => {
           }, {} as Record<string, typeof produtos[0]>);
 
           // Ordenar produtos únicos por eficiência (melhor performance) e depois por produção
+          // Filtrar apenas produtos com quantidade produzida > 0
           const produtosOrdenados = Object.values(produtosUnicosPorCodigo)
+            .filter(item => (item.quantidade_produzida || 0) > 0) // Só produtos com produção > 0
             .sort((a, b) => {
               const eficienciaA = a.eficiencia || 0;
               const eficienciaB = b.eficiencia || 0;

@@ -267,10 +267,15 @@ const UsuarioForm = ({
               <SelectValue placeholder="Selecione o perfil" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="admin">Administrador</SelectItem>
-              <SelectItem value="usuario">Usuário</SelectItem>
-              <SelectItem value="estoque">Estoque</SelectItem>
-              <SelectItem value="financeiro">Financeiro</SelectItem>
+              <SelectItem value="DESENVOLVEDOR">DESENVOLVEDOR</SelectItem>
+              <SelectItem value="ADMINISTRATIVO">ADMINISTRATIVO</SelectItem>
+              <SelectItem value="ENCARREGADO">ENCARREGADO</SelectItem>
+              <SelectItem value="COLABORADOR">COLABORADOR</SelectItem>
+              <SelectItem value="ESTOQUISTA">ESTOQUISTA</SelectItem>
+              <SelectItem value="LÍDER">LÍDER</SelectItem>
+              <SelectItem value="PRESIDENTE">PRESIDENTE</SelectItem>
+              <SelectItem value="GERENTE">GERENTE</SelectItem>
+              <SelectItem value="FORNECEDOR">FORNECEDOR</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -555,7 +560,7 @@ const GestaoUsuarios = () => {
                     <TableBody>
                     {filteredUsuarios.map((usuario) => (
                         <TableRow key={usuario.id}>
-                        <TableCell className="font-medium">{usuario.nome}</TableCell>
+                        <TableCell className="font-medium uppercase">{usuario.nome}</TableCell>
                         <TableCell>{usuario.email}</TableCell>
                         <TableCell className="capitalize">{usuario.perfil}</TableCell>
                         <TableCell>{usuario.unidade}</TableCell>

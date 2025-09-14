@@ -17,6 +17,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import usePCPOptimized from "@/hooks/usePCPOptimized";
 import { PeriodFilter } from "@/hooks/usePCPPageState";
+import { db } from "@/firebase/firebase";
+import { doc, getDoc } from "firebase/firestore";
 type PeriodType = "dia" | "semana" | "mes" | "ano" | "personalizado";
 interface ProdutoProcessado {
   classificacao: string;
@@ -41,6 +43,7 @@ const ResultadosFinais: React.FC = () => {
   const [showCalendarFim, setShowCalendarFim] = useState(false);
   const [expandedClassificacao, setExpandedClassificacao] = useState<string | null>(null);
   const [selectedClassificacao, setSelectedClassificacao] = useState<string>("todas");
+  const [metas, setMetas] = useState<Record<string, number>>({});
   const {
     toast
   } = useToast();
@@ -216,6 +219,19 @@ const ResultadosFinais: React.FC = () => {
       totalProdutos
     };
   }, [filteredClassificacoes]);
+
+  // Buscar metas do Firestore
+  const fetchMetas = async () => {
+    try {
+      const metaDoc = await getDoc(doc(db, "PCP_configuracoes", "meta"));
+      if (metaDoc.exists()) {
+        setMetas(metaDoc.data() || {});
+      }
+    } catch (error) {
+      console.error("Erro ao buscar metas:", error);
+    }
+  };
+
   const toggleClassificacao = (classificacao: string) => {
     setExpandedClassificacao(expandedClassificacao === classificacao ? null : classificacao);
   };
@@ -257,6 +273,13 @@ const ResultadosFinais: React.FC = () => {
       fetchPCPData(period, dataInicio, dataFim);
     }
   }, [dataInicio, dataFim]); // Só executa quando datas mudam no período personalizado
+
+  // Buscar metas quando mudar para filtro "dia"
+  useEffect(() => {
+    if (periodType === "dia") {
+      fetchMetas();
+    }
+  }, [periodType]);
 
   // Setup do listener em tempo real
   useEffect(() => {
@@ -467,6 +490,7 @@ const ResultadosFinais: React.FC = () => {
                     <TableHead>Planejado</TableHead>
                     <TableHead>Diferença</TableHead>
                     <TableHead>Eficiência</TableHead>
+                    {periodType === "dia" && <TableHead>Meta Diária</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -491,6 +515,21 @@ const ResultadosFinais: React.FC = () => {
                         return formatNumber(totalPlanejado > 0 ? totalProduzido / totalPlanejado * 100 : 0) + '%';
                       })()}
                         </TableCell>
+                        {periodType === "dia" && (
+                          <TableCell>
+                            {(() => {
+                              const totalProduzido = pp.produtos.reduce((sum, p) => sum + p.kgTotal, 0);
+                              const metaClassificacao = metas[pp.classificacao] || 0;
+                              const porcentagemMeta = metaClassificacao > 0 ? (totalProduzido / metaClassificacao) * 100 : 0;
+                              const cor = porcentagemMeta >= 80 ? "text-green-400" : "text-white";
+                              return (
+                                <span className={cor}>
+                                  {formatNumber(porcentagemMeta)}%
+                                </span>
+                              );
+                            })()}
+                          </TableCell>
+                        )}
                       </TableRow>
                       
                       {expandedClassificacao === pp.classificacao && <>
@@ -512,6 +551,20 @@ const ResultadosFinais: React.FC = () => {
                               <TableCell>
                                 {formatNumber(produto.eficiencia)}%
                               </TableCell>
+                              {periodType === "dia" && (
+                                <TableCell>
+                                  {(() => {
+                                    const metaClassificacao = metas[pp.classificacao] || 0;
+                                    const porcentagemMeta = metaClassificacao > 0 ? (produto.kgTotal / metaClassificacao) * 100 : 0;
+                                    const cor = porcentagemMeta >= 80 ? "text-green-400" : "text-white";
+                                    return (
+                                      <span className={cor}>
+                                        {formatNumber(porcentagemMeta)}%
+                                      </span>
+                                    );
+                                  })()}
+                                </TableCell>
+                              )}
                             </TableRow>)}
                           
                           <TableRow className="font-medium bg-muted/25">

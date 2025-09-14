@@ -196,14 +196,16 @@ const ListaOrdensServico = () => {
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center">Lista de Ordens de Serviço</CardTitle>
-        <div className="mt-4 relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por setor, equipamento, responsável..."
-            value={searchTerm}
-            onChange={handleSearch}
-            className="pl-9 max-w-md mx-auto"
-          />
+        <div className="mt-4 flex justify-end">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por setor, equipamento, responsável..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="pl-9 w-80"
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -342,12 +344,13 @@ const ListaOrdensServico = () => {
 
                                 <div className="md:col-span-2 mt-4">
                                   <h4 className="font-semibold text-sm text-gray-500">Alterar Status</h4>
-                                  <div className="flex space-x-2 mt-2">
+                                   <div className="flex space-x-2 mt-2">
                                     <Button 
                                       variant={selectedOrdem.status === "pendente" ? "default" : "outline"} 
                                       size="sm"
                                       className="dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800"
                                       onClick={() => handleStatusChange(selectedOrdem.id, "pendente")}
+                                      disabled={selectedOrdem.status === "pendente"}
                                     >
                                       Pendente
                                     </Button>
@@ -356,6 +359,7 @@ const ListaOrdensServico = () => {
                                       size="sm"
                                       className="dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800"
                                       onClick={() => handleStatusChange(selectedOrdem.id, "em_andamento")}
+                                      disabled={selectedOrdem.status === "em_andamento"}
                                     >
                                       Em Andamento
                                     </Button>
@@ -364,6 +368,7 @@ const ListaOrdensServico = () => {
                                       size="sm"
                                       className="dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800"
                                       onClick={() => handleStatusChange(selectedOrdem.id, "concluido")}
+                                      disabled={selectedOrdem.status === "concluido"}
                                     >
                                       Concluído
                                     </Button>
@@ -374,32 +379,34 @@ const ListaOrdensServico = () => {
                           </DialogContent>
                         </Dialog>
                         
-                        <div className="flex space-x-1">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className={`${ordem.status === "pendente" ? "dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
-                            onClick={() => handleStatusChange(ordem.id, "pendente")}
-                          >
-                            Pendente
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className={`${ordem.status === "em_andamento" ? "dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
-                            onClick={() => handleStatusChange(ordem.id, "em_andamento")}
-                          >
-                            Em Andamento
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className={`${ordem.status === "concluido" ? "dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
-                            onClick={() => handleStatusChange(ordem.id, "concluido")}
-                          >
-                            Concluído
-                          </Button>
-                        </div>
+                        {ordem.status !== "concluido" && (
+                          <div className="flex space-x-1">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className={`${ordem.status === "pendente" ? "dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
+                              onClick={() => handleStatusChange(ordem.id, "pendente")}
+                            >
+                              Pendente
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className={`${ordem.status === "em_andamento" ? "dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
+                              onClick={() => handleStatusChange(ordem.id, "em_andamento")}
+                            >
+                              Em Andamento
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className={`${ordem.status === "concluido" ? "dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
+                              onClick={() => handleStatusChange(ordem.id, "concluido")}
+                            >
+                              Concluído
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

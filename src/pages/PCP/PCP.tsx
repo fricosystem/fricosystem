@@ -82,7 +82,7 @@ import SegundoTurno from "./2turno";
 import Processamento from "./Processamento";
 import ResultadosFinais from "./ResultadosFinais";
 import Produtos from "./Produtos";
-import Sistema from "./Sistema";
+
 import Metas from "./Metas";
 
 // Importando os modais para produtos sem classificação
@@ -147,6 +147,19 @@ const PCP = () => {
     closeAdicionarProduto,
     handleProdutoAdicionado,
   } = usePCPPageState();
+
+  // Escutar eventos customizados para mudança de aba
+  useEffect(() => {
+    const handleChangeTab = (event: CustomEvent) => {
+      handleTabChange(event.detail);
+    };
+
+    window.addEventListener('changeTab', handleChangeTab as EventListener);
+    
+    return () => {
+      window.removeEventListener('changeTab', handleChangeTab as EventListener);
+    };
+  }, [handleTabChange]);
 
   // Hook personalizado para dados PCP
   const { 
@@ -391,14 +404,6 @@ const PCP = () => {
             <Target className="h-4 w-4" />
             Metas
           </Button>
-          <Button
-            variant={activeTab === "sistema" ? "default" : "ghost"}
-            onClick={() => handleTabChange("sistema")}
-            className="flex items-center gap-2"
-          >
-            <Settings className="h-4 w-4" />
-            Sistema
-          </Button>
         </div>
 
         {/* Conteúdo das abas */}
@@ -589,10 +594,10 @@ const PCP = () => {
                   label: pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0) === 0 ? "Sem planejamento" : 
                     (metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) >= 0.85 
                       ? period === 'hoje' ? "Meta de Hoje atingida" 
-                        : period === 'semana' ? "Meta Semanal atingida"
-                        : period === 'mes' ? "Meta Mensal atingida"
-                        : period === 'ano' ? "Meta Anual atingida"
-                        : "Meta Personalizada atingida"
+                        : period === 'semana' ? "Meta Semanal realizada"
+                        : period === 'mes' ? "Meta Mensal realizada"
+                        : period === 'ano' ? "Meta Anual realizada"
+                        : "Meta Personalizada realizada"
                       : "Abaixo da meta"
                 }}
                 description="KG Planejado / KG Realizado"
@@ -765,7 +770,7 @@ const PCP = () => {
                       <CardTitle className="flex items-center gap-2">
                         <Layers className="h-5 w-5" /> Performance por Classificação
                       </CardTitle>
-                      <CardDescription>Planejado vs Produzido por família de produto</CardDescription>
+                      <CardDescription>Planejado vs Produzido por classificação de produto</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="h-[300px]">
@@ -813,7 +818,35 @@ const PCP = () => {
                 )}
 
                  {/* Performance por Produto - ocupando toda a largura */}
-                 {pcpData.length > 0 && chartDataMemo.performanceChart.length > 0 && (
+                 {pcpData.length > 0 && (() => {
+                   // Filtrar dados para mostrar apenas classificações que tenham produtos com produção > 0
+                   const filteredData = [];
+                   const classificacoes = new Set();
+                   
+                   // Primeiro passo: identificar classificações que têm produtos com produção > 0
+                   chartDataMemo.performanceChart.forEach(item => {
+                     if (!item.isSeparator && item.produzido > 0) {
+                       classificacoes.add(item.classificacao);
+                     }
+                   });
+                   
+                   // Segundo passo: construir dados filtrados mantendo estrutura
+                   let currentClassificacao = null;
+                   chartDataMemo.performanceChart.forEach(item => {
+                     if (item.isSeparator) {
+                       // Adicionar separador apenas se a próxima classificação tiver produtos válidos
+                       const nextClassificacao = chartDataMemo.performanceChart[chartDataMemo.performanceChart.indexOf(item) + 1]?.classificacao;
+                       if (nextClassificacao && classificacoes.has(nextClassificacao) && currentClassificacao !== nextClassificacao) {
+                         filteredData.push(item);
+                       }
+                     } else if (item.produzido > 0 && classificacoes.has(item.classificacao)) {
+                       filteredData.push(item);
+                       currentClassificacao = item.classificacao;
+                     }
+                   });
+                   
+                   return filteredData.length > 0;
+                 })() && (
                   <Card className="w-full mb-6">
                      <CardHeader>
                        <CardTitle className="flex items-center gap-2">
@@ -825,7 +858,32 @@ const PCP = () => {
                        <div className="h-[300px]">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart
-                              data={chartDataMemo.performanceChart}
+                              data={(() => {
+                                // Mesma lógica de filtro para os dados do gráfico
+                                const filteredData = [];
+                                const classificacoes = new Set();
+                                
+                                chartDataMemo.performanceChart.forEach(item => {
+                                  if (!item.isSeparator && item.produzido > 0) {
+                                    classificacoes.add(item.classificacao);
+                                  }
+                                });
+                                
+                                let currentClassificacao = null;
+                                chartDataMemo.performanceChart.forEach(item => {
+                                  if (item.isSeparator) {
+                                    const nextClassificacao = chartDataMemo.performanceChart[chartDataMemo.performanceChart.indexOf(item) + 1]?.classificacao;
+                                    if (nextClassificacao && classificacoes.has(nextClassificacao) && currentClassificacao !== nextClassificacao) {
+                                      filteredData.push(item);
+                                    }
+                                  } else if (item.produzido > 0 && classificacoes.has(item.classificacao)) {
+                                    filteredData.push(item);
+                                    currentClassificacao = item.classificacao;
+                                  }
+                                });
+                                
+                                return filteredData;
+                              })()}
                               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                             >
                              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -878,10 +936,10 @@ const PCP = () => {
                                          : `${data.posicao}° melhor da classificação`
                                        }
                                      </p>
-                                     <div className="space-y-1 text-sm">
-                                       <p className="text-green-600">
-                                         <span className="font-medium">Produzido:</span> {data.produzido.toLocaleString()} kg
-                                       </p>
+                                      <div className="space-y-1 text-sm">
+                                        <p className="text-green-600">
+                                          <span className="font-medium">Produzido:</span> {(data.produzido || 0).toLocaleString()} kg
+                                        </p>
                                        <p className="text-blue-600">
                                          <span className="font-medium">Planejado:</span> {data.planejado.toLocaleString()} kg
                                        </p>
@@ -899,17 +957,11 @@ const PCP = () => {
                                name="Planejado (kg)" 
                                fill="hsl(var(--primary))"
                              />
-                             <Bar 
-                               dataKey="produzido" 
-                               name="Produzido (kg)"
-                             >
-                               {chartDataMemo.performanceChart.map((entry, index) => (
-                                 <Cell 
-                                   key={`cell-${index}`} 
-                                   fill={entry.cor || "hsl(var(--success))"} 
-                                 />
-                               ))}
-                             </Bar>
+                              <Bar 
+                                dataKey="produzido" 
+                                name="Produzido (kg)"
+                                fill="hsl(var(--success))"
+                              />
                            </BarChart>
                          </ResponsiveContainer>
                        </div>
@@ -947,11 +999,6 @@ const PCP = () => {
         {activeTab === "metas" && (
           <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
             <Metas />
-          </React.Suspense>
-        )}
-        {activeTab === "sistema" && (
-          <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-            <Sistema />
           </React.Suspense>
         )}
 

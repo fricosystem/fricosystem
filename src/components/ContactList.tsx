@@ -86,14 +86,16 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
     const query = searchQuery.toLowerCase();
     const filtered = contacts.filter(
       (contact) =>
-        contact.nome.toLowerCase().includes(query) ||
-        contact.email.toLowerCase().includes(query)
+        (contact.nome?.toLowerCase().includes(query)) ||
+        (contact.email?.toLowerCase().includes(query))
     );
     
     setFilteredContacts(filtered);
   }, [searchQuery, contacts]);
   
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | undefined | null) => {
+    if (!name || typeof name !== 'string') return "??";
+    
     return name
       .split(" ")
       .map((n) => n[0])
@@ -152,7 +154,7 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
                     </div>
                     <div className="flex-1 min-w-0 text-left">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium truncate">{contact.nome}</p>
+                        <p className="text-sm font-medium truncate">{contact.nome || 'Usuário sem nome'}</p>
                         {unreadCounts[contact.id] > 0 && (
                           <Badge 
                             variant="destructive" 
@@ -163,7 +165,7 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {contact.email}
+                        {contact.email || 'Email não disponível'}
                       </p>
                       <div className="flex items-center gap-1 mt-1">
                         <span className="text-xs text-muted-foreground">
