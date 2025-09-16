@@ -1,4 +1,5 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import React from "react";
 
 interface StatsCardProps {
@@ -13,6 +14,8 @@ interface StatsCardProps {
   description?: string;
   className?: string;
   onClick?: () => void;
+  formula?: string;
+  disableHover?: boolean;
 }
 
 export const StatsCard = ({
@@ -23,10 +26,12 @@ export const StatsCard = ({
   description,
   className = "",
   onClick,
+  formula,
+  disableHover = false,
 }: StatsCardProps) => {
   return (
     <Card 
-      className={`${className} ${onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
+      className={`${className} ${onClick && !disableHover ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
       onClick={onClick}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -34,7 +39,20 @@ export const StatsCard = ({
         <div className="h-4 w-4 text-muted-foreground">{icon}</div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        {formula ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-2xl font-bold">{value}</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{formula}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <div className="text-2xl font-bold">{value}</div>
+        )}
         {trend && trend.label && (
           <div className="flex items-center pt-1">
             <span

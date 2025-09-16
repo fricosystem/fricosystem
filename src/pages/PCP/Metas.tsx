@@ -101,6 +101,7 @@ const Metas = () => {
   const [progressoMensal, setProgressoMensal] = useState(0);
   const [eficienciaGeral, setEficienciaGeral] = useState(0);
   const [tendenciaProducao, setTendenciaProducao] = useState<'crescente' | 'estavel' | 'decrescente'>('estavel');
+  const [usandoDadosOntem, setUsandoDadosOntem] = useState(false);
 
   // Estados para controlar valores formatados dos inputs
   const [metaMensalFormatada, setMetaMensalFormatada] = useState('0');
@@ -216,6 +217,20 @@ const Metas = () => {
       return dataItem === hoje && (item.classificacao || item.setor || 'Sem classificação') === classificacao;
     }).reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
   };
+
+  const calcularRealizadoDiaAnterior = (classificacao: string): number => {
+    const ontem = new Date();
+    ontem.setDate(ontem.getDate() - 1);
+    const dataOntem = ontem.toISOString().split('T')[0];
+    
+    return dadosProcessados.filter(item => {
+      let dataItem = '';
+      if (item.data_inicio && typeof item.data_inicio === 'object' && item.data_inicio.toDate) {
+        dataItem = item.data_inicio.toDate().toISOString().split('T')[0];
+      }
+      return dataItem === dataOntem && (item.classificacao || item.setor || 'Sem classificação') === classificacao;
+    }).reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
+  };
   const inicializarMetas = async () => {
     if (pcpLoading) return;
     try {
@@ -230,8 +245,16 @@ const Metas = () => {
         classificacoesUnicas.push(...classificacoesPadrao);
       }
       const metasComRealizado: MetaPorClassificacao[] = [];
+      let temProducaoHoje = false;
+      
       for (const classificacao of classificacoesUnicas) {
         const realizadoDiaAtual = calcularRealizadoDiaAtual(classificacao);
+        const realizadoDiaAnterior = calcularRealizadoDiaAnterior(classificacao);
+        
+        // Verificar se há produção hoje para qualquer classificação
+        if (realizadoDiaAtual > 0) {
+          temProducaoHoje = true;
+        }
 
         // Priorizar meta salva, depois padrão, depois cálculo baseado na meta mensal
         let metaDiaria = 0;
@@ -246,15 +269,23 @@ const Metas = () => {
           console.log(`Meta calculada para ${classificacao}: ${metaDiaria} (mensal: ${metaMensal})`);
         }
 
-        // Calcular progresso do dia atual vs meta diária
-        const percentual = metaDiaria > 0 ? realizadoDiaAtual / metaDiaria * 100 : 0;
+        // Usar dia atual se há produção, senão usar dia anterior
+        const realizadoFinal = realizadoDiaAtual > 0 ? realizadoDiaAtual : realizadoDiaAnterior;
+        const percentual = metaDiaria > 0 ? realizadoFinal / metaDiaria * 100 : 0;
+        
         metasComRealizado.push({
           classificacao,
           meta: metaDiaria,
-          realizado: realizadoDiaAtual,
+          realizado: realizadoFinal,
           percentual: Math.round(percentual * 100) / 100
         });
       }
+      
+      // Definir se estamos usando dados do dia anterior baseado na produção geral
+      setUsandoDadosOntem(!temProducaoHoje);
+
+      // Verificar se estamos usando dados do dia anterior
+      // setUsandoDadosOntem(!temProducaoHoje); // Movido para cima
 
       // Incluir todas as metas, mesmo as que não têm produção no dia atual
       setMetasPorClassificacao(metasComRealizado);
@@ -667,7 +698,7 @@ const Metas = () => {
                   <TableHead className="text-center">Meta Diária (kg)</TableHead>
                   <TableHead className="text-right">Realizado (kg)</TableHead>
                   <TableHead className="text-right">Diferença (Kg)</TableHead>
-                  <TableHead className="text-center">Progresso do Dia Atual</TableHead>
+                  <TableHead className="text-center">Progresso do Dia {usandoDadosOntem ? 'Anterior' : 'Atual'}</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -692,7 +723,7 @@ const Metas = () => {
                           <span className="text-sm w-12">{meta.percentual.toFixed(1)}%</span>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Realizado hoje: {formatarNumero(meta.realizado)} kg
+                          {usandoDadosOntem ? 'Produzido ontem:' : 'Realizado hoje:'} {formatarNumero(meta.realizado)} kg
                           <br />
                           Falta: {formatarNumero(Math.max(0, meta.meta - meta.realizado))} kg
                         </div>
@@ -727,7 +758,7 @@ const Metas = () => {
             </CardDescription>
           </CardHeader>
            <CardContent>
-             {/* Verificar se há dados de produção no dia atual */}
+             {/* Verificar se há dados de produção */}
              {metasPorClassificacao.length === 0 || metasPorClassificacao.every(meta => meta.percentual === 0) ? <div className="flex flex-col items-center justify-center py-12 space-y-4">
                  <AlertTriangle className="h-16 w-16 text-muted-foreground" />
                  <div className="text-center">
@@ -735,9 +766,9 @@ const Metas = () => {
                      Nenhum dado de produção encontrado
                    </h3>
                    <p className="text-muted-foreground">
-                     Não existem dados de produção para o dia atual.
+                     Não existem dados de produção para os últimos dois dias.
                      <br />
-                     Verifique se já foram processados dados de produção para hoje.
+                     Verifique se já foram processados dados de produção.
                    </p>
                  </div>
                </div> : <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

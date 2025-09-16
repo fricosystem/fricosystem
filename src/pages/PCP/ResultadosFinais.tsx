@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { RefreshCw, CalendarIcon } from "lucide-react";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -76,6 +77,8 @@ const ResultadosFinais: React.FC = () => {
         return "mes";
       case "ano":
         return "ano";
+      case "personalizado":
+        return "personalizado";
       default:
         return "hoje";
     }
@@ -256,10 +259,18 @@ const ResultadosFinais: React.FC = () => {
         return;
       }
 
-      // Para período personalizado, carregar apenas se tiver ambas as datas
-      if (periodType === "personalizado" && dataInicio && dataFim && !isUpdatingPeriod) {
-        const period = convertPeriodToFilter(periodType);
-        await fetchPCPData(period, dataInicio, dataFim);
+      // Para período personalizado, garantir que ele sempre execute quando mudado para personalizado
+      if (periodType === "personalizado") {
+        // Se não há datas, definir as datas padrão
+        if (!dataInicio || !dataFim) {
+          const hoje = new Date();
+          setDataInicio(hoje);
+          setDataFim(hoje);
+        } else if (!isUpdatingPeriod) {
+          // Se há datas, carregar os dados
+          const period = convertPeriodToFilter(periodType);
+          await fetchPCPData(period, dataInicio, dataFim);
+        }
       }
     };
 
@@ -272,7 +283,7 @@ const ResultadosFinais: React.FC = () => {
       const period = convertPeriodToFilter(periodType);
       fetchPCPData(period, dataInicio, dataFim);
     }
-  }, [dataInicio, dataFim]); // Só executa quando datas mudam no período personalizado
+  }, [dataInicio, dataFim, periodType]); // Executar também quando periodType muda para personalizado
 
   // Buscar metas quando mudar para filtro "dia"
   useEffect(() => {
@@ -388,10 +399,30 @@ const ResultadosFinais: React.FC = () => {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={dataInicio} onSelect={date => {
-                    setDataInicio(date);
-                    setShowCalendarInicio(false);
-                  }} initialFocus className="p-3 pointer-events-auto" locale={ptBR} />
+                      <Calendar 
+                        mode="single" 
+                        selected={dataInicio} 
+                        onSelect={date => {
+                          setDataInicio(date);
+                          setShowCalendarInicio(false);
+                          if (periodType === "personalizado" && date && dataFim) {
+                            const period = convertPeriodToFilter("personalizado");
+                            fetchPCPData(period, date, dataFim);
+                          }
+                        }} 
+                        initialFocus 
+                        className="p-3 pointer-events-auto" 
+                        locale={ptBR}
+                        classNames={{
+                          day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary focus:text-primary-foreground",
+                          day_today: "bg-accent text-accent-foreground font-semibold border border-primary/20",
+                          day: "h-9 w-9 text-center font-normal hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
+                          head_cell: "text-muted-foreground w-9 font-normal text-[0.8rem] text-center",
+                          cell: "text-center p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                          nav_button: "hover:bg-accent hover:text-accent-foreground",
+                          caption: "flex justify-center pt-1 relative items-center"
+                        }}
+                      />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -408,10 +439,30 @@ const ResultadosFinais: React.FC = () => {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={dataFim} onSelect={date => {
-                    setDataFim(date);
-                    setShowCalendarFim(false);
-                  }} initialFocus className="p-3 pointer-events-auto" locale={ptBR} />
+                      <Calendar 
+                        mode="single" 
+                        selected={dataFim} 
+                        onSelect={date => {
+                          setDataFim(date);
+                          setShowCalendarFim(false);
+                          if (periodType === "personalizado" && dataInicio && date) {
+                            const period = convertPeriodToFilter("personalizado");
+                            fetchPCPData(period, dataInicio, date);
+                          }
+                        }} 
+                        initialFocus 
+                        className="p-3 pointer-events-auto" 
+                        locale={ptBR}
+                        classNames={{
+                          day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary focus:text-primary-foreground",
+                          day_today: "bg-accent text-accent-foreground font-semibold border border-primary/20",
+                          day: "h-9 w-9 text-center font-normal hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
+                          head_cell: "text-muted-foreground w-9 font-normal text-[0.8rem] text-center",
+                          cell: "text-center p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                          nav_button: "hover:bg-accent hover:text-accent-foreground",
+                          caption: "flex justify-center pt-1 relative items-center"
+                        }}
+                      />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -431,7 +482,7 @@ const ResultadosFinais: React.FC = () => {
       </Card>
 
       {/* Cards de Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Produção Total</CardTitle>
@@ -440,30 +491,28 @@ const ResultadosFinais: React.FC = () => {
             <div className="text-3xl font-bold">
               {formatNumber(metricas.totalProduzido)} kg
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Eficiência Média</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {formatNumber(metricas.eficienciaMedia)}%
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Produtos Processados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {metricas.totalProdutos}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Eficiência Média</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-3xl font-bold">
+                      {formatNumber(metricas.eficienciaMedia)}%
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>(Total Produzido ÷ Total Planejado) × 100</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardContent>
+          </Card>
       </div>
 
       {/* Abas por Classificação */}
@@ -486,8 +535,8 @@ const ResultadosFinais: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Classificação</TableHead>
+                    <TableHead>Total Planejado</TableHead>
                     <TableHead>Total Produzido</TableHead>
-                    <TableHead>Planejado</TableHead>
                     <TableHead>Diferença</TableHead>
                     <TableHead>Eficiência</TableHead>
                     {periodType === "dia" && <TableHead>Meta Diária</TableHead>}
@@ -498,10 +547,10 @@ const ResultadosFinais: React.FC = () => {
                       <TableRow className="cursor-pointer" onClick={() => toggleClassificacao(pp.classificacao)}>
                         <TableCell className="font-medium">{pp.classificacao}</TableCell>
                         <TableCell>
-                          {formatNumber(pp.produtos.reduce((sum, p) => sum + p.kgTotal, 0))} kg
+                          {formatNumber(pp.produtos.reduce((sum, p) => sum + p.planoDiario, 0))} kg
                         </TableCell>
                         <TableCell>
-                          {formatNumber(pp.produtos.reduce((sum, p) => sum + p.planoDiario, 0))} kg
+                          {formatNumber(pp.produtos.reduce((sum, p) => sum + p.kgTotal, 0))} kg
                         </TableCell>
                         <TableCell>
                           <span className={pp.produtos.reduce((sum, p) => sum + (p.kgTotal - p.planoDiario), 0) >= 0 ? "text-green-600" : "text-red-600"}>
@@ -541,8 +590,8 @@ const ResultadosFinais: React.FC = () => {
                                   <span>{produto.descricao}</span>
                                 </div>
                               </TableCell>
-                              <TableCell>{formatNumber(produto.kgTotal)} kg</TableCell>
                               <TableCell>{formatNumber(produto.planoDiario)} kg</TableCell>
+                              <TableCell>{formatNumber(produto.kgTotal)} kg</TableCell>
                               <TableCell>
                                 <span className={produto.kgTotal - produto.planoDiario >= 0 ? "text-green-600" : "text-red-600"}>
                                   {formatNumber(produto.kgTotal - produto.planoDiario)} kg

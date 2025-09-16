@@ -500,6 +500,7 @@ const Processamento: React.FC = () => {
 
   // Função para carregar dados consolidados dos processamentos
   const loadProcessamentos = useCallback(async () => {
+    console.log("🔄 Carregando processamentos...");
     try {
       const processamentosCollection = collection(db, "PCP");
       const q = query(processamentosCollection, where("processado", "==", "sim"));
@@ -518,6 +519,7 @@ const Processamento: React.FC = () => {
             dataProcessamento: data.date || documentId,
             dataUltimaAtualizacao: data.updatedAt || data.timestamp
           };
+          console.log("📊 Processamento encontrado:", processamentoComData);
           dadosConsolidados.push(processamentoComData);
         } else {
           // Caso contrário, calcular na hora (dados consolidados)
@@ -584,6 +586,12 @@ const Processamento: React.FC = () => {
               itensTurno1,
               itensTurno2,
               turnosAtivos: [...(itensTurno1 > 0 ? ['1° Turno'] : []), ...(itensTurno2 > 0 ? ['2° Turno'] : [])].join(', ')
+            });
+            console.log("📋 Dados consolidados adicionados:", {
+              documentId,
+              dataProcessamento: data.date || documentId,
+              itensTurno1,
+              itensTurno2
             });
           }
         }
@@ -710,6 +718,11 @@ const Processamento: React.FC = () => {
     setShowDetailsDialog(true);
   };
   const handleShowEditModal = async (processamento: ProcessamentoData) => {
+    console.log("🔍 Abrindo modal de edição para:", processamento);
+    console.log("📅 Data do processamento:", processamento.dataProcessamento);
+    console.log("🏷️ ID do processamento:", processamento.id);
+    console.log("📄 Document ID:", processamento.documentId);
+
     setEditingProcessamento(processamento);
     setOriginalProcessamentoDate(processamento.dataProcessamento);
     setShowActionMenu(null);
@@ -1088,18 +1101,48 @@ const Processamento: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="border rounded-lg p-4">
                   <h3 className="text-sm font-medium text-muted-foreground">1° Turno</h3>
-                  <div className="mt-2 space-y-2">
-                    <p><span className="font-medium">Produzido:</span> {selectedProcessamento.kgTurno1?.toLocaleString('pt-BR') || 0} kg</p>
-                    <p><span className="font-medium">Planejado:</span> {selectedProcessamento.planejadoTurno1?.toLocaleString('pt-BR') || 0} kg</p>
-                    <p><span className="font-medium">Eficiência:</span> {selectedProcessamento.ctp1?.toFixed(1) || 0}%</p>
+                  <div className="mt-2 space-y-3">
+                    <div>
+                      <p><span className="font-medium">Produzido:</span> {selectedProcessamento.kgTurno1?.toLocaleString('pt-BR') || 0} kg</p>
+                      <p><span className="font-medium">Planejado:</span> {selectedProcessamento.planejadoTurno1?.toLocaleString('pt-BR') || 0} kg</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Eficiência:</span>
+                        <span className={`font-medium ${(selectedProcessamento.ctp1 || 0) >= 80 ? 'text-green-500' : 'text-white'}`}>
+                          {selectedProcessamento.ctp1?.toFixed(1) || 0}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-secondary rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${(selectedProcessamento.ctp1 || 0) >= 80 ? 'bg-green-500' : 'bg-primary'}`}
+                          style={{ width: `${Math.min((selectedProcessamento.ctp1 || 0), 100)}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="border rounded-lg p-4">
                   <h3 className="text-sm font-medium text-muted-foreground">2° Turno</h3>
-                  <div className="mt-2 space-y-2">
-                    <p><span className="font-medium">Produzido:</span> {selectedProcessamento.kgTurno2?.toLocaleString('pt-BR') || 0} kg</p>
-                    <p><span className="font-medium">Planejado:</span> {selectedProcessamento.planejadoTurno2?.toLocaleString('pt-BR') || 0} kg</p>
-                    <p><span className="font-medium">Eficiência:</span> {selectedProcessamento.ctp2?.toFixed(1) || 0}%</p>
+                  <div className="mt-2 space-y-3">
+                    <div>
+                      <p><span className="font-medium">Produzido:</span> {selectedProcessamento.kgTurno2?.toLocaleString('pt-BR') || 0} kg</p>
+                      <p><span className="font-medium">Planejado:</span> {selectedProcessamento.planejadoTurno2?.toLocaleString('pt-BR') || 0} kg</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Eficiência:</span>
+                        <span className={`font-medium ${(selectedProcessamento.ctp2 || 0) >= 80 ? 'text-green-500' : 'text-white'}`}>
+                          {selectedProcessamento.ctp2?.toFixed(1) || 0}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-secondary rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${(selectedProcessamento.ctp2 || 0) >= 80 ? 'bg-green-500' : 'bg-primary'}`}
+                          style={{ width: `${Math.min((selectedProcessamento.ctp2 || 0), 100)}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

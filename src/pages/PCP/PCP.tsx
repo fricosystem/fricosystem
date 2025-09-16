@@ -31,6 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tooltip as UITooltip, TooltipContent as UITooltipContent, TooltipProvider as UITooltipProvider, TooltipTrigger as UITooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -469,8 +470,20 @@ const PCP = () => {
                               disabled={(date) =>
                                 date > new Date() || date < new Date("2020-01-01")
                               }
+                              locale={ptBR}
                               initialFocus
                               className={cn("p-3 pointer-events-auto")}
+                              showOutsideDays={true}
+                              fixedWeeks={true}
+                              classNames={{
+                                day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary focus:text-primary-foreground",
+                                day_today: "bg-accent text-accent-foreground font-semibold border border-primary/20",
+                                day: "h-9 w-9 text-center font-normal hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
+                                head_cell: "text-muted-foreground w-9 font-normal text-[0.8rem] text-center",
+                                cell: "text-center p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                                nav_button: "hover:bg-accent hover:text-accent-foreground",
+                                caption: "flex justify-center pt-1 relative items-center"
+                              }}
                             />
                           </PopoverContent>
                         </Popover>
@@ -505,8 +518,20 @@ const PCP = () => {
                                 const startLimit = customStartDate || new Date("2020-01-01");
                                 return date > today || date < startLimit;
                               }}
+                              locale={ptBR}
                               initialFocus
                               className={cn("p-3 pointer-events-auto")}
+                              showOutsideDays={true}
+                              fixedWeeks={true}
+                              classNames={{
+                                day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary focus:text-primary-foreground",
+                                day_today: "bg-accent text-accent-foreground font-semibold border border-primary/20",
+                                day: "h-9 w-9 text-center font-normal hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
+                                head_cell: "text-muted-foreground w-9 font-normal text-[0.8rem] text-center",
+                                cell: "text-center p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                                nav_button: "hover:bg-accent hover:text-accent-foreground",
+                                caption: "flex justify-center pt-1 relative items-center"
+                              }}
                             />
                           </PopoverContent>
                         </Popover>
@@ -553,16 +578,32 @@ const PCP = () => {
                 title="Produção por Turno"
                 value={
                   <div className="space-y-1">
-                    <div>1° Turno: {((metrics.producaoPorTurno['1° Turno'] as any)?.quantidade || 0).toLocaleString()} KG</div>
-                    <div>2° Turno: {((metrics.producaoPorTurno['2° Turno'] as any)?.quantidade || 0).toLocaleString()} KG</div>
+                    <UITooltipProvider>
+                      <UITooltip>
+                        <UITooltipTrigger asChild>
+                          <div className="cursor-pointer">1° Turno: {((metrics.producaoPorTurno['1° Turno'] as any)?.quantidade || 0).toLocaleString()} KG</div>
+                        </UITooltipTrigger>
+                        <UITooltipContent>
+                          <p>Soma das quantidades produzidas no 1° turno</p>
+                        </UITooltipContent>
+                      </UITooltip>
+                    </UITooltipProvider>
+                    <UITooltipProvider>
+                      <UITooltip>
+                        <UITooltipTrigger asChild>
+                          <div className="cursor-pointer">2° Turno: {((metrics.producaoPorTurno['2° Turno'] as any)?.quantidade || 0).toLocaleString()} KG</div>
+                        </UITooltipTrigger>
+                        <UITooltipContent>
+                          <p>Soma das quantidades produzidas no 2° turno</p>
+                        </UITooltipContent>
+                      </UITooltip>
+                    </UITooltipProvider>
                   </div>
                 }
                 icon={<Clock className="h-4 w-4" />}
                 description="Turnos de Produção"
-                className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10 cursor-pointer hover:shadow-lg transition-all duration-200"
-                onClick={() => {
-                  // Mostra informações detalhadas dos turnos
-                }}
+                className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
+                disableHover={true}
               />
               
               <StatsCard
@@ -577,6 +618,7 @@ const PCP = () => {
                     : `${period === 'hoje' ? 'Hoje' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
                 }}
                 description="KG produzidos"
+                formula="Soma de toda produção realizada no período selecionado"
                 className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-900/10"
               />
              
@@ -584,23 +626,17 @@ const PCP = () => {
                 title="Planejado x Realizado"
                 value={`${pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0).toLocaleString()} / ${metrics.producaoTotal.toLocaleString()}`}
                 icon={<BarChart2 className="h-4 w-4" />}
-                trend={{
-                  value: pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0) > 0 
-                    ? Math.round((metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) * 100)
-                    : 0,
-                  positive: pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0) > 0 
-                    ? (metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) >= 0.85
-                    : false,
-                  label: pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0) === 0 ? "Sem planejamento" : 
-                    (metrics.producaoTotal / pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0)) >= 0.85 
-                      ? period === 'hoje' ? "Meta de Hoje atingida" 
-                        : period === 'semana' ? "Meta Semanal realizada"
-                        : period === 'mes' ? "Meta Mensal realizada"
-                        : period === 'ano' ? "Meta Anual realizada"
-                        : "Meta Personalizada realizada"
-                      : "Abaixo da meta"
-                }}
-                description="KG Planejado / KG Realizado"
+                description={`Dias trabalhados: ${(() => {
+                  const uniqueDates = new Set();
+                  pcpData.forEach(item => {
+                    if (item.data_inicio) {
+                      const date = item.data_inicio.toDate ? item.data_inicio.toDate() : new Date(item.data_inicio.seconds * 1000);
+                      uniqueDates.add(date.toDateString());
+                    }
+                  });
+                  return uniqueDates.size;
+                })()}`}
+                formula="Soma(quantidade_planejada) / Soma(quantidade_produzida)"
                 className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
               />
 
@@ -622,6 +658,7 @@ const PCP = () => {
                     : "Sem meta definida"
                 }}
                 description={`Meta: ${config?.meta_minima_mensal?.toLocaleString() || 0} KG | Produção total: ${metrics.producaoTotal.toLocaleString()} KG`}
+                formula="(Produção Total / Meta Mínima Mensal) × 100"
                 className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
               />
             </div>
@@ -699,30 +736,37 @@ const PCP = () => {
                       </CardContent>
                     </Card>
 
-                     {/* Setores mais produtivos */}
-                     {chartDataMemo.setoresChart.length > 0 && (
-                      <Card>
-                         <CardHeader>
-                           <CardTitle className="flex items-center gap-2">
-                             <Boxes className="h-5 w-5" /> Avaliação de Setores
-                           </CardTitle>
-                           <CardDescription>Métricas de produtividade dos setores</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="h-[300px]">
-                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart
-                                data={chartDataMemo.setoresChart.map(item => ({
-                                  ...item,
-                                  setor: item.setor === "Sem classificação" || item.setor === "NÃO CADASTRADO" || item.setor === "Não classificado" ? "Sem cadastro" : item.setor
-                                }))}
-                                layout="vertical"
-                                margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
-                                onClick={handleBarClick}
-                              >
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                                <XAxis type="number" />
-                                <YAxis dataKey="setor" type="category" width={80} />
+                      {/* Setores mais produtivos */}
+                      {chartDataMemo.setoresChart.length > 0 && (
+                       <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Boxes className="h-5 w-5" /> Avaliação de Setores
+                            </CardTitle>
+                            <CardDescription>Métricas de produtividade dos setores</CardDescription>
+                         </CardHeader>
+                         <CardContent>
+                           <div className="h-[300px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                  data={chartDataMemo.setoresChart.map(item => ({
+                                    ...item,
+                                    setor: item.setor === "Sem classificação" || item.setor === "NÃO CADASTRADO" || item.setor === "Não classificado" ? "Sem cadastro" : item.setor
+                                  }))}
+                                  layout="vertical"
+                                  margin={{ top: 20, right: 30, left: 60, bottom: 5 }}
+                                  onClick={handleBarClick}
+                                >
+                                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                  <XAxis type="number" />
+                                  <YAxis 
+                                    dataKey="setor" 
+                                    type="category" 
+                                    width={60}
+                                    tick={{ fontSize: 11, textAnchor: "end" }}
+                                    interval={0}
+                                    tickFormatter={(value) => value}
+                                  />
                                <Tooltip 
                                  contentStyle={{
                                    background: 'hsl(var(--background))',

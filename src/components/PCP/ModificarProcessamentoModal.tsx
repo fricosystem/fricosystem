@@ -12,7 +12,7 @@ import {
   Check,
   ChevronLeft
 } from "lucide-react";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useToast } from "@/components/ui/use-toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,6 +22,29 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+
+interface ProdutoPCP {
+  id: string;
+  codigo: string;
+  descricao_produto: string;
+  batch_receita_kg?: number;
+  classificacao?: string;
+}
+
+interface ProdutoProcessamento {
+  codigo: string;
+  kg: number;
+  cx: number;
+  planejamento: number;
+  texto_breve?: string;
+  descricao?: string;
+  nome?: string;
+  produto?: string;
+  timestamp?: Date;
+  date?: string;
+  descricao_produto?: string;
+  id?: string;
+}
 
 interface ProcessamentoData {
   id?: string;
@@ -64,8 +87,9 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
   documentCache,
   setDocumentCache
 }) => {
-  const [editedTurno1Data, setEditedTurno1Data] = useState<any[]>([]);
-  const [editedTurno2Data, setEditedTurno2Data] = useState<any[]>([]);
+  const [editedTurno1Data, setEditedTurno1Data] = useState<ProdutoProcessamento[]>([]);
+  const [editedTurno2Data, setEditedTurno2Data] = useState<ProdutoProcessamento[]>([]);
+  const [produtosPCP, setProdutosPCP] = useState<ProdutoPCP[]>([]);
   const [activeEditTab, setActiveEditTab] = useState<'1' | '2'>('1');
   const [isSaving, setIsSaving] = useState(false);
   const [searchTurno1, setSearchTurno1] = useState('');
@@ -88,14 +112,66 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
 
   const { toast } = useToast();
 
+  // Função para buscar produtos da coleção PCP_produtos
+  const fetchProdutosPCP = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "PCP_produtos"));
+      const produtosData: ProdutoPCP[] = [];
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data && data.codigo) {
+          produtosData.push({
+            id: doc.id,
+            ...data
+          } as ProdutoPCP);
+        }
+      });
+      return produtosData;
+    } catch (error) {
+      console.error("Error fetching produtos PCP:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar produtos do sistema",
+        variant: "destructive"
+      });
+      return [];
+    }
+  };
+
+  // Função para mesclar dados do processamento com produtos PCP
+  const mergeProcessamentoWithPCPProducts = (
+    processamentoData: any[], 
+    pcpProducts: ProdutoPCP[]
+  ): ProdutoProcessamento[] => {
+    return pcpProducts.map(pcpProduto => {
+      const processamentoItem = processamentoData.find(item => item.codigo === pcpProduto.codigo);
+      return {
+        codigo: pcpProduto.codigo,
+        kg: processamentoItem?.kg || 0,
+        cx: processamentoItem?.cx || 0,
+        planejamento: processamentoItem?.planejamento || 0,
+        texto_breve: pcpProduto.descricao_produto || "",
+        descricao_produto: pcpProduto.descricao_produto,
+        id: pcpProduto.id,
+        timestamp: processamentoItem?.timestamp || new Date(),
+        date: processamentoItem?.date || ""
+      };
+    });
+  };
+
   // UseEffect para carregar dados quando editingProcessamento muda
   useEffect(() => {
     const loadEditingData = async () => {
       if (!editingProcessamento) {
         setEditedTurno1Data([]);
         setEditedTurno2Data([]);
+        setProdutosPCP([]);
         return;
       }
+
+      // Carregar produtos PCP
+      const pcpProducts = await fetchProdutosPCP();
+      setProdutosPCP(pcpProducts);
 
       const possibleIds = [
         editingProcessamento.dataProcessamento, 
@@ -125,12 +201,21 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
       if (documentFound && docData) {
         const turno1Data = docData["1_turno"] || [];
         const turno2Data = docData["2_turno"] || [];
-        setEditedTurno1Data(turno1Data);
-        setEditedTurno2Data(turno2Data);
+        
+        // Mesclar com produtos PCP
+        const mergedTurno1Data = mergeProcessamentoWithPCPProducts(turno1Data, pcpProducts);
+        const mergedTurno2Data = mergeProcessamentoWithPCPProducts(turno2Data, pcpProducts);
+        
+        setEditedTurno1Data(mergedTurno1Data);
+        setEditedTurno2Data(mergedTurno2Data);
       } else {
         console.error("❌ Nenhum documento encontrado para IDs:", possibleIds);
-        setEditedTurno1Data([]);
-        setEditedTurno2Data([]);
+        // Se não encontrou documento, criar lista com produtos PCP zerados
+        const emptyTurno1Data = mergeProcessamentoWithPCPProducts([], pcpProducts);
+        const emptyTurno2Data = mergeProcessamentoWithPCPProducts([], pcpProducts);
+        
+        setEditedTurno1Data(emptyTurno1Data);
+        setEditedTurno2Data(emptyTurno2Data);
       }
     };
     
@@ -346,12 +431,20 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
           const newTimestamp = new Date(editSelectedDate);
           newTimestamp.setHours(12, 0, 0, 0);
 
-          const updatedTurno1Data = editedTurno1Data.map(item => ({
+          // Filtrar apenas produtos com quantidades > 0
+          const filteredTurno1Data = editedTurno1Data.filter(produto => 
+            produto.kg > 0 || produto.cx > 0 || produto.planejamento > 0
+          );
+          const filteredTurno2Data = editedTurno2Data.filter(produto => 
+            produto.kg > 0 || produto.cx > 0 || produto.planejamento > 0
+          );
+          
+          const updatedTurno1Data = filteredTurno1Data.map(item => ({
             ...item,
             timestamp: newTimestamp,
             date: newDate
           }));
-          const updatedTurno2Data = editedTurno2Data.map(item => ({
+          const updatedTurno2Data = filteredTurno2Data.map(item => ({
             ...item,
             timestamp: newTimestamp,
             date: newDate
@@ -385,9 +478,18 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
         }
       } else {
         const docRef = doc(db, "PCP", editingProcessamento.dataProcessamento);
+        
+        // Filtrar apenas produtos com quantidades > 0
+        const filteredTurno1Data = editedTurno1Data.filter(produto => 
+          produto.kg > 0 || produto.cx > 0 || produto.planejamento > 0
+        );
+        const filteredTurno2Data = editedTurno2Data.filter(produto => 
+          produto.kg > 0 || produto.cx > 0 || produto.planejamento > 0
+        );
+        
         await updateDoc(docRef, {
-          "1_turno": editedTurno1Data,
-          "2_turno": editedTurno2Data,
+          "1_turno": filteredTurno1Data,
+          "2_turno": filteredTurno2Data,
           updatedAt: new Date()
         });
         
@@ -457,20 +559,32 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
       const newTimestamp = new Date(mergeSelectedDate);
       newTimestamp.setHours(12, 0, 0, 0);
       
-      if (mergeSelectedTurnos.turno1 && editedTurno1Data.length > 0) {
-        dataToTransfer["1_turno"] = editedTurno1Data.map(item => ({
-          ...item,
-          timestamp: newTimestamp,
-          date: newDate
-        }));
+      if (mergeSelectedTurnos.turno1) {
+        // Filtrar apenas produtos com quantidades > 0
+        const filteredTurno1Data = editedTurno1Data.filter(produto => 
+          produto.kg > 0 || produto.cx > 0 || produto.planejamento > 0
+        );
+        if (filteredTurno1Data.length > 0) {
+          dataToTransfer["1_turno"] = filteredTurno1Data.map(item => ({
+            ...item,
+            timestamp: newTimestamp,
+            date: newDate
+          }));
+        }
       }
       
-      if (mergeSelectedTurnos.turno2 && editedTurno2Data.length > 0) {
-        dataToTransfer["2_turno"] = editedTurno2Data.map(item => ({
-          ...item,
-          timestamp: newTimestamp,
-          date: newDate
-        }));
+      if (mergeSelectedTurnos.turno2) {
+        // Filtrar apenas produtos com quantidades > 0
+        const filteredTurno2Data = editedTurno2Data.filter(produto => 
+          produto.kg > 0 || produto.cx > 0 || produto.planejamento > 0
+        );
+        if (filteredTurno2Data.length > 0) {
+          dataToTransfer["2_turno"] = filteredTurno2Data.map(item => ({
+            ...item,
+            timestamp: newTimestamp,
+            date: newDate
+          }));
+        }
       }
       
       // Aplicar modo de transferência (merge ou replace)
@@ -652,65 +766,68 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
                     />
                   </div>
                   
-                  {editedTurno1Data.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">
-                      Nenhum produto encontrado no 1° Turno
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {editedTurno1Data.map((produto, originalIndex) => {
-                        const searchLower = searchTurno1.toLowerCase();
-                        const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || '').toLowerCase();
-                        const codigo = (produto.codigo || '').toLowerCase();
-                        const shouldShow = descricao.includes(searchLower) || codigo.includes(searchLower);
-                        
-                        if (!shouldShow) return null;
-                        
-                        return (
-                          <div key={originalIndex} className="border rounded-lg p-4">
-                            <div className="mb-3">
-                              <div className="text-base font-medium text-foreground">
-                                Descrição: {produto.texto_breve || produto.descricao || produto.nome || produto.produto || 'Sem descrição'}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                Código: {produto.codigo}
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-3 gap-4">
-                              <div>
-                                <label className="text-sm font-medium">KG:</label>
-                                <Input 
-                                  type="number" 
-                                  value={produto.kg || '0'} 
-                                  onChange={(e) => updateTurnoField('1', originalIndex, 'kg', e.target.value)} 
-                                  className="mt-1" 
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">CX:</label>
-                                <Input 
-                                  type="number" 
-                                  value={produto.cx || '0'} 
-                                  onChange={(e) => updateTurnoField('1', originalIndex, 'cx', e.target.value)} 
-                                  className="mt-1" 
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">Planejado:</label>
-                                <Input 
-                                  type="number" 
-                                  value={produto.planejamento || '0'} 
-                                  onChange={(e) => updateTurnoField('1', originalIndex, 'planejamento', e.target.value)} 
-                                  className="mt-1" 
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                   {editedTurno1Data.length === 0 ? (
+                     <p className="text-center text-muted-foreground py-8">
+                       Nenhum produto encontrado no 1° Turno
+                     </p>
+                   ) : (
+                     <div className="space-y-3">
+                       {editedTurno1Data.map((produto, originalIndex) => {
+                         const searchLower = searchTurno1.toLowerCase();
+                         const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || produto.descricao_produto || '').toLowerCase();
+                         const codigo = (produto.codigo || '').toLowerCase();
+                         const shouldShow = descricao.includes(searchLower) || codigo.includes(searchLower);
+                         
+                         if (!shouldShow) return null;
+                         
+                         return (
+                           <div key={originalIndex} className="border rounded-lg p-4">
+                             <div className="mb-3">
+                               <div className="text-base font-medium text-foreground">
+                                 Descrição: {produto.texto_breve || produto.descricao || produto.nome || produto.produto || produto.descricao_produto || 'Sem descrição'}
+                               </div>
+                               <div className="text-sm text-muted-foreground">
+                                 Código: {produto.codigo}
+                               </div>
+                             </div>
+                             
+                             <div className="grid grid-cols-3 gap-4">
+                               <div>
+                                 <label className="text-sm font-medium">KG:</label>
+                                 <Input 
+                                   type="number" 
+                                   value={produto.kg || '0'} 
+                                   onChange={(e) => updateTurnoField('1', originalIndex, 'kg', e.target.value)} 
+                                   className="mt-1" 
+                                   step="0.01"
+                                 />
+                               </div>
+                               <div>
+                                 <label className="text-sm font-medium">CX:</label>
+                                 <Input 
+                                   type="number" 
+                                   value={produto.cx || '0'} 
+                                   onChange={(e) => updateTurnoField('1', originalIndex, 'cx', e.target.value)} 
+                                   className="mt-1" 
+                                   step="0.01"
+                                 />
+                               </div>
+                               <div>
+                                 <label className="text-sm font-medium">Planejado:</label>
+                                 <Input 
+                                   type="number" 
+                                   value={produto.planejamento || '0'} 
+                                   onChange={(e) => updateTurnoField('1', originalIndex, 'planejamento', e.target.value)} 
+                                   className="mt-1" 
+                                   step="0.01"
+                                 />
+                               </div>
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+                   )}
                 </div>
               )}
 
@@ -740,65 +857,68 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
                     />
                   </div>
                   
-                  {editedTurno2Data.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">
-                      Nenhum produto encontrado no 2° Turno
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {editedTurno2Data.map((produto, originalIndex) => {
-                        const searchLower = searchTurno2.toLowerCase();
-                        const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || '').toLowerCase();
-                        const codigo = (produto.codigo || '').toLowerCase();
-                        const shouldShow = descricao.includes(searchLower) || codigo.includes(searchLower);
-                        
-                        if (!shouldShow) return null;
-                        
-                        return (
-                          <div key={originalIndex} className="border rounded-lg p-4">
-                            <div className="mb-3">
-                              <div className="text-base font-medium text-foreground">
-                                Descrição: {produto.texto_breve || produto.descricao || produto.nome || produto.produto || 'Sem descrição'}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                Código: {produto.codigo}
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-3 gap-4">
-                              <div>
-                                <label className="text-sm font-medium">KG:</label>
-                                <Input 
-                                  type="number" 
-                                  value={produto.kg || '0'} 
-                                  onChange={(e) => updateTurnoField('2', originalIndex, 'kg', e.target.value)} 
-                                  className="mt-1" 
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">CX:</label>
-                                <Input 
-                                  type="number" 
-                                  value={produto.cx || '0'} 
-                                  onChange={(e) => updateTurnoField('2', originalIndex, 'cx', e.target.value)} 
-                                  className="mt-1" 
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">Planejado:</label>
-                                <Input 
-                                  type="number" 
-                                  value={produto.planejamento || '0'} 
-                                  onChange={(e) => updateTurnoField('2', originalIndex, 'planejamento', e.target.value)} 
-                                  className="mt-1" 
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                   {editedTurno2Data.length === 0 ? (
+                     <p className="text-center text-muted-foreground py-8">
+                       Nenhum produto encontrado no 2° Turno
+                     </p>
+                   ) : (
+                     <div className="space-y-3">
+                       {editedTurno2Data.map((produto, originalIndex) => {
+                         const searchLower = searchTurno2.toLowerCase();
+                         const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || produto.descricao_produto || '').toLowerCase();
+                         const codigo = (produto.codigo || '').toLowerCase();
+                         const shouldShow = descricao.includes(searchLower) || codigo.includes(searchLower);
+                         
+                         if (!shouldShow) return null;
+                         
+                         return (
+                           <div key={originalIndex} className="border rounded-lg p-4">
+                             <div className="mb-3">
+                               <div className="text-base font-medium text-foreground">
+                                 Descrição: {produto.texto_breve || produto.descricao || produto.nome || produto.produto || produto.descricao_produto || 'Sem descrição'}
+                               </div>
+                               <div className="text-sm text-muted-foreground">
+                                 Código: {produto.codigo}
+                               </div>
+                             </div>
+                             
+                             <div className="grid grid-cols-3 gap-4">
+                               <div>
+                                 <label className="text-sm font-medium">KG:</label>
+                                 <Input 
+                                   type="number" 
+                                   value={produto.kg || '0'} 
+                                   onChange={(e) => updateTurnoField('2', originalIndex, 'kg', e.target.value)} 
+                                   className="mt-1" 
+                                   step="0.01"
+                                 />
+                               </div>
+                               <div>
+                                 <label className="text-sm font-medium">CX:</label>
+                                 <Input 
+                                   type="number" 
+                                   value={produto.cx || '0'} 
+                                   onChange={(e) => updateTurnoField('2', originalIndex, 'cx', e.target.value)} 
+                                   className="mt-1" 
+                                   step="0.01"
+                                 />
+                               </div>
+                               <div>
+                                 <label className="text-sm font-medium">Planejado:</label>
+                                 <Input 
+                                   type="number" 
+                                   value={produto.planejamento || '0'} 
+                                   onChange={(e) => updateTurnoField('2', originalIndex, 'planejamento', e.target.value)} 
+                                   className="mt-1" 
+                                   step="0.01"
+                                 />
+                               </div>
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+                   )}
                 </div>
               )}
             </div>

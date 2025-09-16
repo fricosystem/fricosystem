@@ -119,11 +119,10 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
     return mergedProducts;
   };
 
-  // Filtrar produtos baseado no termo de busca
+  // Filtrar produtos baseado no termo de busca - apenas código exato
   const filterProducts = (products: Produto[], search: string) => {
     if (!search.trim()) return products;
-    const searchLower = search.toLowerCase();
-    return products.filter(produto => produto.codigo.toLowerCase().includes(searchLower) || produto.textoBreve.toLowerCase().includes(searchLower) || produto.descricao_produto && produto.descricao_produto.toLowerCase().includes(searchLower));
+    return products.filter(produto => produto.codigo === search.trim());
   };
 
   // Atualizar produtos filtrados quando search term ou produtos mudarem
@@ -691,7 +690,7 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
                 <div className="mb-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input type="text" placeholder="Pesquisar por código ou descrição..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+                    <Input type="text" placeholder="Pesquisar por código exato..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
                     Exibindo {produtosFiltrados.length} de {produtos.length} produtos
@@ -735,8 +734,22 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
                             </TableCell>
                           </TableRow>;
                   })}
-                    </TableBody>
-                  </Table>
+                     </TableBody>
+                     <TableFooter>
+                       <TableRow>
+                         <TableCell colSpan={2} className="font-semibold text-right">Total:</TableCell>
+                         <TableCell className="text-right font-bold">
+                           {formatNumber(produtos.reduce((sum, item) => sum + item.kg, 0))}
+                         </TableCell>
+                         <TableCell className="text-right font-bold">
+                           {formatNumber(produtos.reduce((sum, item) => sum + item.cx, 0))}
+                         </TableCell>
+                         <TableCell className="text-right font-bold">
+                           {formatNumber(produtos.reduce((sum, item) => sum + item.planejamento, 0))}
+                         </TableCell>
+                       </TableRow>
+                     </TableFooter>
+                   </Table>
                 </div>
 
                 <div className="mt-4 flex justify-between items-center">
