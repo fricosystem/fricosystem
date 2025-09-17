@@ -106,9 +106,14 @@ export const usePCP = () => {
     
     switch (period) {
       case 'hoje':
+        // Alterar para mostrar dados do dia anterior
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+        const endOfYesterday = new Date(startOfYesterday.getTime() + 24 * 60 * 60 * 1000);
         return {
-          start: Timestamp.fromDate(startOfDay),
-          end: Timestamp.fromDate(new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000))
+          start: Timestamp.fromDate(startOfYesterday),
+          end: Timestamp.fromDate(endOfYesterday)
         };
       
       case 'semana':

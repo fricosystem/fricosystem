@@ -543,68 +543,45 @@ const ResultadosFinais: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClassificacoes.map(pp => <React.Fragment key={pp.classificacao}>
-                      <TableRow className="cursor-pointer" onClick={() => toggleClassificacao(pp.classificacao)}>
-                        <TableCell className="font-medium">{pp.classificacao}</TableCell>
-                        <TableCell>
-                          {formatNumber(pp.produtos.reduce((sum, p) => sum + p.planoDiario, 0))} kg
-                        </TableCell>
-                        <TableCell>
-                          {formatNumber(pp.produtos.reduce((sum, p) => sum + p.kgTotal, 0))} kg
-                        </TableCell>
-                        <TableCell>
-                          <span className={pp.produtos.reduce((sum, p) => sum + (p.kgTotal - p.planoDiario), 0) >= 0 ? "text-green-600" : "text-red-600"}>
-                            {formatNumber(pp.produtos.reduce((sum, p) => sum + (p.kgTotal - p.planoDiario), 0))} kg
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {(() => {
-                        const totalProduzido = pp.produtos.reduce((sum, p) => sum + p.kgTotal, 0);
-                        const totalPlanejado = pp.produtos.reduce((sum, p) => sum + p.planoDiario, 0);
-                        return formatNumber(totalPlanejado > 0 ? totalProduzido / totalPlanejado * 100 : 0) + '%';
-                      })()}
-                        </TableCell>
-                        {periodType === "dia" && (
-                          <TableCell>
-                            {(() => {
-                              const totalProduzido = pp.produtos.reduce((sum, p) => sum + p.kgTotal, 0);
-                              const metaClassificacao = metas[pp.classificacao] || 0;
-                              const porcentagemMeta = metaClassificacao > 0 ? (totalProduzido / metaClassificacao) * 100 : 0;
-                              const cor = porcentagemMeta >= 80 ? "text-green-400" : "text-white";
-                              return (
-                                <span className={cor}>
-                                  {formatNumber(porcentagemMeta)}%
-                                </span>
-                              );
-                            })()}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                      
-                      {expandedClassificacao === pp.classificacao && <>
-                          {pp.produtos.map(produto => <TableRow key={`${pp.classificacao}-${produto.codigo}`} className="bg-muted/50">
-                              <TableCell className="pl-8">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground">{produto.codigo}</span>
-                                  <Separator orientation="vertical" className="h-4" />
-                                  <span>{produto.descricao}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>{formatNumber(produto.planoDiario)} kg</TableCell>
-                              <TableCell>{formatNumber(produto.kgTotal)} kg</TableCell>
+                  {filteredClassificacoes.map(pp => (
+                    <React.Fragment key={pp.classificacao}>
+                      {(() => {
+                        const term = (searchTerm || '').toLowerCase();
+                        const produtosVisiveis = term
+                          ? pp.produtos.filter(p =>
+                              p.codigo.toLowerCase().includes(term) ||
+                              p.descricao.toLowerCase().includes(term)
+                            )
+                          : pp.produtos;
+
+                        const totalPlanejado = produtosVisiveis.reduce((sum, p) => sum + p.planoDiario, 0);
+                        const totalProduzido = produtosVisiveis.reduce((sum, p) => sum + p.kgTotal, 0);
+                        const diff = totalProduzido - totalPlanejado;
+                        const eficiencia = totalPlanejado > 0 ? (totalProduzido / totalPlanejado) * 100 : 0;
+
+                        return (
+                          <>
+                            <TableRow className="cursor-pointer" onClick={() => toggleClassificacao(pp.classificacao)}>
+                              <TableCell className="font-medium">{pp.classificacao}</TableCell>
                               <TableCell>
-                                <span className={produto.kgTotal - produto.planoDiario >= 0 ? "text-green-600" : "text-red-600"}>
-                                  {formatNumber(produto.kgTotal - produto.planoDiario)} kg
+                                {formatNumber(totalPlanejado)} kg
+                              </TableCell>
+                              <TableCell>
+                                {formatNumber(totalProduzido)} kg
+                              </TableCell>
+                              <TableCell>
+                                <span className={diff >= 0 ? "text-green-600" : "text-red-600"}>
+                                  {formatNumber(diff)} kg
                                 </span>
                               </TableCell>
                               <TableCell>
-                                {formatNumber(produto.eficiencia)}%
+                                {formatNumber(eficiencia)}%
                               </TableCell>
                               {periodType === "dia" && (
                                 <TableCell>
                                   {(() => {
                                     const metaClassificacao = metas[pp.classificacao] || 0;
-                                    const porcentagemMeta = metaClassificacao > 0 ? (produto.kgTotal / metaClassificacao) * 100 : 0;
+                                    const porcentagemMeta = metaClassificacao > 0 ? (totalProduzido / metaClassificacao) * 100 : 0;
                                     const cor = porcentagemMeta >= 80 ? "text-green-400" : "text-white";
                                     return (
                                       <span className={cor}>
@@ -614,33 +591,76 @@ const ResultadosFinais: React.FC = () => {
                                   })()}
                                 </TableCell>
                               )}
-                            </TableRow>)}
-                          
-                          <TableRow className="font-medium bg-muted/25">
-                            <TableCell className="pl-8">Detalhes por Turno</TableCell>
-                            <TableCell colSpan={4}>
-                              <div className="grid grid-cols-4 gap-4">
-                                <div>
-                                  <p className="text-sm text-muted-foreground">1° Turno</p>
-                                  <p>{formatNumber(pp.produtos.reduce((sum, p) => sum + p.kgTurno1, 0))} kg</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground">2° Turno</p>
-                                  <p>{formatNumber(pp.produtos.reduce((sum, p) => sum + p.kgTurno2, 0))} kg</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Planejado 1°</p>
-                                  <p>{formatNumber(pp.produtos.reduce((sum, p) => sum + p.planejadoTurno1, 0))} kg</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Planejado 2°</p>
-                                  <p>{formatNumber(pp.produtos.reduce((sum, p) => sum + p.planejadoTurno2, 0))} kg</p>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        </>}
-                    </React.Fragment>)}
+                            </TableRow>
+
+                            {expandedClassificacao === pp.classificacao && (
+                              <>
+                                {produtosVisiveis.map(produto => (
+                                  <TableRow key={`${pp.classificacao}-${produto.codigo}`} className="bg-muted/50">
+                                    <TableCell className="pl-8">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-muted-foreground">{produto.codigo}</span>
+                                        <Separator orientation="vertical" className="h-4" />
+                                        <span>{produto.descricao}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>{formatNumber(produto.planoDiario)} kg</TableCell>
+                                    <TableCell>{formatNumber(produto.kgTotal)} kg</TableCell>
+                                    <TableCell>
+                                      <span className={(produto.kgTotal - produto.planoDiario) >= 0 ? "text-green-600" : "text-red-600"}>
+                                        {formatNumber(produto.kgTotal - produto.planoDiario)} kg
+                                      </span>
+                                    </TableCell>
+                                    <TableCell>
+                                      {formatNumber(produto.eficiencia)}%
+                                    </TableCell>
+                                    {periodType === "dia" && (
+                                      <TableCell>
+                                        {(() => {
+                                          const metaClassificacao = metas[pp.classificacao] || 0;
+                                          const porcentagemMeta = metaClassificacao > 0 ? (produto.kgTotal / metaClassificacao) * 100 : 0;
+                                          const cor = porcentagemMeta >= 80 ? "text-green-400" : "text-white";
+                                          return (
+                                            <span className={cor}>
+                                              {formatNumber(porcentagemMeta)}%
+                                            </span>
+                                          );
+                                        })()}
+                                      </TableCell>
+                                    )}
+                                  </TableRow>
+                                ))}
+
+                                <TableRow className="font-medium bg-muted/25">
+                                  <TableCell className="pl-8">Detalhes por Turno</TableCell>
+                                  <TableCell colSpan={4}>
+                                    <div className="grid grid-cols-4 gap-4">
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">1° Turno</p>
+                                        <p>{formatNumber(produtosVisiveis.reduce((sum, p) => sum + p.kgTurno1, 0))} kg</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">2° Turno</p>
+                                        <p>{formatNumber(produtosVisiveis.reduce((sum, p) => sum + p.kgTurno2, 0))} kg</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">Planejado 1°</p>
+                                        <p>{formatNumber(produtosVisiveis.reduce((sum, p) => sum + p.planejadoTurno1, 0))} kg</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">Planejado 2°</p>
+                                        <p>{formatNumber(produtosVisiveis.reduce((sum, p) => sum + p.planejadoTurno2, 0))} kg</p>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </React.Fragment>
+                  ))}
                 </TableBody>
               </Table>
             </TabsContent>

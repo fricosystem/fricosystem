@@ -159,7 +159,10 @@ const Metas = () => {
     });
   };
   const formatarNumeroInput = (valor: number): string => {
-    return valor.toLocaleString('pt-BR');
+    return valor.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   };
   const parseNumero = (valor: string): number => {
     const cleanValue = valor.replace(/\./g, '').replace(',', '.');

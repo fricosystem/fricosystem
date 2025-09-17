@@ -145,11 +145,15 @@ export const usePCPOptimized = () => {
     
     switch (period) {
       case 'hoje':
-        const endOfDay = new Date(startOfDay);
-        endOfDay.setHours(23, 59, 59, 999);
+        // Alterar para mostrar dados do dia anterior
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+        const endOfYesterday = new Date(startOfYesterday);
+        endOfYesterday.setHours(23, 59, 59, 999);
         return {
-          start: Timestamp.fromDate(startOfDay),
-          end: Timestamp.fromDate(endOfDay)
+          start: Timestamp.fromDate(startOfYesterday),
+          end: Timestamp.fromDate(endOfYesterday)
         };
       
       case 'semana':
@@ -597,25 +601,49 @@ export const usePCPOptimized = () => {
         quantidade: data.quantidade
       }));
 
-    const setoresChart = Object.entries(metrics.producaoPorSetor).map(([setor, producao], index) => ({
-      setor,
-      producao_real: producao,
-      fill: `hsl(${(index * 60) % 360}, 70%, 50%)`
-    }));
+    const setoresChart = Object.entries(metrics.producaoPorSetor)
+      .sort(([, a], [, b]) => b - a) // Ordena por produção decrescente (maior primeiro)
+      .map(([setor, producao], index) => ({
+        setor,
+        producao_real: producao,
+        fill: `hsl(${(index * 60) % 360}, 70%, 50%)`
+      }));
 
-    // Performance por Produto - 2 melhores produtos de cada classificação (sem repetir)
+    // Performance por Produto - 2 melhores produtos de cada classificação (agregado por período)
     const performanceChart = (() => {
-      // Agrupar produtos por classificação
-      const produtosPorClassificacao = pcpData.reduce((acc, item) => {
-        const classificacao = item.classificacao || 'Sem classificação';
-        if (!acc[classificacao]) {
-          acc[classificacao] = [];
-        }
-        acc[classificacao].push(item);
-        return acc;
-      }, {} as Record<string, typeof pcpData>);
+      // Usar a mesma lógica do ResultadosFinais.tsx para garantir consistência
+      const produtosPorClassificacao = new Map<string, Map<string, {
+        codigo: string;
+        produto_nome: string;
+        kgTotal: number;
+        planoDiario: number;
+        eficiencia: number;
+      }>>();
 
-      // Gerar array com cores aleatórias para cada classificação
+      pcpData.forEach(item => {
+        const classificacao = item.classificacao || 'Sem classificação';
+        const codigo = item.codigo || item.ordem_id.slice(-6);
+        if (!produtosPorClassificacao.has(classificacao)) {
+          produtosPorClassificacao.set(classificacao, new Map());
+        }
+        const mapa = produtosPorClassificacao.get(classificacao)!;
+        const existente = mapa.get(codigo);
+        if (!existente) {
+          mapa.set(codigo, {
+            codigo,
+            produto_nome: item.produto_nome,
+            kgTotal: item.quantidade_produzida || 0,
+            planoDiario: item.quantidade_planejada || 0,
+            eficiencia: 0
+          });
+        } else {
+          // Usar a mesma nomenclatura do ResultadosFinais
+          existente.kgTotal += item.quantidade_produzida || 0;
+          existente.planoDiario += item.quantidade_planejada || 0;
+        }
+      });
+
+      // Cores (mantém estrutura)
       const cores = [
         '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
         '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6366F1',
@@ -623,13 +651,11 @@ export const usePCPOptimized = () => {
         '#38BDF8', '#FBBF24', '#F472B6', '#34D399', '#A78BFA'
       ];
 
-      // Para cada classificação, pegar os 2 melhores produtos únicos (por eficiência e depois por produção)
       const dadosComSeparadores: any[] = [];
-      
-      Object.entries(produtosPorClassificacao)
-        .sort(([a], [b]) => a.localeCompare(b)) // Ordenar classificações alfabeticamente
-        .forEach(([classificacao, produtos], classIndex) => {
-          // Adicionar separador visual (exceto para a primeira classificação)
+
+      Array.from(produtosPorClassificacao.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .forEach(([classificacao, mapa], classIndex) => {
           if (classIndex > 0) {
             dadosComSeparadores.push({
               name: '─────────',
@@ -641,47 +667,34 @@ export const usePCPOptimized = () => {
             });
           }
 
-          // Agrupar produtos por código para evitar repetições
-          const produtosUnicosPorCodigo = produtos.reduce((acc, item) => {
-            const codigo = item.codigo || item.ordem_id.slice(-6);
-            if (!acc[codigo] || (item.eficiencia || 0) > (acc[codigo].eficiencia || 0)) {
-              acc[codigo] = item;
-            }
-            return acc;
-          }, {} as Record<string, typeof produtos[0]>);
+          const produtosAgregados = Array.from(mapa.values()).map(p => ({
+            ...p,
+            // Usar a mesma fórmula de cálculo do ResultadosFinais
+            eficiencia: p.planoDiario > 0 ? Math.round((p.kgTotal / p.planoDiario) * 100) : 0
+          }))
+          .filter(p => (p.kgTotal || 0) > 0 || (p.planoDiario || 0) > 0);
 
-          // Ordenar produtos únicos por eficiência (melhor performance) e depois por produção
-          // Filtrar apenas produtos com quantidade produzida > 0
-          const produtosOrdenados = Object.values(produtosUnicosPorCodigo)
-            .filter(item => (item.quantidade_produzida || 0) > 0) // Só produtos com produção > 0
+          const produtosOrdenados = produtosAgregados
             .sort((a, b) => {
-              const eficienciaA = a.eficiencia || 0;
-              const eficienciaB = b.eficiencia || 0;
-              
-              // Primeiro critério: eficiência
-              if (eficienciaB !== eficienciaA) {
-                return eficienciaB - eficienciaA;
-              }
-              
-              // Segundo critério: quantidade produzida
-              return (b.quantidade_produzida || 0) - (a.quantidade_produzida || 0);
+              if (b.eficiencia !== a.eficiencia) return b.eficiencia - a.eficiencia;
+              return (b.kgTotal || 0) - (a.kgTotal || 0);
             })
-            .slice(0, 2); // Pegar apenas os 2 melhores
-          
+            .slice(0, 2);
+
           const isUnicoProduto = produtosOrdenados.length === 1;
-          
-          produtosOrdenados.forEach((item, prodIndex) => {
+
+          produtosOrdenados.forEach((p, prodIndex) => {
             dadosComSeparadores.push({
-              name: `${item.codigo || item.ordem_id.slice(-6)}`,
-              produzido: item.quantidade_produzida || 0,
-              planejado: item.quantidade_planejada || 0,
-              eficiencia: item.eficiencia || 0,
+              name: p.codigo,
+              produzido: Math.round(p.kgTotal * 100) / 100,
+              planejado: Math.round(p.planoDiario * 100) / 100,
+              eficiencia: p.eficiencia,
               isSeparator: false,
               classificacao: classificacao,
-              posicao: prodIndex + 1, // 1º ou 2º melhor
-              produto_nome: item.produto_nome,
-              cor: cores[classIndex % cores.length], // Cor aleatória baseada na classificação
-              isUnicoProduto: isUnicoProduto
+              posicao: prodIndex + 1,
+              produto_nome: p.produto_nome,
+              cor: cores[classIndex % cores.length],
+              isUnicoProduto
             });
           });
         });
@@ -690,25 +703,79 @@ export const usePCPOptimized = () => {
     })();
 
     // Novo gráfico de Performance por Classificação
-    const performanceClassificacaoChart = Object.entries(
-      pcpData.reduce((acc, item) => {
-        const classificacao = item.classificacao || 'Sem classificação';
-        if (!acc[classificacao]) {
-          acc[classificacao] = {
-            produzido: 0,
-            planejado: 0
-          };
+    // Usar a mesma lógica de processamento do ResultadosFinais.tsx
+    const performanceClassificacaoChart = (() => {
+      // Agrupar dados por classificação e produto (mesma lógica do ResultadosFinais)
+      const grupoPorClassificacao = new Map<string, Map<string, any>>();
+      pcpData.forEach(item => {
+        const classificacao = item.classificacao || "Sem classificação";
+        const codigo = item.codigo;
+        if (!codigo) return;
+        
+        if (!grupoPorClassificacao.has(classificacao)) {
+          grupoPorClassificacao.set(classificacao, new Map());
         }
-        acc[classificacao].produzido += item.quantidade_produzida || 0;
-        acc[classificacao].planejado += item.quantidade_planejada || 0;
-        return acc;
-      }, {} as Record<string, { produzido: number; planejado: number }>)
-    ).map(([classificacao, data]) => ({
-      name: classificacao,
-      produzido: Math.round(data.produzido * 100) / 100,
-      planejado: Math.round(data.planejado * 100) / 100,
-      eficiencia: data.planejado > 0 ? Math.round((data.produzido / data.planejado) * 100) : 0
-    }));
+        
+        const grupoClassificacao = grupoPorClassificacao.get(classificacao)!;
+        if (!grupoClassificacao.has(codigo)) {
+          grupoClassificacao.set(codigo, {
+            codigo,
+            kgTotal: 0,
+            planoDiario: 0
+          });
+        }
+        
+        const produto = grupoClassificacao.get(codigo)!;
+        
+        // Acumular valores por produto
+        produto.kgTotal += item.quantidade_produzida || 0;
+        produto.planoDiario += item.quantidade_planejada || 0;
+      });
+      
+      // Converter para array e somar por classificação (mesma lógica do ResultadosFinais)
+      const resultado = [];
+      grupoPorClassificacao.forEach((produtos, classificacao) => {
+        const produtosArray = Array.from(produtos.values());
+        
+        // Somar todos os produtos da classificação (mesma lógica das linhas 562-564 do ResultadosFinais)
+        const totalProduzido = produtosArray.reduce((sum, p) => sum + p.kgTotal, 0);
+        const totalPlanejado = produtosArray.reduce((sum, p) => sum + p.planoDiario, 0);
+        const eficiencia = totalPlanejado > 0 ? Math.round((totalProduzido / totalPlanejado) * 100) : 0;
+        
+        resultado.push({
+          name: classificacao,
+          produzido: Math.round(totalProduzido * 100) / 100,
+          planejado: Math.round(totalPlanejado * 100) / 100,
+          eficiencia
+        });
+      });
+      
+      return resultado.sort((a, b) => {
+        // Ordenação personalizada: FRESCAIS primeiro na sequência específica
+        const ordemFrescais = ['FRESCAIS GROSSAS', 'FRESCAIS FINAS', 'FRESCAIS BANDEJAS'];
+        
+        const indexA = ordemFrescais.indexOf(a.name);
+        const indexB = ordemFrescais.indexOf(b.name);
+        
+        // Se ambos são FRESCAIS, ordenar pela sequência específica
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB;
+        }
+        
+        // Se apenas A é FRESCAIS, A vem primeiro
+        if (indexA !== -1 && indexB === -1) {
+          return -1;
+        }
+        
+        // Se apenas B é FRESCAIS, B vem primeiro
+        if (indexA === -1 && indexB !== -1) {
+          return 1;
+        }
+        
+        // Se nenhum é FRESCAIS, manter ordem alfabética
+        return a.name.localeCompare(b.name);
+      });
+    })();
 
     return {
       turnosChart,

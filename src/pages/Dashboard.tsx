@@ -141,10 +141,13 @@ const Dashboard = () => {
           const dataCriacao = new Date(produto.data_criacao);
           
           if (period === 'hoje') {
-            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const endOfDay = new Date(startOfDay);
-            endOfDay.setHours(23, 59, 59, 999);
-            return dataCriacao >= startOfDay && dataCriacao <= endOfDay;
+            // Alterar para mostrar dados do dia anterior
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+            const endOfYesterday = new Date(startOfYesterday);
+            endOfYesterday.setHours(23, 59, 59, 999);
+            return dataCriacao >= startOfYesterday && dataCriacao <= endOfYesterday;
           } else if (period === 'semana') {
             const startOfWeek = new Date(now);
             startOfWeek.setDate(now.getDate() - now.getDay());
@@ -287,18 +290,20 @@ const Dashboard = () => {
     let data: { name: string; transferencias: number }[] = [];
     
     if (period === "hoje") {
-      // Filtro mais preciso para hoje - considerar apenas o dia atual
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const endOfDay = new Date(startOfDay);
-      endOfDay.setHours(23, 59, 59, 999);
+      // Filtro para o dia anterior
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+      const endOfYesterday = new Date(startOfYesterday);
+      endOfYesterday.setHours(23, 59, 59, 999);
       
-      // Por hora hoje
+      // Por hora ontem
       const hours = Array.from({ length: 24 }, (_, i) => i);
       data = hours.map(hour => ({
         name: `${hour}h`,
         transferencias: transferencias.filter(t => {
           const date = convertFirebaseTimestamp(t.data_transferencia);
-          return date >= startOfDay && date <= endOfDay && date.getHours() === hour;
+          return date >= startOfYesterday && date <= endOfYesterday && date.getHours() === hour;
         }).reduce((sum, t) => sum + (t.quantidade || 0), 0)
       }));
     } else if (period === "semana") {
@@ -561,8 +566,8 @@ const Dashboard = () => {
                       <Truck className="h-5 w-5" /> Movimentação de Estoque
                     </CardTitle>
                     <CardDescription>
-                      {period === "hoje" ? "Hoje por hora" : 
-                       period === "semana" ? "Esta semana por dia" : 
+                      {period === "hoje" ? "Ontem por hora" : 
+                       period === "semana" ? "Esta semana por dia" :
                        period === "mes" ? "Este mês por dia" : "Este ano por mês"}
                     </CardDescription>
                   </div>
