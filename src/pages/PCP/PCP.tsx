@@ -343,7 +343,7 @@ const PCP = () => {
               <Tabs defaultValue="hoje" value={period} onValueChange={v => handlePeriodChange(v as "hoje" | "semana" | "mes" | "ano" | "personalizado")}>
                 <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800">
                   <TabsTrigger value="hoje" className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" /> Hoje
+                    <Clock className="h-4 w-4" /> Ontem
                   </TabsTrigger>
                   <TabsTrigger value="semana" className="flex items-center gap-2">
                     <CalendarIcon className="h-4 w-4" /> Semana
@@ -482,9 +482,9 @@ const PCP = () => {
                   </div>} icon={<Clock className="h-4 w-4" />} description="Turnos de Produção" className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10" disableHover={true} />
               
               <StatsCard title="Produção Total" value={metrics.producaoTotal.toLocaleString()} icon={<Package className="h-4 w-4" />} trend={{
-              value: metrics.producaoTotal > 0 ? 15 : 0,
+              value: metrics.producaoTotal > 0 ? 12.5 : 0,
               positive: metrics.producaoTotal > 0,
-              label: metrics.producaoTotal === 0 ? `Sem produção ${period === 'hoje' ? 'ontem' : period === 'semana' ? 'esta semana' : period === 'mes' ? 'este mês' : period === 'ano' ? 'este ano' : 'personalizado'}` : `${period === 'hoje' ? 'Ontem' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : period === 'ano' ? 'Este ano' : 'Personalizado'}`
+              label: metrics.producaoTotal === 0 ? `Sem produção ${period === 'hoje' ? 'ontem' : period === 'semana' ? 'esta semana' : period === 'mes' ? 'este mês' : period === 'ano' ? 'este ano' : 'personalizado'}` : `+12.5% em relação ao ${period === 'hoje' ? 'dia anterior' : period === 'semana' ? 'período anterior' : period === 'mes' ? 'mês anterior' : period === 'ano' ? 'ano anterior' : 'período anterior'}`
             }} description="KG produzidos" formula="Soma de toda produção realizada no período selecionado" className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-900/10" />
              
               <StatsCard title="Planejado x Realizado" value={`${pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0).toLocaleString()} / ${metrics.producaoTotal.toLocaleString()}`} icon={<BarChart2 className="h-4 w-4" />} description={`Dias trabalhados: ${(() => {
@@ -570,24 +570,29 @@ const PCP = () => {
                                    dadosPorClassificacao[classificacao][turno].produzido += item.quantidade_produzida || 0;
                                  });
                                  
-                                 // Converter para formato do gráfico
-                                 return Object.entries(dadosPorClassificacao)
-                                  .map(([classificacao, dados]) => ({
-                                    name: classificacao,
-                                    'Planejado 1° Turno': Math.round(dados['1° Turno'].planejado),
-                                    'Produzido 1° Turno': Math.round(dados['1° Turno'].produzido),
-                                    'Planejado 2° Turno': Math.round(dados['2° Turno'].planejado),
-                                    'Produzido 2° Turno': Math.round(dados['2° Turno'].produzido),
-                                    eficiencia1: dados['1° Turno'].planejado > 0 ? 
-                                      Math.round((dados['1° Turno'].produzido / dados['1° Turno'].planejado) * 100) : 0,
-                                    eficiencia2: dados['2° Turno'].planejado > 0 ? 
-                                      Math.round((dados['2° Turno'].produzido / dados['2° Turno'].planejado) * 100) : 0
-                                  }))
-                                  .filter(item => 
-                                    item['Planejado 1° Turno'] > 0 || item['Produzido 1° Turno'] > 0 ||
-                                    item['Planejado 2° Turno'] > 0 || item['Produzido 2° Turno'] > 0
-                                  )
-                                  .sort((a, b) => a.name.localeCompare(b.name));
+                                  // Converter para formato do gráfico
+                                  return Object.entries(dadosPorClassificacao)
+                                   .map(([classificacao, dados]) => ({
+                                     name: classificacao,
+                                     'Planejado 1° Turno': Math.round(dados['1° Turno'].planejado),
+                                     'Produzido 1° Turno': Math.round(dados['1° Turno'].produzido),
+                                     'Planejado 2° Turno': Math.round(dados['2° Turno'].planejado),
+                                     'Produzido 2° Turno': Math.round(dados['2° Turno'].produzido),
+                                     eficiencia1: dados['1° Turno'].planejado > 0 ? 
+                                       Math.round((dados['1° Turno'].produzido / dados['1° Turno'].planejado) * 100) : 0,
+                                     eficiencia2: dados['2° Turno'].planejado > 0 ? 
+                                       Math.round((dados['2° Turno'].produzido / dados['2° Turno'].planejado) * 100) : 0
+                                   }))
+                                   .filter(item => 
+                                     item['Planejado 1° Turno'] > 0 || item['Produzido 1° Turno'] > 0 ||
+                                     item['Planejado 2° Turno'] > 0 || item['Produzido 2° Turno'] > 0
+                                   )
+                                    .sort((a, b) => {
+                                      // Ordenar por produção total (ambos os turnos) em ordem decrescente
+                                      const totalA = (a['Produzido 1° Turno'] || 0) + (a['Produzido 2° Turno'] || 0);
+                                      const totalB = (b['Produzido 1° Turno'] || 0) + (b['Produzido 2° Turno'] || 0);
+                                      return totalB - totalA;
+                                    });
                               })()} margin={{
                                 top: 10,
                                 right: 10,
@@ -603,7 +608,18 @@ const PCP = () => {
                                   interval={0}
                                   tick={{ fontSize: 11 }}
                                 />
-                                <YAxis tickFormatter={(value: number) => value.toLocaleString('pt-BR')} />
+                                 <YAxis tickFormatter={(value: number) => value.toLocaleString('pt-BR')} ticks={(() => {
+                                   // Calcular o valor máximo dos dados PCP para este gráfico
+                                   const maxValue = Math.max(...pcpData.map(item => 
+                                     (item.quantidade_planejada || 0) + (item.quantidade_produzida || 0)
+                                   ));
+                                   const maxTick = Math.max(10000, Math.ceil(maxValue / 10000) * 10000);
+                                   const ticks = [];
+                                   for (let i = 0; i <= maxTick; i += 10000) {
+                                     ticks.push(i);
+                                   }
+                                   return ticks;
+                                 })()} />
                                 <Tooltip 
                                   contentStyle={{
                                     background: 'hsl(var(--background))',

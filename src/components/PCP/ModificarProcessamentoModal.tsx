@@ -772,11 +772,12 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
                      </p>
                    ) : (
                      <div className="space-y-3">
-                       {editedTurno1Data.map((produto, originalIndex) => {
-                         const searchLower = searchTurno1.toLowerCase();
-                         const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || produto.descricao_produto || '').toLowerCase();
-                         const codigo = (produto.codigo || '').toLowerCase();
-                         const shouldShow = descricao.includes(searchLower) || codigo.includes(searchLower);
+                        {editedTurno1Data.map((produto, originalIndex) => {
+                          const searchLower = searchTurno1.toLowerCase();
+                          const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || produto.descricao_produto || '').toLowerCase();
+                          const codigo = (produto.codigo || '').toLowerCase();
+                          // Busca exata por código ou busca por substring na descrição
+                          const shouldShow = searchLower === '' || codigo === searchLower || descricao.includes(searchLower);
                          
                          if (!shouldShow) return null;
                          
@@ -863,11 +864,12 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
                      </p>
                    ) : (
                      <div className="space-y-3">
-                       {editedTurno2Data.map((produto, originalIndex) => {
-                         const searchLower = searchTurno2.toLowerCase();
-                         const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || produto.descricao_produto || '').toLowerCase();
-                         const codigo = (produto.codigo || '').toLowerCase();
-                         const shouldShow = descricao.includes(searchLower) || codigo.includes(searchLower);
+                        {editedTurno2Data.map((produto, originalIndex) => {
+                          const searchLower = searchTurno2.toLowerCase();
+                          const descricao = (produto.texto_breve || produto.descricao || produto.nome || produto.produto || produto.descricao_produto || '').toLowerCase();
+                          const codigo = (produto.codigo || '').toLowerCase();
+                          // Busca exata por código ou busca por substring na descrição
+                          const shouldShow = searchLower === '' || codigo === searchLower || descricao.includes(searchLower);
                          
                          if (!shouldShow) return null;
                          
