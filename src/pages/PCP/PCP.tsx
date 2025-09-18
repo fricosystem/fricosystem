@@ -484,7 +484,7 @@ const PCP = () => {
               <StatsCard title="Produção Total" value={metrics.producaoTotal.toLocaleString()} icon={<Package className="h-4 w-4" />} trend={{
               value: metrics.producaoTotal > 0 ? 15 : 0,
               positive: metrics.producaoTotal > 0,
-              label: metrics.producaoTotal === 0 ? `Sem produção ${period === 'hoje' ? 'ontem' : period === 'semana' ? 'esta semana' : period === 'mes' ? 'este mês' : 'este ano'}` : `${period === 'hoje' ? 'Ontem' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : 'Este ano'}`
+              label: metrics.producaoTotal === 0 ? `Sem produção ${period === 'hoje' ? 'ontem' : period === 'semana' ? 'esta semana' : period === 'mes' ? 'este mês' : period === 'ano' ? 'este ano' : 'personalizado'}` : `${period === 'hoje' ? 'Ontem' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : period === 'ano' ? 'Este ano' : 'Personalizado'}`
             }} description="KG produzidos" formula="Soma de toda produção realizada no período selecionado" className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-900/10" />
              
               <StatsCard title="Planejado x Realizado" value={`${pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0).toLocaleString()} / ${metrics.producaoTotal.toLocaleString()}`} icon={<BarChart2 className="h-4 w-4" />} description={`Dias trabalhados: ${(() => {
@@ -498,11 +498,30 @@ const PCP = () => {
               return uniqueDates.size;
             })()}`} formula="Soma(quantidade_planejada) / Soma(quantidade_produzida)" className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10" />
 
-              <StatsCard title="Total Geral em %" value={`${config?.meta_minima_mensal && config.meta_minima_mensal > 0 ? Math.round(metrics.producaoTotal / config.meta_minima_mensal * 100) : 0}%`} icon={<Boxes className="h-4 w-4" />} trend={{
-              value: config?.meta_minima_mensal && config.meta_minima_mensal > 0 ? Math.round(metrics.producaoTotal / config.meta_minima_mensal * 100) : 0,
-              positive: config?.meta_minima_mensal && config.meta_minima_mensal > 0 ? metrics.producaoTotal / config.meta_minima_mensal * 100 >= 80 : false,
-              label: config?.meta_minima_mensal && config.meta_minima_mensal > 0 ? metrics.producaoTotal / config.meta_minima_mensal * 100 >= 80 ? "Meta atingida" : "Abaixo da meta" : "Sem meta definida"
-            }} description={`Meta: ${config?.meta_minima_mensal?.toLocaleString() || 0} KG | Produção total: ${metrics.producaoTotal.toLocaleString()} KG`} formula="(Produção Total / Meta Mínima Mensal) × 100" className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10" />
+              <StatsCard title="Eficiência Média" value={`${(() => {
+                const totalPlanejado = pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0);
+                const totalProduzido = metrics.producaoTotal;
+                return totalPlanejado > 0 ? Math.round((totalProduzido / totalPlanejado) * 100) : 0;
+              })()}%`} icon={<Boxes className="h-4 w-4" />} trend={{
+              value: (() => {
+                const totalPlanejado = pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0);
+                const totalProduzido = metrics.producaoTotal;
+                return totalPlanejado > 0 ? Math.round((totalProduzido / totalPlanejado) * 100) : 0;
+              })(),
+              positive: (() => {
+                const totalPlanejado = pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0);
+                const totalProduzido = metrics.producaoTotal;
+                return totalPlanejado > 0 ? (totalProduzido / totalPlanejado) * 100 >= 80 : false;
+              })(),
+              label: (() => {
+                const totalPlanejado = pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0);
+                const totalProduzido = metrics.producaoTotal;
+                const eficiencia = totalPlanejado > 0 ? (totalProduzido / totalPlanejado) * 100 : 0;
+                const periodoLabel = period === 'hoje' ? 'Ontem' : period === 'semana' ? 'Esta semana' : period === 'mes' ? 'Este mês' : period === 'ano' ? 'Este ano' : 'Personalizado';
+                const eficienciaLabel = eficiencia >= 100 ? "Eficiência alta" : eficiencia >= 80 ? "Eficiência boa" : "Eficiência baixa";
+                return `${eficienciaLabel} - ${periodoLabel}`;
+              })()
+            }} description={`Planejado: ${pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0).toLocaleString()} KG | Produzido: ${metrics.producaoTotal.toLocaleString()} KG`} formula="(Total Produzido ÷ Total Planejado) × 100" className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10" />
             </div>
 
             {/* Mensagem quando não há dados */}

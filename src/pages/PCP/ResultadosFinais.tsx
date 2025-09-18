@@ -376,7 +376,7 @@ const ResultadosFinais: React.FC = () => {
               <Label>Período</Label>
               <Tabs value={periodType} onValueChange={(value: PeriodType) => setPeriodType(value)} className="w-full">
                 <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="dia">Dia</TabsTrigger>
+                  <TabsTrigger value="dia">Ontem</TabsTrigger>
                   <TabsTrigger value="semana">Semana</TabsTrigger>
                   <TabsTrigger value="mes">Mês</TabsTrigger>
                   <TabsTrigger value="ano">Ano</TabsTrigger>

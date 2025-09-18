@@ -963,7 +963,6 @@ const Processamento: React.FC = () => {
                   <TableHead>Turnos Enviados</TableHead>
                   <TableHead>Total Planejado (kg)</TableHead>
                   <TableHead>Total Produzido (kg)</TableHead>
-                  <TableHead className="hidden md:table-cell">Total Produzido (cx)</TableHead>
                   <TableHead>Diferença (kg)</TableHead>
                   <TableHead>Eficiência Geral</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -998,9 +997,6 @@ const Processamento: React.FC = () => {
                       minimumFractionDigits: 2
                     })}</TableCell>
                       <TableCell>{(processamento.kgTotal || 0).toLocaleString('pt-BR', {
-                      minimumFractionDigits: 2
-                    })}</TableCell>
-                      <TableCell className="hidden md:table-cell">{(processamento.cxTotal || 0).toLocaleString('pt-BR', {
                       minimumFractionDigits: 2
                     })}</TableCell>
                       <TableCell>

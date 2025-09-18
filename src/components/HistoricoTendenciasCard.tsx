@@ -405,7 +405,7 @@ export const HistoricoTendenciasCard = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Target className={`h-4 w-4 ${tendencia.bateuMetaHoje ? 'text-green-500' : 'text-orange-500'}`} />
-                <span className="text-sm font-medium">Desempenho Hoje</span>
+                <span className="text-sm font-medium">Desempenho de Ontem</span>
               </div>
               <div className="flex items-baseline gap-2">
                 <p className={`text-2xl font-bold ${tendencia.bateuMetaHoje ? 'text-green-600' : 'text-orange-600'}`}>
