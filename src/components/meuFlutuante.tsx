@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCarrinho } from "@/hooks/useCarrinho";
@@ -7,16 +6,16 @@ import { db } from "@/firebase/firebase";
 import { collection, query, where, getDocs, doc, setDoc, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { 
-  Calendar, Settings, Box, ClipboardList, 
-  ShoppingCart, Factory, UserRound, Wallet, LayoutDashboard,
-  PackageSearch, Warehouse, Truck, Receipt, BarChart, LogOut,
-  FileText, Sun, Moon, Layers, Briefcase, Boxes, Network,
-  ArrowLeftRight, ArchiveRestore, Clipboard, ClipboardCheck,
-  Package, CheckSquare, HardHat, GraduationCap, BarChart3,
-  Users, Monitor, ArrowLeftFromLine, ArrowDownFromLine, Home,
-  Building2, FileSpreadsheet, AlertTriangle, TrendingUp, PieChart,
-  Bell, PackagePlus, Ruler, Wrench, ShoppingBag, CalendarCheck,
-  ListChecks, Download, Database
+  Layers, Home, Boxes, Package, ClipboardList, Truck, Warehouse, 
+  ShoppingCart, AlertTriangle, FileText, Users, Wallet, TrendingUp, 
+  Settings, FileSpreadsheet, ListChecks, PackagePlus, Ruler, Wrench, 
+  ShoppingBag, Factory, Receipt, CalendarCheck, PieChart, Bell, 
+  PackageSearch, Download, Database, LogOut, Sun, Moon, ChevronUp, 
+  ChevronDown, UserRound, Briefcase, Building2, BarChart3, 
+  ShoppingBasket, Scan, FileInput, ReceiptText, ArrowRightLeft, 
+  MapPin, TreePine, FileOutput, ClipboardCheck, RotateCcw, UserCheck, 
+  Building, DollarSign, Calculator, Upload, Shield, Cog, PackageCheck, 
+  Gavel, X, Menu
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -31,6 +30,7 @@ const FuturisticFloatingMenu = () => {
   const [minimized, setMinimized] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
   
   const isAdmin = userData?.cargo === "DESENVOLVEDOR";
 
@@ -45,7 +45,7 @@ const FuturisticFloatingMenu = () => {
     }
   }, [userData, navigate, toast]);
 
-  const filterItemsByPermission = (items: any[]) => {
+  const filterItemsByPermission = (items) => {
     if (!userData?.permissoes) return items;
     if (userData.permissoes.includes("tudo")) return items;
     return items.filter(item => {
@@ -79,7 +79,7 @@ const FuturisticFloatingMenu = () => {
         snapshot.forEach((doc) => {
           const data = doc.data();
           if (data.solicitante && Array.isArray(data.solicitante)) {
-            const hasPending = data.solicitante.some((item: any) => 
+            const hasPending = data.solicitante.some((item) => 
               item.status && item.status.toLowerCase() === "pendente"
             );
             if (hasPending) count++;
@@ -118,7 +118,7 @@ const FuturisticFloatingMenu = () => {
         if (!querySnapshot.empty) {
           const userDoc = querySnapshot.docs[0];
           if (userDoc.data().tema) {
-            const savedTheme = userDoc.data().tema as "light" | "dark";
+            const savedTheme = userDoc.data().tema;
             setTheme(savedTheme);
             document.documentElement.classList.toggle("dark", savedTheme === "dark");
           } else {
@@ -273,7 +273,7 @@ const FuturisticFloatingMenu = () => {
       label: "Principal",
       items: filterItemsByPermission([
         { id: "dashboard", icon: <BarChart3 size={20} />, label: "Dashboard Geral", path: "/dashboard", permission: "dashboard" },
-        { id: "fornecedor-produtos", icon: <ShoppingBag size={20} />, label: "Ordens de Compra", path: "/fornecedor-produtos", permission: "ordens_compra" },
+        { id: "fornecedor-produtos", icon: <ShoppingBasket size={20} />, label: "Ordens de Compra", path: "/fornecedor-produtos", permission: "ordens_compra" },
       ]),
     },
     {
@@ -281,13 +281,13 @@ const FuturisticFloatingMenu = () => {
       icon: <Boxes size={24} />,
       label: "Estoque",
       items: filterItemsByPermission([
-        { id: "produtos", icon: <CheckSquare size={20} />, label: "Produtos", path: "/produtos", permission: "produtos" },
-        { id: "inventario", icon: <PackageSearch size={20} />, label: "Inventário", path: "/inventario", permission: "inventario" },
+        { id: "produtos", icon: <PackageCheck size={20} />, label: "Produtos", path: "/produtos", permission: "produtos" },
+        { id: "inventario", icon: <Scan size={20} />, label: "Inventário", path: "/inventario", permission: "inventario" },
         { id: "entrada-manual", icon: <PackagePlus size={20} />, label: "Entrada Manual", path: "/entrada-manual", permission: "entrada_manual" },
-        { id: "notas-fiscais", icon: <FileText size={20} />, label: "NF - Entrada XML", path: "/notas-fiscais", permission: "notas_fiscais" },
-        { id: "transferencia", icon: <ArrowLeftFromLine size={20} />, label: "Transferência", path: "/transferencia", permission: "transferencia" },
-        { id: "enderecamento", icon: <Warehouse size={20} />, label: "Endereçamento", path: "/enderecamento", permission: "enderecamento" },
-        { id: "medida-de-lenha", icon: <Ruler size={20} />, label: "Cubagem e medida de Lenha", path: "/medida-de-lenha", permission: "medida_lenha" },
+        { id: "notas-fiscais", icon: <FileInput size={20} />, label: "NF - Entrada XML", path: "/notas-fiscais", permission: "notas_fiscais" },
+        { id: "transferencia", icon: <ArrowRightLeft size={20} />, label: "Transferência", path: "/transferencia", permission: "transferencia" },
+        { id: "enderecamento", icon: <MapPin size={20} />, label: "Endereçamento", path: "/enderecamento", permission: "enderecamento" },
+        { id: "medida-de-lenha", icon: <TreePine size={20} />, label: "Cubagem e medida de Lenha", path: "/medida-de-lenha", permission: "medida_lenha" },
         { id: "relatorios", icon: <FileSpreadsheet size={20} />, label: "Relatórios", path: "/relatorios", permission: "relatorios" },
       ]),
     },
@@ -299,7 +299,7 @@ const FuturisticFloatingMenu = () => {
         { id: "requisicoes", icon: <ClipboardCheck size={20} />, label: "Requisições", path: "/requisicoes", badge: pendingRequestsCount > 0 ? pendingRequestsCount : null, permission: "requisicoes" },
         { id: "carrinho", icon: <ShoppingCart size={20} />, label: "Carrinho", path: "/carrinho", badge: totalItens > 0 ? totalItens : null, permission: "carrinho" },
         { id: "ordensServico", icon: <Wrench size={20} />, label: "Ordens de Serviço", path: "/ordensServico", permission: "ordens_servico" },
-        { id: "devolucao", icon: <ArchiveRestore size={20} />, label: "Devoluções", path: "/devolucao", permission: "devolucoes" },
+        { id: "devolucao", icon: <RotateCcw size={20} />, label: "Devoluções", path: "/devolucao", permission: "devolucoes" },
       ]),
     },
     {
@@ -308,7 +308,7 @@ const FuturisticFloatingMenu = () => {
       label: "Compras",
       items: filterItemsByPermission([
         { id: "compras", icon: <ShoppingBag size={20} />, label: "Compras", path: "/compras", permission: "compras" },
-        { id: "fornecedores", icon: <Building2 size={20} />, label: "Fornecedores", path: "/fornecedores", permission: "fornecedores" },
+        { id: "fornecedores", icon: <Building size={20} />, label: "Fornecedores", path: "/fornecedores", permission: "fornecedores" },
       ]),
     },
     {
@@ -316,7 +316,7 @@ const FuturisticFloatingMenu = () => {
       icon: <Wallet size={24} />,
       label: "Financeiro",
       items: filterItemsByPermission([
-        { id: "notas-fiscais-lancamento", icon: <Receipt size={20} />, label: "NF - Lançamento", path: "/notas-fiscais-lancamento", permission: "notas_fiscais_lancamento" },
+        { id: "notas-fiscais-lancamento", icon: <ReceiptText size={20} />, label: "NF - Lançamento", path: "/notas-fiscais-lancamento", permission: "notas_fiscais_lancamento" },
         { id: "centro-custo", icon: <PieChart size={20} />, label: "Centro de Custo", path: "/centro-custo", permission: "centro_custo" },
       ]),
     },
@@ -325,7 +325,7 @@ const FuturisticFloatingMenu = () => {
       icon: <FileText size={24} />,
       label: "Utilitários",
       items: filterItemsByPermission([
-        { id: "importar-planilha", icon: <ArrowDownFromLine size={20} />, label: "Importar dados", path: "/importar-planilha", permission: "importar_dados" },
+        { id: "importar-planilha", icon: <Upload size={20} />, label: "Importar dados", path: "/importar-planilha", permission: "importar_dados" },
         { id: "exportacoes", icon: <Download size={20} />, label: "Exportar dados", path: "/exportacoes", permission: "exportar_dados" },
         { id: "backup-dados", icon: <Database size={20} />, label: "Backup/Restauração", path: "/backup-dados", permission: "backup_dados" },
       ]),
@@ -335,7 +335,7 @@ const FuturisticFloatingMenu = () => {
       icon: <Factory size={24} />,
       label: "Produção",
       items: filterItemsByPermission([
-        { id: "pcp", icon: <HardHat size={20} />, label: "PCP", path: "/pcp", permission: "pcp" },
+        { id: "pcp", icon: <TrendingUp size={20} />, label: "PCP", path: "/pcp", permission: "pcp" },
       ]),
     },
     ...(isAdmin ? [{
@@ -343,30 +343,33 @@ const FuturisticFloatingMenu = () => {
       icon: <Settings size={24} />,
       label: "Administrativo",
       items: filterItemsByPermission([
-        { id: "gestao-usuarios", icon: <Users size={20} />, label: "Gestão de Usuários", path: "/gestao-usuarios", permission: "gestao_usuarios" },
-        { id: "configuracoes-sistema", icon: <Settings size={20} />, label: "Configurações do Sistema", path: "/configuracoes-sistema", permission: "configuracoes_sistema" },
-        { id: "alertas-notificacoes", icon: <Bell size={20} />, label: "Alertas e Notificações", path: "/alertas-notificacoes", permission: "alertas_notificacoes" },
-        { id: "sugestao-reabastecimento", icon: <PackageSearch size={20} />, label: "Sugestão de Reabastecimento", path: "/sugestao-reabastecimento", permission: "sugestao_reabastecimento" },
-        { id: "integracoes", icon: <Settings size={20} />, label: "Integrações (ERP/API)", path: "/integracoes", permission: "integracoes" },
-        { id: "gestao-produtos", icon: <Package size={20} />, label: "Gestão de Produtos", path: "/gestao-produtos", permission: "gestao_produtos" },
+        { id: "gestao-usuarios", icon: <UserCheck size={20} />, label: "Gestão de Usuários", path: "/gestao-usuarios", permission: "gestao_usuarios" },
+        { id: "gestao-produtos", icon: <Cog size={20} />, label: "Gestão de Produtos", path: "/gestao-produtos", permission: "gestao_produtos" },
+        { id: "unidades", icon: <Building2 size={20} />, label: "Gestão de Unidades", path: "/unidades", permission: "gestao_unidades" },
       ]),
     }] : []),
     {
       id: "sistema",
-      icon: <Monitor size={24} />,
+      icon: <Settings size={24} />,
       label: "Sistema",
       items: [
         { 
-          id: "config", 
-          icon: <Settings size={20} />, 
-          label: "Configurações", 
-          path: "/configuracoes" 
+          id: "perfil", 
+          icon: <UserRound size={20} />, 
+          label: "Perfil", 
+          path: "/perfil" 
         },
         { 
           id: "theme", 
           icon: theme === "light" ? <Moon size={20} /> : <Sun size={20} />, 
           label: `Tema ${theme === "light" ? "Escuro" : "Claro"}`, 
           onClick: toggleTheme 
+        },
+        { 
+          id: "config", 
+          icon: <Settings size={20} />, 
+          label: "Configurações", 
+          path: "/perfil" 
         },
         { 
           id: "logout", 
@@ -420,10 +423,22 @@ const FuturisticFloatingMenu = () => {
 
   return (
     <>
-      {!minimized && (
+      {isVisible && !minimized && (
         <div id="floating-menu-container" className={`fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 ${theme === "dark" ? "dark" : ""}`}>
           {activeMenu && (
-            <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 overflow-hidden transition-all duration-300 ease-in-out animate-fadeIn">
+            <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 overflow-hidden transition-all duration-300 ease-in-out">
+              <div className="flex justify-between items-center p-3 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="font-bold text-gray-800 dark:text-gray-100">
+                  {menuCategories.find(cat => cat.id === activeMenu)?.label}
+                </h3>
+                <button 
+                  onClick={() => setActiveMenu(null)}
+                  className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              
               {activeMenu === "sistema" && (
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-3">
@@ -478,7 +493,7 @@ const FuturisticFloatingMenu = () => {
 
           <div className="relative">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-sm opacity-75"></div>
-            <div className="relative bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 rounded-full shadow-lg px-2 py-2 flex items-center justify-center space-x-1">
+            <div className="relative bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-full shadow-lg px-2 py-2 flex items-center justify-center space-x-1">
               {menuCategories.map((category, idx) => {
                 const isCategoryActive = category.items?.some(item => 
                   item.path && location.pathname === item.path
@@ -543,7 +558,7 @@ const FuturisticFloatingMenu = () => {
               </div>
             ) : (
               <>
-                <ArrowLeftFromLine size={20} className="text-blue-500" />
+                <Menu size={20} className="text-blue-500" />
                 {selectedCategory?.icon && (
                   <div className="ml-2">
                     {React.cloneElement(selectedCategory.icon, { size: 20 })}
@@ -563,7 +578,7 @@ const FuturisticFloatingMenu = () => {
             )}
           </div>
         ) : (
-          <ArrowDownFromLine size={20} className="text-blue-600 dark:text-blue-400" />
+          <X size={20} className="text-blue-600 dark:text-blue-400" />
         )}
       </button>
     </>

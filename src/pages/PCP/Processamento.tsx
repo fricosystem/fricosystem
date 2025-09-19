@@ -1094,7 +1094,7 @@ const Processamento: React.FC = () => {
                 </ResponsiveContainer>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
                 <div className="border rounded-lg p-4">
                   <h3 className="text-sm font-medium text-muted-foreground">1° Turno</h3>
                   <div className="mt-2 space-y-3">

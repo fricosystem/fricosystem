@@ -39,29 +39,54 @@ export const StatsCard = ({
         <div className="h-4 w-4 text-muted-foreground">{icon}</div>
       </CardHeader>
       <CardContent>
-        {formula ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-2xl font-bold">{value}</span>
-              </TooltipTrigger>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+               <div 
+                className="text-2xl font-bold" 
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (formula) {
+                    // Tooltip já será mostrado pelo Radix UI
+                  }
+                }}
+              >
+                {value}
+              </div>
+            </TooltipTrigger>
+            {formula && (
               <TooltipContent>
                 <p>{formula}</p>
               </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <div className="text-2xl font-bold">{value}</div>
-        )}
+            )}
+          </Tooltip>
+        </TooltipProvider>
         {trend && trend.label && (
           <div className="flex items-center pt-1">
-            <span
-              className={`text-sm font-medium ${
-                trend.positive ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {trend.label}
-            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                   <span
+                    className={`text-sm font-medium ${
+                      trend.positive ? "text-green-600" : "text-red-600"
+                    }`}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      if (formula) {
+                        // Tooltip já será mostrado pelo Radix UI
+                      }
+                    }}
+                  >
+                    {trend.label}
+                  </span>
+                </TooltipTrigger>
+                {formula && (
+                  <TooltipContent>
+                    <p>{formula}</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
         {description && description.trim() && (

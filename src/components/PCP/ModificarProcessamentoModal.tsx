@@ -108,9 +108,36 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
   const [mergeReplaceModalOpen, setMergeReplaceModalOpen] = useState(false);
   const [mergeSelectedDate, setMergeSelectedDate] = useState<Date | null>(null);
   const [mergeStep, setMergeStep] = useState<'selection' | 'turno-selection'>('selection');
-  const [mergeSelectedTurnos, setMergeSelectedTurnos] = useState<{turno1: boolean, turno2: boolean}>({turno1: true, turno2: true});
+  const [mergeSelectedTurnos, setMergeSelectedTurnos] = useState<{turno1: boolean, turno2: boolean}>({turno1: false, turno2: false});
+  const [datesWithData, setDatesWithData] = useState<Set<string>>(new Set());
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(new Date());
 
   const { toast } = useToast();
+
+  // Função para verificar datas que já possuem dados na coleção PCP
+  const fetchDatesWithData = async () => {
+    try {
+      console.log("🔍 Carregando datas com dados da coleção PCP...");
+      const querySnapshot = await getDocs(collection(db, "PCP"));
+      const dates = new Set<string>();
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Verifica se há dados nos turnos para esta data
+        if (data["1_turno"] && Array.isArray(data["1_turno"]) && data["1_turno"].length > 0) {
+          dates.add(doc.id); // O ID do documento é a data no formato YYYY-MM-DD
+        }
+        if (data["2_turno"] && Array.isArray(data["2_turno"]) && data["2_turno"].length > 0) {
+          dates.add(doc.id);
+        }
+      });
+      
+      console.log("📅 Datas com dados encontradas:", Array.from(dates));
+      setDatesWithData(dates);
+    } catch (error) {
+      console.error("Erro ao verificar datas com dados:", error);
+    }
+  };
 
   // Função para buscar produtos da coleção PCP_produtos
   const fetchProdutosPCP = async () => {
@@ -220,6 +247,7 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
     };
     
     loadEditingData();
+    fetchDatesWithData(); // Carregar datas com dados existentes
   }, [editingProcessamento]);
 
   // Configurar data selecionada quando o modal abrir
@@ -397,10 +425,14 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
     setPendingNewDate(null);
     setSelectedTurnosToTransfer(['1', '2']);
     
+    // Carregar datas com dados sempre que abrir o modal
+    console.log("🔄 Abrindo modal de transferência, carregando datas...");
+    await fetchDatesWithData();
+    
     setMergeReplaceModalOpen(true);
     setMergeStep('selection');
     setMergeSelectedDate(null);
-    setMergeSelectedTurnos({turno1: true, turno2: true});
+    setMergeSelectedTurnos({turno1: false, turno2: false});
   };
 
   const handleSaveChanges = async () => {
@@ -429,7 +461,7 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
           const originalData = originalDoc.data();
 
           const newTimestamp = new Date(editSelectedDate);
-          newTimestamp.setHours(12, 0, 0, 0);
+          newTimestamp.setHours(0, 0, 0, 0);
 
           // Filtrar apenas produtos com quantidades > 0
           const filteredTurno1Data = editedTurno1Data.filter(produto => 
@@ -557,7 +589,7 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
       // Preparar dados para transferência
       const dataToTransfer: any = {};
       const newTimestamp = new Date(mergeSelectedDate);
-      newTimestamp.setHours(12, 0, 0, 0);
+      newTimestamp.setHours(0, 0, 0, 0);
       
       if (mergeSelectedTurnos.turno1) {
         // Filtrar apenas produtos com quantidades > 0
@@ -959,7 +991,7 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
       {mergeReplaceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMergeReplaceModalOpen(false)} />
-          <div className="relative bg-background rounded-lg p-6 w-full max-w-md mx-4 border">
+          <div className="relative bg-background rounded-lg p-6 w-full max-w-4xl mx-4 border max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">
                 {mergeStep === 'selection' ? 'Transferir data ou Substituir data de Processamento' : 'Selecionar Turnos'}
@@ -971,61 +1003,170 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
 
             {mergeStep === 'selection' ? (
               <>
-                <div className="space-y-4 mb-6">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  {/* Calendário Customizado */}
+                  <div className="space-y-4">
                     <Label>Selecione uma data</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !mergeSelectedDate && "text-muted-foreground"
-                          )}
+                    <div className="rounded-md border bg-card p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <button
+                          onClick={() => {
+                            const prevMonth = new Date(calendarViewDate);
+                            prevMonth.setMonth(prevMonth.getMonth() - 1);
+                            setCalendarViewDate(prevMonth);
+                          }}
+                          className="p-2 hover:bg-accent rounded-md"
                         >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {mergeSelectedDate ? (
-                            format(mergeSelectedDate, "dd/MM/yyyy")
-                          ) : (
-                            <span>Selecionar data</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={mergeSelectedDate || undefined}
-                        onSelect={(date) => setMergeSelectedDate(date || null)}
-                        className="rounded-md border bg-card pointer-events-auto p-3"
-                        locale={ptBR}
-                        classNames={{
-                          day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary focus:text-primary-foreground",
-                          day_today: "bg-accent text-accent-foreground font-semibold border border-primary/20",
-                          day: "h-9 w-9 text-center font-normal hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
-                        }}
-                        initialFocus
-                      />
-                      </PopoverContent>
-                    </Popover>
+                          ←
+                        </button>
+                        <h3 className="font-semibold">
+                          {format(calendarViewDate, "MMMM yyyy", { locale: ptBR })}
+                        </h3>
+                        <button
+                          onClick={() => {
+                            const nextMonth = new Date(calendarViewDate);
+                            nextMonth.setMonth(nextMonth.getMonth() + 1);
+                            setCalendarViewDate(nextMonth);
+                          }}
+                          className="p-2 hover:bg-accent rounded-md"
+                        >
+                          →
+                        </button>
+                      </div>
+                      
+                      {/* Cabeçalho dos dias da semana */}
+                      <div className="grid grid-cols-7 gap-1 mb-2">
+                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                          <div key={day} className="text-center text-sm font-medium text-muted-foreground p-2">
+                            {day}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Grade de dias */}
+                      <div className="grid grid-cols-7 gap-1">
+                        {(() => {
+                          const year = calendarViewDate.getFullYear();
+                          const month = calendarViewDate.getMonth();
+                          const firstDay = new Date(year, month, 1);
+                          const lastDay = new Date(year, month + 1, 0);
+                          const startDate = new Date(firstDay);
+                          startDate.setDate(startDate.getDate() - firstDay.getDay());
+                          
+                          const days = [];
+                          for (let i = 0; i < 42; i++) {
+                            const currentDate = new Date(startDate);
+                            currentDate.setDate(startDate.getDate() + i);
+                            
+                            const dateString = currentDate.toISOString().split('T')[0];
+                            const isCurrentMonth = currentDate.getMonth() === month;
+                            const isToday = dateString === new Date().toISOString().split('T')[0];
+                            const isSelected = mergeSelectedDate && dateString === mergeSelectedDate.toISOString().split('T')[0];
+                            const hasData = datesWithData.has(dateString);
+                            
+                            days.push(
+                              <button
+                                key={i}
+                                onClick={() => {
+                                  if (hasData) {
+                                    console.log("⛔ Data bloqueada por ter dados existentes");
+                                    toast({
+                                      title: "Data não disponível",
+                                      description: "Já existem dados nesta data. Escolha outra data para evitar conflitos nos dados.",
+                                      variant: "destructive"
+                                    });
+                                    return;
+                                  }
+                                  console.log("✅ Data aprovada para seleção");
+                                  setMergeSelectedDate(currentDate);
+                                }}
+                                disabled={hasData}
+                                className={cn(
+                                  "h-9 w-9 text-sm rounded-md transition-all duration-200",
+                                  !isCurrentMonth && "text-muted-foreground/40",
+                                  isCurrentMonth && !hasData && "hover:bg-accent hover:text-accent-foreground",
+                                  isToday && !hasData && "bg-accent text-accent-foreground font-semibold",
+                                  isSelected && !hasData && "bg-primary text-primary-foreground",
+                                  hasData && "bg-red-500 text-white font-bold cursor-not-allowed hover:bg-red-500",
+                                  !hasData && isCurrentMonth && "text-foreground"
+                                )}
+                              >
+                                {currentDate.getDate()}
+                              </button>
+                            );
+                          }
+                          return days;
+                        })()}
+                      </div>
+                      
+                      {/* Legenda */}
+                      <div className="mt-4 text-xs text-muted-foreground space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-red-500 rounded"></div>
+                          <span>Dias com dados existentes (não selecionáveis)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-primary rounded"></div>
+                          <span>Data selecionada</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Selecione o modo de processamento</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        variant={transferMode === 'merge' ? 'default' : 'outline'}
-                        onClick={() => setTransferMode('merge')}
-                        className="w-full"
-                      >
-                        Transferir
-                      </Button>
-                      <Button
-                        variant={transferMode === 'replace' ? 'default' : 'outline'}
-                        onClick={() => setTransferMode('replace')}
-                        className="w-full"
-                      >
-                        Substituir
-                      </Button>
+                  {/* Informações da data selecionada e modo de processamento */}
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-lg font-semibold mb-2">Data Selecionada</h4>
+                      <div className="p-4 bg-primary/10 rounded-lg border">
+                        <p className="text-lg font-medium">
+                          {mergeSelectedDate 
+                            ? format(mergeSelectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                            : "Nenhuma data selecionada"
+                          }
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Esta será a data de destino para a transferência/substituição
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Selecione o modo de processamento</Label>
+                      <div className="grid grid-cols-1 gap-2">
+                        <Button
+                          variant={transferMode === 'merge' ? 'default' : 'outline'}
+                          onClick={() => setTransferMode('merge')}
+                          className="w-full justify-start text-left"
+                        >
+                          <div>
+                            <div className="font-medium">Transferir</div>
+                            <div className="text-xs text-muted-foreground">
+                              Mescla os dados com os existentes na data de destino
+                            </div>
+                          </div>
+                        </Button>
+                        <Button
+                          variant={transferMode === 'replace' ? 'default' : 'outline'}
+                          onClick={() => setTransferMode('replace')}
+                          className="w-full justify-start text-left"
+                        >
+                          <div>
+                            <div className="font-medium">Substituir</div>
+                            <div className="text-xs text-muted-foreground">
+                              Substitui completamente os dados na data de destino
+                            </div>
+                          </div>
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-muted-foreground space-y-2 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded">
+                      <p className="text-orange-700 dark:text-orange-300 font-medium">⚠️ Importante:</p>
+                      <ul className="text-orange-600 dark:text-orange-400 text-xs space-y-1">
+                        <li>• Datas em vermelho já possuem dados e não podem ser selecionadas</li>
+                        <li>• <strong>Transferir</strong>: adiciona aos dados existentes</li>
+                        <li>• <strong>Substituir</strong>: remove dados existentes e adiciona os novos</li>
+                      </ul>
                     </div>
                   </div>
                 </div>

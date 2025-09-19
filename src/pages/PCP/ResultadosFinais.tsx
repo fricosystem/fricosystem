@@ -92,9 +92,11 @@ const ResultadosFinais: React.FC = () => {
     const hoje = new Date();
     switch (type) {
       case "dia":
+        const ontem = new Date(hoje);
+        ontem.setDate(hoje.getDate() - 1);
         return {
-          inicio: new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
-          fim: new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59)
+          inicio: new Date(ontem.getFullYear(), ontem.getMonth(), ontem.getDate()),
+          fim: new Date(ontem.getFullYear(), ontem.getMonth(), ontem.getDate(), 23, 59, 59)
         };
       case "semana":
         return {

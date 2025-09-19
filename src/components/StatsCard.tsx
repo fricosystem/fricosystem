@@ -1,5 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface StatsCardProps {
@@ -13,6 +14,7 @@ interface StatsCardProps {
     label?: string;
   };
   className?: string;
+  formula?: string;
 }
 
 const StatsCard = ({
@@ -22,6 +24,7 @@ const StatsCard = ({
   icon,
   trend,
   className,
+  formula,
 }: StatsCardProps) => {
   const isPositiveTrend = trend?.positive;
 
@@ -32,7 +35,28 @@ const StatsCard = ({
         {icon && <div className="text-muted-foreground">{icon}</div>}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div 
+                className="text-2xl font-bold cursor-help"
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (formula) {
+                    // Tooltip já será mostrado pelo Radix UI
+                  }
+                }}
+              >
+                {value}
+              </div>
+            </TooltipTrigger>
+            {formula && (
+              <TooltipContent>
+                <p>{formula}</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
         {description && (
           <p className="text-xs text-muted-foreground mt-1">{description}</p>
         )}
@@ -47,9 +71,28 @@ const StatsCard = ({
               {isPositiveTrend ? "↑" : "↓"} {Math.abs(trend.value)}%
             </span>
             {trend.label && (
-              <span className="text-xs text-muted-foreground ml-1">
-                {trend.label}
-              </span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span 
+                      className="text-xs text-muted-foreground ml-1 cursor-help"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        if (formula) {
+                          // Tooltip já será mostrado pelo Radix UI
+                        }
+                      }}
+                    >
+                      {trend.label}
+                    </span>
+                  </TooltipTrigger>
+                  {formula && (
+                    <TooltipContent>
+                      <p>{formula}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         )}

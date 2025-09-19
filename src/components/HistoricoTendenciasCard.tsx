@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, TrendingDown, Minus, Target, Calendar, AlertTriangle, CheckCircle2, Zap, BarChart3 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TrendingUp, TrendingDown, Minus, Target, Calendar, AlertTriangle, CheckCircle2, Zap, BarChart3, Activity, Clock } from "lucide-react";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { doc, getDoc, collection, getDocs, query, orderBy, where, Timestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isAfter, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePCPConfig } from "@/hooks/usePCPConfig";
+import { useHistoricoAvancado } from "@/hooks/useHistoricoAvancado";
+import { MetricasComparativasCard } from "@/components/PCP/MetricasComparativasCard";
+import { PrevisaoRecomendacoesCard } from "@/components/PCP/PrevisaoRecomendacoesCard";
 
 interface ProducaoHistorica {
   data: string;
@@ -38,10 +42,25 @@ export const HistoricoTendenciasCard = () => {
   const [loading, setLoading] = useState(true);
   const [producaoTotal, setProducaoTotal] = useState(0);
   const [metaMensalAtual, setMetaMensalAtual] = useState(0);
+  const [activeTab, setActiveTab] = useState<'historico' | 'comparativo' | 'previsao'>('historico');
+
+  // Hook para análise histórica avançada
+  const {
+    loading: loadingAvancado,
+    dadosHistoricos,
+    analiseComparativaMes,
+    analiseComparativaAno,
+    previsaoAvancada,
+    metricasConsistencia,
+    analiseDesempenho,
+    executarAnaliseCompleta
+  } = useHistoricoAvancado();
 
   useEffect(() => {
     carregarDadosHistoricos();
-  }, []);
+    // Executar análise completa dos últimos 6 meses
+    executarAnaliseCompleta(6);
+  }, [executarAnaliseCompleta]);
 
   const carregarDadosHistoricos = async () => {
     try {
@@ -85,6 +104,7 @@ export const HistoricoTendenciasCard = () => {
         if (!dateMatch) return;
         
         const dataProcessamento = new Date(docId);
+        dataProcessamento.setHours(0, 0, 0, 0); // Garantir padrão 00:00
         
         // Filtrar apenas dados do mês atual
         if (isAfter(dataProcessamento, inicioMes) || dataProcessamento.getTime() === inicioMes.getTime()) {
@@ -196,15 +216,18 @@ export const HistoricoTendenciasCard = () => {
     if (variacao > 5) tendenciaCalculada = 'crescente';
     else if (variacao < -5) tendenciaCalculada = 'decrescente';
     
-    // Verificar meta diária HOJE
+    // Verificar meta diária do DIA ANTERIOR (ontem)
     const hoje = new Date();
-    const hojeDateString = format(hoje, 'yyyy-MM-dd');
-    const dadosHoje = dados.find(d => d.data === hojeDateString);
+    const ontem = new Date(hoje);
+    ontem.setDate(hoje.getDate() - 1);
+    ontem.setHours(0, 0, 0, 0); // Usar padrão 00:00
+    const ontemDateString = format(ontem, 'yyyy-MM-dd');
+    const dadosOntem = dados.find(d => d.data === ontemDateString);
     
-    const producaoHoje = dadosHoje?.producao || 0;
-    const metaDiariaHoje = dadosHoje?.meta || (dadosRecentes.length > 0 ? dadosRecentes[dadosRecentes.length - 1].meta : 2000);
-    const bateuMetaHoje = producaoHoje >= metaDiariaHoje;
-    const pendenteHoje = Math.max(0, metaDiariaHoje - producaoHoje);
+    const producaoOntem = dadosOntem?.producao || 0;
+    const metaDiariaOntem = dadosOntem?.meta || (dadosRecentes.length > 0 ? dadosRecentes[dadosRecentes.length - 1].meta : 2000);
+    const bateuMetaOntem = producaoOntem >= metaDiariaOntem;
+    const pendenteOntem = Math.max(0, metaDiariaOntem - producaoOntem);
     
     // Calcular dias restantes no mês
     const fimMes = endOfMonth(hoje);
@@ -218,8 +241,8 @@ export const HistoricoTendenciasCard = () => {
     let previsaoMeta = true;
     let probabilidadeSuccess = 85; // Base alta se estiver batendo metas diárias
     
-    // Se não está batendo meta diária hoje, ajustar análise
-    if (!bateuMetaHoje && dados.length > 0) {
+    // Se não está batendo meta de ontem, ajustar análise
+    if (!bateuMetaOntem && dados.length > 0) {
       // Verificar quantos dos últimos 7 dias bateram a meta
       const diasComMeta = dadosRecentes.filter(d => d.producao >= d.meta).length;
       const percentualSucesso = (diasComMeta / dadosRecentes.length) * 100;
@@ -237,14 +260,14 @@ export const HistoricoTendenciasCard = () => {
           probabilidadeSuccess = Math.max(10, percentualSucesso - (deficit * 100));
         }
       } else {
-        // Se geralmente bate as metas, manter otimismo mesmo com dia ruim
-        const projecaoTotal = producaoAtual + (metaDiariaHoje * diasRestantes);
+        // Se geralmente bate as metas, manter otimismo mesmo com dia ruim ontem
+        const projecaoTotal = producaoAtual + (metaDiariaOntem * diasRestantes);
         previsaoMeta = projecaoTotal >= metaMensal;
         probabilidadeSuccess = Math.max(70, percentualSucesso);
       }
     } else {
-      // Se está batendo meta hoje, usar projeção otimista
-      const projecaoTotal = producaoAtual + (metaDiariaHoje * diasRestantes);
+      // Se bateu meta ontem, usar projeção otimista
+      const projecaoTotal = producaoAtual + (metaDiariaOntem * diasRestantes);
       previsaoMeta = projecaoTotal >= metaMensal;
       
       if (previsaoMeta) {
@@ -260,11 +283,11 @@ export const HistoricoTendenciasCard = () => {
       diasRestantes,
       producaoNecessariaDiaria,
       probabilidadeSuccess: Math.round(probabilidadeSuccess),
-      // Dados adicionais para exibição
-      bateuMetaHoje,
-      pendenteHoje,
-      producaoHoje,
-      metaDiariaHoje
+      // Dados adicionais para exibição (usando dados de ontem)
+      bateuMetaHoje: bateuMetaOntem,
+      pendenteHoje: pendenteOntem,
+      producaoHoje: producaoOntem,
+      metaDiariaHoje: metaDiariaOntem
     };
   };
 
@@ -323,20 +346,51 @@ export const HistoricoTendenciasCard = () => {
 
   const progressoMensal = metaMensalAtual > 0 ? (producaoTotal / metaMensalAtual) * 100 : 0;
 
-  if (loading) {
+  // Calcular média dos últimos 7 dias
+  const mediaUltimos7Dias = useMemo(() => {
+    if (historico.length === 0) return 0;
+    const ultimos7 = historico.slice(-7);
+    return ultimos7.reduce((sum, d) => sum + d.producao, 0) / ultimos7.length;
+  }, [historico]);
+
+  // Métricas para bater meta
+  const metricasParaBaterMeta = useMemo(() => {
+    if (!tendencia || !metaMensalAtual) return null;
+    
+    const hoje = new Date();
+    const fimMes = endOfMonth(hoje);
+    const diasRestantes = differenceInDays(fimMes, hoje);
+    const producaoRestante = Math.max(0, metaMensalAtual - producaoTotal);
+    const producaoNecessariaDiaria = diasRestantes > 0 ? producaoRestante / diasRestantes : 0;
+    
+    // Diferença entre necessário e média atual
+    const diferencaMedia = producaoNecessariaDiaria - mediaUltimos7Dias;
+    const percentualAumento = mediaUltimos7Dias > 0 ? (diferencaMedia / mediaUltimos7Dias) * 100 : 0;
+    
+    return {
+      producaoNecessariaDiaria,
+      diferencaMedia,
+      percentualAumento,
+      statusMeta: producaoTotal >= metaMensalAtual ? 'atingida' : 
+                  producaoNecessariaDiaria <= mediaUltimos7Dias ? 'facilmente_atingivel' :
+                  percentualAumento <= 20 ? 'atingivel' : 'dificil'
+    };
+  }, [tendencia, metaMensalAtual, producaoTotal, mediaUltimos7Dias]);
+
+  if (loading || loadingAvancado) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            Histórico e Tendências
+            Painel de Performance e Previsão de Produção
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center p-8">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="text-sm text-muted-foreground mt-2">Analisando tendências...</p>
+              <p className="text-sm text-muted-foreground mt-2">Analisando tendências avançadas...</p>
             </div>
           </div>
         </CardContent>
@@ -349,153 +403,259 @@ export const HistoricoTendenciasCard = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5" />
-          Histórico e Tendências
+          Painel de Performance e Previsão de Produção
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        
+        {/* Abas para diferentes visualizações */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="historico" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Histórico
+            </TabsTrigger>
+            <TabsTrigger value="comparativo" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Comparativo
+            </TabsTrigger>
+            <TabsTrigger value="previsao" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Previsões
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Tendência de Produção */}
-          <StatsCard
-            title="Tendência de Produção"
-            value={
-              <div className="flex items-center gap-2">
-                {getTendenciaIcon()}
-                <span className="capitalize">
-                  {tendencia?.tendencia || 'Calculando...'}
-                </span>
-              </div>
-            }
-            icon={<TrendingUp />}
-            description={
-              tendencia ? `Variação de ${tendencia.variacao.toFixed(1)}% nos últimos 7 dias` : undefined
-            }
-            trend={
-              tendencia ? {
-                value: tendencia.variacao,
-                positive: tendencia.tendencia === 'crescente',
-                label: `Confiabilidade: ${tendencia.confiabilidade}%`
-              } : undefined
-            }
-          />
+          {/* Conteúdo da aba Histórico */}
+          <TabsContent value="historico" className="space-y-6 mt-6">
 
-          {/* Previsão da Meta */}
-          <StatsCard
-            title="Previsão da Meta"
-            value={
-              <div className="flex items-center gap-2">
-                {getStatusMetaIcon()}
-                <span className={
-                  tendencia?.previsaoMeta ? 'text-green-600' : 'text-red-600'
-                }>
-                  {tendencia?.previsaoMeta ? 'Meta Atingível' : 'Meta em Risco'}
-                </span>
-              </div>
-            }
-            icon={<Target />}
-            description={
-              tendencia ? `Probabilidade de sucesso: ${tendencia.probabilidadeSuccess}%` : undefined
-            }
-          />
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Tendência de Produção */}
+              <StatsCard
+                title="Tendência de Produção"
+                value={
+                  <div className="flex items-center gap-2">
+                    {getTendenciaIcon()}
+                    <span className="capitalize">
+                      {tendencia?.tendencia || 'Calculando...'}
+                    </span>
+                  </div>
+                }
+                icon={<TrendingUp />}
+                description={
+                  tendencia ? `Variação de ${tendencia.variacao.toFixed(1)}% nos últimos 7 dias` : undefined
+                }
+                trend={
+                  tendencia ? {
+                    value: tendencia.variacao,
+                    positive: tendencia.tendencia === 'crescente',
+                    label: `Confiabilidade: ${tendencia.confiabilidade}%`
+                  } : undefined
+                }
+              />
 
-        {/* Métricas Detalhadas - Foco no Dia Atual */}
-        {tendencia && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Target className={`h-4 w-4 ${tendencia.bateuMetaHoje ? 'text-green-500' : 'text-orange-500'}`} />
-                <span className="text-sm font-medium">Desempenho de Ontem</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className={`text-2xl font-bold ${tendencia.bateuMetaHoje ? 'text-green-600' : 'text-orange-600'}`}>
-                  {formatNumber(tendencia.producaoHoje || 0)} kg
-                </p>
-                <span className="text-sm text-muted-foreground">
-                  / {formatNumber(tendencia.metaDiariaHoje || 0)} kg
-                </span>
-              </div>
-              <div className="space-y-1">
-                <Progress 
-                  value={Math.min(100, ((tendencia.producaoHoje || 0) / (tendencia.metaDiariaHoje || 1)) * 100)} 
-                  className="h-2" 
-                />
-                <p className={`text-xs font-medium ${tendencia.bateuMetaHoje ? 'text-green-600' : 'text-orange-600'}`}>
-                  {tendencia.bateuMetaHoje 
-                    ? `Meta atingida! +${formatNumber((tendencia.producaoHoje || 0) - (tendencia.metaDiariaHoje || 0))} kg` 
-                    : `Faltam ${formatNumber(tendencia.pendenteHoje || 0)} kg para meta`
+              {/* Previsão da Meta */}
+              <StatsCard
+                title="Previsão da Meta"
+                value={
+                  <div className="flex items-center gap-2">
+                    {getStatusMetaIcon()}
+                    <span className={
+                      tendencia?.previsaoMeta ? 'text-green-600' : 'text-red-600'
+                    }>
+                      {tendencia?.previsaoMeta ? 'Meta Atingível' : 'Meta em Risco'}
+                    </span>
+                  </div>
+                }
+                icon={<Target />}
+                description={
+                  tendencia ? `Probabilidade de sucesso: ${tendencia.probabilidadeSuccess}%` : undefined
+                }
+              />
+            </div>
+
+            {/* MANTÉM A MÉDIA DOS ÚLTIMOS 7 DIAS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <StatsCard
+                title="Média Últimos 7 Dias"
+                value={`${formatNumber(mediaUltimos7Dias)} kg/dia`}
+                icon={<Activity />}
+                description={
+                  historico.length > 0 && (() => {
+                    const ultimos7 = historico.slice(-7);
+                    const diasComMeta = ultimos7.filter(d => d.producao >= d.meta).length;
+                    const percentual = Math.round((diasComMeta / ultimos7.length) * 100);
+                    return `${diasComMeta}/${ultimos7.length} dias bateram meta (${percentual}%)`;
+                  })()
+                }
+                trend={
+                  tendencia ? {
+                    value: tendencia.variacao,
+                    positive: tendencia.tendencia === 'crescente',
+                    label: `Tendência ${tendencia.tendencia}`
+                  } : undefined
+                }
+              />
+
+              {/* Métricas para Bater Meta */}
+              {metricasParaBaterMeta && (
+                <StatsCard
+                  title="Para Bater Meta Mensal"
+                  value={
+                    <div className="flex items-center gap-2">
+                      {metricasParaBaterMeta.statusMeta === 'atingida' ? 
+                        <CheckCircle2 className="h-4 w-4 text-green-500" /> :
+                       metricasParaBaterMeta.statusMeta === 'facilmente_atingivel' ?
+                        <Target className="h-4 w-4 text-green-500" /> :
+                       metricasParaBaterMeta.statusMeta === 'atingivel' ?
+                        <Zap className="h-4 w-4 text-yellow-500" /> :
+                        <AlertTriangle className="h-4 w-4 text-red-500" />}
+                      <span className={
+                        metricasParaBaterMeta.statusMeta === 'atingida' ? 'text-green-600' :
+                        metricasParaBaterMeta.statusMeta === 'facilmente_atingivel' ? 'text-green-600' :
+                        metricasParaBaterMeta.statusMeta === 'atingivel' ? 'text-yellow-600' : 'text-red-600'
+                      }>
+                        {formatNumber(metricasParaBaterMeta.producaoNecessariaDiaria)} kg/dia
+                      </span>
+                    </div>
                   }
-                </p>
-              </div>
+                  icon={<Target />}
+                  description={
+                    metricasParaBaterMeta.statusMeta === 'atingida' ? 'Meta mensal já atingida!' :
+                    metricasParaBaterMeta.diferencaMedia <= 0 ? 'Mantendo média atual é suficiente' :
+                    `Necessário aumentar ${formatNumber(metricasParaBaterMeta.diferencaMedia)} kg/dia`
+                  }
+                  trend={
+                    metricasParaBaterMeta.statusMeta !== 'atingida' ? {
+                      value: Math.abs(metricasParaBaterMeta.percentualAumento),
+                      positive: metricasParaBaterMeta.diferencaMedia <= 0,
+                      label: metricasParaBaterMeta.percentualAumento > 0 ? 
+                        `+${metricasParaBaterMeta.percentualAumento.toFixed(0)}% na produção` :
+                        'Meta atingível com performance atual'
+                    } : undefined
+                  }
+                />
+              )}
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Média Últimos 7 Dias</span>
-              </div>
-              <p className="text-2xl font-bold">
-                {historico.length > 0 
-                  ? formatNumber(historico.slice(-7).reduce((sum, d) => sum + d.producao, 0) / Math.min(7, historico.slice(-7).length))
-                  : '0'
-                } kg/dia
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {historico.length > 0 && (() => {
-                  const ultimos7 = historico.slice(-7);
-                  const diasComMeta = ultimos7.filter(d => d.producao >= d.meta).length;
-                  const percentual = Math.round((diasComMeta / ultimos7.length) * 100);
-                  return `${diasComMeta}/${ultimos7.length} dias bateram meta (${percentual}%)`;
-                })()}
-              </p>
-            </div>
-          </div>
-        )}
+            {/* Métricas Detalhadas - Foco no Dia Atual */}
+            {tendencia && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Target className={`h-4 w-4 ${tendencia.bateuMetaHoje ? 'text-green-500' : 'text-orange-500'}`} />
+                    <span className="text-sm font-medium">Desempenho de Ontem</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <p className={`text-2xl font-bold ${tendencia.bateuMetaHoje ? 'text-green-600' : 'text-orange-600'}`}>
+                      {formatNumber(tendencia.producaoHoje || 0)} kg
+                    </p>
+                    <span className="text-sm text-muted-foreground">
+                      / {formatNumber(tendencia.metaDiariaHoje || 0)} kg
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <Progress 
+                      value={Math.min(100, ((tendencia.producaoHoje || 0) / (tendencia.metaDiariaHoje || 1)) * 100)} 
+                      className="h-2" 
+                    />
+                    <p className={`text-xs font-medium ${tendencia.bateuMetaHoje ? 'text-green-600' : 'text-orange-600'}`}>
+                      {tendencia.bateuMetaHoje 
+                        ? `Meta atingida! +${formatNumber((tendencia.producaoHoje || 0) - (tendencia.metaDiariaHoje || 0))} kg` 
+                        : `Faltam ${formatNumber(tendencia.pendenteHoje || 0)} kg para meta`
+                      }
+                    </p>
+                  </div>
+                </div>
 
-        {/* Status da Tendência */}
-        {tendencia && (
-          <div className="pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Status da Análise</span>
-              <Badge variant={getTendenciaColor()}>
-                {tendencia.previsaoMeta ? 'Positiva' : 'Atenção Necessária'}
-              </Badge>
-            </div>
-            
-            {(!tendencia.previsaoMeta || (tendencia.bateuMetaHoje === false && tendencia.pendenteHoje && tendencia.pendenteHoje > 0)) && (
-              <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                  <div className="text-sm">
-                    {tendencia.bateuMetaHoje === false ? (
-                      <>
-                        <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                          Meta diária não atingida!
-                        </p>
-                        <p className="text-yellow-700 dark:text-yellow-300 mt-1">
-                          Faltam {formatNumber(tendencia.pendenteHoje || 0)} kg para completar a meta de hoje.
-                          {tendencia.diasRestantes > 0 && (
-                            <> Para o mês, é necessário produzir {formatNumber(tendencia.producaoNecessariaDiaria)} kg/dia nos próximos {tendencia.diasRestantes} dias.</>
-                          )}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                          Meta mensal em risco!
-                        </p>
-                        <p className="text-yellow-700 dark:text-yellow-300 mt-1">
-                          É necessário aumentar a produção diária para {formatNumber(tendencia.producaoNecessariaDiaria)} kg 
-                          para atingir a meta mensal.
-                        </p>
-                      </>
-                    )}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Progresso Meta Mensal</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold">
+                      {formatNumber(producaoTotal)} kg
+                    </p>
+                    <span className="text-sm text-muted-foreground">
+                      / {formatNumber(metaMensalAtual)} kg
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <Progress value={progressoMensal} className="h-2" />
+                    <p className="text-xs text-muted-foreground">
+                      {progressoMensal.toFixed(1)}% da meta mensal concluída
+                    </p>
                   </div>
                 </div>
               </div>
             )}
-          </div>
-        )}
+
+            {/* Status da Tendência */}
+            {tendencia && (
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Status da Análise</span>
+                  <Badge variant={getTendenciaColor()}>
+                    {tendencia.previsaoMeta ? 'Positiva' : 'Atenção Necessária'}
+                  </Badge>
+                </div>
+                
+                {(!tendencia.previsaoMeta || (tendencia.bateuMetaHoje === false && tendencia.pendenteHoje && tendencia.pendenteHoje > 0)) && (
+                  <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                      <div className="text-sm">
+                        {tendencia.bateuMetaHoje === false ? (
+                          <>
+                            <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                              Meta diária não atingida!
+                            </p>
+                            <p className="text-yellow-700 dark:text-yellow-300 mt-1">
+                              Faltam {formatNumber(tendencia.pendenteHoje || 0)} kg para completar a meta de hoje.
+                              {tendencia.diasRestantes > 0 && (
+                                <> Para o mês, é necessário produzir {formatNumber(tendencia.producaoNecessariaDiaria)} kg/dia nos próximos {tendencia.diasRestantes} dias.</>
+                              )}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                              Meta mensal em risco!
+                            </p>
+                            <p className="text-yellow-700 dark:text-yellow-300 mt-1">
+                              É necessário aumentar a produção diária para {formatNumber(tendencia.producaoNecessariaDiaria)} kg 
+                              para atingir a meta mensal.
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </TabsContent>
+
+          {/* Conteúdo da aba Comparativo */}
+          <TabsContent value="comparativo" className="mt-6">
+            <MetricasComparativasCard 
+              analiseMes={analiseComparativaMes}
+              analiseAno={analiseComparativaAno}
+              loading={loadingAvancado}
+            />
+          </TabsContent>
+
+          {/* Conteúdo da aba Previsões */}
+          <TabsContent value="previsao" className="mt-6">
+            <PrevisaoRecomendacoesCard
+              previsao={previsaoAvancada}
+              metricas={metricasConsistencia}
+              loading={loadingAvancado}
+            />
+          </TabsContent>
+
+        </Tabs>
       </CardContent>
     </Card>
   );

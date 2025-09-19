@@ -63,6 +63,7 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [datesWithData, setDatesWithData] = useState<Set<string>>(new Set());
   const {
     toast
   } = useToast();
@@ -92,6 +93,26 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
         variant: "destructive"
       });
       return [];
+    }
+  };
+
+  // Função para verificar datas que já possuem dados na coleção PCP
+  const fetchDatesWithData = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "PCP"));
+      const dates = new Set<string>();
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Verifica se há dados nos turnos para esta data
+        if (data[`${turno}_turno`] && Array.isArray(data[`${turno}_turno`]) && data[`${turno}_turno`].length > 0) {
+          dates.add(doc.id); // O ID do documento é a data no formato YYYY-MM-DD
+        }
+      });
+      
+      setDatesWithData(dates);
+    } catch (error) {
+      console.error("Erro ao verificar datas com dados:", error);
     }
   };
 
@@ -153,6 +174,7 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
       // Não carrega automaticamente do Firestore - só após importação da planilha
     };
     loadData();
+    fetchDatesWithData(); // Carregar datas com dados existentes
   }, [turno]);
 
   // Função para analisar o valor formatado e converter para número
@@ -610,22 +632,109 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
           <CardContent>
             <div className="flex flex-col lg:flex-row gap-6 items-start">
               <div className="w-fit">
-                <Calendar 
-                  mode="single" 
-                  selected={selectedDate} 
-                  onSelect={date => date && setSelectedDate(date)} 
-                  className="rounded-md border bg-card pointer-events-auto p-3" 
-                  locale={ptBR}
-                  classNames={{
-                    day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary focus:text-primary-foreground",
-                    day_today: "bg-accent text-accent-foreground font-semibold border border-primary/20",
-                    day: "h-9 w-9 text-center font-normal hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
-                    head_cell: "text-muted-foreground w-9 font-normal text-[0.8rem] text-center",
-                    cell: "text-center p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                    nav_button: "hover:bg-accent hover:text-accent-foreground",
-                    caption: "flex justify-center pt-1 relative items-center"
-                  }}
-                />
+                {/* Calendário Customizado */}
+                <div className="rounded-md border bg-card p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <button
+                      onClick={() => {
+                        const prevMonth = new Date(selectedDate);
+                        prevMonth.setMonth(prevMonth.getMonth() - 1);
+                        setSelectedDate(prevMonth);
+                      }}
+                      className="p-2 hover:bg-accent rounded-md"
+                    >
+                      ←
+                    </button>
+                    <h3 className="font-semibold">
+                      {format(selectedDate, "MMMM yyyy", { locale: ptBR })}
+                    </h3>
+                    <button
+                      onClick={() => {
+                        const nextMonth = new Date(selectedDate);
+                        nextMonth.setMonth(nextMonth.getMonth() + 1);
+                        setSelectedDate(nextMonth);
+                      }}
+                      className="p-2 hover:bg-accent rounded-md"
+                    >
+                      →
+                    </button>
+                  </div>
+                  
+                  {/* Cabeçalho dos dias da semana */}
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                      <div key={day} className="text-center text-sm font-medium text-muted-foreground p-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Grade de dias */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {(() => {
+                      const year = selectedDate.getFullYear();
+                      const month = selectedDate.getMonth();
+                      const firstDay = new Date(year, month, 1);
+                      const lastDay = new Date(year, month + 1, 0);
+                      const startDate = new Date(firstDay);
+                      startDate.setDate(startDate.getDate() - firstDay.getDay());
+                      
+                      const days = [];
+                      for (let i = 0; i < 42; i++) {
+                        const currentDate = new Date(startDate);
+                        currentDate.setDate(startDate.getDate() + i);
+                        
+                        const dateString = currentDate.toISOString().split('T')[0];
+                        const isCurrentMonth = currentDate.getMonth() === month;
+                        const isToday = dateString === new Date().toISOString().split('T')[0];
+                        const isSelected = dateString === selectedDate.toISOString().split('T')[0];
+                        const hasData = datesWithData.has(dateString);
+                        
+                        days.push(
+                          <button
+                            key={i}
+                            onClick={() => {
+                              if (hasData) {
+                                toast({
+                                  title: "Data não disponível",
+                                  description: `Já existem dados do ${turno}° Turno para esta data. Escolha outra data para evitar sobrescrever os dados.`,
+                                  variant: "destructive"
+                                });
+                                return;
+                              }
+                              setSelectedDate(currentDate);
+                            }}
+                            disabled={hasData}
+                            className={cn(
+                              "h-9 w-9 text-sm rounded-md transition-all duration-200",
+                              !isCurrentMonth && "text-muted-foreground/40",
+                              isCurrentMonth && !hasData && "hover:bg-accent hover:text-accent-foreground",
+                              isToday && !hasData && "bg-accent text-accent-foreground font-semibold",
+                              isSelected && !hasData && "bg-primary text-primary-foreground",
+                              hasData && "bg-red-500 text-white font-bold cursor-not-allowed hover:bg-red-500",
+                              !hasData && isCurrentMonth && "text-foreground"
+                            )}
+                          >
+                            {currentDate.getDate()}
+                          </button>
+                        );
+                      }
+                      return days;
+                    })()}
+                  </div>
+                  
+                  {/* Legenda */}
+                  <div className="mt-4 text-xs text-muted-foreground space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-red-500 rounded"></div>
+                      <span>Dias com dados do {turno}° Turno (não selecionáveis)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-primary rounded"></div>
+                      <span>Data selecionada</span>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="flex-1 space-y-4">
                 <div>
@@ -641,10 +750,16 @@ const TurnoForm: React.FC<TurnoFormProps> = ({
                     </p>
                   </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground space-y-2">
                   <p>• Selecione uma data anterior ou posterior para lançamentos retroativos ou futuros</p>
                   <p>• Por padrão, a data atual está selecionada</p>
                   <p>• Esta data será aplicada ao salvar os dados no sistema</p>
+                  <div className="mt-3 p-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded">
+                    <p className="text-orange-700 dark:text-orange-300 font-medium">⚠️ Proteção de dados:</p>
+                    <p className="text-orange-600 dark:text-orange-400 text-xs">
+                      Datas que já possuem dados do {turno}° Turno não podem ser selecionadas para evitar sobrescrever informações existentes. Escolha uma data diferente para seus lançamentos.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

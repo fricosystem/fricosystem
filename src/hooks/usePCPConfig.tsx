@@ -5,10 +5,6 @@ import { db } from '@/firebase/firebase';
 export interface PCPConfig {
   meta_diaria_global: number;
   eficiencia_minima: number;
-  horario_turno1_inicio: string;
-  horario_turno1_fim: string;
-  horario_turno2_inicio: string;
-  horario_turno2_fim: string;
   calendario_excecoes: string[]; // Array de datas no formato YYYY-MM-DD
   // Novos campos para a aba Sistema
   meta_minima_mensal?: number;
@@ -28,10 +24,6 @@ export interface PCPMeta {
 const DEFAULT_CONFIG: PCPConfig = {
   meta_diaria_global: 2000,
   eficiencia_minima: 85,
-  horario_turno1_inicio: '06:00',
-  horario_turno1_fim: '14:00',
-  horario_turno2_inicio: '14:00',
-  horario_turno2_fim: '22:00',
   calendario_excecoes: [],
   updatedAt: new Date()
 };

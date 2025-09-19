@@ -160,8 +160,8 @@ const Metas = () => {
   };
   const formatarNumeroInput = (valor: number): string => {
     return valor.toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     });
   };
   const parseNumero = (valor: string): number => {
@@ -210,29 +210,38 @@ const Metas = () => {
   }, [pcpData]);
 
   const calcularRealizadoDiaAtual = (classificacao: string): number => {
-    const hoje = new Date().toISOString().split('T')[0];
-    return dadosProcessados.filter(item => {
-      // Usar data_inicio para filtrar pelo dia atual
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); // Usar padrão 00:00
+    const dataHoje = hoje.toISOString().split('T')[0];
+    
+    // Buscar nos dados PCP carregados pelo hook usePCP
+    const dadosHoje = pcpData.filter(item => {
       let dataItem = '';
       if (item.data_inicio && typeof item.data_inicio === 'object' && item.data_inicio.toDate) {
         dataItem = item.data_inicio.toDate().toISOString().split('T')[0];
       }
-      return dataItem === hoje && (item.classificacao || item.setor || 'Sem classificação') === classificacao;
-    }).reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
+      return dataItem === dataHoje && (item.classificacao || item.setor || 'Sem classificação') === classificacao;
+    });
+    
+    return dadosHoje.reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
   };
 
   const calcularRealizadoDiaAnterior = (classificacao: string): number => {
     const ontem = new Date();
     ontem.setDate(ontem.getDate() - 1);
+    ontem.setHours(0, 0, 0, 0); // Usar padrão 00:00
     const dataOntem = ontem.toISOString().split('T')[0];
     
-    return dadosProcessados.filter(item => {
+    // Buscar nos dados PCP carregados pelo hook usePCP
+    const dadosOntem = pcpData.filter(item => {
       let dataItem = '';
       if (item.data_inicio && typeof item.data_inicio === 'object' && item.data_inicio.toDate) {
         dataItem = item.data_inicio.toDate().toISOString().split('T')[0];
       }
       return dataItem === dataOntem && (item.classificacao || item.setor || 'Sem classificação') === classificacao;
-    }).reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
+    });
+    
+    return dadosOntem.reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
   };
   const inicializarMetas = async () => {
     if (pcpLoading) return;
@@ -252,7 +261,7 @@ const Metas = () => {
       
       for (const classificacao of classificacoesUnicas) {
         const realizadoDiaAtual = calcularRealizadoDiaAtual(classificacao);
-        const realizadoDiaAnterior = calcularRealizadoDiaAnterior(classificacao);
+        const realizadoDiaAnterior = await calcularRealizadoDiaAnterior(classificacao);
         
         // Verificar se há produção hoje para qualquer classificação
         if (realizadoDiaAtual > 0) {
@@ -558,7 +567,7 @@ const Metas = () => {
                             <Input {...field} value={metaMensalFormatada} onChange={e => {
                         setMetaMensalFormatada(e.target.value);
                         field.onChange(parseNumero(e.target.value));
-                      }} disabled={!editandoMetaMensal} className={editandoMetaMensal ? "border-primary" : ""} />
+                      }} disabled={!editandoMetaMensal} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>} />
@@ -571,7 +580,7 @@ const Metas = () => {
                             <Input {...field} value={diasUteisFormatados} onChange={e => {
                         setDiasUteisFormatados(e.target.value);
                         field.onChange(parseNumero(e.target.value));
-                      }} disabled={!editandoDiasUteis} className={editandoDiasUteis ? "border-primary" : ""} />
+                      }} disabled={!editandoDiasUteis} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>} />
