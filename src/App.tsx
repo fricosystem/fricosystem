@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
-// Páginas
+// PÃ¡ginas
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import TelaBemVindo from "./pages/TelaBemVindo";
@@ -31,23 +31,23 @@ import RelatoriosES from "./pages/Relatorios/Relatorios";
 import PlanejamentoDesenvolvimento from "./pages/Planejamento/PlanejamentoDesenvolvimento";
 import IDE from "./pages/IDE";
 
-// Páginas de Transferência e entrada manual
+// PÃ¡ginas de TransferÃªncia e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
 import TransferenciasET from "./pages/TransferenciasET";
 
-// Páginas de Compras e Pedidos
+// PÃ¡ginas de Compras e Pedidos
 import Compras from "./pages/Compras";
 import GestaoProdutos from "./pages/GestaoProdutos";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
 import CentroCusto from "./pages/CentroCusto";
 import Unidades from "./pages/Unidades";
 
-// Páginas de comunicação
+// PÃ¡ginas de comunicaÃ§Ã£o
 import ChatPage from "./pages/ChatPage";
 import Email from "./pages/Email";
-import Agendamento from "./pages/Agendamento";
+import Agendamento from "./pages/reunioes";
 
-// Páginas de Inventário
+// PÃ¡ginas de InventÃ¡rio
 import Inventario from "./pages/Inventario";
 
 // Create a client
@@ -98,7 +98,7 @@ const AppContent = () => {
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Rotas públicas */}
+          {/* Rotas pÃºblicas */}
           <Route path="/" element={<NoAuthGuard><Login /></NoAuthGuard>} />
           
           {/* Rotas protegidas */}
@@ -128,17 +128,17 @@ const AppContent = () => {
            <Route path="/planejamento-desenvolvimento" element={<AuthGuard><PlanejamentoDesenvolvimento /></AuthGuard>} />
            <Route path="/ide" element={<AuthGuard><IDE /></AuthGuard>} />
 
-          {/* Rotas de Entrada Manual e Transferência */}
+          {/* Rotas de Entrada Manual e TransferÃªncia */}
           <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />
           <Route path="/transferencia" element={<AuthGuard><TransferenciasET /></AuthGuard>} />
 
           {/* Rotas de Compras e Pedidos */}
           <Route path="/compras" element={<AuthGuard><Compras /></AuthGuard>} />
 
-          {/* Rotas de Comunicação */}
+          {/* Rotas de ComunicaÃ§Ã£o */}
           <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />
           <Route path="/email" element={<AuthGuard><Email /></AuthGuard>} />
-          <Route path="/agendamento" element={<AuthGuard><Agendamento /></AuthGuard>} />
+          <Route path="/reunioes" element={<AuthGuard><Agendamento /></AuthGuard>} />
           
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />
