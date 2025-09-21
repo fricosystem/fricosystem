@@ -2,7 +2,8 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Edit, Trash2, Info, Calendar, Tag, Package, BarChart, Home, MapPin, User, DollarSign, Clock } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Edit, Trash2, Info, Calendar, Tag, Package, BarChart, Home, MapPin, User, DollarSign, Clock, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import AdicionarAoCarrinho from "./AdicionarAoCarrinho";
 import { useState, useEffect } from "react";
@@ -56,6 +57,7 @@ const ProdutoCard = ({
 }: ProdutoCardProps) => {
   const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null);
   const [unidadeMedida, setUnidadeMedida] = useState<string>("");
+  const [imageModalOpen, setImageModalOpen] = useState<boolean>(false);
   const { user } = useAuth();
 
   // Buscar unidade_de_medida diretamente do Firestore se não estiver no objeto
@@ -176,7 +178,12 @@ const ProdutoCard = ({
         <img
           src={produto.imagem || "/placeholder.svg"}
           alt={produto.nome}
-          className="h-full w-full object-contain"
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+          style={{ 
+            imageRendering: 'crisp-edges'
+          }}
         />
         <div className="absolute top-2 right-2">
           <Dialog>
@@ -189,13 +196,19 @@ const ProdutoCard = ({
                 <Info className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl w-[95vw] max-h-[95dvh] p-0 overflow-hidden flex flex-col">
-              <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-                <div className="relative w-full md:w-2/5 bg-muted flex-shrink-0 max-h-[30vh] md:max-h-none">
+            <DialogContent className="max-w-7xl w-[95vw] max-h-[95dvh] p-0 overflow-hidden flex flex-col">
+              <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+                <div className="relative w-full lg:w-1/2 bg-muted flex-shrink-0 max-h-[40vh] lg:max-h-none">
                   <img
                     src={produto.imagem || "/placeholder.svg"}
                     alt={produto.nome}
-                    className="h-full w-full object-contain p-4"
+                    loading="eager"
+                    decoding="sync"
+                    className="h-full w-full object-contain p-4 cursor-pointer"
+                    style={{ 
+                      imageRendering: 'crisp-edges'
+                    }}
+                    onClick={() => setImageModalOpen(true)}
                   />
                   {isLowStock && (
                     <div className="absolute top-4 right-4">
@@ -315,15 +328,36 @@ const ProdutoCard = ({
                         <Edit className="mr-2 h-4 w-4" />
                         Editar
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="flex items-center text-destructive hover:bg-destructive/10"
-                        onClick={() => produto.id && onDelete(produto.id)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex items-center text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir o produto "{produto.nome}"? 
+                              Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => produto.id && onDelete(produto.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </div>
@@ -368,6 +402,25 @@ const ProdutoCard = ({
         />
       </CardFooter>
     </Card>
+
+    {/* Modal para visualização ampliada da imagem */}
+    <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
+      <DialogContent className="max-w-2xl w-[90vw] max-h-[90dvh] p-2 overflow-hidden bg-black/95 border-none">
+        <div className="relative w-full h-[80vh] flex items-center justify-center">
+          <img
+            src={produto.imagem || "/placeholder.svg"}
+            alt={produto.nome}
+            loading="eager"
+            decoding="sync"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            style={{ 
+              imageRendering: 'crisp-edges',
+              filter: 'contrast(1.1) saturate(1.1)'
+            }}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   </>
 );
 };

@@ -37,6 +37,18 @@ import {
   Calendar,
   GraduationCap,
   ClipboardCheck,
+  Shield,
+  CheckCircle,
+  AlertTriangle,
+  Award,
+  Target,
+  Microscope,
+  Monitor,
+  Server,
+  HardDrive,
+  Database,
+  Activity,
+  Lock,
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useEffect, useState } from "react";
@@ -252,6 +264,28 @@ const AppSidebar = () => {
         { to: "/centro-custo", icon: BarChart3, label: "Centro de Custo" },
         { to: "/suppliers", icon: Users, label: "Fornecedores" },
         { to: "/relatorios", icon: Home, label: "Relatórios" },
+      ],
+    },
+    {
+      label: "Controle de Qualidade",
+      items: [
+        { to: "/qualidade/inspecoes", icon: CheckCircle, label: "Inspeções" },
+        { to: "/qualidade/auditorias", icon: Shield, label: "Auditorias" },
+        { to: "/qualidade/nao-conformidades", icon: AlertTriangle, label: "Não Conformidades" },
+        { to: "/qualidade/certificacoes", icon: Award, label: "Certificações" },
+        { to: "/qualidade/calibracoes", icon: Target, label: "Calibrações" },
+        { to: "/qualidade/laboratorio", icon: Microscope, label: "Laboratório" },
+      ],
+    },
+    {
+      label: "T.I",
+      items: [
+        { to: "/ti/sistemas", icon: Monitor, label: "Sistemas" },
+        { to: "/ti/infraestrutura", icon: Server, label: "Infraestrutura" },
+        { to: "/ti/backup", icon: HardDrive, label: "Backup" },
+        { to: "/ti/banco-dados", icon: Database, label: "Banco de Dados" },
+        { to: "/ti/monitoramento", icon: Activity, label: "Monitoramento" },
+        { to: "/ti/seguranca", icon: Lock, label: "Segurança" },
       ],
     },
     {

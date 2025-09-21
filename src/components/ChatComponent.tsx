@@ -79,7 +79,7 @@ const ChatComponent = () => {
           {selectedContact ? (
             <ChatWindow selectedContact={selectedContact} />
           ) : (
-            <div className="flex items-center justify-center h-full bg-muted/20">
+            <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-2">
                 <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
                   <svg

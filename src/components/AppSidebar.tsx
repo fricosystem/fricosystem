@@ -11,64 +11,69 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Layers,
-  Home,
-  Boxes,
-  Package,
-  ClipboardList,
-  Truck,
-  Warehouse,
-  ShoppingCart,
-  AlertTriangle,
-  FileText,
-  Users,
-  Wallet,
-  TrendingUp,
-  Settings,
-  FileSpreadsheet,
-  ListChecks,
-  PackagePlus,
-  Ruler,
-  Wrench,
-  ShoppingBag,
-  Factory,
-  Receipt,
-  CalendarCheck,
-  PieChart,
-  Bell,
-  PackageSearch,
-  Download,
-  Database,
-  LogOut,
-  Sun,
-  Moon,
-  ChevronUp,
-  ChevronDown,
-  UserRound,
-  Briefcase,
-  Building2,
-  // Novos ícones específicos
-  BarChart3,
-  ShoppingBasket,
-  Scan,
-  FileInput,
-  ReceiptText,
-  ArrowRightLeft,
-  MapPin,
-  TreePine,
-  FileOutput,
-  ClipboardCheck,
-  RotateCcw,
-  UserCheck,
-  Building,
-  DollarSign,
-  Calculator,
-  Upload,
-  Shield,
-  Cog,
-  PackageCheck,
-  Gavel
-} from "lucide-react";
+    Layers,
+    Home,
+    Boxes,
+    Package,
+    ClipboardList,
+    Truck,
+    Warehouse,
+    ShoppingCart,
+    AlertTriangle,
+    FileText,
+    Users,
+    Wallet,
+    TrendingUp,
+    Settings,
+    FileSpreadsheet,
+    ListChecks,
+    PackagePlus,
+    Ruler,
+    Wrench,
+    ShoppingBag,
+    Factory,
+    Receipt,
+    CalendarCheck,
+    PieChart,
+    Bell,
+    PackageSearch,
+    Download,
+    Database,
+    LogOut,
+    Sun,
+    Moon,
+    ChevronUp,
+    ChevronDown,
+    UserRound,
+    Briefcase,
+    Building2,
+    // Novos ícones específicos
+    BarChart3,
+    ShoppingBasket,
+    Scan,
+    FileInput,
+    ReceiptText,
+    ArrowRightLeft,
+    MapPin,
+    TreePine,
+    FileOutput,
+    ClipboardCheck,
+    RotateCcw,
+    UserCheck,
+    Building,
+    DollarSign,
+    Calculator,
+    Upload,
+    Shield,
+    Cog,
+    PackageCheck,
+    Gavel,
+    MessageSquare,
+    Mail,
+    Calendar,
+    Code,
+    Monitor
+  } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -109,6 +114,7 @@ const AppSidebar = () => {
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   const isAdmin = userData?.cargo === "DESENVOLVEDOR";
+  const isDesenvolvedor = userData?.cargo === "DESENVOLVEDOR";
   
   // Verifica se o usuário está ativo
   useEffect(() => {
@@ -205,8 +211,6 @@ const AppSidebar = () => {
       icon: FileText,
       items: [
         { to: "/importar-planilha", icon: Upload, label: "Importar dados", permission: "importar_dados" },
-        { to: "/exportacoes", icon: Download, label: "Exportar dados", permission: "exportar_dados" },
-        { to: "/backup-dados", icon: Database, label: "Backup/Restauração", permission: "backup_dados" },
       ],
     },
     {
@@ -214,6 +218,15 @@ const AppSidebar = () => {
       icon: Factory,
       items: [
         { to: "/pcp", icon: TrendingUp, label: "PCP", permission: "pcp" },
+      ],
+    },
+    {
+      label: "Comunicação",
+      icon: MessageSquare,
+      items: [
+        { to: "/chat", icon: MessageSquare, label: "Chat", permission: "chat" },
+        { to: "/email", icon: Mail, label: "Email", permission: "email" },
+        { to: "/agendamento", icon: Calendar, label: "Agendamento", permission: "agendamento" },
       ],
     },
     ...(isAdmin ? [{
@@ -225,7 +238,15 @@ const AppSidebar = () => {
         { to: "/unidades", icon: Building2, label: "Gestão de Unidades", permission: "gestao_unidades" },
       ],
     }] : []),
-  ], [pendingRequestsCount, isAdmin]);
+    ...(isDesenvolvedor ? [{
+      label: "Desenvolvedor",
+      icon: Code,
+      items: [
+        { to: "/planejamento-desenvolvimento", icon: ClipboardList, label: "Planejamento", permission: "planejamento_desenvolvimento" },
+        { to: "/ide", icon: Monitor, label: "IDE", permission: "ide" },
+      ],
+    }] : []),
+  ], [pendingRequestsCount, isAdmin, isDesenvolvedor]);
 
   // Aplicar filtro para mostrar apenas categorias que tenham itens válidos
   const sidebarCategories = useMemo(() => 

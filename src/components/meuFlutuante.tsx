@@ -15,7 +15,7 @@ import {
   ShoppingBasket, Scan, FileInput, ReceiptText, ArrowRightLeft, 
   MapPin, TreePine, FileOutput, ClipboardCheck, RotateCcw, UserCheck, 
   Building, DollarSign, Calculator, Upload, Shield, Cog, PackageCheck, 
-  Gavel, X, Menu
+  Gavel, X, Menu, MessageSquare, Mail, Calendar
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -326,8 +326,6 @@ const FuturisticFloatingMenu = () => {
       label: "Utilitários",
       items: filterItemsByPermission([
         { id: "importar-planilha", icon: <Upload size={20} />, label: "Importar dados", path: "/importar-planilha", permission: "importar_dados" },
-        { id: "exportacoes", icon: <Download size={20} />, label: "Exportar dados", path: "/exportacoes", permission: "exportar_dados" },
-        { id: "backup-dados", icon: <Database size={20} />, label: "Backup/Restauração", path: "/backup-dados", permission: "backup_dados" },
       ]),
     },
     {
@@ -336,6 +334,16 @@ const FuturisticFloatingMenu = () => {
       label: "Produção",
       items: filterItemsByPermission([
         { id: "pcp", icon: <TrendingUp size={20} />, label: "PCP", path: "/pcp", permission: "pcp" },
+      ]),
+    },
+    {
+      id: "comunicacao",
+      icon: <MessageSquare size={24} />,
+      label: "Comunicação",
+      items: filterItemsByPermission([
+        { id: "chat", icon: <MessageSquare size={20} />, label: "Chat", path: "/chat", permission: "chat" },
+        { id: "email", icon: <Mail size={20} />, label: "Email", path: "/email", permission: "email" },
+        { id: "agendamento", icon: <Calendar size={20} />, label: "Agendamento", path: "/agendamento", permission: "agendamento" },
       ]),
     },
     ...(isAdmin ? [{

@@ -45,6 +45,20 @@ type Fornecedor = {
   createdAt?: Date | { toDate: () => Date };
 };
 
+type Requisicao = {
+  requisicao_id: string;
+  status: string;
+  itens: Array<{
+    nome: string;
+    codigo_material: string;
+    quantidade: number;
+    valor_unitario: number;
+    centro_de_custo: string;
+  }>;
+  data_criacao: Date | { toDate: () => Date };
+  valor_total: number;
+};
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#A4DE6C', '#D0ED57', '#FFC658'];
 
 const Dashboard = () => {
@@ -65,8 +79,9 @@ const Dashboard = () => {
   const [depositos, setDepositos] = useState<Deposito[]>([]);
   const [produtosEsteMes, setProdutosEsteMes] = useState(0);
   const [produtosBaixoEstoque, setProdutosBaixoEstoque] = useState<Produto[]>([]);
+  const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
 
-  // FunÃÂ§ÃÂ£o para converter timestamp do Firestore para Date
+  // Função para converter timestamp do Firestore para Date
   const convertFirebaseTimestamp = (timestamp: Date | { toDate: () => Date }): Date => {
     return timestamp instanceof Date ? timestamp : timestamp.toDate();
   };
@@ -84,13 +99,17 @@ const Dashboard = () => {
     return new Date(year, month, 0).getDate();
   };
 
-  // FunÃÂ§ÃÂ£o para converter string de valor para nÃÂºmero
+  // Função para converter string de valor para número
   const parseCurrencyValue = (value: string | number): number => {
     if (typeof value === 'number') return value;
+    if (!value || value === '') return 0;
     
-    // Remove pontos de milhar e substitui vÃÂ­rgula decimal por ponto
-    const cleanedValue = value.replace(/\./g, '').replace(',', '.');
-    return parseFloat(cleanedValue) || 0;
+    // Remove pontos de milhar e substitui vírgula decimal por ponto
+    const cleanedValue = value.toString().replace(/\./g, '').replace(',', '.');
+    const result = parseFloat(cleanedValue) || 0;
+    
+    console.log(`parseCurrencyValue: "${value}" -> "${cleanedValue}" -> ${result}`);
+    return result;
   };
 
   // Carregar dados do Firestore
@@ -100,7 +119,7 @@ const Dashboard = () => {
       setLoadingProgress(0);
       
       try {
-        // 1. Carregar usuÃÂ¡rios
+        // 1. Carregar usuários
         setLoadingProgress(10);
         const usuariosSnapshot = await getDocs(collection(db, "usuarios"));
         const usuariosData = usuariosSnapshot.docs.map(doc => doc.data() as Usuario);
@@ -111,28 +130,71 @@ const Dashboard = () => {
         // 2. Carregar produtos
         setLoadingProgress(30);
         const produtosSnapshot = await getDocs(collection(db, "produtos"));
-        const produtosData = produtosSnapshot.docs.map(doc => {
+        console.log(`=== CARREGAMENTO DE PRODUTOS ===`);
+        console.log(`Documentos encontrados: ${produtosSnapshot.docs.length}`);
+        
+        const produtosData = produtosSnapshot.docs.map((doc, index) => {
           const data = doc.data() as Produto;
-          // Converter valor_unitario para nÃÂºmero
+          console.log(`[${index + 1}] Documento ${doc.id}:`, data);
+          
+          // Converter valor_unitario para número
+          const valorOriginal = data.valor_unitario;
           data.valor_unitario = parseCurrencyValue(data.valor_unitario?.toString() || '0');
+          
+          console.log(`  Valor original: ${valorOriginal}, Valor convertido: ${data.valor_unitario}`);
+          
           return data;
         });
         setProdutos(produtosData);
         setTotalProdutos(produtosData.length);
         
         // Calcular valor total do estoque
-        const valorTotal = produtosData.reduce((sum, produto) => {
-          const valorUnitario = Number(produto.valor_unitario);
-          const quantidade = produto.quantidade || 1;
-          return sum + (valorUnitario * quantidade);
-        }, 0);
+        console.log('=== INÍCIO DO CÁLCULO DE VALOR EM ESTOQUE ===');
+        console.log(`Total de produtos encontrados: ${produtosData.length}`);
+        
+        let valorTotal = 0;
+        let produtosComValor = 0;
+        let produtosSemValor = 0;
+        
+        produtosData.forEach((produto, index) => {
+          const valorUnitarioOriginal = produto.valor_unitario;
+          const quantidadeOriginal = produto.quantidade;
+          
+          const valorUnitario = Number(produto.valor_unitario) || 0;
+          const quantidade = Number(produto.quantidade) || 0;
+          const valorTotalProduto = valorUnitario * quantidade;
+          
+          if (valorUnitario > 0 && quantidade > 0) {
+            produtosComValor++;
+          } else {
+            produtosSemValor++;
+          }
+          
+          valorTotal += valorTotalProduto;
+          
+          console.log(`[${index + 1}] ${produto.nome}`);
+          console.log(`  - Valor Original: ${valorUnitarioOriginal} (tipo: ${typeof valorUnitarioOriginal})`);
+          console.log(`  - Quantidade Original: ${quantidadeOriginal} (tipo: ${typeof quantidadeOriginal})`);
+          console.log(`  - Valor Convertido: ${valorUnitario}`);
+          console.log(`  - Quantidade Convertida: ${quantidade}`);
+          console.log(`  - Total do Produto: ${valorTotalProduto}`);
+          console.log(`  - Valor Acumulado: ${valorTotal}`);
+          console.log('  ---');
+        });
+        
+        console.log(`=== RESUMO DO CÁLCULO ===`);
+        console.log(`Produtos com valor: ${produtosComValor}`);
+        console.log(`Produtos sem valor: ${produtosSemValor}`);
+        console.log(`Valor total final: ${valorTotal}`);
+        console.log('=== FIM DO CÁLCULO ===');
+        
         setValorEstoque(valorTotal);
 
         // Identificar produtos com baixo estoque (quantidade < 5)
         const baixoEstoque = produtosData.filter(p => p.quantidade && p.quantidade < 5);
         setProdutosBaixoEstoque(baixoEstoque);
 
-        // Calcular produtos baseado no perÃÂ­odo selecionado
+        // Calcular produtos baseado no período selecionado
         const now = new Date();
         
         const produtosFiltrados = produtosData.filter(produto => {
@@ -141,13 +203,11 @@ const Dashboard = () => {
           const dataCriacao = new Date(produto.data_criacao);
           
           if (period === 'hoje') {
-            // Alterar para mostrar dados do dia anterior
-            const yesterday = new Date(now);
-            yesterday.setDate(now.getDate() - 1);
-            const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-            const endOfYesterday = new Date(startOfYesterday);
-            endOfYesterday.setHours(23, 59, 59, 999);
-            return dataCriacao >= startOfYesterday && dataCriacao <= endOfYesterday;
+            // Mostrar dados de hoje
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const endOfToday = new Date(startOfToday);
+            endOfToday.setHours(23, 59, 59, 999);
+            return dataCriacao >= startOfToday && dataCriacao <= endOfToday;
           } else if (period === 'semana') {
             const startOfWeek = new Date(now);
             startOfWeek.setDate(now.getDate() - now.getDay());
@@ -173,7 +233,7 @@ const Dashboard = () => {
         
         setProdutosEsteMes(produtosFiltrados);
 
-        // 3. Carregar transferÃÂªncias
+        // 3. Carregar transferências
         setLoadingProgress(50);
         const transferenciasSnapshot = await getDocs(collection(db, "transferencias"));
         const transferenciasData = transferenciasSnapshot.docs.map(doc => {
@@ -185,7 +245,7 @@ const Dashboard = () => {
         });
         setTransferencias(transferenciasData);
 
-        // 4. Carregar depÃÂ³sitos
+        // 4. Carregar depósitos
         setLoadingProgress(70);
         const depositosSnapshot = await getDocs(collection(db, "depositos"));
         const depositosData = depositosSnapshot.docs.map(doc => doc.data() as Deposito);
@@ -195,7 +255,7 @@ const Dashboard = () => {
         setUnidades(unidadesUnicas);
 
         // 5. Carregar fornecedores
-        setLoadingProgress(90);
+        setLoadingProgress(80);
         const fornecedoresSnapshot = await getDocs(collection(db, "fornecedores"));
         const fornecedoresData = fornecedoresSnapshot.docs.map(doc => {
           const data = doc.data() as Fornecedor;
@@ -206,12 +266,24 @@ const Dashboard = () => {
         });
         setFornecedores(fornecedoresData);
 
+        // 6. Carregar requisições
+        setLoadingProgress(90);
+        const requisicoesSnapshot = await getDocs(collection(db, "requisicoes"));
+        const requisicoesData = requisicoesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            ...data,
+            data_criacao: data.data_criacao
+          } as Requisicao;
+        });
+        setRequisicoes(requisicoesData);
+
         setLoadingProgress(100);
       } catch (error) {
         console.error("Error loading data:", error);
         toast({
           title: "Erro ao carregar dados",
-          description: "NÃÂ£o foi possÃÂ­vel carregar os dados do Firestore.",
+          description: "Não foi possível carregar os dados do Firestore.",
           variant: "destructive",
         });
       } finally {
@@ -220,26 +292,26 @@ const Dashboard = () => {
     };
     
     fetchData();
-  }, [period, toast]); // Recarregar quando o perÃÂ­odo mudar
+  }, [period, toast]); // Recarregar quando o período mudar
 
-  // Calcular porcentagem de usuÃÂ¡rios ativos
+  // Calcular porcentagem de usuários ativos
   const porcentagemAtivos = totalUsuarios > 0 ? (usuariosAtivos / totalUsuarios) * 100 : 0;
 
-  // Calcular porcentagem de produtos cadastrados no perÃÂ­odo
+  // Calcular porcentagem de produtos cadastrados no período
   const porcentagemProdutosPeriodo = totalProdutos > 0 ? (produtosEsteMes / totalProdutos) * 100 : 0;
   
-  // Texto baseado no perÃÂ­odo
+  // Texto baseado no período
   const getPeriodText = () => {
     switch (period) {
       case 'hoje': return 'hoje';
       case 'semana': return 'esta semana';
-      case 'mes': return 'este mÃÂªs';
+      case 'mes': return 'este mês';
       case 'ano': return 'este ano';
-      default: return 'no perÃÂ­odo';
+      default: return 'no período';
     }
   };
 
-  // Preparar dados para grÃÂ¡ficos
+  // Preparar dados para gráficos
   const produtosPorFornecedor = () => {
     const fornecedorCount: Record<string, number> = {};
     
@@ -275,7 +347,7 @@ const Dashboard = () => {
     const estadoCount: Record<string, number> = {};
     
     fornecedores.forEach(fornecedor => {
-      const estado = fornecedor.endereco?.estado || 'NÃÂ£o informado';
+      const estado = fornecedor.endereco?.estado || 'Não informado';
       estadoCount[estado] = (estadoCount[estado] || 0) + 1;
     });
     
@@ -285,30 +357,138 @@ const Dashboard = () => {
     })).sort((a, b) => b.value - a.value);
   };
 
+  const requisicoesMovimentacaoPorPeriodo = () => {
+    const now = new Date();
+    let timeLabels: string[] = [];
+    let data: Record<string, any>[] = [];
+
+    // Definir intervalos de tempo baseado no período
+    if (period === "hoje") {
+      timeLabels = Array.from({ length: 24 }, (_, i) => `${i}h`);
+    } else if (period === "semana") {
+      timeLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    } else if (period === "mes") {
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      timeLabels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`);
+    } else {
+      timeLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'];
+    }
+
+    // Filtrar requisições por período
+    const filteredRequisicoes = requisicoes.filter(requisicao => {
+      if (!requisicao.data_criacao) return false;
+      
+      const dataCriacao = convertFirebaseTimestamp(requisicao.data_criacao);
+      
+      if (period === 'hoje') {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfToday = new Date(startOfToday);
+        endOfToday.setHours(23, 59, 59, 999);
+        return dataCriacao >= startOfToday && dataCriacao <= endOfToday;
+      } else if (period === 'semana') {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        return dataCriacao >= startOfWeek && dataCriacao <= endOfWeek;
+      } else if (period === 'mes') {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+        return dataCriacao >= startOfMonth && dataCriacao <= endOfMonth;
+      } else if (period === 'ano') {
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        endOfYear.setHours(23, 59, 59, 999);
+        return dataCriacao >= startOfYear && dataCriacao <= endOfYear;
+      }
+      
+      return false;
+    });
+
+    // Extrair todos os centros de custo únicos
+    const centrosCusto = new Set<string>();
+    filteredRequisicoes.forEach(requisicao => {
+      if (requisicao.itens && Array.isArray(requisicao.itens)) {
+        requisicao.itens.forEach(item => {
+          if (item.centro_de_custo) {
+            centrosCusto.add(item.centro_de_custo);
+          }
+        });
+      }
+    });
+
+    // Criar estrutura de dados para cada label de tempo
+    data = timeLabels.map((label, labelIndex) => {
+      const timeData: Record<string, any> = { name: label };
+      
+      // Para cada centro de custo, calcular as requisições neste período
+      Array.from(centrosCusto).forEach(centroCusto => {
+        let quantidade = 0;
+        
+        filteredRequisicoes.forEach(requisicao => {
+          const dataCriacao = convertFirebaseTimestamp(requisicao.data_criacao);
+          let matches = false;
+
+          // Verificar se a requisição está no período correto
+          if (period === "hoje") {
+            matches = dataCriacao.getHours() === labelIndex;
+          } else if (period === "semana") {
+            const dayOfWeek = dataCriacao.getDay();
+            matches = dayOfWeek === labelIndex;
+          } else if (period === "mes") {
+            const dayOfMonth = dataCriacao.getDate();
+            matches = dayOfMonth === labelIndex + 1;
+          } else {
+            const month = dataCriacao.getMonth();
+            matches = month === labelIndex;
+          }
+
+          if (matches && requisicao.itens) {
+            requisicao.itens.forEach(item => {
+              if (item.centro_de_custo === centroCusto) {
+                quantidade += item.quantidade || 0;
+              }
+            });
+          }
+        });
+
+        timeData[centroCusto] = quantidade;
+      });
+
+      return timeData;
+    });
+
+    return {
+      data,
+      centrosCusto: Array.from(centrosCusto)
+    };
+  };
+
   const transferenciasPorPeriodo = () => {
     const now = new Date();
     let data: { name: string; transferencias: number }[] = [];
     
     if (period === "hoje") {
-      // Filtro para o dia anterior
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
-      const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-      const endOfYesterday = new Date(startOfYesterday);
-      endOfYesterday.setHours(23, 59, 59, 999);
+      // Filtro para hoje
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfToday = new Date(startOfToday);
+      endOfToday.setHours(23, 59, 59, 999);
       
-      // Por hora ontem
+      // Por hora hoje
       const hours = Array.from({ length: 24 }, (_, i) => i);
       data = hours.map(hour => ({
         name: `${hour}h`,
         transferencias: transferencias.filter(t => {
           const date = convertFirebaseTimestamp(t.data_transferencia);
-          return date >= startOfYesterday && date <= endOfYesterday && date.getHours() === hour;
+          return date >= startOfToday && date <= endOfToday && date.getHours() === hour;
         }).reduce((sum, t) => sum + (t.quantidade || 0), 0)
       }));
     } else if (period === "semana") {
       // Por dia na semana - semana atual
-      const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃÂ¡b'];
+      const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
       const startOfWeek = new Date(now);
       startOfWeek.setDate(now.getDate() - now.getDay());
       startOfWeek.setHours(0, 0, 0, 0);
@@ -328,7 +508,7 @@ const Dashboard = () => {
         };
       });
     } else if (period === "mes") {
-      // Por dia no mÃÂªs atual
+      // Por dia no mês atual
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       const daysInMonth = endOfMonth.getDate();
@@ -347,7 +527,7 @@ const Dashboard = () => {
         };
       });
     } else {
-      // Por mÃÂªs no ano atual
+      // Por mês no ano atual
       const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'];
       data = months.map((month, i) => {
         const startOfMonth = new Date(now.getFullYear(), i, 1);
@@ -392,7 +572,7 @@ const Dashboard = () => {
     ).length;
   };
 
-  // Dados para grÃÂ¡fico de radar (anÃÂ¡lise de estoque)
+  // Dados para gráfico de radar (análise de estoque)
   const dadosAnaliseEstoque = () => {
     return [
       {
@@ -416,14 +596,14 @@ const Dashboard = () => {
         fullMark: 100,
       },
       {
-        subject: 'TransferÃÂªncias',
+        subject: 'Transferências',
         A: Math.min(transferencias.length / 50, 100), // Normalizado para escala 0-100
         fullMark: 100,
       },
     ];
   };
 
-  // Dados para grÃÂ¡fico de dispersÃÂ£o (valor vs quantidade)
+  // Dados para gráfico de dispersão (valor vs quantidade)
   const dadosValorQuantidade = () => {
     if (!produtos || produtos.length === 0) {
       return [{ x: 0, y: 0, z: 20, name: 'Sem dados' }];
@@ -439,7 +619,7 @@ const Dashboard = () => {
       }));
   };
 
-  // Dados para grÃÂ¡fico de produtos por unidade (barras)
+  // Dados para gráfico de produtos por unidade (barras)
   const dadosProdutosPorUnidade = () => {
     const data = produtosPorUnidade();
     if (!data || data.length === 0) {
@@ -452,7 +632,7 @@ const Dashboard = () => {
     }));
   };
 
-  // Dados para grÃÂ¡fico composto (valor do estoque por unidade)
+  // Dados para gráfico composto (valor do estoque por unidade)
   const dadosValorEstoquePorUnidade = () => {
     if (!produtos || produtos.length === 0) {
       return [{ name: 'Sem dados', valor: 0, quantidade: 0 }];
@@ -462,7 +642,9 @@ const Dashboard = () => {
     
     produtos.forEach(produto => {
       if (produto.unidade) {
-        const valor = Number(produto.valor_unitario || 0) * (produto.quantidade || 1);
+        const valorUnitario = Number(produto.valor_unitario) || 0;
+        const quantidade = Number(produto.quantidade) || 0;
+        const valor = valorUnitario * quantidade;
         unidadeMap[produto.unidade] = (unidadeMap[produto.unidade] || 0) + valor;
       }
     });
@@ -478,9 +660,68 @@ const Dashboard = () => {
     }));
   };
 
+  // Dados para gráfico de requisições por centro de custo
+  const requisicoesPorentoCusto = () => {
+    if (!requisicoes || requisicoes.length === 0) {
+      return [];
+    }
+
+    const now = new Date();
+    const filteredRequisicoes = requisicoes.filter(requisicao => {
+      if (!requisicao.data_criacao) return false;
+      
+      const dataCriacao = convertFirebaseTimestamp(requisicao.data_criacao);
+      
+      if (period === 'hoje') {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfToday = new Date(startOfToday);
+        endOfToday.setHours(23, 59, 59, 999);
+        return dataCriacao >= startOfToday && dataCriacao <= endOfToday;
+      } else if (period === 'semana') {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        return dataCriacao >= startOfWeek && dataCriacao <= endOfWeek;
+      } else if (period === 'mes') {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+        return dataCriacao >= startOfMonth && dataCriacao <= endOfMonth;
+      } else if (period === 'ano') {
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        endOfYear.setHours(23, 59, 59, 999);
+        return dataCriacao >= startOfYear && dataCriacao <= endOfYear;
+      }
+      
+      return false;
+    });
+
+    const centroCustoMap: Record<string, number> = {};
+    
+    filteredRequisicoes.forEach(requisicao => {
+      if (requisicao.itens && Array.isArray(requisicao.itens)) {
+        requisicao.itens.forEach(item => {
+          if (item.centro_de_custo) {
+            centroCustoMap[item.centro_de_custo] = (centroCustoMap[item.centro_de_custo] || 0) + item.quantidade;
+          }
+        });
+      }
+    });
+    
+    return Object.entries(centroCustoMap).map(([name, value], index) => ({
+      name: name || 'Centro não definido',
+      value: value || 0,
+      fill: COLORS[index % COLORS.length]
+    })).sort((a, b) => b.value - a.value);
+  };
+
   return (
     <AppLayout title="Dashboard Geral">
-      {/* Seletor de perÃÂ­odo */}
+      {/* Seletor de período */}
       <div className="mb-6">
         <Tabs defaultValue="hoje" value={period} onValueChange={(v) => setPeriod(v as "hoje" | "semana" | "mes" | "ano")}>
           <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800">
@@ -491,7 +732,7 @@ const Dashboard = () => {
               <Calendar className="h-4 w-4" /> Semana
             </TabsTrigger>
             <TabsTrigger value="mes" className="flex items-center gap-2">
-              <Layers className="h-4 w-4" /> MÃÂªs
+              <Layers className="h-4 w-4" /> Mês
             </TabsTrigger>
             <TabsTrigger value="ano" className="flex items-center gap-2">
               <BarChart2 className="h-4 w-4" /> Ano
@@ -513,10 +754,10 @@ const Dashboard = () => {
         </Card>
       ) : (
         <>
-          {/* Cards de estatÃÂ­sticas */}
+          {/* Cards de estatísticas */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
             <StatsCard
-              title="UsuÃÂ¡rios Ativos"
+              title="Usuários Ativos"
               value={`${usuariosAtivos}/${totalUsuarios}`}
               icon={<Users className="h-5 w-5" />}
               trend={{
@@ -524,7 +765,7 @@ const Dashboard = () => {
                 positive: porcentagemAtivos > 70,
                 label: `${porcentagemAtivos.toFixed(0)}% de ativos`
               }}
-              description="EficiÃÂªncia da equipe"
+              description="Eficiência da equipe"
               className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
             />
             <StatsCard
@@ -538,7 +779,7 @@ const Dashboard = () => {
               title="Valor em Estoque"
               value={formatCurrency(valorEstoque)}
               icon={<DollarSign className="h-5 w-5" />}
-              description="Valor total do inventÃÂ¡rio"
+              description="Valor total do inventário"
               className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
             />
             <StatsCard
@@ -550,41 +791,43 @@ const Dashboard = () => {
                 positive: false,
                 label: `${((produtosBaixoEstoque.length / totalProdutos) * 100).toFixed(1)}%`
               }}
-              description="Itens com estoque crÃÂ­tico"
+              description="Itens com estoque crítico"
               className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-900/10"
             />
           </div>
 
-          {/* Primeira linha de grÃÂ¡ficos */}
+          {/* Primeira linha de gráficos */}
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
-            {/* TransferÃÂªncias por perÃÂ­odo - GrÃÂ¡fico de ÃÂrea */}
+            {/* Movimentação por Centro de Custo - Gráfico de Área Múltipla */}
             <Card className="col-span-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Truck className="h-5 w-5" /> MovimentaÃÂ§ÃÂ£o de Estoque
+                      <Truck className="h-5 w-5" /> Movimentação por Centro de Custo
                     </CardTitle>
                     <CardDescription>
-                      {period === "hoje" ? "Ontem por hora" : 
+                      {period === "hoje" ? "Hoje por hora" : 
                        period === "semana" ? "Esta semana por dia" :
-                       period === "mes" ? "Este mÃÂªs por dia" : "Este ano por mÃÂªs"}
+                       period === "mes" ? "Este mês por dia" : "Este ano por mês"}
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="border-primary text-primary">
-                    {transferencias.length} transferÃÂªncias
+                    {requisicoesMovimentacaoPorPeriodo().centrosCusto.length} centros
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={transferenciasPorPeriodo()}>
+                    <AreaChart data={requisicoesMovimentacaoPorPeriodo().data}>
                       <defs>
-                        <linearGradient id="colorTransferencias" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                        </linearGradient>
+                        {requisicoesMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => (
+                          <linearGradient key={centro} id={`color${centro.replace(/\s+/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.1}/>
+                          </linearGradient>
+                        ))}
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                       <XAxis dataKey="name" />
@@ -595,28 +838,33 @@ const Dashboard = () => {
                           borderColor: 'hsl(var(--border))',
                           borderRadius: 'var(--radius)',
                         }}
-                        formatter={(value) => [`${value} itens`, 'Quantidade']}
+                        formatter={(value, name) => [`${value} itens`, name]}
                       />
-                      <Area 
-                        type="monotone" 
-                        dataKey="transferencias" 
-                        stroke="#8884d8" 
-                        fillOpacity={1} 
-                        fill="url(#colorTransferencias)" 
-                      />
+                      <Legend />
+                      {requisicoesMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => (
+                        <Area 
+                          key={centro}
+                          type="monotone" 
+                          dataKey={centro} 
+                          stackId="1"
+                          stroke={COLORS[index % COLORS.length]} 
+                          fillOpacity={1} 
+                          fill={`url(#color${centro.replace(/\s+/g, '')})`}
+                        />
+                      ))}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* AnÃÂ¡lise de Estoque - GrÃÂ¡fico de Radar */}
+            {/* Análise de Estoque - Gráfico de Radar */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Boxes className="h-5 w-5" /> SaÃÂºde do Estoque
+                  <Boxes className="h-5 w-5" /> Saúde do Estoque
                 </CardTitle>
-                <CardDescription>MÃÂ©tricas-chave do inventÃÂ¡rio</CardDescription>
+                <CardDescription>Métricas-chave do inventário</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -631,7 +879,7 @@ const Dashboard = () => {
                           borderColor: 'hsl(var(--border))',
                           borderRadius: 'var(--radius)',
                         }}
-                        formatter={(value) => [`${value}%`, 'ÃÂndice']}
+                        formatter={(value) => [`${value}%`, 'Índice']}
                       />
                       <Radar 
                         name="Estoque" 
@@ -647,9 +895,9 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Segunda linha de grÃÂ¡ficos */}
+          {/* Segunda linha de gráficos */}
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
-            {/* Produtos por fornecedor - GrÃÂ¡fico de Barras Horizontais */}
+            {/* Produtos por fornecedor - Gráfico de Barras Horizontais */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -683,13 +931,13 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Fornecedores por estado - GrÃÂ¡fico de Pizza */}
+            {/* Fornecedores por estado - Gráfico de Pizza */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Map className="h-5 w-5" /> Fornecedores por Estado
                 </CardTitle>
-                <CardDescription>DistribuiÃÂ§ÃÂ£o geogrÃÂ¡fica</CardDescription>
+                <CardDescription>Distribuição geográfica</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -726,13 +974,13 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Valor vs Quantidade - GrÃÂ¡fico de DispersÃÂ£o */}
+            {/* Valor vs Quantidade - Gráfico de Dispersão */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <PieChartIcon className="h-5 w-5" /> Valor vs Quantidade
                 </CardTitle>
-                <CardDescription>RelaÃÂ§ÃÂ£o entre valor unitÃÂ¡rio e estoque</CardDescription>
+                <CardDescription>Relação entre valor unitário e estoque</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -764,15 +1012,51 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Terceira linha de grÃÂ¡ficos */}
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-6">
-            {/* Produtos por unidade - GrÃÂ¡fico de Funil */}
+          {/* Terceira linha de gráficos */}
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
+            {/* Requisições por Centro de Custo */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" /> Requisições por Centro de Custo
+                </CardTitle>
+                <CardDescription>Distribuição de requisições {getPeriodText()}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={requisicoesPorentoCusto()}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        interval={0}
+                      />
+                      <YAxis />
+                      <Tooltip 
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)',
+                        }}
+                        formatter={(value) => [`${value} itens`, 'Quantidade']}
+                      />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Produtos por unidade - Gráfico de Barras */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Warehouse className="h-5 w-5" /> Produtos por Unidade
                 </CardTitle>
-                <CardDescription>DistribuiÃÂ§ÃÂ£o por localizaÃÂ§ÃÂ£o</CardDescription>
+                <CardDescription>Distribuição por localização</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -796,7 +1080,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Valor do estoque por unidade - GrÃÂ¡fico Composto */}
+            {/* Valor do estoque por unidade - Gráfico Composto */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -837,7 +1121,7 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Listas de informaÃÂ§ÃÂµes */}
+          {/* Listas de informações */}
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             {/* Lista de produtos com baixo estoque */}
             <Card>
@@ -845,7 +1129,7 @@ const Dashboard = () => {
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-yellow-600" /> Produtos com Baixo Estoque
                 </CardTitle>
-                <CardDescription>Itens que precisam de reposiÃÂ§ÃÂ£o</CardDescription>
+                <CardDescription>Itens que precisam de reposição</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -854,7 +1138,7 @@ const Dashboard = () => {
                       <div key={index} className="flex items-start justify-between p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
                         <div>
                           <p className="font-medium">{produto.nome || 'Produto sem nome'}</p>
-                          <p className="text-sm text-muted-foreground">{produto.fornecedor_nome || 'Fornecedor nÃÂ£o especificado'}</p>
+                          <p className="text-sm text-muted-foreground">{produto.fornecedor_nome || 'Fornecedor não especificado'}</p>
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-yellow-600">{produto.quantidade} un.</p>
@@ -885,7 +1169,7 @@ const Dashboard = () => {
                     tempoCadastroFornecedores().map((fornecedor, index) => {
                       const estado = fornecedores.find(f => 
                         (f.razao_social || f.nome) === fornecedor.name
-                      )?.endereco?.estado || 'NÃÂ£o informado';
+                      )?.endereco?.estado || 'Não informado';
                       
                       return (
                         <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">

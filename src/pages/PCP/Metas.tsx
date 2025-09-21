@@ -208,12 +208,11 @@ const Metas = () => {
     // Como os dados PCP vêm dos documentos que já foram processados, mantemos todos
     return pcpData;
   }, [pcpData]);
-
   const calcularRealizadoDiaAtual = (classificacao: string): number => {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0); // Usar padrão 00:00
     const dataHoje = hoje.toISOString().split('T')[0];
-    
+
     // Buscar nos dados PCP carregados pelo hook usePCP
     const dadosHoje = pcpData.filter(item => {
       let dataItem = '';
@@ -222,16 +221,14 @@ const Metas = () => {
       }
       return dataItem === dataHoje && (item.classificacao || item.setor || 'Sem classificação') === classificacao;
     });
-    
     return dadosHoje.reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
   };
-
   const calcularRealizadoDiaAnterior = (classificacao: string): number => {
     const ontem = new Date();
     ontem.setDate(ontem.getDate() - 1);
     ontem.setHours(0, 0, 0, 0); // Usar padrão 00:00
     const dataOntem = ontem.toISOString().split('T')[0];
-    
+
     // Buscar nos dados PCP carregados pelo hook usePCP
     const dadosOntem = pcpData.filter(item => {
       let dataItem = '';
@@ -240,7 +237,6 @@ const Metas = () => {
       }
       return dataItem === dataOntem && (item.classificacao || item.setor || 'Sem classificação') === classificacao;
     });
-    
     return dadosOntem.reduce((total, item) => total + (item.quantidade_produzida || 0), 0);
   };
   const inicializarMetas = async () => {
@@ -258,11 +254,10 @@ const Metas = () => {
       }
       const metasComRealizado: MetaPorClassificacao[] = [];
       let temProducaoHoje = false;
-      
       for (const classificacao of classificacoesUnicas) {
         const realizadoDiaAtual = calcularRealizadoDiaAtual(classificacao);
         const realizadoDiaAnterior = await calcularRealizadoDiaAnterior(classificacao);
-        
+
         // Verificar se há produção hoje para qualquer classificação
         if (realizadoDiaAtual > 0) {
           temProducaoHoje = true;
@@ -284,7 +279,6 @@ const Metas = () => {
         // Usar dia atual se há produção, senão usar dia anterior
         const realizadoFinal = realizadoDiaAtual > 0 ? realizadoDiaAtual : realizadoDiaAnterior;
         const percentual = metaDiaria > 0 ? realizadoFinal / metaDiaria * 100 : 0;
-        
         metasComRealizado.push({
           classificacao,
           meta: metaDiaria,
@@ -292,7 +286,7 @@ const Metas = () => {
           percentual: Math.round(percentual * 100) / 100
         });
       }
-      
+
       // Definir se estamos usando dados do dia anterior baseado na produção geral
       setUsandoDadosOntem(!temProducaoHoje);
 
@@ -501,10 +495,7 @@ const Metas = () => {
             <RefreshCw className="h-4 w-4" />
             Atualizar
           </Button>
-          <Button onClick={() => gerarMetaMensal()} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Gerar Meta Mensal
-          </Button>
+          
         </div>
       </div>
 
@@ -512,8 +503,7 @@ const Metas = () => {
       <div className="space-y-6">
         
         {/* Alerta de Processamento Pendente */}
-        {temPendenciaHoje && (
-          <Card className="border-orange-500/50 bg-orange-50 dark:bg-orange-950/20">
+        {temPendenciaHoje && <Card className="border-orange-500/50 bg-orange-50 dark:bg-orange-950/20">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-orange-600" />
@@ -526,22 +516,18 @@ const Metas = () => {
                     Acesse a aba <strong>Processamento</strong> para processar a produção do dia.
                   </p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    // Disparar evento customizado para mudar a aba
-                    const event = new CustomEvent('changeTab', { detail: 'processamento' });
-                    window.dispatchEvent(event);
-                  }}
-                  className="ml-auto border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-300 dark:hover:bg-orange-900/20"
-                >
+                <Button variant="outline" size="sm" onClick={() => {
+              // Disparar evento customizado para mudar a aba
+              const event = new CustomEvent('changeTab', {
+                detail: 'processamento'
+              });
+              window.dispatchEvent(event);
+            }} className="ml-auto border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-300 dark:hover:bg-orange-900/20">
                   Processar Agora
                 </Button>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
         
         {/* Controle e Progresso da Meta Mensal Unificado */}
         <Card>

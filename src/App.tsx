@@ -28,6 +28,8 @@ import FornecedorProdutos from "./pages/Fornecedor/FornecedorProdutos";
 import NotasFiscaisLancamento from "./pages/NotasFiscaisLancamento";
 import PCP from "./pages/PCP/PCP";
 import RelatoriosES from "./pages/Relatorios/Relatorios";
+import PlanejamentoDesenvolvimento from "./pages/Planejamento/PlanejamentoDesenvolvimento";
+import IDE from "./pages/IDE";
 
 // Páginas de Transferência e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
@@ -42,6 +44,8 @@ import Unidades from "./pages/Unidades";
 
 // Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
+import Email from "./pages/Email";
+import Agendamento from "./pages/Agendamento";
 
 // Páginas de Inventário
 import Inventario from "./pages/Inventario";
@@ -119,8 +123,10 @@ const AppContent = () => {
           <Route path="/notas-fiscais-lancamento" element={<AuthGuard><NotasFiscaisLancamento /></AuthGuard>} />
           <Route path="/centro-custo" element={<AuthGuard><CentroCusto /></AuthGuard>} />
           <Route path="/unidades" element={<AuthGuard><Unidades /></AuthGuard>} />
-          <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
-          <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
+           <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
+           <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
+           <Route path="/planejamento-desenvolvimento" element={<AuthGuard><PlanejamentoDesenvolvimento /></AuthGuard>} />
+           <Route path="/ide" element={<AuthGuard><IDE /></AuthGuard>} />
 
           {/* Rotas de Entrada Manual e Transferência */}
           <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />
@@ -131,6 +137,8 @@ const AppContent = () => {
 
           {/* Rotas de Comunicação */}
           <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />
+          <Route path="/email" element={<AuthGuard><Email /></AuthGuard>} />
+          <Route path="/agendamento" element={<AuthGuard><Agendamento /></AuthGuard>} />
           
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />

@@ -575,9 +575,9 @@ const CentroCusto = () => {
                 <SelectValue placeholder="Filtrar por Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">📋 Todos os Status</SelectItem>
-                <SelectItem value="Ativo">✅ Centros Ativos</SelectItem>
-                <SelectItem value="Inativo">❌ Centros Inativos</SelectItem>
+                <SelectItem value="todos">Todos os Status</SelectItem>
+                <SelectItem value="Ativo">Centros Ativos</SelectItem>
+                <SelectItem value="Inativo">Centros Inativos</SelectItem>
               </SelectContent>
             </Select>
             
@@ -587,12 +587,12 @@ const CentroCusto = () => {
                 <SelectValue placeholder="Filtrar por Unidade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todas">🏢 Todas as Unidades</SelectItem>
+                <SelectItem value="todas">Todas as Unidades</SelectItem>
                 {unidades
                   .filter(unidade => unidade && unidade.trim() !== "")
                   .map(unidade => (
                     <SelectItem key={unidade} value={unidade}>
-                      🏭 {unidade}
+                      {unidade}
                     </SelectItem>
                   ))}
               </SelectContent>

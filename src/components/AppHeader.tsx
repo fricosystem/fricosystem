@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, ShoppingCart, MessageSquare, QrCode, Barcode, Scan } from "lucide-react";
+import { Bell, ShoppingCart, MessageSquare, QrCode, Barcode, Scan, Mail, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -187,12 +187,13 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Chat Button */}
+          {/* Communication Button */}
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => navigate("/chat")}
             className="relative"
+            onClick={() => navigate("/chat")}
+            title="Comunicação"
           >
             <MessageSquare size={20} />
             {totalUnreadMessages > 0 && (

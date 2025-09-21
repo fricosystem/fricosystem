@@ -629,16 +629,13 @@ const PCP = () => {
                 };
               })()} description="KG produzidos" formula="Soma de toda produção realizada no período selecionado" className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-900/10" />
              
-              <StatsCard title="Planejado x Realizado" value={`${pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0).toLocaleString()} / ${metrics.producaoTotal.toLocaleString()}`} icon={<BarChart2 className="h-4 w-4" />} description={`Dias trabalhados: ${(() => {
-              const uniqueDates = new Set();
-              pcpData.forEach(item => {
-                if (item.data_inicio) {
-                  const date = item.data_inicio.toDate ? item.data_inicio.toDate() : new Date(item.data_inicio.seconds * 1000);
-                  uniqueDates.add(date.toDateString());
-                }
-              });
-              return uniqueDates.size;
-            })()}`} formula="Soma: Quantidade realizada) / Quantidade produzida" className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10" />
+              <StatsCard title="Planejado x Realizado" value={`${pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0).toLocaleString()} / ${metrics.producaoTotal.toLocaleString()}`} icon={<BarChart2 className="h-4 w-4" />} description={`Desvio do planejamento: ${(() => {
+              const totalPlanejado = pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0);
+              const totalRealizado = metrics.producaoTotal;
+              if (totalPlanejado === 0) return "0%";
+              const desvio = ((totalRealizado - totalPlanejado) / totalPlanejado) * 100;
+              return `${desvio >= 0 ? '+' : ''}${desvio.toFixed(1)}%`;
+            })()}`} formula="(Realizado - Planejado) / Planejado × 100" className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10" />
 
               <StatsCard title="Eficiência Média" value={`${(() => {
                 const totalPlanejado = pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0);
@@ -768,18 +765,48 @@ const PCP = () => {
                                    interval={0}
                                    tick={{ fontSize: 11 }}
                                  />
-                                 <YAxis tickFormatter={(value: number) => value.toLocaleString('pt-BR')} ticks={(() => {
-                                   // Calcular o valor máximo dos dados PCP para este gráfico
-                                   const maxValue = Math.max(...pcpData.map(item => 
-                                     (item.quantidade_planejada || 0) + (item.quantidade_produzida || 0)
-                                   ));
-                                   const maxTick = Math.max(10000, Math.ceil(maxValue / 10000) * 10000);
-                                   const ticks = [];
-                                   for (let i = 0; i <= maxTick; i += 10000) {
-                                     ticks.push(i);
-                                   }
-                                   return ticks;
-                                 })()} />
+                                  <YAxis 
+                                    tickFormatter={(value: number) => value.toLocaleString('pt-BR')} 
+                                    domain={[0, 'dataMax']}
+                                    ticks={(() => {
+                                      // Calcular o valor máximo real dos dados do gráfico
+                                      const dadosGrafico = Object.entries((() => {
+                                        const dadosPorClassificacao: Record<string, any> = {};
+                                        pcpData.forEach(item => {
+                                          const classificacao = item.classificacao || 'Sem classificação';
+                                          const turno = item.turno === '1_turno' ? '1° Turno' : '2° Turno';
+                                          if (!dadosPorClassificacao[classificacao]) {
+                                            dadosPorClassificacao[classificacao] = {
+                                              '1° Turno': { planejado: 0, produzido: 0 },
+                                              '2° Turno': { planejado: 0, produzido: 0 }
+                                            };
+                                          }
+                                          dadosPorClassificacao[classificacao][turno].planejado += item.quantidade_planejada || 0;
+                                          dadosPorClassificacao[classificacao][turno].produzido += item.quantidade_produzida || 0;
+                                        });
+                                        return dadosPorClassificacao;
+                                      })()).map(([classificacao, dados]) => ({
+                                        'Planejado 1° Turno': Math.round(dados['1° Turno'].planejado),
+                                        'Produzido 1° Turno': Math.round(dados['1° Turno'].produzido),
+                                        'Planejado 2° Turno': Math.round(dados['2° Turno'].planejado),
+                                        'Produzido 2° Turno': Math.round(dados['2° Turno'].produzido),
+                                      }));
+
+                                      const maxValue = Math.max(...dadosGrafico.flatMap(item => [
+                                        item['Planejado 1° Turno'],
+                                        item['Produzido 1° Turno'],
+                                        item['Planejado 2° Turno'],
+                                        item['Produzido 2° Turno']
+                                      ]));
+
+                                      const step = 10000; // Incremento de 10.000 em 10.000
+                                      const maxTick = Math.max(step, Math.ceil(maxValue / step) * step);
+                                      const ticks = [];
+                                       for (let i = 0; i <= maxTick; i += step) {
+                                         ticks.push(i);
+                                       }
+                                       return ticks;
+                                     })()} />
                                 <Tooltip 
                                   contentStyle={{
                                     background: 'hsl(var(--background))',
