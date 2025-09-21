@@ -45,7 +45,7 @@ import Unidades from "./pages/Unidades";
 // PÃ¡ginas de comunicaÃ§Ã£o
 import ChatPage from "./pages/ChatPage";
 import Email from "./pages/Email";
-import Agendamento from "./pages/reunioes";
+import Reunioes from "./pages/Agendamento";
 
 // PÃ¡ginas de InventÃ¡rio
 import Inventario from "./pages/Inventario";
@@ -138,7 +138,7 @@ const AppContent = () => {
           {/* Rotas de ComunicaÃ§Ã£o */}
           <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />
           <Route path="/email" element={<AuthGuard><Email /></AuthGuard>} />
-          <Route path="/reunioes" element={<AuthGuard><Agendamento /></AuthGuard>} />
+          <Route path="/reunioes" element={<AuthGuard><Reunioes /></AuthGuard>} />
           
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />
