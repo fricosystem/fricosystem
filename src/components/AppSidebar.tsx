@@ -147,7 +147,7 @@ const AppSidebar = () => {
     return user.email || null;
   };
 
-  // FunÃ§Ã£o para filtrar categorias que tenham pelo menos um item vÃ¡lido
+  // FunÃ§Ã£o para filtrar categorias que tenham pelo menos um item válido
   const filterCategoriesWithItems = (categories: SidebarCategory[]) => {
     return categories
       .map(category => ({
