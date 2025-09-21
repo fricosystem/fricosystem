@@ -24,7 +24,7 @@ const IDE: React.FC = () => {
   const [user, loading] = useAuthState(auth);
   const [initializing, setInitializing] = useState(true);
   
-  // Estados para inicialização do projeto
+  // Estados para inicializaÃ§Ã£o do projeto
   const [showInitModal, setShowInitModal] = useState(false);
   const [npmInstallProgress, setNpmInstallProgress] = useState(0);
   const [npmDevProgress, setNpmDevProgress] = useState(0);
@@ -41,19 +41,19 @@ const IDE: React.FC = () => {
       }
 
       try {
-        // Primeiro, verifica se existe configuração no firestore
+        // Primeiro, verifica se existe configuraÃ§Ã£o no firestore
         const hasConfig = await githubService.hasExistingConfig();
         setHasExistingConfig(hasConfig);
 
         if (hasConfig) {
-          // Se existe configuração, mostra modal de senha
+          // Se existe configuraÃ§Ã£o, mostra modal de senha
           setShowPasswordModal(true);
         } else {
-          // Se não existe configuração, vai direto para o formulário
+          // Se nÃ£o existe configuraÃ§Ã£o, vai direto para o formulÃ¡rio
           setIsConfigured(false);
         }
       } catch (error) {
-        console.error('Erro ao verificar configuração do GitHub:', error);
+        console.error('Erro ao verificar configuraÃ§Ã£o do GitHub:', error);
         setHasExistingConfig(false);
         setIsConfigured(false);
       } finally {
@@ -73,22 +73,22 @@ const IDE: React.FC = () => {
 
   const handlePasswordValidated = async () => {
     try {
-      // Carrega a configuração do GitHub após validar a senha
+      // Carrega a configuraÃ§Ã£o do GitHub apÃ³s validar a senha
       await githubService.forceReloadConfig();
       setIsConfigured(githubService.isConfigured());
       setShowPasswordModal(false);
       
-      // Inicia o processo de inicialização do projeto
+      // Inicia o processo de inicializaÃ§Ã£o do projeto
       await initializeProject();
     } catch (error) {
-      console.error('Erro ao carregar configuração do GitHub:', error);
+      console.error('Erro ao carregar configuraÃ§Ã£o do GitHub:', error);
     }
   };
 
   const handleConfigured = () => {
     setIsConfigured(true);
     setHasExistingConfig(true);
-    // Inicia o processo de inicialização do projeto
+    // Inicia o processo de inicializaÃ§Ã£o do projeto
     initializeProject();
   };
 
@@ -123,13 +123,13 @@ const IDE: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    // Força re-render dos componentes
+    // ForÃ§a re-render dos componentes
     setSelectedFile(null);
     setTimeout(() => setSelectedFile(selectedFile), 100);
   };
 
   return (
-    <AppLayout title="IDE - Editor de Código Integrado">
+    <AppLayout title="FR - Fusion IDE">
       <div className="h-[calc(100vh-4rem)] flex flex-col">
         {loading || initializing ? (
           <div className="flex items-center justify-center h-full">
@@ -143,15 +143,15 @@ const IDE: React.FC = () => {
             <div className="max-w-md mx-auto text-center space-y-6">
               <div className="space-y-2">
                 <UserX className="h-12 w-12 mx-auto text-muted-foreground" />
-                <h2 className="text-xl font-semibold">Autenticação Necessária</h2>
+                <h2 className="text-xl font-semibold">AutenticaÃ§Ã£o NecessÃ¡ria</h2>
                 <p className="text-sm text-muted-foreground">
-                  O IDE requer autenticação para funcionar de forma segura. 
-                  Por favor, faça login para acessar esta funcionalidade.
+                  O IDE requer autenticaÃ§Ã£o para funcionar de forma segura. 
+                  Por favor, faÃ§a login para acessar esta funcionalidade.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
                 <Shield className="h-3 w-3" />
-                <span>Seus tokens GitHub são criptografados e armazenados com segurança</span>
+                <span>Seus tokens GitHub sÃ£o criptografados e armazenados com seguranÃ§a</span>
               </div>
             </div>
           </div>
@@ -160,9 +160,9 @@ const IDE: React.FC = () => {
             <div className="max-w-md mx-auto text-center space-y-6">
               <div className="space-y-2">
                 <Code className="h-12 w-12 mx-auto text-primary" />
-                <h2 className="text-xl font-semibold">IDE - Editor de Código</h2>
+                <h2 className="text-xl font-semibold">IDE - Editor de CÃ³digo</h2>
                 <p className="text-sm text-muted-foreground">
-                  Configuração GitHub encontrada. Confirme sua senha para acessar.
+                  ConfiguraÃ§Ã£o GitHub encontrada. Confirme sua senha para acessar.
                 </p>
               </div>
             </div>
@@ -178,9 +178,9 @@ const IDE: React.FC = () => {
               <div className="text-center space-y-4">
                 <Code className="h-16 w-16 mx-auto text-primary" />
                 <div className="space-y-2">
-                  <h1 className="text-2xl font-bold">IDE - Editor de Código</h1>
+                  <h1 className="text-2xl font-bold">IDE - Editor de CÃ³digo</h1>
                   <p className="text-muted-foreground">
-                    Editor completo com integração ao GitHub, Monaco Editor e controle de versão
+                    Editor completo com integraÃ§Ã£o ao GitHub, Monaco Editor e controle de versÃ£o
                   </p>
                 </div>
               </div>
@@ -219,7 +219,7 @@ const IDE: React.FC = () => {
 
               <ResizableHandle className="w-1 bg-border/60 hover:bg-border transition-colors" />
 
-              {/* Área central - Editor com abas */}
+              {/* Ãrea central - Editor com abas */}
               <ResizablePanel defaultSize={80}>
                 <div className="h-full flex flex-col">
                   {selectedFile ? (
@@ -234,13 +234,13 @@ const IDE: React.FC = () => {
                             </TabsTrigger>
                             <TabsTrigger value="preview" className="flex items-center gap-2 text-xs">
                               <Eye className="h-3 w-3" />
-                              Visualização
+                              VisualizaÃ§Ã£o
                             </TabsTrigger>
                           </TabsList>
                         </Tabs>
                       </div>
                       
-                      {/* Conteúdo das abas */}
+                      {/* ConteÃºdo das abas */}
                       <div className="flex-1 min-h-0">
                         {activeEditorTab === 'editor' ? (
                           <CodeEditor 
@@ -265,7 +265,7 @@ const IDE: React.FC = () => {
                         <Code className="h-16 w-16 mx-auto text-muted-foreground/30" />
                         <div className="space-y-2">
                           <p className="text-lg font-medium text-muted-foreground">Nenhum arquivo selecionado</p>
-                          <p className="text-sm text-muted-foreground/70">Selecione um arquivo no explorer para começar a editar</p>
+                          <p className="text-sm text-muted-foreground/70">Selecione um arquivo no explorer para comeÃ§ar a editar</p>
                         </div>
                       </div>
                     </div>
@@ -274,7 +274,7 @@ const IDE: React.FC = () => {
               </ResizablePanel>
             </ResizablePanelGroup>
 
-            {/* Modal de Inicialização */}
+            {/* Modal de InicializaÃ§Ã£o */}
             <Dialog open={showInitModal} onOpenChange={() => {}}>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -299,7 +299,7 @@ const IDE: React.FC = () => {
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {currentInitStep === 'install' && `${npmInstallProgress}%`}
-                        {(currentInitStep === 'dev' || currentInitStep === 'complete') && '✓'}
+                        {(currentInitStep === 'dev' || currentInitStep === 'complete') && 'â'}
                       </span>
                     </div>
                     <Progress 
@@ -320,7 +320,7 @@ const IDE: React.FC = () => {
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {currentInitStep === 'dev' && `${npmDevProgress}%`}
-                        {currentInitStep === 'complete' && '✓'}
+                        {currentInitStep === 'complete' && 'â'}
                       </span>
                     </div>
                     <Progress 
@@ -332,7 +332,7 @@ const IDE: React.FC = () => {
 
                   {currentInitStep === 'complete' && (
                     <div className="text-center py-2">
-                      <p className="text-sm font-medium text-green-600">✓ Projeto inicializado com sucesso!</p>
+                      <p className="text-sm font-medium text-green-600">â Projeto inicializado com sucesso!</p>
                     </div>
                   )}
                 </div>
