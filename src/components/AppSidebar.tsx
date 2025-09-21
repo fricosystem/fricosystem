@@ -47,7 +47,7 @@ import {
     UserRound,
     Briefcase,
     Building2,
-    // Novos ícones específicos
+    // Novos Ã­cones especÃ­ficos
     BarChart3,
     ShoppingBasket,
     Scan,
@@ -116,28 +116,28 @@ const AppSidebar = () => {
   const isAdmin = userData?.cargo === "DESENVOLVEDOR";
   const isDesenvolvedor = userData?.cargo === "DESENVOLVEDOR";
   
-  // Verifica se o usuário está ativo
+  // Verifica se o usuÃ¡rio estÃ¡ ativo
   useEffect(() => {
-    if (userData?.ativo === "não") {
+    if (userData?.ativo === "nÃ£o") {
       navigate("/bem-vindo");
       toast({
         title: "Conta inativa",
-        description: "Sua conta está inativa. Entre em contato com o administrador.",
+        description: "Sua conta estÃ¡ inativa. Entre em contato com o administrador.",
         variant: "destructive",
       });
     }
   }, [userData, navigate, toast]);
 
-  // Filtra os itens do sidebar baseado nas permissões do usuário
+  // Filtra os itens do sidebar baseado nas permissÃµes do usuÃ¡rio
   const filterItemsByPermission = (items: SidebarItem[]) => {
     if (!userData?.permissoes) return items;
-    // Se o usuário tem permissão "tudo", retorna todos os itens
+    // Se o usuÃ¡rio tem permissÃ£o "tudo", retorna todos os itens
     if (userData.permissoes.includes("tudo")) return items;
-    // Caso contrário, filtra normalmente
+    // Caso contrÃ¡rio, filtra normalmente
     return items.filter(item => {
-      // Se não tem permissão definida, permite acesso
+      // Se nÃ£o tem permissÃ£o definida, permite acesso
       if (!item.permission) return true;
-      // Verifica se a permissão está no array de permissões do usuário
+      // Verifica se a permissÃ£o estÃ¡ no array de permissÃµes do usuÃ¡rio
       return userData.permissoes.includes(item.permission);
     });
   };
@@ -147,7 +147,7 @@ const AppSidebar = () => {
     return user.email || null;
   };
 
-  // Função para filtrar categorias que tenham pelo menos um item válido
+  // FunÃ§Ã£o para filtrar categorias que tenham pelo menos um item vÃ¡lido
   const filterCategoriesWithItems = (categories: SidebarCategory[]) => {
     return categories
       .map(category => ({
@@ -171,23 +171,23 @@ const AppSidebar = () => {
       icon: Boxes,
       items: [
          { to: "/produtos", icon: PackageCheck, label: "Produtos", permission: "produtos" },
-         { to: "/inventario", icon: Scan, label: "Inventário", permission: "inventario" },
+         { to: "/inventario", icon: Scan, label: "InventÃ¡rio", permission: "inventario" },
         { to: "/entrada-manual", icon: PackagePlus, label: "Entrada Manual", permission: "entrada_manual" },
         { to: "/notas-fiscais", icon: FileInput, label: "NF - Entrada XML", permission: "notas_fiscais" },
-        { to: "/transferencia", icon: ArrowRightLeft, label: "Transferência", permission: "transferencia" },
-        { to: "/enderecamento", icon: MapPin, label: "Endereçamento", permission: "enderecamento" },
+        { to: "/transferencia", icon: ArrowRightLeft, label: "TransferÃªncia", permission: "transferencia" },
+        { to: "/enderecamento", icon: MapPin, label: "EndereÃ§amento", permission: "enderecamento" },
         { to: "/medida-de-lenha", icon: TreePine, label: "Cubagem e medida de Lenha", permission: "medida_lenha" },
-        { to: "/relatorios", icon: FileSpreadsheet, label: "Relatórios", permission: "relatorios" },
+        { to: "/relatorios", icon: FileSpreadsheet, label: "RelatÃ³rios", permission: "relatorios" },
       ],
     },
     {
-      label: "Requisições",
+      label: "RequisiÃ§Ãµes",
       icon: ClipboardList,
       items: [
-        { to: "/requisicoes", icon: ClipboardCheck, label: "Requisições", badgeCount: pendingRequestsCount, permission: "requisicoes" },
+        { to: "/requisicoes", icon: ClipboardCheck, label: "RequisiÃ§Ãµes", badgeCount: pendingRequestsCount, permission: "requisicoes" },
         { to: "/carrinho", icon: ShoppingCart, label: "Carrinho", permission: "carrinho" },
-        { to: "/ordensServico", icon: Wrench, label: "Ordens de Serviço", permission: "ordens_servico" },
-        { to: "/devolucao", icon: RotateCcw, label: "Devoluções", permission: "devolucoes" },
+        { to: "/ordensServico", icon: Wrench, label: "Ordens de ServiÃ§o", permission: "ordens_servico" },
+        { to: "/devolucao", icon: RotateCcw, label: "DevoluÃ§Ãµes", permission: "devolucoes" },
       ],
     },
     {
@@ -202,40 +202,40 @@ const AppSidebar = () => {
       label: "Financeiro",
       icon: Wallet,
       items: [
-        { to: "/notas-fiscais-lancamento", icon: ReceiptText, label: "NF - Lançamento", permission: "notas_fiscais_lancamento" },
+        { to: "/notas-fiscais-lancamento", icon: ReceiptText, label: "NF - LanÃ§amento", permission: "notas_fiscais_lancamento" },
         { to: "/centro-custo", icon: PieChart, label: "Centro de Custo", permission: "centro_custo" },
       ],
     },
     {
-      label: "Utilitários",
+      label: "UtilitÃ¡rios",
       icon: FileText,
       items: [
         { to: "/importar-planilha", icon: Upload, label: "Importar dados", permission: "importar_dados" },
       ],
     },
     {
-      label: "Produção",
+      label: "ProduÃ§Ã£o",
       icon: Factory,
       items: [
         { to: "/pcp", icon: TrendingUp, label: "PCP", permission: "pcp" },
       ],
     },
     {
-      label: "Comunicação",
+      label: "ComunicaÃ§Ã£o",
       icon: MessageSquare,
       items: [
         { to: "/chat", icon: MessageSquare, label: "Chat", permission: "chat" },
         { to: "/email", icon: Mail, label: "Email", permission: "email" },
-        { to: "/agendamento", icon: Calendar, label: "Agendamento", permission: "agendamento" },
+        { to: "/reunioes", icon: Calendar, label: "Reuniões", permission: "reunioes" },
       ],
     },
     ...(isAdmin ? [{
       label: "Administrativo",
       icon: Settings,
       items: [
-        { to: "/gestao-usuarios", icon: UserCheck, label: "Gestão de Usuários", permission: "gestao_usuarios" },
-        { to: "/gestao-produtos", icon: Cog, label: "Gestão de Produtos", permission: "gestao_produtos" },
-        { to: "/unidades", icon: Building2, label: "Gestão de Unidades", permission: "gestao_unidades" },
+        { to: "/gestao-usuarios", icon: UserCheck, label: "GestÃ£o de UsuÃ¡rios", permission: "gestao_usuarios" },
+        { to: "/gestao-produtos", icon: Cog, label: "GestÃ£o de Produtos", permission: "gestao_produtos" },
+        { to: "/unidades", icon: Building2, label: "GestÃ£o de Unidades", permission: "gestao_unidades" },
       ],
     }] : []),
     ...(isDesenvolvedor ? [{
@@ -248,7 +248,7 @@ const AppSidebar = () => {
     }] : []),
   ], [pendingRequestsCount, isAdmin, isDesenvolvedor]);
 
-  // Aplicar filtro para mostrar apenas categorias que tenham itens válidos
+  // Aplicar filtro para mostrar apenas categorias que tenham itens vÃ¡lidos
   const sidebarCategories = useMemo(() => 
     filterCategoriesWithItems(allSidebarCategories), 
     [allSidebarCategories, userData?.permissoes]
@@ -287,10 +287,10 @@ const AppSidebar = () => {
         setPendingRequestsCount(count);
       },
       (error) => {
-        console.error("Erro ao monitorar requisições pendentes:", error);
+        console.error("Erro ao monitorar requisiÃ§Ãµes pendentes:", error);
         toast({
           title: "Erro",
-          description: "Falha ao carregar requisições pendentes",
+          description: "Falha ao carregar requisiÃ§Ãµes pendentes",
           variant: "destructive",
         });
       }
@@ -386,7 +386,7 @@ const AppSidebar = () => {
       setTheme(theme);
       document.documentElement.classList.toggle("dark", theme === "dark");
       toast({
-        description: "Erro ao salvar preferência de tema. Tente novamente.",
+        description: "Erro ao salvar preferÃªncia de tema. Tente novamente.",
         variant: "destructive",
         duration: 3000,
       });
@@ -445,7 +445,7 @@ const AppSidebar = () => {
     } else if (user?.email) {
       return user.email.split('@')[0];
     }
-    return "Usuário";
+    return "UsuÃ¡rio";
   };
 
   const getUserCargo = () => {
@@ -559,7 +559,7 @@ const AppSidebar = () => {
         <div className="flex flex-col items-center justify-center px-1 py-2">
           <img 
             src="/Uploads/IconeFrico3D.png" 
-            alt="Fricó Alimentos Logo" 
+            alt="FricÃ³ Alimentos Logo" 
             className="w-20 h-20 rounded-xl object-scale-down" 
           />
         </div>
@@ -734,7 +734,7 @@ const AppSidebar = () => {
                     
                     <DropdownMenuItem onClick={() => navigate("/perfil")} className="hover:bg-muted focus:bg-muted p-2">
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Configurações</span>
+                      <span>ConfiguraÃ§Ãµes</span>
                     </DropdownMenuItem>
                     
                     <DropdownMenuSeparator className="bg-border" />
