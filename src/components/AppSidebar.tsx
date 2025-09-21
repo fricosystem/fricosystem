@@ -122,7 +122,7 @@ const AppSidebar = () => {
       navigate("/bem-vindo");
       toast({
         title: "Conta inativa",
-        description: "Sua conta estÃ¡ inativa. Entre em contato com o administrador.",
+        description: "Sua conta está inativa. Entre em contato com o administrador.",
         variant: "destructive",
       });
     }
@@ -171,23 +171,23 @@ const AppSidebar = () => {
       icon: Boxes,
       items: [
          { to: "/produtos", icon: PackageCheck, label: "Produtos", permission: "produtos" },
-         { to: "/inventario", icon: Scan, label: "InventÃ¡rio", permission: "inventario" },
+         { to: "/inventario", icon: Scan, label: "Inventário", permission: "inventario" },
         { to: "/entrada-manual", icon: PackagePlus, label: "Entrada Manual", permission: "entrada_manual" },
         { to: "/notas-fiscais", icon: FileInput, label: "NF - Entrada XML", permission: "notas_fiscais" },
-        { to: "/transferencia", icon: ArrowRightLeft, label: "TransferÃªncia", permission: "transferencia" },
-        { to: "/enderecamento", icon: MapPin, label: "EndereÃ§amento", permission: "enderecamento" },
+        { to: "/transferencia", icon: ArrowRightLeft, label: "Transferência", permission: "transferencia" },
+        { to: "/enderecamento", icon: MapPin, label: "Endereçamento", permission: "enderecamento" },
         { to: "/medida-de-lenha", icon: TreePine, label: "Cubagem e medida de Lenha", permission: "medida_lenha" },
-        { to: "/relatorios", icon: FileSpreadsheet, label: "RelatÃ³rios", permission: "relatorios" },
+        { to: "/relatorios", icon: FileSpreadsheet, label: "Relatórios", permission: "relatorios" },
       ],
     },
     {
-      label: "RequisiÃ§Ãµes",
+      label: "Requisições",
       icon: ClipboardList,
       items: [
-        { to: "/requisicoes", icon: ClipboardCheck, label: "RequisiÃ§Ãµes", badgeCount: pendingRequestsCount, permission: "requisicoes" },
+        { to: "/requisicoes", icon: ClipboardCheck, label: "Requisições", badgeCount: pendingRequestsCount, permission: "requisicoes" },
         { to: "/carrinho", icon: ShoppingCart, label: "Carrinho", permission: "carrinho" },
-        { to: "/ordensServico", icon: Wrench, label: "Ordens de ServiÃ§o", permission: "ordens_servico" },
-        { to: "/devolucao", icon: RotateCcw, label: "DevoluÃ§Ãµes", permission: "devolucoes" },
+        { to: "/ordensServico", icon: Wrench, label: "Ordens de Serviço", permission: "ordens_servico" },
+        { to: "/devolucao", icon: RotateCcw, label: "Devoluções", permission: "devolucoes" },
       ],
     },
     {
@@ -202,26 +202,26 @@ const AppSidebar = () => {
       label: "Financeiro",
       icon: Wallet,
       items: [
-        { to: "/notas-fiscais-lancamento", icon: ReceiptText, label: "NF - LanÃ§amento", permission: "notas_fiscais_lancamento" },
+        { to: "/notas-fiscais-lancamento", icon: ReceiptText, label: "NF - Lançamento", permission: "notas_fiscais_lancamento" },
         { to: "/centro-custo", icon: PieChart, label: "Centro de Custo", permission: "centro_custo" },
       ],
     },
     {
-      label: "UtilitÃ¡rios",
+      label: "Utilitários",
       icon: FileText,
       items: [
         { to: "/importar-planilha", icon: Upload, label: "Importar dados", permission: "importar_dados" },
       ],
     },
     {
-      label: "ProduÃ§Ã£o",
+      label: "Produção",
       icon: Factory,
       items: [
         { to: "/pcp", icon: TrendingUp, label: "PCP", permission: "pcp" },
       ],
     },
     {
-      label: "ComunicaÃ§Ã£o",
+      label: "Comunicação",
       icon: MessageSquare,
       items: [
         { to: "/chat", icon: MessageSquare, label: "Chat", permission: "chat" },
@@ -233,9 +233,9 @@ const AppSidebar = () => {
       label: "Administrativo",
       icon: Settings,
       items: [
-        { to: "/gestao-usuarios", icon: UserCheck, label: "GestÃ£o de UsuÃ¡rios", permission: "gestao_usuarios" },
-        { to: "/gestao-produtos", icon: Cog, label: "GestÃ£o de Produtos", permission: "gestao_produtos" },
-        { to: "/unidades", icon: Building2, label: "GestÃ£o de Unidades", permission: "gestao_unidades" },
+        { to: "/gestao-usuarios", icon: UserCheck, label: "Gestão de Usuários", permission: "gestao_usuarios" },
+        { to: "/gestao-produtos", icon: Cog, label: "Gestão de Produtos", permission: "gestao_produtos" },
+        { to: "/unidades", icon: Building2, label: "Gestão de Unidades", permission: "gestao_unidades" },
       ],
     }] : []),
     ...(isDesenvolvedor ? [{
@@ -287,10 +287,10 @@ const AppSidebar = () => {
         setPendingRequestsCount(count);
       },
       (error) => {
-        console.error("Erro ao monitorar requisiÃ§Ãµes pendentes:", error);
+        console.error("Erro ao monitorar requisições pendentes:", error);
         toast({
           title: "Erro",
-          description: "Falha ao carregar requisiÃ§Ãµes pendentes",
+          description: "Falha ao carregar requisições pendentes",
           variant: "destructive",
         });
       }
@@ -386,7 +386,7 @@ const AppSidebar = () => {
       setTheme(theme);
       document.documentElement.classList.toggle("dark", theme === "dark");
       toast({
-        description: "Erro ao salvar preferÃªncia de tema. Tente novamente.",
+        description: "Erro ao salvar preferência de tema. Tente novamente.",
         variant: "destructive",
         duration: 3000,
       });
@@ -445,7 +445,7 @@ const AppSidebar = () => {
     } else if (user?.email) {
       return user.email.split('@')[0];
     }
-    return "UsuÃ¡rio";
+    return "Usuário";
   };
 
   const getUserCargo = () => {
@@ -559,7 +559,7 @@ const AppSidebar = () => {
         <div className="flex flex-col items-center justify-center px-1 py-2">
           <img 
             src="/Uploads/IconeFrico3D.png" 
-            alt="FricÃ³ Alimentos Logo" 
+            alt="Fricó Alimentos Logo" 
             className="w-20 h-20 rounded-xl object-scale-down" 
           />
         </div>
@@ -734,7 +734,7 @@ const AppSidebar = () => {
                     
                     <DropdownMenuItem onClick={() => navigate("/perfil")} className="hover:bg-muted focus:bg-muted p-2">
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>ConfiguraÃ§Ãµes</span>
+                      <span>Configurações</span>
                     </DropdownMenuItem>
                     
                     <DropdownMenuSeparator className="bg-border" />
