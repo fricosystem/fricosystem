@@ -479,7 +479,7 @@ const Dashboard = () => {
   };
 
   return (
-    <AppLayout title="Dashboard Geral ( Teste IDE 1 )">
+    <AppLayout title="Dashboard Geral">
       {/* Seletor de perÃÂ­odo */}
       <div className="mb-6">
         <Tabs defaultValue="hoje" value={period} onValueChange={(v) => setPeriod(v as "hoje" | "semana" | "mes" | "ano")}>
