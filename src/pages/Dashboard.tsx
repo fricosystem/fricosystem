@@ -66,7 +66,7 @@ const Dashboard = () => {
   const [produtosEsteMes, setProdutosEsteMes] = useState(0);
   const [produtosBaixoEstoque, setProdutosBaixoEstoque] = useState<Produto[]>([]);
 
-  // FunÃ§Ã£o para converter timestamp do Firestore para Date
+  // FunÃÂ§ÃÂ£o para converter timestamp do Firestore para Date
   const convertFirebaseTimestamp = (timestamp: Date | { toDate: () => Date }): Date => {
     return timestamp instanceof Date ? timestamp : timestamp.toDate();
   };
@@ -84,11 +84,11 @@ const Dashboard = () => {
     return new Date(year, month, 0).getDate();
   };
 
-  // FunÃ§Ã£o para converter string de valor para nÃºmero
+  // FunÃÂ§ÃÂ£o para converter string de valor para nÃÂºmero
   const parseCurrencyValue = (value: string | number): number => {
     if (typeof value === 'number') return value;
     
-    // Remove pontos de milhar e substitui vÃ­rgula decimal por ponto
+    // Remove pontos de milhar e substitui vÃÂ­rgula decimal por ponto
     const cleanedValue = value.replace(/\./g, '').replace(',', '.');
     return parseFloat(cleanedValue) || 0;
   };
@@ -100,7 +100,7 @@ const Dashboard = () => {
       setLoadingProgress(0);
       
       try {
-        // 1. Carregar usuÃ¡rios
+        // 1. Carregar usuÃÂ¡rios
         setLoadingProgress(10);
         const usuariosSnapshot = await getDocs(collection(db, "usuarios"));
         const usuariosData = usuariosSnapshot.docs.map(doc => doc.data() as Usuario);
@@ -113,7 +113,7 @@ const Dashboard = () => {
         const produtosSnapshot = await getDocs(collection(db, "produtos"));
         const produtosData = produtosSnapshot.docs.map(doc => {
           const data = doc.data() as Produto;
-          // Converter valor_unitario para nÃºmero
+          // Converter valor_unitario para nÃÂºmero
           data.valor_unitario = parseCurrencyValue(data.valor_unitario?.toString() || '0');
           return data;
         });
@@ -132,7 +132,7 @@ const Dashboard = () => {
         const baixoEstoque = produtosData.filter(p => p.quantidade && p.quantidade < 5);
         setProdutosBaixoEstoque(baixoEstoque);
 
-        // Calcular produtos baseado no perÃ­odo selecionado
+        // Calcular produtos baseado no perÃÂ­odo selecionado
         const now = new Date();
         
         const produtosFiltrados = produtosData.filter(produto => {
@@ -173,7 +173,7 @@ const Dashboard = () => {
         
         setProdutosEsteMes(produtosFiltrados);
 
-        // 3. Carregar transferÃªncias
+        // 3. Carregar transferÃÂªncias
         setLoadingProgress(50);
         const transferenciasSnapshot = await getDocs(collection(db, "transferencias"));
         const transferenciasData = transferenciasSnapshot.docs.map(doc => {
@@ -185,7 +185,7 @@ const Dashboard = () => {
         });
         setTransferencias(transferenciasData);
 
-        // 4. Carregar depÃ³sitos
+        // 4. Carregar depÃÂ³sitos
         setLoadingProgress(70);
         const depositosSnapshot = await getDocs(collection(db, "depositos"));
         const depositosData = depositosSnapshot.docs.map(doc => doc.data() as Deposito);
@@ -211,7 +211,7 @@ const Dashboard = () => {
         console.error("Error loading data:", error);
         toast({
           title: "Erro ao carregar dados",
-          description: "NÃ£o foi possÃ­vel carregar os dados do Firestore.",
+          description: "NÃÂ£o foi possÃÂ­vel carregar os dados do Firestore.",
           variant: "destructive",
         });
       } finally {
@@ -220,26 +220,26 @@ const Dashboard = () => {
     };
     
     fetchData();
-  }, [period, toast]); // Recarregar quando o perÃ­odo mudar
+  }, [period, toast]); // Recarregar quando o perÃÂ­odo mudar
 
-  // Calcular porcentagem de usuÃ¡rios ativos
+  // Calcular porcentagem de usuÃÂ¡rios ativos
   const porcentagemAtivos = totalUsuarios > 0 ? (usuariosAtivos / totalUsuarios) * 100 : 0;
 
-  // Calcular porcentagem de produtos cadastrados no perÃ­odo
+  // Calcular porcentagem de produtos cadastrados no perÃÂ­odo
   const porcentagemProdutosPeriodo = totalProdutos > 0 ? (produtosEsteMes / totalProdutos) * 100 : 0;
   
-  // Texto baseado no perÃ­odo
+  // Texto baseado no perÃÂ­odo
   const getPeriodText = () => {
     switch (period) {
       case 'hoje': return 'hoje';
       case 'semana': return 'esta semana';
-      case 'mes': return 'este mÃªs';
+      case 'mes': return 'este mÃÂªs';
       case 'ano': return 'este ano';
-      default: return 'no perÃ­odo';
+      default: return 'no perÃÂ­odo';
     }
   };
 
-  // Preparar dados para grÃ¡ficos
+  // Preparar dados para grÃÂ¡ficos
   const produtosPorFornecedor = () => {
     const fornecedorCount: Record<string, number> = {};
     
@@ -275,7 +275,7 @@ const Dashboard = () => {
     const estadoCount: Record<string, number> = {};
     
     fornecedores.forEach(fornecedor => {
-      const estado = fornecedor.endereco?.estado || 'NÃ£o informado';
+      const estado = fornecedor.endereco?.estado || 'NÃÂ£o informado';
       estadoCount[estado] = (estadoCount[estado] || 0) + 1;
     });
     
@@ -308,7 +308,7 @@ const Dashboard = () => {
       }));
     } else if (period === "semana") {
       // Por dia na semana - semana atual
-      const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b'];
+      const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃÂ¡b'];
       const startOfWeek = new Date(now);
       startOfWeek.setDate(now.getDate() - now.getDay());
       startOfWeek.setHours(0, 0, 0, 0);
@@ -328,7 +328,7 @@ const Dashboard = () => {
         };
       });
     } else if (period === "mes") {
-      // Por dia no mÃªs atual
+      // Por dia no mÃÂªs atual
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       const daysInMonth = endOfMonth.getDate();
@@ -347,7 +347,7 @@ const Dashboard = () => {
         };
       });
     } else {
-      // Por mÃªs no ano atual
+      // Por mÃÂªs no ano atual
       const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'];
       data = months.map((month, i) => {
         const startOfMonth = new Date(now.getFullYear(), i, 1);
@@ -392,7 +392,7 @@ const Dashboard = () => {
     ).length;
   };
 
-  // Dados para grÃ¡fico de radar (anÃ¡lise de estoque)
+  // Dados para grÃÂ¡fico de radar (anÃÂ¡lise de estoque)
   const dadosAnaliseEstoque = () => {
     return [
       {
@@ -416,14 +416,14 @@ const Dashboard = () => {
         fullMark: 100,
       },
       {
-        subject: 'TransferÃªncias',
+        subject: 'TransferÃÂªncias',
         A: Math.min(transferencias.length / 50, 100), // Normalizado para escala 0-100
         fullMark: 100,
       },
     ];
   };
 
-  // Dados para grÃ¡fico de dispersÃ£o (valor vs quantidade)
+  // Dados para grÃÂ¡fico de dispersÃÂ£o (valor vs quantidade)
   const dadosValorQuantidade = () => {
     if (!produtos || produtos.length === 0) {
       return [{ x: 0, y: 0, z: 20, name: 'Sem dados' }];
@@ -439,7 +439,7 @@ const Dashboard = () => {
       }));
   };
 
-  // Dados para grÃ¡fico de produtos por unidade (barras)
+  // Dados para grÃÂ¡fico de produtos por unidade (barras)
   const dadosProdutosPorUnidade = () => {
     const data = produtosPorUnidade();
     if (!data || data.length === 0) {
@@ -452,7 +452,7 @@ const Dashboard = () => {
     }));
   };
 
-  // Dados para grÃ¡fico composto (valor do estoque por unidade)
+  // Dados para grÃÂ¡fico composto (valor do estoque por unidade)
   const dadosValorEstoquePorUnidade = () => {
     if (!produtos || produtos.length === 0) {
       return [{ name: 'Sem dados', valor: 0, quantidade: 0 }];
@@ -479,8 +479,8 @@ const Dashboard = () => {
   };
 
   return (
-    <AppLayout title="Dashboard Geral ( Teste IDE )">
-      {/* Seletor de perÃ­odo */}
+    <AppLayout title="Dashboard Geral ( Teste IDE 1 )">
+      {/* Seletor de perÃÂ­odo */}
       <div className="mb-6">
         <Tabs defaultValue="hoje" value={period} onValueChange={(v) => setPeriod(v as "hoje" | "semana" | "mes" | "ano")}>
           <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800">
@@ -491,7 +491,7 @@ const Dashboard = () => {
               <Calendar className="h-4 w-4" /> Semana
             </TabsTrigger>
             <TabsTrigger value="mes" className="flex items-center gap-2">
-              <Layers className="h-4 w-4" /> MÃªs
+              <Layers className="h-4 w-4" /> MÃÂªs
             </TabsTrigger>
             <TabsTrigger value="ano" className="flex items-center gap-2">
               <BarChart2 className="h-4 w-4" /> Ano
@@ -513,10 +513,10 @@ const Dashboard = () => {
         </Card>
       ) : (
         <>
-          {/* Cards de estatÃ­sticas */}
+          {/* Cards de estatÃÂ­sticas */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
             <StatsCard
-              title="UsuÃ¡rios Ativos"
+              title="UsuÃÂ¡rios Ativos"
               value={`${usuariosAtivos}/${totalUsuarios}`}
               icon={<Users className="h-5 w-5" />}
               trend={{
@@ -524,7 +524,7 @@ const Dashboard = () => {
                 positive: porcentagemAtivos > 70,
                 label: `${porcentagemAtivos.toFixed(0)}% de ativos`
               }}
-              description="EficiÃªncia da equipe"
+              description="EficiÃÂªncia da equipe"
               className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
             />
             <StatsCard
@@ -538,7 +538,7 @@ const Dashboard = () => {
               title="Valor em Estoque"
               value={formatCurrency(valorEstoque)}
               icon={<DollarSign className="h-5 w-5" />}
-              description="Valor total do inventÃ¡rio"
+              description="Valor total do inventÃÂ¡rio"
               className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10"
             />
             <StatsCard
@@ -550,29 +550,29 @@ const Dashboard = () => {
                 positive: false,
                 label: `${((produtosBaixoEstoque.length / totalProdutos) * 100).toFixed(1)}%`
               }}
-              description="Itens com estoque crÃ­tico"
+              description="Itens com estoque crÃÂ­tico"
               className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-900/10"
             />
           </div>
 
-          {/* Primeira linha de grÃ¡ficos */}
+          {/* Primeira linha de grÃÂ¡ficos */}
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
-            {/* TransferÃªncias por perÃ­odo - GrÃ¡fico de Ãrea */}
+            {/* TransferÃÂªncias por perÃÂ­odo - GrÃÂ¡fico de ÃÂrea */}
             <Card className="col-span-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Truck className="h-5 w-5" /> MovimentaÃ§Ã£o de Estoque
+                      <Truck className="h-5 w-5" /> MovimentaÃÂ§ÃÂ£o de Estoque
                     </CardTitle>
                     <CardDescription>
                       {period === "hoje" ? "Ontem por hora" : 
                        period === "semana" ? "Esta semana por dia" :
-                       period === "mes" ? "Este mÃªs por dia" : "Este ano por mÃªs"}
+                       period === "mes" ? "Este mÃÂªs por dia" : "Este ano por mÃÂªs"}
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="border-primary text-primary">
-                    {transferencias.length} transferÃªncias
+                    {transferencias.length} transferÃÂªncias
                   </Badge>
                 </div>
               </CardHeader>
@@ -610,13 +610,13 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* AnÃ¡lise de Estoque - GrÃ¡fico de Radar */}
+            {/* AnÃÂ¡lise de Estoque - GrÃÂ¡fico de Radar */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Boxes className="h-5 w-5" /> SaÃºde do Estoque
+                  <Boxes className="h-5 w-5" /> SaÃÂºde do Estoque
                 </CardTitle>
-                <CardDescription>MÃ©tricas-chave do inventÃ¡rio</CardDescription>
+                <CardDescription>MÃÂ©tricas-chave do inventÃÂ¡rio</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -631,7 +631,7 @@ const Dashboard = () => {
                           borderColor: 'hsl(var(--border))',
                           borderRadius: 'var(--radius)',
                         }}
-                        formatter={(value) => [`${value}%`, 'Ãndice']}
+                        formatter={(value) => [`${value}%`, 'ÃÂndice']}
                       />
                       <Radar 
                         name="Estoque" 
@@ -647,9 +647,9 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Segunda linha de grÃ¡ficos */}
+          {/* Segunda linha de grÃÂ¡ficos */}
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
-            {/* Produtos por fornecedor - GrÃ¡fico de Barras Horizontais */}
+            {/* Produtos por fornecedor - GrÃÂ¡fico de Barras Horizontais */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -683,13 +683,13 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Fornecedores por estado - GrÃ¡fico de Pizza */}
+            {/* Fornecedores por estado - GrÃÂ¡fico de Pizza */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Map className="h-5 w-5" /> Fornecedores por Estado
                 </CardTitle>
-                <CardDescription>DistribuiÃ§Ã£o geogrÃ¡fica</CardDescription>
+                <CardDescription>DistribuiÃÂ§ÃÂ£o geogrÃÂ¡fica</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -726,13 +726,13 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Valor vs Quantidade - GrÃ¡fico de DispersÃ£o */}
+            {/* Valor vs Quantidade - GrÃÂ¡fico de DispersÃÂ£o */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <PieChartIcon className="h-5 w-5" /> Valor vs Quantidade
                 </CardTitle>
-                <CardDescription>RelaÃ§Ã£o entre valor unitÃ¡rio e estoque</CardDescription>
+                <CardDescription>RelaÃÂ§ÃÂ£o entre valor unitÃÂ¡rio e estoque</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -764,15 +764,15 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Terceira linha de grÃ¡ficos */}
+          {/* Terceira linha de grÃÂ¡ficos */}
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-6">
-            {/* Produtos por unidade - GrÃ¡fico de Funil */}
+            {/* Produtos por unidade - GrÃÂ¡fico de Funil */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Warehouse className="h-5 w-5" /> Produtos por Unidade
                 </CardTitle>
-                <CardDescription>DistribuiÃ§Ã£o por localizaÃ§Ã£o</CardDescription>
+                <CardDescription>DistribuiÃÂ§ÃÂ£o por localizaÃÂ§ÃÂ£o</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -796,7 +796,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Valor do estoque por unidade - GrÃ¡fico Composto */}
+            {/* Valor do estoque por unidade - GrÃÂ¡fico Composto */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -837,7 +837,7 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Listas de informaÃ§Ãµes */}
+          {/* Listas de informaÃÂ§ÃÂµes */}
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             {/* Lista de produtos com baixo estoque */}
             <Card>
@@ -845,7 +845,7 @@ const Dashboard = () => {
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-yellow-600" /> Produtos com Baixo Estoque
                 </CardTitle>
-                <CardDescription>Itens que precisam de reposiÃ§Ã£o</CardDescription>
+                <CardDescription>Itens que precisam de reposiÃÂ§ÃÂ£o</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -854,7 +854,7 @@ const Dashboard = () => {
                       <div key={index} className="flex items-start justify-between p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
                         <div>
                           <p className="font-medium">{produto.nome || 'Produto sem nome'}</p>
-                          <p className="text-sm text-muted-foreground">{produto.fornecedor_nome || 'Fornecedor nÃ£o especificado'}</p>
+                          <p className="text-sm text-muted-foreground">{produto.fornecedor_nome || 'Fornecedor nÃÂ£o especificado'}</p>
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-yellow-600">{produto.quantidade} un.</p>
@@ -885,7 +885,7 @@ const Dashboard = () => {
                     tempoCadastroFornecedores().map((fornecedor, index) => {
                       const estado = fornecedores.find(f => 
                         (f.razao_social || f.nome) === fornecedor.name
-                      )?.endereco?.estado || 'NÃ£o informado';
+                      )?.endereco?.estado || 'NÃÂ£o informado';
                       
                       return (
                         <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
