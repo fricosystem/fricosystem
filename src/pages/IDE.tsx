@@ -129,7 +129,7 @@ const IDE: React.FC = () => {
   };
 
   return (
-    <AppLayout title="FR - Fusion IDE">
+    <AppLayout title="FR - Fusion IDE Teste">
       <div className="h-[calc(100vh-4rem)] flex flex-col">
         {loading || initializing ? (
           <div className="flex items-center justify-center h-full">
