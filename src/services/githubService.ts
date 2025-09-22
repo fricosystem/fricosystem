@@ -18,6 +18,34 @@ interface GitHubConfig {
   repo: string;
 }
 
+interface CodespaceConfig {
+  machine: 'basicLinux32gb' | 'standardLinux32gb' | 'premiumLinux64gb';
+  devcontainer_path?: string;
+  idle_timeout_minutes?: number;
+}
+
+interface Codespace {
+  id: number;
+  name: string;
+  display_name?: string;
+  state: 'Available' | 'Unavailable' | 'Created' | 'Starting' | 'Started' | 'Stopping' | 'Stopped' | 'Rebuilding' | 'Exporting' | 'Unknown' | 'Queued' | 'Provisioning' | 'Awaiting' | 'Deleted' | 'Moved' | 'Shutdown' | 'Archived' | 'ShuttingDown' | 'Failed' | 'Updating';
+  machine?: {
+    name: string;
+    display_name: string;
+    operating_system: string;
+    storage_in_bytes: number;
+    memory_in_bytes: number;
+    cpus: number;
+  };
+  web_url?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_used_at?: string;
+  repository?: {
+    full_name: string;
+  };
+}
+
 interface StoredGitHubConfig extends GitHubConfig {
   id: string;
   createdAt: any;
@@ -183,7 +211,7 @@ class GitHubService {
           path: data.path,
           type: 'file',
           sha: data.sha,
-          content: 'content' in data && data.content ? atob(data.content) : undefined,
+          content: 'content' in data && data.content ? decodeURIComponent(escape(atob(data.content.replace(/\s/g, '')))) : undefined,
         }];
       }
     } catch (error) {
@@ -205,7 +233,10 @@ class GitHubService {
       });
 
       if ('content' in data && data.content) {
-        return atob(data.content);
+        // Decodificação correta para UTF-8 - método mais simples e confiável
+        const base64Content = data.content.replace(/\s/g, '');
+        const decodedContent = decodeURIComponent(escape(atob(base64Content)));
+        return decodedContent;
       }
       throw new Error('Arquivo não encontrado ou não é um arquivo texto');
     } catch (error) {
@@ -241,12 +272,8 @@ class GitHubService {
       const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm:ss');
       const commitMessage = `${message} - ${timestamp}`;
 
-      // Codificação melhorada para evitar problemas com caracteres especiais
-      const encodedContent = btoa(
-        new TextEncoder()
-          .encode(content)
-          .reduce((data, byte) => data + String.fromCharCode(byte), '')
-      );
+      // Codificação correta para UTF-8 - método mais simples e confiável
+      const encodedContent = btoa(unescape(encodeURIComponent(content)));
 
       const response = await this.octokit.rest.repos.createOrUpdateFileContents({
         owner: this.config.owner,
@@ -338,6 +365,122 @@ class GitHubService {
     }
   }
 
+  // ============= CODESPACES METHODS =============
+
+  public async listCodespaces(): Promise<Codespace[]> {
+    if (!this.octokit || !this.config) {
+      throw new Error('GitHub não configurado');
+    }
+
+    try {
+      // Lista codespaces do usuário autenticado relacionados ao repositório
+      const { data } = await this.octokit.rest.codespaces.listForAuthenticatedUser();
+      
+      // Filtra apenas os codespaces do repositório atual
+      const repoCodespaces = data.codespaces.filter(
+        (cs: any) => cs.repository.full_name === `${this.config!.owner}/${this.config!.repo}`
+      );
+
+      return repoCodespaces;
+    } catch (error) {
+      console.error('Erro ao listar Codespaces:', error);
+      throw error;
+    }
+  }
+
+  public async createCodespace(config: CodespaceConfig = { machine: 'basicLinux32gb' }): Promise<Codespace> {
+    if (!this.octokit || !this.config) {
+      throw new Error('GitHub não configurado');
+    }
+
+    try {
+      // Cria codespace usando a API rest genérica
+      const response = await this.octokit.request('POST /repos/{owner}/{repo}/codespaces', {
+        owner: this.config.owner,
+        repo: this.config.repo,
+        machine: config.machine,
+        devcontainer_path: config.devcontainer_path,
+        idle_timeout_minutes: config.idle_timeout_minutes || 30,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao criar Codespace:', error);
+      throw error;
+    }
+  }
+
+  public async startCodespace(codespaceName: string): Promise<Codespace> {
+    if (!this.octokit) {
+      throw new Error('GitHub não configurado');
+    }
+
+    try {
+      const response = await this.octokit.request('POST /codespaces/{codespace_name}/start', {
+        codespace_name: codespaceName,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao iniciar Codespace:', error);
+      throw error;
+    }
+  }
+
+  public async stopCodespace(codespaceName: string): Promise<Codespace> {
+    if (!this.octokit) {
+      throw new Error('GitHub não configurado');
+    }
+
+    try {
+      const response = await this.octokit.request('POST /codespaces/{codespace_name}/stop', {
+        codespace_name: codespaceName,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao parar Codespace:', error);
+      throw error;
+    }
+  }
+
+  public async deleteCodespace(codespaceName: string): Promise<void> {
+    if (!this.octokit) {
+      throw new Error('GitHub não configurado');
+    }
+
+    try {
+      await this.octokit.request('DELETE /codespaces/{codespace_name}', {
+        codespace_name: codespaceName,
+      });
+    } catch (error) {
+      console.error('Erro ao deletar Codespace:', error);
+      throw error;
+    }
+  }
+
+  public async getCodespace(codespaceName: string): Promise<Codespace> {
+    if (!this.octokit) {
+      throw new Error('GitHub não configurado');
+    }
+
+    try {
+      const response = await this.octokit.request('GET /codespaces/{codespace_name}', {
+        codespace_name: codespaceName,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar Codespace:', error);
+      throw error;
+    }
+  }
+
+  public getCodespaceEmbedUrl(webUrl: string): string {
+    // Converte a URL web do Codespace para URL de embed
+    return webUrl.replace('github.dev', 'github.dev');
+  }
+
   public async disconnect(): Promise<void> {
     try {
       if (this.configId && auth.currentUser) {
@@ -354,4 +497,4 @@ class GitHubService {
 }
 
 export const githubService = new GitHubService();
-export type { FileNode, GitHubConfig, StoredGitHubConfig };
+export type { FileNode, GitHubConfig, StoredGitHubConfig, Codespace, CodespaceConfig };

@@ -32,13 +32,15 @@ const AppLayout = ({ children, title }: AppLayoutProps) => {
     };
   }, []);
   
+  const isIDEPage = location.pathname === '/ide';
+  
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden"> {/* Adicione overflow-hidden */}
+      <div className="flex h-screen w-full overflow-hidden">
         <AppSidebar />
         <div className="flex-1 flex flex-col h-full">
           <AppHeader title={title} />
-          <main className="flex-1 overflow-auto p-6">
+          <main className={`flex-1 overflow-auto ${isIDEPage ? 'p-0' : 'p-6'}`}>
             {children}
           </main>
         </div>

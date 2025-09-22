@@ -213,10 +213,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         <ContextMenu>
           <ContextMenuTrigger>
             <div
-              className={`flex items-center gap-2 px-2 py-1 hover:bg-muted cursor-pointer ${
-                isSelected ? 'bg-accent text-accent-foreground' : ''
+              className={`flex items-center gap-2 px-2 py-1.5 mx-1 my-0.5 rounded-md cursor-pointer transition-all duration-200 group ${
+                isSelected 
+                  ? 'bg-primary/15 text-primary border-l-2 border-primary shadow-sm' 
+                  : 'hover:bg-muted/60 hover:text-foreground'
               }`}
-              style={{ paddingLeft: `${level * 16 + 8}px` }}
+              style={{ paddingLeft: `${level * 16 + 12}px` }}
               onClick={() => {
                 if (node.type === 'file') {
                   onFileSelect(node.path);
@@ -228,23 +230,26 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
               {node.type === 'dir' && (
                 <>
                   {isExpanded ? (
-                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                   ) : (
-                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                   )}
-                  <Folder className="h-4 w-4 text-blue-500" />
+                  <Folder className={`h-4 w-4 transition-colors ${
+                    isExpanded ? 'text-primary' : 'text-blue-500'
+                  }`} />
                 </>
               )}
               
               {node.type === 'file' && (
                 <>
-                  <span className="w-3" />
-                  <File className="h-4 w-4 text-muted-foreground" />
+                  <span className="w-3.5" />
+                  <File className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </>
               )}
               
-              <span className="text-sm truncate flex-1">
-                {getFileIcon(node.name)} {node.name}
+              <span className="text-sm truncate flex-1 group-hover:text-foreground transition-colors">
+                <span className="mr-2">{getFileIcon(node.name)}</span>
+                {node.name}
               </span>
             </div>
           </ContextMenuTrigger>
@@ -272,16 +277,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         {/* Input para criar novo arquivo */}
         {creatingFile === node.path && (
           <div 
-            className="flex items-center gap-2 px-2 py-1"
-            style={{ paddingLeft: `${(level + 1) * 16 + 8}px` }}
+            className="flex items-center gap-2 px-2 py-1.5 mx-1 my-0.5 bg-muted/40 rounded-md border border-dashed border-primary/30"
+            style={{ paddingLeft: `${(level + 1) * 16 + 12}px` }}
           >
-            <span className="w-3" />
-            <File className="h-4 w-4 text-muted-foreground" />
+            <span className="w-3.5" />
+            <File className="h-4 w-4 text-primary/70" />
             <Input
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
               placeholder="nome-do-arquivo.tsx"
-              className="h-6 text-xs"
+              className="h-7 text-xs bg-background/80 border-primary/30 focus:border-primary"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -320,25 +325,34 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
 
   if (!githubService.isConfigured()) {
     return (
-      <div className="p-4 text-center text-muted-foreground">
-        <Folder className="h-8 w-8 mx-auto mb-2" />
-        <p className="text-sm">Configure o GitHub para ver os arquivos</p>
+      <div className="h-full flex items-center justify-center p-6">
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 bg-muted/20 blur-xl rounded-full"></div>
+            <Folder className="h-12 w-12 mx-auto text-muted-foreground/40 relative z-10" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">GitHub não configurado</p>
+            <p className="text-xs text-muted-foreground/70">Configure o GitHub para ver os arquivos</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-2 border-b">
-        <span className="text-sm font-medium">Explorador</span>
+    <div className="h-full flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center justify-between p-3 border-b border-border/40 bg-gradient-to-r from-muted/30 to-muted/10">
+        <span className="text-sm font-semibold text-foreground">Explorador</span>
         <div className="flex gap-1">
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setCreatingFile('')}
-            className="h-6 w-6 p-0"
+            className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary transition-colors"
+            title="Novo arquivo"
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="h-3.5 w-3.5" />
           </Button>
           <Button
             size="sm"
@@ -348,24 +362,25 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
               onRefresh?.();
             }}
             disabled={loading}
-            className="h-6 w-6 p-0"
+            className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary transition-colors"
+            title="Atualizar"
           >
-            <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
       
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 bg-gradient-to-b from-transparent to-muted/5 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/20">
         {/* Input para criar arquivo na raiz */}
         {creatingFile === '' && (
-          <div className="flex items-center gap-2 px-2 py-1">
-            <span className="w-3" />
-            <File className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 px-2 py-1.5 mx-1 my-1 bg-muted/40 rounded-md border border-dashed border-primary/30">
+            <span className="w-3.5" />
+            <File className="h-4 w-4 text-primary/70" />
             <Input
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
               placeholder="nome-do-arquivo.tsx"
-              className="h-6 text-xs"
+              className="h-7 text-xs bg-background/80 border-primary/30 focus:border-primary"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -387,12 +402,23 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         )}
         
         {loading && files.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground">
-            <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
-            <p className="text-sm">Carregando arquivos...</p>
+          <div className="p-6 text-center">
+            <div className="space-y-3">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary/60" />
+              <p className="text-sm text-muted-foreground">Carregando arquivos...</p>
+            </div>
+          </div>
+        ) : files.length === 0 ? (
+          <div className="p-6 text-center">
+            <div className="space-y-3">
+              <Folder className="h-8 w-8 mx-auto text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">Nenhum arquivo encontrado</p>
+            </div>
           </div>
         ) : (
-          files.map(node => renderFileNode(node))
+          <div className="py-1">
+            {files.map(node => renderFileNode(node))}
+          </div>
         )}
       </div>
     </div>

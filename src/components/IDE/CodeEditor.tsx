@@ -5,6 +5,8 @@ import { Save, X, Circle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { githubService } from '@/services/githubService';
 import { useHotkeys } from 'react-hotkeys-hook';
+import SaveStatusModal from '@/components/IDE/SaveStatusModal';
+import { useSaveStatus } from '@/hooks/useSaveStatus';
 
 interface OpenFile {
   path: string;
@@ -24,6 +26,16 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const editorRef = useRef<any>(null);
+  
+  // Hook para gerenciar status de salvamento
+  const { 
+    isModalOpen, 
+    steps, 
+    saveFileWithStatus, 
+    closeSaveModal, 
+    retryLastSave, 
+    cancelSave 
+  } = useSaveStatus();
 
   const getLanguageFromPath = (filePath: string): string => {
     const extension = filePath.split('.').pop()?.toLowerCase();
@@ -76,7 +88,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
         originalContent: content,
       };
       
-      setOpenFiles(prev => [...prev, newFile]);
+      setOpenFiles(prev => {
+        // Verifica novamente para evitar condições de corrida
+        const alreadyExists = prev.find(f => f.path === filePath);
+        if (alreadyExists) {
+          return prev;
+        }
+        return [...prev, newFile];
+      });
       setActiveFile(filePath);
     } catch (error) {
       console.error('Erro ao carregar arquivo:', error);
@@ -109,13 +128,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
 
     try {
       const fileName = filePath.split('/').pop() || filePath;
-      const result = await githubService.updateFile(
+      const success = await saveFileWithStatus(
         filePath,
         file.content,
         `Atualizar ${fileName} via IDE`
       );
 
-      if (result) {
+      if (success) {
         // Marca o arquivo como salvo
         setOpenFiles(prev => prev.map(f => {
           if (f.path === filePath) {
@@ -127,14 +146,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
           }
           return f;
         }));
-
-        toast({
-          title: "✅ Sucesso",
-          description: `Arquivo ${fileName} salvo e enviado para o GitHub com timestamp`,
-        });
       }
     } catch (error) {
-      console.error('Erro detalhado ao salvar arquivo:', error);
+      console.error('Erro ao salvar arquivo:', error);
       
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       
@@ -156,25 +170,29 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
       
       if (shouldSave) {
         saveFile(filePath).then(() => {
-          setOpenFiles(prev => prev.filter(f => f.path !== filePath));
-          
-          // Se o arquivo fechado era o ativo, muda para outro
-          if (activeFile === filePath) {
-            const remainingFiles = openFiles.filter(f => f.path !== filePath);
-            setActiveFile(remainingFiles.length > 0 ? remainingFiles[0].path : null);
-          }
+          // Remove o arquivo da lista
+          setOpenFiles(prev => {
+            const newFiles = prev.filter(f => f.path !== filePath);
+            // Se o arquivo fechado era o ativo, muda para outro
+            if (activeFile === filePath) {
+              setActiveFile(newFiles.length > 0 ? newFiles[0].path : null);
+            }
+            return newFiles;
+          });
         });
         return;
       }
     }
     
-    setOpenFiles(prev => prev.filter(f => f.path !== filePath));
-    
-    // Se o arquivo fechado era o ativo, muda para outro
-    if (activeFile === filePath) {
-      const remainingFiles = openFiles.filter(f => f.path !== filePath);
-      setActiveFile(remainingFiles.length > 0 ? remainingFiles[0].path : null);
-    }
+    // Remove o arquivo da lista
+    setOpenFiles(prev => {
+      const newFiles = prev.filter(f => f.path !== filePath);
+      // Se o arquivo fechado era o ativo, muda para outro
+      if (activeFile === filePath) {
+        setActiveFile(newFiles.length > 0 ? newFiles[0].path : null);
+      }
+      return newFiles;
+    });
   };
 
   const saveActiveFile = () => {
@@ -183,10 +201,48 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
     }
   };
 
+  const saveAllFiles = async () => {
+    const modifiedFiles = openFiles.filter(f => f.modified);
+    
+    if (modifiedFiles.length === 0) {
+      toast({
+        title: "Informação",
+        description: "Nenhum arquivo possui alterações para salvar",
+      });
+      return;
+    }
+
+    const promises = modifiedFiles.map(file => saveFile(file.path));
+    
+    try {
+      await Promise.all(promises);
+      toast({
+        title: "✅ Sucesso",
+        description: `${modifiedFiles.length} arquivo(s) salvado(s) com sucesso`,
+      });
+    } catch (error) {
+      console.error('Erro ao salvar arquivos:', error);
+      toast({
+        title: "❌ Erro",
+        description: "Falha ao salvar alguns arquivos. Verifique os logs para mais detalhes.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getModifiedFilesCount = () => {
+    return openFiles.filter(f => f.modified).length;
+  };
+
   // Hotkeys
   useHotkeys('ctrl+s', (e) => {
     e.preventDefault();
     saveActiveFile();
+  });
+
+  useHotkeys('ctrl+shift+s', (e) => {
+    e.preventDefault();
+    saveAllFiles();
   });
 
   useHotkeys('ctrl+w', (e) => {
@@ -199,7 +255,12 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
   // Carrega arquivo quando selecionado
   useEffect(() => {
     if (selectedFile && githubService.isConfigured()) {
-      loadFile(selectedFile);
+      // Adiciona um pequeno delay para evitar múltiplas chamadas simultâneas
+      const timer = setTimeout(() => {
+        loadFile(selectedFile);
+      }, 50);
+      
+      return () => clearTimeout(timer);
     }
   }, [selectedFile]);
 
@@ -207,10 +268,20 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
 
   if (!githubService.isConfigured()) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <div className="text-6xl mb-4">📝</div>
-          <p>Configure o GitHub para começar a editar</p>
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center space-y-6 p-8">
+          <div className="relative">
+            <div className="absolute inset-0 bg-muted/20 blur-2xl rounded-full"></div>
+            <div className="text-6xl mb-4 relative z-10">📝</div>
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-muted-foreground">
+              GitHub não configurado
+            </h3>
+            <p className="text-sm text-muted-foreground/70 max-w-md">
+              Configure sua integração com GitHub para começar a editar
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -218,10 +289,24 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
 
   if (openFiles.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <div className="text-6xl mb-4">📂</div>
-          <p>Selecione um arquivo para começar a editar</p>
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center space-y-6 p-8">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/10 blur-2xl rounded-full"></div>
+            <div className="text-6xl mb-4 relative z-10">📂</div>
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-muted-foreground">
+              Nenhum arquivo aberto
+            </h3>
+            <p className="text-sm text-muted-foreground/70 max-w-md">
+              Selecione um arquivo no explorer para começar a editar
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/50">
+            <div className="w-2 h-2 bg-primary/30 rounded-full animate-pulse"></div>
+            <span>Aguardando seleção de arquivo...</span>
+          </div>
         </div>
       </div>
     );
@@ -230,14 +315,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
   return (
     <div className="h-full flex flex-col">
       {/* Abas dos arquivos */}
-      <div className="flex border-b bg-muted/30 overflow-x-auto">
+      <div className="flex border-b bg-gradient-to-r from-muted/20 to-muted/10 overflow-x-auto">
         {openFiles.map((file) => (
           <div
             key={file.path}
-            className={`flex items-center gap-2 px-3 py-2 border-r cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 border-r border-border/30 cursor-pointer whitespace-nowrap transition-all duration-200 group ${
               activeFile === file.path 
-                ? 'bg-background border-b-2 border-primary' 
-                : 'hover:bg-muted/50'
+                ? 'bg-background border-b-2 border-primary shadow-sm text-primary font-medium' 
+                : 'hover:bg-muted/40 hover:text-foreground'
             }`}
             onClick={() => setActiveFile(file.path)}
           >
@@ -246,13 +331,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
             </span>
             
             {file.modified && (
-              <Circle className="h-2 w-2 fill-orange-500 text-orange-500" />
+              <Circle className="h-2 w-2 fill-warning text-warning animate-pulse" />
             )}
             
             <Button
               size="sm"
               variant="ghost"
-              className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+              className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all ml-1"
               onClick={(e) => {
                 e.stopPropagation();
                 closeFile(file.path);
@@ -266,12 +351,18 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
 
       {/* Barra de ferramentas */}
       {activeFileData && (
-        <div className="flex items-center justify-between p-2 border-b bg-muted/30">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{activeFileData.path}</span>
-            {activeFileData.modified && (
-              <span className="text-orange-500">(modificado)</span>
-            )}
+        <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-muted/20 to-muted/5">
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <span className="font-mono text-xs bg-muted/40 px-2 py-1 rounded">
+                {activeFileData.path}
+              </span>
+              {activeFileData.modified && (
+                <span className="text-warning text-xs bg-warning/10 px-2 py-1 rounded border border-warning/20">
+                  • modificado
+                </span>
+              )}
+            </div>
           </div>
           
           <div className="flex gap-2">
@@ -279,11 +370,29 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
               size="sm"
               onClick={saveActiveFile}
               disabled={!activeFileData.modified}
-              className="h-7"
+              className={`h-8 px-3 transition-all ${
+                activeFileData.modified 
+                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm' 
+                  : 'opacity-50'
+              }`}
+              title="Salvar arquivo atual (Ctrl+S)"
             >
-              <Save className="h-3 w-3 mr-1" />
+              <Save className="h-3.5 w-3.5 mr-1.5" />
               Salvar
             </Button>
+            
+            {getModifiedFilesCount() > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={saveAllFiles}
+                className="h-8 px-3 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all"
+                title={`Salvar todos os arquivos modificados (${getModifiedFilesCount()}) - Ctrl+Shift+S`}
+              >
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                Salvar Todos ({getModifiedFilesCount()})
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -332,6 +441,17 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
           />
         ) : null}
       </div>
+
+      {/* Modal de Status de Salvamento */}
+      <SaveStatusModal
+        isOpen={isModalOpen}
+        onClose={closeSaveModal}
+        steps={steps}
+        fileName={activeFileData?.path.split('/').pop()}
+        onRetry={retryLastSave}
+        canCancel={steps.some(step => step.status === 'in-progress')}
+        onCancel={cancelSave}
+      />
     </div>
   );
 };
