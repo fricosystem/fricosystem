@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Shield, UserX, Code, Eye } from "lucide-react";
+import { Shield, UserX, Code, Eye, Menu, X } from "lucide-react";
 import { githubService } from '@/services/githubService';
 import { auth } from '@/firebase/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -24,6 +24,7 @@ const IDE: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [user, loading] = useAuthState(auth);
   const [initializing, setInitializing] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   
   // Estados para inicialização do projeto
   const [showInitModal, setShowInitModal] = useState(false);
@@ -33,6 +34,18 @@ const IDE: React.FC = () => {
   
   // Estado para controlar as abas do editor
   const [activeEditorTab, setActiveEditorTab] = useState<'editor' | 'preview'>('editor');
+
+  // Estado para controlar o tamanho da tela
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const initializeService = async () => {
@@ -121,6 +134,9 @@ const IDE: React.FC = () => {
 
   const handleFileSelect = (filePath: string) => {
     setSelectedFile(filePath);
+    if (isMobile) {
+      setIsMobileSidebarOpen(false);
+    }
   };
 
   const handleRefresh = () => {
@@ -129,9 +145,13 @@ const IDE: React.FC = () => {
     setTimeout(() => setSelectedFile(selectedFile), 100);
   };
 
+  const toggleMobileSidebar = () => {
+    setIsMobileSidebarOpen(!isMobileSidebarOpen);
+  };
+
   return (
     <AppLayout title="FR - Fusion IDE">
-      <div className="flex flex-col h-screen min-h-0 w-full overflow-hidden">
+      <div className="flex flex-col h-screen min-h-0 w-full overflow-hidden relative">
         {loading || initializing ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
@@ -175,7 +195,7 @@ const IDE: React.FC = () => {
           </div>
         ) : !isConfigured ? (
           <div className="flex items-center justify-center h-full">
-            <div className="max-w-2xl mx-auto space-y-8">
+            <div className="max-w-2xl mx-auto space-y-8 px-4">
               <div className="text-center space-y-4">
                 <Code className="h-16 w-16 mx-auto text-primary" />
                 <div className="space-y-2">
@@ -191,57 +211,93 @@ const IDE: React.FC = () => {
           </div>
         ) : (
           <div className="flex-1 min-h-0 w-full overflow-hidden">
-            <ResizablePanelGroup direction="horizontal" className="h-full w-full min-h-0">
-              {/* Sidebar esquerda - Explorer */}
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="min-w-0">
-                <div className="h-full flex flex-col bg-muted/30 min-h-0">
-                  <Tabs defaultValue="explorer" className="h-full flex flex-col min-h-0">
-                    <div className="px-3 py-2 bg-background/50 backdrop-blur-sm border-b border-border/40 flex-shrink-0">
-                      <TabsList className="grid w-full grid-cols-3 h-9 bg-muted/50 p-1">
-                        <TabsTrigger 
-                          value="explorer" 
-                          className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                        >
-                          Explorer
-                        </TabsTrigger>
-                        <TabsTrigger 
-                          value="commits" 
-                          className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                        >
-                          Commits
-                        </TabsTrigger>
-                        <TabsTrigger 
-                          value="codespaces" 
-                          className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                        >
-                          Codespaces
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
-                    
-                    <TabsContent value="explorer" className="flex-1 m-0 min-h-0 overflow-hidden">
-                      <FileExplorer 
-                        onFileSelect={handleFileSelect}
-                        selectedFile={selectedFile}
-                        onRefresh={handleRefresh}
-                      />
-                    </TabsContent>
-                    
-                    <TabsContent value="commits" className="flex-1 m-0 min-h-0 overflow-hidden">
-                      <CommitPanel />
-                    </TabsContent>
-                    
-                    <TabsContent value="codespaces" className="flex-1 m-0 min-h-0 overflow-hidden">
-                      <CodespacesManager />
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              </ResizablePanel>
+            {/* Botão de toggle para sidebar em mobile */}
+            {isMobile && (
+              <button
+                onClick={toggleMobileSidebar}
+                className="fixed top-16 left-2 z-50 p-2 rounded-md bg-background/80 backdrop-blur-sm border border-border shadow-sm md:hidden"
+              >
+                {isMobileSidebarOpen ? <X size={16} /> : <Menu size={16} />}
+              </button>
+            )}
 
-              <ResizableHandle className="w-1 bg-gradient-to-b from-border/40 to-border/80 hover:bg-primary/20 transition-colors duration-200" />
+            <ResizablePanelGroup 
+              direction="horizontal" 
+              className="h-full w-full min-h-0"
+            >
+              {/* Sidebar esquerda - Explorer */}
+              {(isMobileSidebarOpen || !isMobile) && (
+                <>
+                  <ResizablePanel 
+                    defaultSize={isMobile ? 100 : 20} 
+                    minSize={isMobile ? 100 : 15} 
+                    maxSize={isMobile ? 100 : 40} 
+                    className="min-w-0 md:relative fixed inset-0 z-40 md:z-auto"
+                  >
+                    <div className="h-full flex flex-col bg-muted/30 min-h-0 border-r border-border/40 md:border-r-0">
+                      <div className="flex justify-end p-2 md:hidden">
+                        <button
+                          onClick={() => setIsMobileSidebarOpen(false)}
+                          className="p-1 rounded-md hover:bg-muted"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <Tabs defaultValue="explorer" className="h-full flex flex-col min-h-0">
+                        <div className="px-3 py-2 bg-background/50 backdrop-blur-sm border-b border-border/40 flex-shrink-0">
+                          <TabsList className="grid w-full grid-cols-3 h-9 bg-muted/50 p-1">
+                            <TabsTrigger 
+                              value="explorer" 
+                              className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                            >
+                              Explorer
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="commits" 
+                              className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                            >
+                              Commits
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="codespaces" 
+                              className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                            >
+                              Codespaces
+                            </TabsTrigger>
+                          </TabsList>
+                        </div>
+                        
+                        <TabsContent value="explorer" className="flex-1 m-0 min-h-0 overflow-hidden">
+                          <FileExplorer 
+                            onFileSelect={handleFileSelect}
+                            selectedFile={selectedFile}
+                            onRefresh={handleRefresh}
+                          />
+                        </TabsContent>
+                        
+                        <TabsContent value="commits" className="flex-1 m-0 min-h-0 overflow-hidden">
+                          <CommitPanel />
+                        </TabsContent>
+                        
+                        <TabsContent value="codespaces" className="flex-1 m-0 min-h-0 overflow-hidden">
+                          <CodespacesManager />
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                  </ResizablePanel>
+
+                  {!isMobile && (
+                    <ResizableHandle className="w-1 bg-gradient-to-b from-border/40 to-border/80 hover:bg-primary/20 transition-colors duration-200" />
+                  )}
+                </>
+              )}
 
               {/* Área central - Editor com abas */}
-              <ResizablePanel defaultSize={80} className="min-w-0">
+              <ResizablePanel 
+                defaultSize={80} 
+                className="min-w-0"
+                style={{ display: isMobile && isMobileSidebarOpen ? 'none' : 'block' }}
+              >
                 <div className="h-full flex flex-col min-h-0">
                   {selectedFile ? (
                     <>
@@ -292,7 +348,17 @@ const IDE: React.FC = () => {
                         <Code className="h-16 w-16 mx-auto text-muted-foreground/30" />
                         <div className="space-y-2">
                           <p className="text-lg font-medium text-muted-foreground">Nenhum arquivo selecionado</p>
-                          <p className="text-sm text-muted-foreground/70">Selecione um arquivo no explorer para começar a editar</p>
+                          <p className="text-sm text-muted-foreground/70">
+                            {isMobile ? 'Toque no menu para abrir o explorer' : 'Selecione um arquivo no explorer para começar a editar'}
+                          </p>
+                          {isMobile && (
+                            <button
+                              onClick={toggleMobileSidebar}
+                              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
+                            >
+                              Abrir Explorer
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -303,7 +369,7 @@ const IDE: React.FC = () => {
 
             {/* Modal de Inicialização */}
             <Dialog open={showInitModal} onOpenChange={() => {}}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md mx-4">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-3">
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
