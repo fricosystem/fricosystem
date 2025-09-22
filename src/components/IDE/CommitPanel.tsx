@@ -342,18 +342,22 @@ const CommitPanel: React.FC = () => {
       setIsUploading(true);
       setUploadProgress(0);
 
-      // Configurar githubService temporariamente para o destino
-      const originalConfig = githubService.getConfig();
-      const destOctokit = new Octokit({ auth: customRepoConfig.token });
+      // Usar configuração atual do GitHub service para o destino
+      const currentConfig = githubService.getConfig();
+      if (!currentConfig) {
+        throw new Error('Configuração do GitHub não encontrada');
+      }
+      
+      const destOctokit = new Octokit({ auth: currentConfig.token });
       
       try {
         // Obter referência da branch de destino
         let baseSha = '';
         try {
           const { data: refData } = await destOctokit.rest.git.getRef({
-            owner: customRepoConfig.owner,
-            repo: customRepoConfig.repo,
-            ref: `heads/${customRepoConfig.branch || 'main'}`,
+            owner: currentConfig.owner,
+            repo: currentConfig.repo,
+            ref: `heads/main`,
           });
           baseSha = refData.object.sha;
         } catch (error: any) {
@@ -361,8 +365,8 @@ const CommitPanel: React.FC = () => {
           if (error.status === 404) {
             // Criar commit inicial se repositório está vazio
             const { data: newCommit } = await destOctokit.rest.repos.createOrUpdateFileContents({
-              owner: customRepoConfig.owner,
-              repo: customRepoConfig.repo,
+              owner: currentConfig.owner,
+              repo: currentConfig.repo,
               path: '.gitkeep',
               message: 'Initial commit',
               content: btoa(''),
@@ -382,16 +386,16 @@ const CommitPanel: React.FC = () => {
         }));
 
         const { data: newTree } = await destOctokit.rest.git.createTree({
-          owner: customRepoConfig.owner,
-          repo: customRepoConfig.repo,
+          owner: currentConfig.owner,
+          repo: currentConfig.repo,
           tree: treeItems,
           base_tree: baseSha,
         });
 
         // Criar commit único com todos os arquivos
         const { data: newCommit } = await destOctokit.rest.git.createCommit({
-          owner: customRepoConfig.owner,
-          repo: customRepoConfig.repo,
+          owner: currentConfig.owner,
+          repo: currentConfig.repo,
           message: customCommitMessage || `Cópia de ${sourceOwner}/${sourceRepo}`,
           tree: newTree.sha,
           parents: baseSha ? [baseSha] : [],
@@ -399,9 +403,9 @@ const CommitPanel: React.FC = () => {
 
         // Atualizar referência da branch
         await destOctokit.rest.git.updateRef({
-          owner: customRepoConfig.owner,
-          repo: customRepoConfig.repo,
-          ref: `heads/${customRepoConfig.branch || 'main'}`,
+          owner: currentConfig.owner,
+          repo: currentConfig.repo,
+          ref: 'heads/main',
           sha: newCommit.sha,
         });
 
@@ -418,7 +422,7 @@ const CommitPanel: React.FC = () => {
 
       toast({
         title: 'Sucesso',
-        description: `${downloads.length} arquivos enviados para ${customRepoConfig.owner}/${customRepoConfig.repo} em um único commit!`,
+        description: `${downloads.length} arquivos enviados para ${currentConfig.owner}/${currentConfig.repo} em um único commit!`,
       });
     } catch (error: any) {
       console.error('Erro no processo de transferência:', error);
@@ -906,7 +910,10 @@ const CommitPanel: React.FC = () => {
                 <div className="text-xs text-green-600 dark:text-green-500 mt-1 space-y-0.5">
                   <p>Commit: "{customCommitMessage}"</p>
                   <p>Origem: {sourceRepoConfig.owner}/{sourceRepoConfig.repo}</p>
-                  <p>Destino: {customRepoConfig.owner}/{customRepoConfig.repo}</p>
+                  <p>Destino: {(() => {
+                    const config = githubService.getConfig();
+                    return config ? `${config.owner}/${config.repo}` : 'Não configurado';
+                  })()}</p>
                   <p>Total de arquivos: {downloadedFiles.length}</p>
                 </div>
               </div>
