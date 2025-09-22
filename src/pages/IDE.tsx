@@ -13,6 +13,7 @@ import FileExplorer from '@/components/IDE/FileExplorer';
 import CodeEditor from '@/components/IDE/CodeEditor';
 import GitHubConfigComponent from '@/components/IDE/GitHubConfig';
 import CommitPanel from '@/components/IDE/CommitPanel';
+import CodespacesManager from '@/components/IDE/CodespacesManager';
 import PasswordModal from '@/components/IDE/PasswordModal';
 
 const IDE: React.FC = () => {
@@ -24,7 +25,7 @@ const IDE: React.FC = () => {
   const [user, loading] = useAuthState(auth);
   const [initializing, setInitializing] = useState(true);
   
-  // Estados para inicializaÃ§Ã£o do projeto
+  // Estados para inicialização do projeto
   const [showInitModal, setShowInitModal] = useState(false);
   const [npmInstallProgress, setNpmInstallProgress] = useState(0);
   const [npmDevProgress, setNpmDevProgress] = useState(0);
@@ -41,19 +42,19 @@ const IDE: React.FC = () => {
       }
 
       try {
-        // Primeiro, verifica se existe configuraÃ§Ã£o no firestore
+        // Primeiro, verifica se existe configuração no firestore
         const hasConfig = await githubService.hasExistingConfig();
         setHasExistingConfig(hasConfig);
 
         if (hasConfig) {
-          // Se existe configuraÃ§Ã£o, mostra modal de senha
+          // Se existe configuração, mostra modal de senha
           setShowPasswordModal(true);
         } else {
-          // Se nÃ£o existe configuraÃ§Ã£o, vai direto para o formulÃ¡rio
+          // Se não existe configuração, vai direto para o formulário
           setIsConfigured(false);
         }
       } catch (error) {
-        console.error('Erro ao verificar configuraÃ§Ã£o do GitHub:', error);
+        console.error('Erro ao verificar configuração do GitHub:', error);
         setHasExistingConfig(false);
         setIsConfigured(false);
       } finally {
@@ -73,22 +74,22 @@ const IDE: React.FC = () => {
 
   const handlePasswordValidated = async () => {
     try {
-      // Carrega a configuraÃ§Ã£o do GitHub apÃ³s validar a senha
+      // Carrega a configuração do GitHub após validar a senha
       await githubService.forceReloadConfig();
       setIsConfigured(githubService.isConfigured());
       setShowPasswordModal(false);
       
-      // Inicia o processo de inicializaÃ§Ã£o do projeto
+      // Inicia o processo de inicialização do projeto
       await initializeProject();
     } catch (error) {
-      console.error('Erro ao carregar configuraÃ§Ã£o do GitHub:', error);
+      console.error('Erro ao carregar configuração do GitHub:', error);
     }
   };
 
   const handleConfigured = () => {
     setIsConfigured(true);
     setHasExistingConfig(true);
-    // Inicia o processo de inicializaÃ§Ã£o do projeto
+    // Inicia o processo de inicialização do projeto
     initializeProject();
   };
 
@@ -123,14 +124,14 @@ const IDE: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    // ForÃ§a re-render dos componentes
+    // Força re-render dos componentes
     setSelectedFile(null);
     setTimeout(() => setSelectedFile(selectedFile), 100);
   };
 
   return (
-    <AppLayout title="FR - Fusion IDE Teste">
-      <div className="h-[calc(100vh-4rem)] flex flex-col">
+    <AppLayout title="FR - Fusion IDE">
+      <div className="flex flex-col h-screen min-h-0 w-full overflow-hidden">
         {loading || initializing ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
@@ -143,15 +144,15 @@ const IDE: React.FC = () => {
             <div className="max-w-md mx-auto text-center space-y-6">
               <div className="space-y-2">
                 <UserX className="h-12 w-12 mx-auto text-muted-foreground" />
-                <h2 className="text-xl font-semibold">AutenticaÃ§Ã£o NecessÃ¡ria</h2>
+                <h2 className="text-xl font-semibold">Autenticação Necessária</h2>
                 <p className="text-sm text-muted-foreground">
-                  O IDE requer autenticaÃ§Ã£o para funcionar de forma segura. 
-                  Por favor, faÃ§a login para acessar esta funcionalidade.
+                  O IDE requer autenticação para funcionar de forma segura. 
+                  Por favor, faça login para acessar esta funcionalidade.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
                 <Shield className="h-3 w-3" />
-                <span>Seus tokens GitHub sÃ£o criptografados e armazenados com seguranÃ§a</span>
+                <span>Seus tokens GitHub são criptografados e armazenados com segurança</span>
               </div>
             </div>
           </div>
@@ -160,9 +161,9 @@ const IDE: React.FC = () => {
             <div className="max-w-md mx-auto text-center space-y-6">
               <div className="space-y-2">
                 <Code className="h-12 w-12 mx-auto text-primary" />
-                <h2 className="text-xl font-semibold">IDE - Editor de CÃ³digo</h2>
+                <h2 className="text-xl font-semibold">IDE - Editor de Código</h2>
                 <p className="text-sm text-muted-foreground">
-                  ConfiguraÃ§Ã£o GitHub encontrada. Confirme sua senha para acessar.
+                  Configuração GitHub encontrada. Confirme sua senha para acessar.
                 </p>
               </div>
             </div>
@@ -178,9 +179,9 @@ const IDE: React.FC = () => {
               <div className="text-center space-y-4">
                 <Code className="h-16 w-16 mx-auto text-primary" />
                 <div className="space-y-2">
-                  <h1 className="text-2xl font-bold">IDE - Editor de CÃ³digo</h1>
+                  <h1 className="text-2xl font-bold">IDE - Editor de Código</h1>
                   <p className="text-muted-foreground">
-                    Editor completo com integraÃ§Ã£o ao GitHub, Monaco Editor e controle de versÃ£o
+                    Editor completo com integração ao GitHub, Monaco Editor e controle de versão
                   </p>
                 </div>
               </div>
@@ -189,20 +190,36 @@ const IDE: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="flex-1 min-h-0">
-            <ResizablePanelGroup direction="horizontal" className="h-full">
+          <div className="flex-1 min-h-0 w-full overflow-hidden">
+            <ResizablePanelGroup direction="horizontal" className="h-full w-full min-h-0">
               {/* Sidebar esquerda - Explorer */}
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
-                <div className="h-full flex flex-col border-r border-border/60">
-                  <Tabs defaultValue="explorer" className="h-full flex flex-col">
-                    <div className="px-4 py-3 border-b border-border/60">
-                      <TabsList className="grid w-full grid-cols-2 h-8">
-                        <TabsTrigger value="explorer" className="text-xs">Explorer</TabsTrigger>
-                        <TabsTrigger value="commits" className="text-xs">Commits</TabsTrigger>
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="min-w-0">
+                <div className="h-full flex flex-col bg-muted/30 min-h-0">
+                  <Tabs defaultValue="explorer" className="h-full flex flex-col min-h-0">
+                    <div className="px-3 py-2 bg-background/50 backdrop-blur-sm border-b border-border/40 flex-shrink-0">
+                      <TabsList className="grid w-full grid-cols-3 h-9 bg-muted/50 p-1">
+                        <TabsTrigger 
+                          value="explorer" 
+                          className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                        >
+                          Explorer
+                        </TabsTrigger>
+                        <TabsTrigger 
+                          value="commits" 
+                          className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                        >
+                          Commits
+                        </TabsTrigger>
+                        <TabsTrigger 
+                          value="codespaces" 
+                          className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                        >
+                          Codespaces
+                        </TabsTrigger>
                       </TabsList>
                     </div>
                     
-                    <TabsContent value="explorer" className="flex-1 m-0">
+                    <TabsContent value="explorer" className="flex-1 m-0 min-h-0 overflow-hidden">
                       <FileExplorer 
                         onFileSelect={handleFileSelect}
                         selectedFile={selectedFile}
@@ -210,38 +227,48 @@ const IDE: React.FC = () => {
                       />
                     </TabsContent>
                     
-                    <TabsContent value="commits" className="flex-1 m-0">
+                    <TabsContent value="commits" className="flex-1 m-0 min-h-0 overflow-hidden">
                       <CommitPanel />
+                    </TabsContent>
+                    
+                    <TabsContent value="codespaces" className="flex-1 m-0 min-h-0 overflow-hidden">
+                      <CodespacesManager />
                     </TabsContent>
                   </Tabs>
                 </div>
               </ResizablePanel>
 
-              <ResizableHandle className="w-1 bg-border/60 hover:bg-border transition-colors" />
+              <ResizableHandle className="w-1 bg-gradient-to-b from-border/40 to-border/80 hover:bg-primary/20 transition-colors duration-200" />
 
-              {/* Ãrea central - Editor com abas */}
-              <ResizablePanel defaultSize={80}>
-                <div className="h-full flex flex-col">
+              {/* Área central - Editor com abas */}
+              <ResizablePanel defaultSize={80} className="min-w-0">
+                <div className="h-full flex flex-col min-h-0">
                   {selectedFile ? (
                     <>
                       {/* Abas do Editor */}
-                      <div className="px-4 py-3 border-b border-border/60">
+                      <div className="px-4 py-2 bg-background/80 backdrop-blur-sm border-b border-border/40 flex-shrink-0">
                         <Tabs value={activeEditorTab} onValueChange={(value) => setActiveEditorTab(value as 'editor' | 'preview')} className="w-full">
-                          <TabsList className="grid w-full grid-cols-2 h-8 max-w-md">
-                            <TabsTrigger value="editor" className="flex items-center gap-2 text-xs">
-                              <Code className="h-3 w-3" />
-                              Editor
+                          <TabsList className="grid w-full grid-cols-2 h-10 max-w-sm bg-muted/40 p-1">
+                            <TabsTrigger 
+                              value="editor" 
+                              className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                            >
+                              <Code className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="hidden sm:inline">Editor</span>
                             </TabsTrigger>
-                            <TabsTrigger value="preview" className="flex items-center gap-2 text-xs">
-                              <Eye className="h-3 w-3" />
-                              VisualizaÃ§Ã£o
+                            <TabsTrigger 
+                              value="preview" 
+                              className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                            >
+                              <Eye className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="hidden sm:inline">Prévia</span>
                             </TabsTrigger>
                           </TabsList>
                         </Tabs>
                       </div>
                       
-                      {/* ConteÃºdo das abas */}
-                      <div className="flex-1 min-h-0">
+                      {/* Conteúdo das abas */}
+                      <div className="flex-1 min-h-0 overflow-hidden">
                         {activeEditorTab === 'editor' ? (
                           <CodeEditor 
                             selectedFile={selectedFile} 
@@ -252,7 +279,7 @@ const IDE: React.FC = () => {
                             <iframe
                               src={window.location.origin}
                               className="w-full h-full border-0"
-                              title="Preview"
+                              title="Prévia"
                               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
                             />
                           </div>
@@ -260,12 +287,12 @@ const IDE: React.FC = () => {
                       </div>
                     </>
                   ) : (
-                    <div className="h-full flex items-center justify-center">
+                    <div className="h-full flex items-center justify-center p-4">
                       <div className="text-center space-y-4">
                         <Code className="h-16 w-16 mx-auto text-muted-foreground/30" />
                         <div className="space-y-2">
                           <p className="text-lg font-medium text-muted-foreground">Nenhum arquivo selecionado</p>
-                          <p className="text-sm text-muted-foreground/70">Selecione um arquivo no explorer para comeÃ§ar a editar</p>
+                          <p className="text-sm text-muted-foreground/70">Selecione um arquivo no explorer para começar a editar</p>
                         </div>
                       </div>
                     </div>
@@ -274,7 +301,7 @@ const IDE: React.FC = () => {
               </ResizablePanel>
             </ResizablePanelGroup>
 
-            {/* Modal de InicializaÃ§Ã£o */}
+            {/* Modal de Inicialização */}
             <Dialog open={showInitModal} onOpenChange={() => {}}>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -299,7 +326,7 @@ const IDE: React.FC = () => {
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {currentInitStep === 'install' && `${npmInstallProgress}%`}
-                        {(currentInitStep === 'dev' || currentInitStep === 'complete') && 'â'}
+                        {(currentInitStep === 'dev' || currentInitStep === 'complete') && '✓'}
                       </span>
                     </div>
                     <Progress 
@@ -320,7 +347,7 @@ const IDE: React.FC = () => {
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {currentInitStep === 'dev' && `${npmDevProgress}%`}
-                        {currentInitStep === 'complete' && 'â'}
+                        {currentInitStep === 'complete' && '✓'}
                       </span>
                     </div>
                     <Progress 
@@ -332,7 +359,7 @@ const IDE: React.FC = () => {
 
                   {currentInitStep === 'complete' && (
                     <div className="text-center py-2">
-                      <p className="text-sm font-medium text-green-600">â Projeto inicializado com sucesso!</p>
+                      <p className="text-sm font-medium text-green-600">✓ Projeto inicializado com sucesso!</p>
                     </div>
                   )}
                 </div>
