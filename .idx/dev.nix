@@ -3,7 +3,7 @@
   packages = [
     pkgs.nodejs_20
     pkgs.corepack_22
-    pkgs.openssh  # ← Adicione esta linha
+    pkgs.openssh
   ];
   idx.extensions = [
     "svelte.svelte-vscode"
