@@ -557,12 +557,12 @@ const AppSidebar = () => {
         </style>
         <SidebarGroup className="flex-1 relative">
           <img 
-            src="/imagens/IconeFrico3D.png" 
+            src="/images/IconeFrico3D.png" 
             alt="Fricó Alimentos Logo" 
             className="w-16 h-16 rounded-xl object-contain p-1 mx-auto"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = "/imagens/IconeFrico.png";
+              target.src = "/images/IconeFrico.png";
             }}
           />
           
