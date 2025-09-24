@@ -313,59 +313,61 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full w-full flex flex-col min-h-0 overflow-hidden">
       {/* Abas dos arquivos */}
-      <div className="flex border-b bg-gradient-to-r from-muted/20 to-muted/10 overflow-x-auto">
-        {openFiles.map((file) => (
-          <div
-            key={file.path}
-            className={`flex items-center gap-2 px-4 py-2.5 border-r border-border/30 cursor-pointer whitespace-nowrap transition-all duration-200 group ${
-              activeFile === file.path 
-                ? 'bg-background border-b-2 border-primary shadow-sm text-primary font-medium' 
-                : 'hover:bg-muted/40 hover:text-foreground'
-            }`}
-            onClick={() => setActiveFile(file.path)}
-          >
-            <span className="text-sm">
-              {file.path.split('/').pop()}
-            </span>
-            
-            {file.modified && (
-              <Circle className="h-2 w-2 fill-warning text-warning animate-pulse" />
-            )}
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all ml-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                closeFile(file.path);
-              }}
+      <div className="inline-flex h-10 items-center justify-start rounded-none bg-muted/30 p-1 text-muted-foreground overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent min-w-0 border-b">
+        <div className="flex min-w-0">
+          {openFiles.map((file) => (
+            <div
+              key={file.path}
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer group min-w-0 max-w-[200px] gap-2 ${
+                activeFile === file.path 
+                  ? 'bg-background text-foreground shadow-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm' 
+                  : 'hover:bg-background/80 hover:text-foreground'
+              }`}
+              onClick={() => setActiveFile(file.path)}
             >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
+              <span className="text-sm truncate min-w-0 flex-1" title={file.path}>
+                {file.path.split('/').pop()}
+              </span>
+              
+              {file.modified && (
+                <Circle className="h-2 w-2 fill-warning text-warning animate-pulse flex-shrink-0" />
+              )}
+              
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeFile(file.path);
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Barra de ferramentas */}
       {activeFileData && (
-        <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-muted/20 to-muted/5">
-          <div className="flex items-center gap-3 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <span className="font-mono text-xs bg-muted/40 px-2 py-1 rounded">
+        <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-muted/20 to-muted/5 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-3 text-sm min-w-0 flex-1">
+            <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+              <span className="font-mono text-xs bg-muted/40 px-2 py-1 rounded truncate max-w-[300px]" title={activeFileData.path}>
                 {activeFileData.path}
               </span>
               {activeFileData.modified && (
-                <span className="text-warning text-xs bg-warning/10 px-2 py-1 rounded border border-warning/20">
+                <span className="text-warning text-xs bg-warning/10 px-2 py-1 rounded border border-warning/20 whitespace-nowrap flex-shrink-0">
                   • modificado
                 </span>
               )}
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0 ml-4">
             <Button
               size="sm"
               onClick={saveActiveFile}
@@ -378,7 +380,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
               title="Salvar arquivo atual (Ctrl+S)"
             >
               <Save className="h-3.5 w-3.5 mr-1.5" />
-              Salvar
+              <span className="hidden sm:inline">Salvar</span>
             </Button>
             
             {getModifiedFilesCount() > 0 && (
@@ -390,7 +392,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
                 title={`Salvar todos os arquivos modificados (${getModifiedFilesCount()}) - Ctrl+Shift+S`}
               >
                 <Save className="h-3.5 w-3.5 mr-1.5" />
-                Salvar Todos ({getModifiedFilesCount()})
+                <span className="hidden md:inline">Todos ({getModifiedFilesCount()})</span>
+                <span className="md:hidden">({getModifiedFilesCount()})</span>
               </Button>
             )}
           </div>
@@ -398,47 +401,63 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
       )}
 
       {/* Editor */}
-      <div className="flex-1">
+      <div className="flex-1 min-h-0 w-full overflow-hidden">
         {loading ? (
-          <div className="h-full flex items-center justify-center">
+          <div className="h-full w-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : activeFileData ? (
-          <Editor
-            height="100%"
-            language={getLanguageFromPath(activeFileData.path)}
-            value={activeFileData.content}
-            onChange={(value) => {
-              if (value !== undefined) {
-                updateFileContent(activeFileData.path, value);
-              }
-            }}
-            onMount={(editor) => {
-              editorRef.current = editor;
-            }}
-            theme={theme === 'dark' ? 'vs-dark' : 'light'}
-            options={{
-              fontSize: 14,
-              fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
-              minimap: { enabled: true },
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-              insertSpaces: true,
-              wordWrap: 'on',
-              lineNumbers: 'on',
-              renderWhitespace: 'selection',
-              bracketPairColorization: { enabled: true },
-              suggest: {
-                enabled: true,
-              },
-              quickSuggestions: {
-                other: true,
-                comments: true,
-                strings: true,
-              },
-            }}
-          />
+          <div className="h-full w-full">
+            <Editor
+              height="100%"
+              width="100%"
+              language={getLanguageFromPath(activeFileData.path)}
+              value={activeFileData.content}
+              onChange={(value) => {
+                if (value !== undefined) {
+                  updateFileContent(activeFileData.path, value);
+                }
+              }}
+              onMount={(editor) => {
+                editorRef.current = editor;
+                // Força layout correto após montar
+                setTimeout(() => {
+                  editor.layout();
+                }, 100);
+              }}
+              theme={theme === 'dark' ? 'vs-dark' : 'light'}
+              options={{
+                fontSize: 14,
+                fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+                insertSpaces: true,
+                wordWrap: 'on',
+                lineNumbers: 'on',
+                renderWhitespace: 'selection',
+                bracketPairColorization: { enabled: true },
+                suggest: {
+                  enabled: true,
+                },
+                quickSuggestions: {
+                  other: true,
+                  comments: true,
+                  strings: true,
+                },
+                // Opções para melhorar responsividade
+                overviewRulerBorder: false,
+                hideCursorInOverviewRuler: true,
+                scrollbar: {
+                  vertical: 'auto',
+                  horizontal: 'auto',
+                  verticalScrollbarSize: 10,
+                  horizontalScrollbarSize: 10,
+                },
+              }}
+            />
+          </div>
         ) : null}
       </div>
 

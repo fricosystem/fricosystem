@@ -191,10 +191,10 @@ const IDE: React.FC = () => {
           </div>
         ) : (
           <div className="flex-1 min-h-0 w-full overflow-hidden">
-            <ResizablePanelGroup direction="horizontal" className="h-full w-full min-h-0">
+            <ResizablePanelGroup direction="horizontal" className="h-full w-full min-h-0 overflow-hidden">
               {/* Sidebar esquerda - Explorer */}
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="min-w-0">
-                <div className="h-full flex flex-col bg-muted/30 min-h-0">
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="min-w-0 overflow-hidden">
+                <div className="h-full flex flex-col bg-muted/30 min-h-0 overflow-hidden">
                   <Tabs defaultValue="explorer" className="h-full flex flex-col min-h-0">
                     <div className="px-3 py-2 bg-background/50 backdrop-blur-sm border-b border-border/40 flex-shrink-0">
                       <TabsList className="grid w-full grid-cols-3 h-9 bg-muted/50 p-1">
@@ -238,15 +238,15 @@ const IDE: React.FC = () => {
                 </div>
               </ResizablePanel>
 
-              <ResizableHandle className="w-1 bg-gradient-to-b from-border/40 to-border/80 hover:bg-primary/20 transition-colors duration-200" />
+              <ResizableHandle className="w-1 bg-gradient-to-b from-border/40 to-border/80 hover:bg-primary/20 transition-colors duration-200 flex-shrink-0" />
 
               {/* Área central - Editor com abas */}
-              <ResizablePanel defaultSize={80} className="min-w-0">
-                <div className="h-full flex flex-col min-h-0">
+              <ResizablePanel defaultSize={80} className="min-w-0 overflow-hidden">
+                <div className="h-full w-full flex flex-col min-h-0 overflow-hidden">
                   {selectedFile ? (
                     <>
                       {/* Abas do Editor */}
-                      <div className="px-4 py-2 bg-background/80 backdrop-blur-sm border-b border-border/40 flex-shrink-0">
+                      <div className="px-4 py-2 bg-background/80 backdrop-blur-sm border-b border-border/40 flex-shrink-0 overflow-hidden">
                         <Tabs value={activeEditorTab} onValueChange={(value) => setActiveEditorTab(value as 'editor' | 'preview')} className="w-full">
                           <TabsList className="grid w-full grid-cols-2 h-10 max-w-sm bg-muted/40 p-1">
                             <TabsTrigger 
@@ -268,14 +268,14 @@ const IDE: React.FC = () => {
                       </div>
                       
                       {/* Conteúdo das abas */}
-                      <div className="flex-1 min-h-0 overflow-hidden">
+                      <div className="flex-1 min-h-0 w-full overflow-hidden">
                         {activeEditorTab === 'editor' ? (
                           <CodeEditor 
                             selectedFile={selectedFile} 
                             theme={theme}
                           />
                         ) : (
-                          <div className="h-full w-full">
+                          <div className="h-full w-full overflow-hidden">
                             <iframe
                               src={window.location.origin}
                               className="w-full h-full border-0"
@@ -287,7 +287,7 @@ const IDE: React.FC = () => {
                       </div>
                     </>
                   ) : (
-                    <div className="h-full flex items-center justify-center p-4">
+                    <div className="h-full w-full flex items-center justify-center p-4 overflow-hidden">
                       <div className="text-center space-y-4">
                         <Code className="h-16 w-16 mx-auto text-muted-foreground/30" />
                         <div className="space-y-2">

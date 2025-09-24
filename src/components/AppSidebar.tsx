@@ -47,7 +47,7 @@ import {
     UserRound,
     Briefcase,
     Building2,
-    // Novos Ã­cones especÃ­ficos
+    // Novos ícones específicos
     BarChart3,
     ShoppingBasket,
     Scan,
@@ -116,9 +116,9 @@ const AppSidebar = () => {
   const isAdmin = userData?.cargo === "DESENVOLVEDOR";
   const isDesenvolvedor = userData?.cargo === "DESENVOLVEDOR";
   
-  // Verifica se o usuÃ¡rio estÃ¡ ativo
+  // Verifica se o usuário está ativo
   useEffect(() => {
-    if (userData?.ativo === "nÃ£o") {
+    if (userData?.ativo === "não") {
       navigate("/bem-vindo");
       toast({
         title: "Conta inativa",
@@ -128,16 +128,16 @@ const AppSidebar = () => {
     }
   }, [userData, navigate, toast]);
 
-  // Filtra os itens do sidebar baseado nas permissÃµes do usuÃ¡rio
+  // Filtra os itens do sidebar baseado nas permissões do usuário
   const filterItemsByPermission = (items: SidebarItem[]) => {
     if (!userData?.permissoes) return items;
-    // Se o usuÃ¡rio tem permissÃ£o "tudo", retorna todos os itens
+    // Se o usuário tem permissão "tudo", retorna todos os itens
     if (userData.permissoes.includes("tudo")) return items;
-    // Caso contrÃ¡rio, filtra normalmente
+    // Caso contrário, filtra normalmente
     return items.filter(item => {
-      // Se nÃ£o tem permissÃ£o definida, permite acesso
+      // Se não tem permissão definida, permite acesso
       if (!item.permission) return true;
-      // Verifica se a permissÃ£o estÃ¡ no array de permissÃµes do usuÃ¡rio
+      // Verifica se a permissão está no array de permissões do usuário
       return userData.permissoes.includes(item.permission);
     });
   };
@@ -147,7 +147,7 @@ const AppSidebar = () => {
     return user.email || null;
   };
 
-  // FunÃ§Ã£o para filtrar categorias que tenham pelo menos um item válido
+  // Função para filtrar categorias que tenham pelo menos um item válido
   const filterCategoriesWithItems = (categories: SidebarCategory[]) => {
     return categories
       .map(category => ({
@@ -248,7 +248,7 @@ const AppSidebar = () => {
     }] : []),
   ], [pendingRequestsCount, isAdmin, isDesenvolvedor]);
 
-  // Aplicar filtro para mostrar apenas categorias que tenham itens vÃ¡lidos
+  // Aplicar filtro para mostrar apenas categorias que tenham itens válidos
   const sidebarCategories = useMemo(() => 
     filterCategoriesWithItems(allSidebarCategories), 
     [allSidebarCategories, userData?.permissoes]
@@ -556,13 +556,15 @@ const AppSidebar = () => {
           `}
         </style>
         <SidebarGroup>
-        <div className="flex flex-col items-center justify-center px-1 py-2">
           <img 
             src="/Uploads/IconeFrico3D.png" 
             alt="Fricó Alimentos Logo" 
-            className="w-20 h-20 rounded-xl object-scale-down" 
+            className="w-20 h-20 rounded-xl object-contain bg-white/10 p-1 mx-auto"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "/Uploads/IconeFrico.png";
+            }}
           />
-        </div>
           
           <div className="overflow-y-auto flex-grow" style={{ maxHeight: "calc(100vh - 180px)" }}>
             {sidebarCategories.map((category, index) => (
