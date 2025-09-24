@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, File, Folder, Plus, Trash2, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  ChevronRight, ChevronDown, Folder, Plus, Trash2, RefreshCw, Upload, Download,
+  FileText, FileCode, FileImage, FileType, Palette, Globe, Clipboard, Book,
+  FolderOpen, Archive, Settings, Database, Key, Shield, File as FileIcon
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { githubService, FileNode } from '@/services/githubService';
@@ -27,6 +31,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   const [loading, setLoading] = useState(false);
   const [creatingFile, setCreatingFile] = useState<string | null>(null);
   const [newFileName, setNewFileName] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const loadFiles = async (path: string = '') => {
@@ -174,33 +180,191 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     }
   };
 
-  const getFileIcon = (fileName: string) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    
+    try {
+      for (const file of Array.from(files)) {
+        const content = await file.text();
+        const result = await githubService.createFile(
+          file.name,
+          content,
+          `Upload arquivo ${file.name} via IDE`
+        );
+        
+        if (!result) {
+          throw new Error(`Falha ao fazer upload do arquivo ${file.name}`);
+        }
+      }
+      
+      toast({
+        title: "✅ Sucesso",
+        description: `${files.length} arquivo(s) enviado(s) com sucesso`,
+      });
+      
+      await loadRootFiles();
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      toast({
+        title: "❌ Falha no Upload",
+        description: `Erro: ${errorMessage}`,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDownloadFile = async (filePath: string) => {
+    try {
+      const content = await githubService.getFileContent(filePath);
+      const fileName = filePath.split('/').pop() || filePath;
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "✅ Download Concluído",
+        description: `Arquivo ${fileName} baixado com sucesso`,
+      });
+    } catch (error) {
+      console.error('Erro no download:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      toast({
+        title: "❌ Falha no Download",
+        description: `Erro: ${errorMessage}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadFolder = async (folderPath: string) => {
+    try {
+      const folderFiles = await githubService.getRepositoryTree(folderPath);
+      const folderName = folderPath.split('/').pop() || 'pasta';
+      
+      // Criar um zip com todos os arquivos da pasta
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      
+      const addFilesToZip = async (files: FileNode[], basePath: string = '') => {
+        for (const file of files) {
+          if (file.type === 'file') {
+            try {
+              const content = await githubService.getFileContent(file.path);
+              const relativePath = basePath ? `${basePath}/${file.name}` : file.name;
+              zip.file(relativePath, content);
+            } catch (error) {
+              console.warn(`Erro ao baixar arquivo ${file.path}:`, error);
+            }
+          } else if (file.type === 'dir' && file.children) {
+            const relativePath = basePath ? `${basePath}/${file.name}` : file.name;
+            await addFilesToZip(file.children, relativePath);
+          }
+        }
+      };
+      
+      await addFilesToZip(folderFiles);
+      
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${folderName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "✅ Download Concluído",
+        description: `Pasta ${folderName} baixada como ZIP`,
+      });
+    } catch (error) {
+      console.error('Erro no download da pasta:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      toast({
+        title: "❌ Falha no Download",
+        description: `Erro: ${errorMessage}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getFileIcon = (fileName: string, isDirectory: boolean = false) => {
+    if (isDirectory) {
+      return FolderOpen;
+    }
+    
     const extension = fileName.split('.').pop()?.toLowerCase();
     
     switch (extension) {
       case 'tsx':
+      case 'jsx':
+        return FileCode;
       case 'ts':
       case 'js':
-      case 'jsx':
-        return '📄';
+        return FileCode;
       case 'css':
       case 'scss':
       case 'sass':
-        return '🎨';
+      case 'less':
+        return Palette;
       case 'html':
-        return '🌐';
+      case 'htm':
+        return Globe;
       case 'json':
-        return '📋';
+        return Clipboard;
       case 'md':
-        return '📖';
+      case 'markdown':
+        return Book;
       case 'png':
       case 'jpg':
       case 'jpeg':
       case 'gif':
       case 'svg':
-        return '🖼️';
+      case 'webp':
+        return FileImage;
+      case 'pdf':
+        return FileText;
+      case 'zip':
+      case 'rar':
+      case '7z':
+      case 'tar':
+      case 'gz':
+        return Archive;
+      case 'env':
+      case 'config':
+        return Settings;
+      case 'sql':
+      case 'db':
+      case 'sqlite':
+        return Database;
+      case 'key':
+      case 'pem':
+      case 'cert':
+        return Key;
+      case 'lock':
+        return Shield;
       default:
-        return '📄';
+        return FileText;
     }
   };
 
@@ -243,12 +407,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
               {node.type === 'file' && (
                 <>
                   <span className="w-3.5" />
-                  <File className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  {(() => {
+                    const IconComponent = getFileIcon(node.name);
+                    return <IconComponent className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />;
+                  })()}
                 </>
               )}
               
               <span className="text-sm truncate flex-1 group-hover:text-foreground transition-colors">
-                <span className="mr-2">{getFileIcon(node.name)}</span>
                 {node.name}
               </span>
             </div>
@@ -256,20 +422,32 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
           
           <ContextMenuContent>
             {node.type === 'dir' && (
-              <ContextMenuItem onClick={() => setCreatingFile(node.path)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo arquivo
-              </ContextMenuItem>
+              <>
+                <ContextMenuItem onClick={() => setCreatingFile(node.path)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo arquivo
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => handleDownloadFolder(node.path)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar pasta
+                </ContextMenuItem>
+              </>
             )}
             
             {node.type === 'file' && (
-              <ContextMenuItem 
-                onClick={() => handleDeleteFile(node.path)}
-                className="text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Deletar arquivo
-              </ContextMenuItem>
+              <>
+                <ContextMenuItem onClick={() => handleDownloadFile(node.path)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar arquivo
+                </ContextMenuItem>
+                <ContextMenuItem 
+                  onClick={() => handleDeleteFile(node.path)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Deletar arquivo
+                </ContextMenuItem>
+              </>
             )}
           </ContextMenuContent>
         </ContextMenu>
@@ -281,7 +459,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
             style={{ paddingLeft: `${(level + 1) * 16 + 12}px` }}
           >
             <span className="w-3.5" />
-            <File className="h-4 w-4 text-primary/70" />
+            <FileIcon className="h-4 w-4 text-primary/70" />
             <Input
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
@@ -348,6 +526,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
           <Button
             size="sm"
             variant="ghost"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary transition-colors"
+            title="Fazer upload de arquivos"
+          >
+            <Upload className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={() => setCreatingFile('')}
             className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary transition-colors"
             title="Novo arquivo"
@@ -370,12 +558,22 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         </div>
       </div>
       
+      {/* Input oculto para upload de arquivos */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        onChange={handleFileUpload}
+        className="hidden"
+        accept="*/*"
+      />
+      
       <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 bg-gradient-to-b from-transparent to-muted/5 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/20">
         {/* Input para criar arquivo na raiz */}
         {creatingFile === '' && (
           <div className="flex items-center gap-2 px-2 py-1.5 mx-1 my-1 bg-muted/40 rounded-md border border-dashed border-primary/30">
             <span className="w-3.5" />
-            <File className="h-4 w-4 text-primary/70" />
+            <FileIcon className="h-4 w-4 text-primary/70" />
             <Input
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
