@@ -131,7 +131,7 @@ const IDE: React.FC = () => {
 
   return (
     <AppLayout title="FR - Fusion IDE Mod 1.0">
-      <div className="flex flex-col h-screen min-h-0 w-full overflow-hidden">
+      <div className="flex flex-col h-full min-h-0 w-full overflow-hidden relative">
         {loading || initializing ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
@@ -190,10 +190,10 @@ const IDE: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="flex-1 min-h-0 w-full overflow-hidden">
-            <ResizablePanelGroup direction="horizontal" className="h-full w-full min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 w-full overflow-hidden bg-background">
+            <ResizablePanelGroup direction="horizontal" className="h-full min-h-0 max-w-full overflow-hidden">
               {/* Sidebar esquerda - Explorer */}
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="min-w-0 overflow-hidden">
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="min-w-0 max-w-full overflow-hidden">
                 <div className="h-full flex flex-col bg-muted/30 min-h-0 overflow-hidden">
                   <Tabs defaultValue="explorer" className="h-full flex flex-col min-h-0">
                     <div className="px-3 py-2 bg-background/50 backdrop-blur-sm border-b border-border/40 flex-shrink-0">
@@ -238,10 +238,10 @@ const IDE: React.FC = () => {
                 </div>
               </ResizablePanel>
 
-              <ResizableHandle className="w-1 bg-gradient-to-b from-border/40 to-border/80 hover:bg-primary/20 transition-colors duration-200 flex-shrink-0" />
+              <ResizableHandle className="w-1 bg-gradient-to-b from-border/40 to-border/80 hover:bg-primary/20 transition-colors duration-200 flex-shrink-0 relative z-10" />
 
               {/* Área central - Editor com abas */}
-              <ResizablePanel defaultSize={80} className="min-w-0 overflow-hidden">
+              <ResizablePanel defaultSize={80} className="min-w-0 max-w-full overflow-hidden flex-1">
                 <div className="h-full w-full flex flex-col min-h-0 overflow-hidden">
                   {selectedFile ? (
                     <>
