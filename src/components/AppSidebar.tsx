@@ -498,8 +498,8 @@ const AppSidebar = () => {
   };
 
   return (
-    <Sidebar className="border-r border-[#2b3341]">
-      <SidebarContent>
+    <Sidebar className="border-r border-[#2b3341] h-screen">
+      <SidebarContent className="relative h-full">
         <style>
           {`
             @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
@@ -555,18 +555,18 @@ const AppSidebar = () => {
             }
           `}
         </style>
-        <SidebarGroup>
+        <SidebarGroup className="flex-1 relative">
           <img 
-            src="/Uploads/IconeFrico3D.png" 
+            src="/imagens/IconeFrico3D.png" 
             alt="Fricó Alimentos Logo" 
-            className="w-20 h-20 rounded-xl object-contain bg-white/10 p-1 mx-auto"
+            className="w-16 h-16 rounded-xl object-contain p-1 mx-auto"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = "/Uploads/IconeFrico.png";
+              target.src = "/imagens/IconeFrico.png";
             }}
           />
           
-          <div className="overflow-y-auto flex-grow" style={{ maxHeight: "calc(100vh - 180px)" }}>
+          <div className="overflow-y-auto flex-1 pb-20" style={{ height: "calc(100vh - 120px)" }}>
             {sidebarCategories.map((category, index) => (
               <SidebarGroup key={index}>
                 {category.items.length > 0 && (
@@ -645,16 +645,16 @@ const AppSidebar = () => {
           </div>
         </SidebarGroup>
         
-        <SidebarGroup className="mt-auto">
+        <SidebarGroup className="absolute bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton className={`flex items-center justify-center w-full p-4 h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-auto my-1`}>
+                    <SidebarMenuButton className={`flex items-center justify-center w-full p-2 h-10 ${firebaseClasses.menuItem.hover} rounded-md mx-auto my-1`}>
                       <div className="flex items-center justify-center space-x-2 w-full">
                         {userData?.imagem_perfil ? (
-                          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
+                          <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
                             <img 
                               src={userData.imagem_perfil} 
                               alt="Profile" 
@@ -662,7 +662,7 @@ const AppSidebar = () => {
                             />
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ff7a59] text-white shrink-0">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ff7a59] text-white shrink-0">
                             {getUserInitial()}
                           </div>
                         )}
@@ -674,7 +674,7 @@ const AppSidebar = () => {
                             </span>
                           )}
                         </div>
-                        <ChevronUp className="h-4 w-4 shrink-0" />
+                        <ChevronUp className="h-3 w-3 shrink-0" />
                       </div>
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
