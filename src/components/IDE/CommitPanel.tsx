@@ -38,6 +38,15 @@ const CommitPanel: React.FC = () => {
   const [showCustomRepoDialog, setShowCustomRepoDialog] = useState(false);
   const [showCustomRepoConfirm, setShowCustomRepoConfirm] = useState(false);
   const [showCommitTrocadoDialog, setShowCommitTrocadoDialog] = useState(false);
+  const [commitTrocadoConfig, setCommitTrocadoConfig] = useState({
+    sourceOwner: '',
+    sourceRepo: '',
+    sourceBranch: 'main',
+    destOwner: '',
+    destRepo: '',
+    destBranch: 'main',
+    commitMessage: ''
+  });
   const [selectedCommit, setSelectedCommit] = useState<CommitData | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [customRepoConfig, setCustomRepoConfig] = useState<CustomRepoConfig>({
@@ -412,6 +421,239 @@ const CommitPanel: React.FC = () => {
     }
   };
 
+  const handleCommitTrocado = async () => {
+    try {
+      // Validar se proprietários são iguais (recomendado)
+      if (commitTrocadoConfig.sourceOwner !== commitTrocadoConfig.destOwner) {
+        toast({
+          title: "Aviso",
+          description: "Proprietários diferentes detectados. Verifique se você tem acesso a ambos os repositórios.",
+          variant: "destructive",
+        });
+      }
+
+      setShowCommitTrocadoDialog(false);
+      setShowDownloadDialog(true);
+      
+      // Configurar para usar o commit trocado
+      setSourceRepoConfig({
+        owner: commitTrocadoConfig.sourceOwner,
+        repo: commitTrocadoConfig.sourceRepo,
+        branch: commitTrocadoConfig.sourceBranch
+      });
+      
+      // Iniciar processo de transferência personalizada
+      await startCommitTrocadoProcess();
+      
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao iniciar transferência entre repositórios.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const startCommitTrocadoProcess = async () => {
+    setIsDownloading(true);
+    setIsUploading(false);
+    setDownloadProgress(0);
+    setUploadProgress(0);
+    setOverallProgress(0);
+    setProcessComplete(false);
+    setDownloadedFiles([]);
+    setStartTime(Date.now());
+
+    try {
+      const sourceOwner = commitTrocadoConfig.sourceOwner.trim();
+      const sourceRepo = commitTrocadoConfig.sourceRepo.trim();
+      const sourceBranch = commitTrocadoConfig.sourceBranch || 'main';
+      const destOwner = commitTrocadoConfig.destOwner.trim();
+      const destRepo = commitTrocadoConfig.destRepo.trim();
+      const destBranch = commitTrocadoConfig.destBranch || 'main';
+
+      // Usar o token do GitHub configurado
+      await githubService.ensureInitialized();
+      if (!githubService.isConfigured()) {
+        throw new Error('GitHub não está configurado. Configure primeiro o GitHub para acessar repositórios.');
+      }
+
+      const { Octokit } = await import('@octokit/rest');
+      const config = githubService.getConfig();
+      const octokit = new Octokit({ auth: config?.token });
+
+      // 1) Download do repositório origem
+      const { data: repoData } = await octokit.rest.repos.get({
+        owner: sourceOwner,
+        repo: sourceRepo,
+      });
+      const defaultBranch = sourceBranch || repoData.default_branch || 'main';
+
+      const { data: refData } = await octokit.rest.git.getRef({
+        owner: sourceOwner,
+        repo: sourceRepo,
+        ref: `heads/${defaultBranch}`,
+      });
+      const commitSha = refData.object.sha;
+
+      const { data: commitData } = await octokit.rest.git.getCommit({
+        owner: sourceOwner,
+        repo: sourceRepo,
+        commit_sha: commitSha,
+      });
+      const treeSha = commitData.tree.sha;
+
+      const { data: treeData } = await octokit.rest.git.getTree({
+        owner: sourceOwner,
+        repo: sourceRepo,
+        tree_sha: treeSha,
+        recursive: 'true',
+      });
+
+      const files = (treeData.tree || []).filter((item: any) => item.type === 'blob' && item.path);
+      const totalFiles = files.length;
+      const totalSteps = totalFiles * 2;
+
+      // Download dos arquivos
+      const downloads: { path: string; content: string }[] = [];
+      let downloadedCount = 0;
+
+      for (const file of files) {
+        if (!file.path || !file.sha) continue;
+        const { data: blob } = await octokit.rest.git.getBlob({
+          owner: sourceOwner,
+          repo: sourceRepo,
+          file_sha: file.sha,
+        });
+
+        const base64 = (blob.content || '').replace(/\n/g, '');
+        let decoded = '';
+        try {
+          decoded = decodeURIComponent(escape(atob(base64)));
+        } catch {
+          decoded = atob(base64);
+        }
+
+        downloads.push({ path: file.path, content: decoded });
+        downloadedCount++;
+        
+        const downloadPercent = Math.round((downloadedCount / totalFiles) * 100);
+        setDownloadProgress(downloadPercent);
+        
+        const overallPercent = Math.round((downloadedCount / totalSteps) * 100);
+        setOverallProgress(overallPercent);
+      }
+
+      setDownloadedFiles(files.map((f: any) => ({ name: f.path.split('/').pop() || f.path, path: f.path })));
+      setIsDownloading(false);
+
+      // 2) Upload para repositório destino
+      setIsUploading(true);
+      setUploadProgress(0);
+      
+      try {
+        // Obter referência da branch de destino
+        let baseSha = '';
+        try {
+          const { data: refData } = await octokit.rest.git.getRef({
+            owner: destOwner,
+            repo: destRepo,
+            ref: `heads/${destBranch}`,
+          });
+          baseSha = refData.object.sha;
+        } catch (error: any) {
+          if (error.status === 404) {
+            // Criar commit inicial se repositório/branch não existe
+            const { data: newCommit } = await octokit.rest.repos.createOrUpdateFileContents({
+              owner: destOwner,
+              repo: destRepo,
+              path: '.gitkeep',
+              message: 'Initial commit',
+              content: btoa(''),
+            });
+            baseSha = newCommit.commit.sha;
+          } else {
+            throw error;
+          }
+        }
+
+        // Criar árvore com todos os arquivos
+        const treeItems = downloads.map(file => ({
+          path: file.path,
+          mode: '100644' as const,
+          type: 'blob' as const,
+          content: file.content,
+        }));
+
+        const { data: newTree } = await octokit.rest.git.createTree({
+          owner: destOwner,
+          repo: destRepo,
+          tree: treeItems,
+          base_tree: baseSha,
+        });
+
+        // Criar commit único com mensagem personalizada
+        const { data: newCommit } = await octokit.rest.git.createCommit({
+          owner: destOwner,
+          repo: destRepo,
+          message: commitTrocadoConfig.commitMessage || `Transferência de ${sourceOwner}/${sourceRepo}`,
+          tree: newTree.sha,
+          parents: baseSha ? [baseSha] : [],
+        });
+
+        // Atualizar referência da branch
+        await octokit.rest.git.updateRef({
+          owner: destOwner,
+          repo: destRepo,
+          ref: `heads/${destBranch}`,
+          sha: newCommit.sha,
+        });
+
+        setUploadProgress(100);
+        setOverallProgress(100);
+      } catch (uploadError) {
+        console.error('Erro no upload:', uploadError);
+        throw uploadError;
+      }
+
+      setIsUploading(false);
+      setProcessComplete(true);
+      setEstimatedTimeRemaining('');
+
+      toast({
+        title: 'Commit Trocado Concluído!',
+        description: `${downloads.length} arquivos transferidos de ${sourceOwner}/${sourceRepo} para ${destOwner}/${destRepo}!`,
+      });
+      
+      // Limpar configuração
+      setCommitTrocadoConfig({
+        sourceOwner: '',
+        sourceRepo: '',
+        sourceBranch: 'main',
+        destOwner: '',
+        destRepo: '',
+        destBranch: 'main',
+        commitMessage: ''
+      });
+      
+    } catch (error: any) {
+      console.error('Erro no commit trocado:', error);
+      let description = 'Erro durante a transferência entre repositórios';
+      
+      if (error?.status === 404) {
+        description = `Repositório não encontrado. Verifique se os nomes estão corretos e se você tem acesso aos repositórios.`;
+      } else if (error instanceof Error) {
+        description = error.message;
+      }
+      
+      toast({ title: 'Erro no Commit Trocado', description, variant: 'destructive' });
+      setIsDownloading(false);
+      setIsUploading(false);
+      setOverallProgress(0);
+      setEstimatedTimeRemaining('');
+    }
+  };
+
   const confirmCustomCommit = async () => {
     try {
       toast({
@@ -667,6 +909,158 @@ const CommitPanel: React.FC = () => {
                   Confirmar Restauração
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Commit Trocado */}
+      <Dialog open={showCommitTrocadoDialog} onOpenChange={setShowCommitTrocadoDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitCommit className="h-5 w-5 text-orange-500" />
+              Commit Trocado - Transferir entre Repositórios
+            </DialogTitle>
+            <DialogDescription>
+              Transfira arquivos de um repositório para outro. Ambos devem ser do mesmo proprietário.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Repositório Origem */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Download className="h-4 w-4 text-blue-500" />
+                <h3 className="font-semibold text-sm">Repositório Origem</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="sourceOwner">Proprietário</Label>
+                  <Input
+                    id="sourceOwner"
+                    placeholder="username"
+                    value={commitTrocadoConfig.sourceOwner}
+                    onChange={(e) => setCommitTrocadoConfig(prev => ({ ...prev, sourceOwner: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sourceRepo">Repositório</Label>
+                  <Input
+                    id="sourceRepo"
+                    placeholder="repo-origem"
+                    value={commitTrocadoConfig.sourceRepo}
+                    onChange={(e) => setCommitTrocadoConfig(prev => ({ ...prev, sourceRepo: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sourceBranch">Branch</Label>
+                  <Input
+                    id="sourceBranch"
+                    placeholder="main"
+                    value={commitTrocadoConfig.sourceBranch}
+                    onChange={(e) => setCommitTrocadoConfig(prev => ({ ...prev, sourceBranch: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Repositório Destino */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Upload className="h-4 w-4 text-green-500" />
+                <h3 className="font-semibold text-sm">Repositório Destino</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="destOwner">Proprietário</Label>
+                  <Input
+                    id="destOwner"
+                    placeholder="username"
+                    value={commitTrocadoConfig.destOwner}
+                    onChange={(e) => setCommitTrocadoConfig(prev => ({ ...prev, destOwner: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="destRepo">Repositório</Label>
+                  <Input
+                    id="destRepo"
+                    placeholder="repo-destino"
+                    value={commitTrocadoConfig.destRepo}
+                    onChange={(e) => setCommitTrocadoConfig(prev => ({ ...prev, destRepo: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="destBranch">Branch</Label>
+                  <Input
+                    id="destBranch"
+                    placeholder="main"
+                    value={commitTrocadoConfig.destBranch}
+                    onChange={(e) => setCommitTrocadoConfig(prev => ({ ...prev, destBranch: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Mensagem do Commit */}
+            <div className="space-y-2">
+              <Label htmlFor="commitMessageTrocado">Mensagem do Commit</Label>
+              <Textarea
+                id="commitMessageTrocado"
+                placeholder="Descreva as alterações que estão sendo transferidas..."
+                value={commitTrocadoConfig.commitMessage}
+                onChange={(e) => setCommitTrocadoConfig(prev => ({ ...prev, commitMessage: e.target.value }))}
+                className="min-h-[80px]"
+              />
+            </div>
+
+            {/* Validação de Proprietário */}
+            {commitTrocadoConfig.sourceOwner && commitTrocadoConfig.destOwner && 
+             commitTrocadoConfig.sourceOwner !== commitTrocadoConfig.destOwner && (
+              <div className="p-3 rounded border bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <p className="text-sm font-medium text-orange-800 dark:text-orange-400">
+                    Atenção: Os proprietários são diferentes
+                  </p>
+                </div>
+                <p className="text-xs text-orange-600 dark:text-orange-500 mt-1">
+                  É recomendado que ambos os repositórios sejam do mesmo proprietário para evitar problemas de acesso.
+                </p>
+              </div>
+            )}
+
+            {/* Preview da Transferência */}
+            {commitTrocadoConfig.sourceOwner && commitTrocadoConfig.sourceRepo && 
+             commitTrocadoConfig.destOwner && commitTrocadoConfig.destRepo && (
+              <div className="p-3 rounded border bg-muted/20">
+                <p className="text-sm font-medium mb-2">Preview da Transferência:</p>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>📥 Origem: {commitTrocadoConfig.sourceOwner}/{commitTrocadoConfig.sourceRepo} ({commitTrocadoConfig.sourceBranch})</p>
+                  <p>📤 Destino: {commitTrocadoConfig.destOwner}/{commitTrocadoConfig.destRepo} ({commitTrocadoConfig.destBranch})</p>
+                  {commitTrocadoConfig.commitMessage && (
+                    <p>💬 Mensagem: {commitTrocadoConfig.commitMessage}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCommitTrocadoDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleCommitTrocado}
+              disabled={!commitTrocadoConfig.sourceOwner || !commitTrocadoConfig.sourceRepo || 
+                       !commitTrocadoConfig.destOwner || !commitTrocadoConfig.destRepo || 
+                       !commitTrocadoConfig.commitMessage}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <GitCommit className="mr-2 h-4 w-4" />
+              Iniciar Transferência
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -979,28 +1373,6 @@ const CommitPanel: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Commit Trocado */}
-      <Dialog open={showCommitTrocadoDialog} onOpenChange={setShowCommitTrocadoDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <GitCommit className="h-5 w-5 text-primary" />
-              Commit Trocado
-            </DialogTitle>
-            <DialogDescription>
-              Modal em branco para commit trocado.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Conteúdo em branco */}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCommitTrocadoDialog(false)}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
