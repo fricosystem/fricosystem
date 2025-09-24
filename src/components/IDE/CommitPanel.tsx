@@ -33,22 +33,19 @@ interface CustomRepoConfig {
 const CommitPanel: React.FC = () => {
   const [commits, setCommits] = useState<CommitData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [commitMessage, setCommitMessage] = useState('');
-  const [committing, setCommitting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [showCustomRepoDialog, setShowCustomRepoDialog] = useState(false);
   const [showCustomRepoConfirm, setShowCustomRepoConfirm] = useState(false);
+  const [showCommitTrocadoDialog, setShowCommitTrocadoDialog] = useState(false);
   const [selectedCommit, setSelectedCommit] = useState<CommitData | null>(null);
   const [restoring, setRestoring] = useState(false);
-  const [customCommitting, setCustomCommitting] = useState(false);
   const [customRepoConfig, setCustomRepoConfig] = useState<CustomRepoConfig>({
     token: '',
     owner: '',
     repo: '',
     branch: 'main'
   });
-  const [customCommitMessage, setCustomCommitMessage] = useState('');
   const [sourceRepoUrl, setSourceRepoUrl] = useState('');
   const [sourceRepoConfig, setSourceRepoConfig] = useState({
     owner: '',
@@ -108,27 +105,6 @@ const CommitPanel: React.FC = () => {
     return sha.substring(0, 7);
   };
 
-  const handleSaveAndCommit = () => {
-    if (!commitMessage.trim()) {
-      toast({
-        title: "Erro",
-        description: "Digite uma mensagem para o commit",
-        variant: "destructive",
-      });
-      return;
-    }
-    setShowConfirmDialog(true);
-  };
-
-  const confirmSaveAndCommit = () => {
-    setShowConfirmDialog(false);
-    
-    toast({
-      title: "Informação",
-      description: "Os commits são criados automaticamente quando você salva arquivos no editor. Use Ctrl+S para salvar e fazer commit.",
-    });
-    setCommitMessage('');
-  };
 
   const handleRestoreCommit = (commit: CommitData) => {
     setSelectedCommit(commit);
@@ -199,17 +175,6 @@ const CommitPanel: React.FC = () => {
     }
   };
 
-  const handleCustomCommit = () => {
-    if (!customCommitMessage.trim()) {
-      toast({
-        title: "Erro",
-        description: "Digite uma mensagem para o commit personalizado",
-        variant: "destructive",
-      });
-      return;
-    }
-    setShowCustomRepoDialog(true);
-  };
 
   const handleCustomRepoSubmit = () => {
     if (!customRepoConfig.token || !customRepoConfig.owner || !customRepoConfig.repo) {
@@ -396,7 +361,7 @@ const CommitPanel: React.FC = () => {
         const { data: newCommit } = await destOctokit.rest.git.createCommit({
           owner: currentConfig.owner,
           repo: currentConfig.repo,
-          message: customCommitMessage || `Cópia de ${sourceOwner}/${sourceRepo}`,
+          message: `Cópia de ${sourceOwner}/${sourceRepo}`,
           tree: newTree.sha,
           parents: baseSha ? [baseSha] : [],
         });
@@ -448,7 +413,6 @@ const CommitPanel: React.FC = () => {
   };
 
   const confirmCustomCommit = async () => {
-    setCustomCommitting(true);
     try {
       toast({
         title: "Enviando...",
@@ -456,7 +420,7 @@ const CommitPanel: React.FC = () => {
       });
 
       // Aqui implementaria a lógica de envio para o repositório personalizado
-      // Usando a configuração customRepoConfig e customCommitMessage
+      // Usando a configuração customRepoConfig
       
       toast({
         title: "Sucesso",
@@ -464,7 +428,6 @@ const CommitPanel: React.FC = () => {
       });
       
       // Limpar formulários
-      setCustomCommitMessage('');
       setCustomRepoConfig({
         token: '',
         owner: '',
@@ -479,7 +442,6 @@ const CommitPanel: React.FC = () => {
         variant: "destructive",
       });
     } finally {
-      setCustomCommitting(false);
       setShowCustomRepoConfirm(false);
     }
   };
@@ -524,68 +486,32 @@ const CommitPanel: React.FC = () => {
         </Button>
       </div>
       
-      {/* Novo Commit */}
+      {/* Opções de Commit */}
       <div className="p-3 border-b border-border/40 bg-gradient-to-b from-muted/10 to-transparent flex-shrink-0">
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Save className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-semibold text-foreground">Novo Commit</span>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleOpenCustomFlow}
-              className="h-6 px-2 text-xs hover:bg-primary/20 hover:text-primary"
-              title="Commit para repositório personalizado"
-            >
-              <Upload className="h-3 w-3 mr-1" />
-              Personalizado
-            </Button>
+          <div className="flex items-center gap-2">
+            <Save className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-semibold text-foreground">Opções de Commit</span>
           </div>
-          <Textarea
-            placeholder="Digite a mensagem do commit..."
-            value={commitMessage}
-            onChange={(e) => setCommitMessage(e.target.value)}
-            className="min-h-[70px] resize-none text-sm bg-background/80 border-primary/20 focus:border-primary"
-          />
+          
           <div className="space-y-2">
             <Button
-              onClick={handleSaveAndCommit}
-              disabled={!commitMessage.trim() || committing}
-              className="w-full h-8 bg-primary hover:bg-primary/90"
+              onClick={handleOpenCustomFlow}
+              className="w-full h-8 bg-primary hover:bg-primary/90 justify-start"
               size="sm"
             >
-              {committing ? (
-                <>
-                  <RefreshCw className="mr-2 h-3 w-3 animate-spin" />
-                  <span className="text-xs">Salvando...</span>
-                </>
-              ) : (
-                <>
-                  <GitCommit className="mr-2 h-3 w-3" />
-                  <span className="text-xs">Salvar e Fazer Commit</span>
-                </>
-              )}
+              <Upload className="mr-2 h-3 w-3" />
+              <span className="text-xs">Personalizado</span>
             </Button>
+            
             <Button
-              onClick={handleCustomCommit}
-              disabled={!commitMessage.trim() || customCommitting}
+              onClick={() => setShowCommitTrocadoDialog(true)}
               variant="outline"
-              className="w-full h-8 border-orange-500/20 hover:bg-orange-500/10 hover:border-orange-500/40"
+              className="w-full h-8 border-orange-500/20 hover:bg-orange-500/10 hover:border-orange-500/40 justify-start"
               size="sm"
             >
-              {customCommitting ? (
-                <>
-                  <RefreshCw className="mr-2 h-3 w-3 animate-spin" />
-                  <span className="text-xs">Enviando...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-3 w-3" />
-                  <span className="text-xs">Commit Personalizado</span>
-                </>
-              )}
+              <GitCommit className="mr-2 h-3 w-3" />
+              <span className="text-xs">Commit Trocado</span>
             </Button>
           </div>
         </div>
@@ -673,17 +599,14 @@ const CommitPanel: React.FC = () => {
               Confirmar Salvamento
             </DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja salvar e fazer commit das alterações com a mensagem:
-              <div className="mt-2 p-2 rounded text-sm font-mono border">
-                "{commitMessage}"
-              </div>
+              Tem certeza que deseja salvar e fazer commit das alterações?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={confirmSaveAndCommit}>
+            <Button onClick={() => setShowConfirmDialog(false)}>
               Confirmar Salvamento
             </Button>
           </DialogFooter>
@@ -805,8 +728,8 @@ const CommitPanel: React.FC = () => {
               <Textarea
                 id="commitMessage"
                 placeholder="Digite a mensagem do commit..."
-                value={customCommitMessage}
-                onChange={(e) => setCustomCommitMessage(e.target.value)}
+                value=""
+                onChange={() => {}}
                 className="min-h-[70px]"
               />
             </div>
@@ -908,7 +831,7 @@ const CommitPanel: React.FC = () => {
                   Transferência Concluída!
                 </p>
                 <div className="text-xs text-green-600 dark:text-green-500 mt-1 space-y-0.5">
-                  <p>Commit: "{customCommitMessage}"</p>
+                  <p>Transferência concluída!</p>
                   <p>Origem: {sourceRepoConfig.owner}/{sourceRepoConfig.repo}</p>
                   <p>Destino: {(() => {
                     const config = githubService.getConfig();
@@ -925,7 +848,6 @@ const CommitPanel: React.FC = () => {
               <Button onClick={() => {
                 setShowDownloadDialog(false);
                 setSourceRepoConfig({ owner: '', repo: '', branch: 'main' });
-                setCustomCommitMessage('');
                 setDownloadProgress(0);
                 setUploadProgress(0);
                 setOverallProgress(0);
@@ -1030,8 +952,8 @@ const CommitPanel: React.FC = () => {
                   </p>
                 </div>
                 <div className="p-3 rounded border bg-muted/20">
-                  <p className="text-xs text-muted-foreground mb-1">Mensagem do commit:</p>
-                  <p className="text-sm font-medium">{commitMessage}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Repositório destino:</p>
+                  <p className="text-sm font-medium">{customRepoConfig.owner}/{customRepoConfig.repo}</p>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Esta versão será enviada como uma versão personalizada independente do repositório principal.
@@ -1043,26 +965,38 @@ const CommitPanel: React.FC = () => {
             <Button 
               variant="outline" 
               onClick={() => setShowCustomRepoConfirm(false)}
-              disabled={customCommitting}
             >
               Cancelar
             </Button>
             <Button 
               onClick={confirmCustomCommit}
-              disabled={customCommitting}
               className="bg-orange-600 hover:bg-orange-700"
             >
-              {customCommitting ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Confirmar Envio
-                </>
-              )}
+              <Upload className="mr-2 h-4 w-4" />
+              Confirmar Envio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Commit Trocado */}
+      <Dialog open={showCommitTrocadoDialog} onOpenChange={setShowCommitTrocadoDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitCommit className="h-5 w-5 text-primary" />
+              Commit Trocado
+            </DialogTitle>
+            <DialogDescription>
+              Modal em branco para commit trocado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Conteúdo em branco */}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCommitTrocadoDialog(false)}>
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
