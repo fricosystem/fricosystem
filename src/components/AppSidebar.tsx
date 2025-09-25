@@ -458,8 +458,8 @@ const AppSidebar = () => {
     }
   };
   const categoryBtnClasses = `
-    flex items-center justify-between px-3 h-10 cursor-pointer transition-all duration-200
-    rounded-md mx-1 my-0.5 font-medium
+    flex items-center justify-between px-2 sm:px-3 h-10 cursor-pointer transition-all duration-200
+    rounded-md mx-1 my-0.5 font-medium text-sm sm:text-base
   `;
   const firebaseClasses = {
     sidebar: "bg-[#111827] border-none",
@@ -542,21 +542,26 @@ const AppSidebar = () => {
           `}
         </style>
         <SidebarGroup className="flex-1 relative">
-          <img src="/Uploads/IconeFrico3D.png" alt="Fricó Alimentos Logo" onError={e => {
-          const target = e.target as HTMLImageElement;
-          target.src = "/Uploads/IconeFrico.png";
-        }} className="w-auto h-40 rounded-xl object-contain p-2 mx-auto" />
+          <img 
+            src="/images/IconeFrico3D.png" 
+            alt="Fricó Alimentos Logo" 
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "/images/IconeFrico.png";
+            }} 
+            className="w-auto h-32 sm:h-36 md:h-40 rounded-xl object-contain p-2 mx-auto transition-all duration-200" 
+          />
           
-          <div className="overflow-y-auto flex-1 pb-20" style={{
-          height: "calc(100vh - 120px)"
+          <div className="overflow-y-auto flex-1 pb-16" style={{
+          height: "calc(100vh - 160px)"
         }}>
             {sidebarCategories.map((category, index) => <SidebarGroup key={index}>
                 {category.items.length > 0 && <>
                     <div className={`${categoryBtnClasses} ${expandedCategories[category.label] ? firebaseClasses.categoryBtn.active : firebaseClasses.categoryBtn.hover} ${firebaseClasses.text.normal}`} onClick={() => toggleCategoryExpansion(category.label)}>
-                      <div className="flex items-center gap-1">
-                        <category.icon className="h-5 w-5" />
-                        <SidebarGroupLabel className="flex-1 text-1xl font-bold">{category.label}</SidebarGroupLabel>
-                        {category.badgeCount && category.badgeCount > 0 && <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                      <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
+                        <category.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                        <SidebarGroupLabel className="flex-1 text-sm sm:text-base font-bold truncate">{category.label}</SidebarGroupLabel>
+                        {category.badgeCount && category.badgeCount > 0 && <span className="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full flex-shrink-0">
                             {category.badgeCount}
                           </span>}
                       </div>
@@ -574,13 +579,13 @@ const AppSidebar = () => {
                           <SidebarGroupContent className="pl-8 pr-1 mt-0.4">
                             <SidebarMenu>
                               {category.items.map(item => <SidebarMenuItem key={item.to}>
-                                  <SidebarMenuButton isActive={location.pathname === item.to} onClick={() => navigate(item.to)} className={`flex items-center h-10 transition-all duration-200 rounded-md ${location.pathname === item.to ? firebaseClasses.menuItem.active : firebaseClasses.menuItem.hover}`}>
-                                    <item.icon className="mr-2 h-6 w-6" />
-                                    <span className="flex-1 text-1xl font-bold">{item.label}</span>
-                                    {item.to === "/carrinho" && totalItens > 0 && <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                                  <SidebarMenuButton isActive={location.pathname === item.to} onClick={() => navigate(item.to)} className={`flex items-center h-10 transition-all duration-200 rounded-md ${location.pathname === item.to ? firebaseClasses.menuItem.active : firebaseClasses.menuItem.hover} px-2 sm:px-3`}>
+                                    <item.icon className="mr-2 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                                    <span className="flex-1 text-sm sm:text-base font-bold truncate">{item.label}</span>
+                                    {item.to === "/carrinho" && totalItens > 0 && <span className="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full flex-shrink-0">
                                         {totalItens}
                                       </span>}
-                                    {item.to === "/requisicoes" && pendingRequestsCount > 0 && <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                                    {item.to === "/requisicoes" && pendingRequestsCount > 0 && <span className="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full flex-shrink-0">
                                         {pendingRequestsCount}
                                       </span>}
                                   </SidebarMenuButton>
@@ -594,26 +599,26 @@ const AppSidebar = () => {
           </div>
         </SidebarGroup>
         
-        <SidebarGroup className="absolute bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
+        <SidebarGroup className="absolute bottom-0 left-0 right-0 z-10 bg-[#111827] border-t border-[#2b3341]">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton className={`flex items-center justify-center w-full p-2 h-10 ${firebaseClasses.menuItem.hover} rounded-md mx-auto my-1`}>
-                      <div className="flex items-center justify-center space-x-2 w-full">
-                        {userData?.imagem_perfil ? <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
+                    <SidebarMenuButton className={`flex items-center w-full p-2 h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-auto my-1`}>
+                      <div className="flex items-center space-x-2 w-full min-w-0">
+                        {userData?.imagem_perfil ? <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-white flex-shrink-0">
                             <img src={userData.imagem_perfil} alt="Profile" className="w-full h-full object-cover" />
-                          </div> : <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ff7a59] text-white shrink-0">
-                            {getUserInitial()}
+                          </div> : <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[#ff7a59] text-white flex-shrink-0">
+                            <span className="text-xs sm:text-sm font-bold">{getUserInitial()}</span>
                           </div>}
-                        <div className="flex flex-col items-start min-w-0">
-                          <span className={`font-medium text-xs text-gray-300 truncate w-full uppercase ${firebaseClasses.text.small}`}>{getDisplayName()}</span>
+                        <div className="flex flex-col items-start min-w-0 flex-1">
+                          <span className={`font-medium text-xs sm:text-sm text-gray-300 truncate w-full uppercase ${firebaseClasses.text.small}`}>{getDisplayName()}</span>
                           {getUserCargo() && <span className={`text-xs text-gray-400 truncate w-full ${firebaseClasses.text.tiny}`}>
                               {getUserCargo()}
                             </span>}
                         </div>
-                        <ChevronUp className="h-3 w-3 shrink-0" />
+                        <ChevronUp className="h-3 w-3 flex-shrink-0" />
                       </div>
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
