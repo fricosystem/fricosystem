@@ -513,7 +513,7 @@ const AppSidebar = () => {
     const target = e.target as HTMLImageElement;
     const currentSrc = target.src;
     
-    if (currentSrc.includes('/Uploads/')) {
+    if (currentSrc.includes('/images/')) {
       target.src = '/images/IconeFrico3D.png';
     } else if (currentSrc.includes('public/')) {
       target.src = '/IconeFrico3D.png';

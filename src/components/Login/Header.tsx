@@ -62,7 +62,7 @@ export function Header() {
         <div className="flex items-center gap-2 pl-1">
           <a href="#hero" className="flex items-center gap-2">
             <img 
-              src="/Uploads/IconeFrico3D.png" 
+              src="/images/IconeFrico3D.png" 
               alt="Fricó Alimentos Logo" 
               className="w-16 h-16 rounded-lg object-scale-down" 
             />
