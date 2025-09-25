@@ -621,7 +621,7 @@ const AppSidebar = () => {
                 src="/images/IconeFrico3D.png" 
                 alt="Fricó Alimentos Logo" 
                 onError={handleImageError}
-                className="logo-image w-auto h-40"
+                className="logo-image w-20 h-20"
                 onLoad={(e) => {
                   console.log("Imagem carregada com sucesso");
                   const target = e.target as HTMLImageElement;
