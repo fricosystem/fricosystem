@@ -553,7 +553,7 @@ const AppSidebar = () => {
               alt="Fricó Alimentos Logo" 
               onError={e => {
                 const target = e.target as HTMLImageElement;
-                target.src = "/Uploads/IconeFrico.png";
+                target.src = "/Uploads/IconeFrico3D.png";
               }} 
               className="w-auto h-40 rounded-xl object-contain mx-auto" 
             />
