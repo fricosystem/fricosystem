@@ -514,7 +514,7 @@ const AppSidebar = () => {
     const currentSrc = target.src;
     
     if (currentSrc.includes('/Uploads/')) {
-      target.src = '/Uploads/IconeFrico3D.png';
+      target.src = '/images/IconeFrico3D.png';
     } else if (currentSrc.includes('public/')) {
       target.src = '/IconeFrico3D.png';
     } else {
@@ -618,7 +618,7 @@ const AppSidebar = () => {
           <div className="logo-container flex-shrink-0">
             {!logoError ? (
               <img 
-                src="/Uploads/IconeFrico3D.png" 
+                src="/images/IconeFrico3D.png" 
                 alt="Fricó Alimentos Logo" 
                 onError={handleImageError}
                 className="logo-image w-auto h-40"
