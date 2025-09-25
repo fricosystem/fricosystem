@@ -11,6 +11,7 @@ import { db } from "@/firebase/firebase";
 import { collection, query, where, getDocs, doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
+
 interface SidebarItem {
   to: string;
   icon: React.ElementType;
@@ -18,12 +19,14 @@ interface SidebarItem {
   badgeCount?: number;
   permission?: string;
 }
+
 interface SidebarCategory {
   label: string;
   icon: React.ElementType;
   items: SidebarItem[];
   badgeCount?: number;
 }
+
 const AppSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,6 +44,7 @@ const AppSidebar = () => {
   } = useToast();
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [logoError, setLogoError] = useState(false);
   const isAdmin = userData?.cargo === "DESENVOLVEDOR";
   const isDesenvolvedor = userData?.cargo === "DESENVOLVEDOR";
 
@@ -69,6 +73,7 @@ const AppSidebar = () => {
       return userData.permissoes.includes(item.permission);
     });
   };
+
   const getUserEmail = () => {
     if (!user) return null;
     return user.email || null;
@@ -81,6 +86,7 @@ const AppSidebar = () => {
       items: filterItemsByPermission(category.items)
     })).filter(category => category.items.length > 0); // Remove categorias vazias
   };
+
   const allSidebarCategories: SidebarCategory[] = useMemo(() => [{
     label: "Principal",
     icon: Layers,
@@ -266,6 +272,7 @@ const AppSidebar = () => {
 
   // Aplicar filtro para mostrar apenas categorias que tenham itens válidos
   const sidebarCategories = useMemo(() => filterCategoriesWithItems(allSidebarCategories), [allSidebarCategories, userData?.permissoes]);
+
   useEffect(() => {
     const initialExpandedState: Record<string, boolean> = {};
     sidebarCategories.forEach(category => {
@@ -274,6 +281,7 @@ const AppSidebar = () => {
     });
     setExpandedCategories(initialExpandedState);
   }, [location.pathname, sidebarCategories]);
+
   useEffect(() => {
     if (!user || !userData?.unidade) return;
     const unsubscribe = onSnapshot(query(collection(db, "requisicoes"), where("unidade", "==", userData.unidade)), snapshot => {
@@ -296,6 +304,7 @@ const AppSidebar = () => {
     });
     return () => unsubscribe();
   }, [user, userData?.unidade]);
+
   useEffect(() => {
     const loadTheme = async () => {
       const userEmail = getUserEmail();
@@ -348,6 +357,7 @@ const AppSidebar = () => {
     };
     addRobotoFont();
   }, [user]);
+
   const toggleTheme = async () => {
     const userEmail = getUserEmail();
     if (!userEmail) return;
@@ -386,18 +396,21 @@ const AppSidebar = () => {
       });
     }
   };
+
   const getUserUnidade = () => {
     if (userData?.unidade) {
       return userData.unidade;
     }
     return "";
   };
+
   const toggleCategoryExpansion = (categoryLabel: string) => {
     setExpandedCategories(prev => ({
       ...prev,
       [categoryLabel]: !prev[categoryLabel]
     }));
   };
+
   const handleSignOut = async () => {
     try {
       await logout();
@@ -415,6 +428,7 @@ const AppSidebar = () => {
       });
     }
   };
+
   const getUserInitial = () => {
     if (userData?.nome) {
       return userData.nome.charAt(0).toUpperCase();
@@ -425,6 +439,7 @@ const AppSidebar = () => {
     }
     return "U";
   };
+
   const getDisplayName = () => {
     if (userData?.nome) {
       return userData.nome;
@@ -435,12 +450,14 @@ const AppSidebar = () => {
     }
     return "Usuário";
   };
+
   const getUserCargo = () => {
     if (userData?.cargo) {
       return userData.cargo;
     }
     return "";
   };
+
   const contentVariants = {
     hidden: {
       opacity: 0,
@@ -457,10 +474,12 @@ const AppSidebar = () => {
       }
     }
   };
+
   const categoryBtnClasses = `
     flex items-center justify-between px-3 h-10 cursor-pointer transition-all duration-200
     rounded-md mx-1 my-0.5 font-medium
   `;
+
   const firebaseClasses = {
     sidebar: "bg-[#111827] border-none",
     categoryBtn: {
@@ -482,6 +501,24 @@ const AppSidebar = () => {
       normal: "font-normal",
       small: "text-sm font-medium",
       tiny: "text-xs font-medium"
+    }
+  };
+
+  // Função para lidar com erro na imagem
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    console.error("Erro ao carregar imagem do logo:", e);
+    setLogoError(true);
+    
+    // Tentar caminhos alternativos
+    const target = e.target as HTMLImageElement;
+    const currentSrc = target.src;
+    
+    if (currentSrc.includes('/Uploads/')) {
+      target.src = '/Uploads/IconeFrico3D.png';
+    } else if (currentSrc.includes('public/')) {
+      target.src = '/IconeFrico3D.png';
+    } else {
+      target.src = './IconeFrico3D.png';
     }
   };
 
@@ -541,22 +578,64 @@ const AppSidebar = () => {
             :root:not(.dark) .border-\\[\\#3e4a5e\\] {
               border-color: #dddddd !important;
             }
+
+            /* Estilos específicos para a imagem do logo */
+            .logo-container {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              padding: 1rem 0.5rem;
+              background: transparent;
+            }
+            
+            .logo-image {
+              max-width: 100%;
+              height: auto;
+              object-fit: contain;
+              border-radius: 0.75rem;
+              display: block;
+            }
+            
+            .logo-fallback {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              width: 160px;
+              height: 160px;
+              background: linear-gradient(135deg, #0e7490 0%, #0891b2 100%);
+              border-radius: 0.75rem;
+              color: white;
+              font-size: 1.5rem;
+              font-weight: bold;
+              text-align: center;
+            }
           `}
         </style>
         
         {/* Container principal */}
         <div className="flex flex-col h-full">
           {/* Logo - fixo no topo */}
-          <div className="flex-shrink-0 p-2">
-            <img 
-              src="/public/Uploads/IconeFrico3D.png" 
-              alt="Fricó Alimentos Logo" 
-              onError={e => {
-                const target = e.target as HTMLImageElement;
-                target.src = "/public/Uploads/IconeFrico3D.png";
-              }} 
-              className="w-auto h-40 rounded-xl object-contain mx-auto" 
-            />
+          <div className="logo-container flex-shrink-0">
+            {!logoError ? (
+              <img 
+                src="/Uploads/IconeFrico3D.png" 
+                alt="Fricó Alimentos Logo" 
+                onError={handleImageError}
+                className="logo-image w-auto h-40"
+                onLoad={(e) => {
+                  console.log("Imagem carregada com sucesso");
+                  const target = e.target as HTMLImageElement;
+                  console.log("Dimensões da imagem:", target.naturalWidth, "x", target.naturalHeight);
+                }}
+              />
+            ) : (
+              <div className="logo-fallback">
+                <div>
+                  <div>FRICÓ</div>
+                  <div style={{fontSize: '0.875rem', marginTop: '0.5rem'}}>ALIMENTOS</div>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Área de navegação - scrollável */}
