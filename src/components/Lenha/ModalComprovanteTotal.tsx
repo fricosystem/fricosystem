@@ -154,7 +154,7 @@ const ModalComprovanteTotal = ({
           <body>
             <div class="container">
               <div class="header">
-                <img src="/Uploads/IconeFrico3D.png" alt="Fricó Alimentos Logo" class="logo" onerror="this.style.display='none'" />
+                <img src="/images/IconeFrico3D.png" alt="Fricó Alimentos Logo" class="logo" onerror="this.style.display='none'" />
                 <div class="header-text">
                   <h1 class="title">RELATÓRIO GERAL DE MEDIÇÃO DE LENHA</h1>
                   <div class="date">Data do relatório: ${dataFormatada}</div>
@@ -239,7 +239,7 @@ const ModalComprovanteTotal = ({
         <div ref={comprovanteRef} className="p-6 bg-gray-800 rounded-lg border border-gray-700">
           <div className="flex items-center mb-6 pb-4 border-b border-gray-700">
             <div className="mr-4">
-              <img src="/Uploads/IconeFrico3D.png" 
+              <img src="/images/IconeFrico3D.png" 
               alt="Fricó Alimentos Logo" className="h-12" onError={(e) => (e.currentTarget.style.display = 'none')} />
             </div>
             <div className="flex-1 text-center">

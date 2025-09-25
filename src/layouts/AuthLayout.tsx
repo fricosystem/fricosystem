@@ -30,7 +30,7 @@ const AuthLayout = ({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5 }}
-              src="/Uploads/IconeFrico3D.png" 
+              src="/images/IconeFrico3D.png" 
               alt="Fricó Alimentos Logo" 
               className="h-24 w-auto mb-2 rounded-lg shadow-xl" 
             />

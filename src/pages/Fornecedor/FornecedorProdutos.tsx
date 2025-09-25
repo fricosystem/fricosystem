@@ -237,7 +237,7 @@ const FornecedorProdutos: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <img 
-                src="/Uploads/IconeFrico3D.png" 
+                src="/images/IconeFrico3D.png" 
                 alt="Fricó Alimentos" 
                 className="h-10 w-10 object-contain"
               />
