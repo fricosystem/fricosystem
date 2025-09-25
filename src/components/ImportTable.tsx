@@ -19,6 +19,9 @@ const columns = [
   { key: "quantidade", label: "Quantidade", type: "number" },
   { key: "unidade_de_medida", label: "U.M", type: "text" },
   { key: "detalhes", label: "Detalhes", type: "text" },
+  { key: "valor_unitario", label: "Valor Unitário", type: "number" },
+  { key: "quantidade_minima", label: "Qtd Mínima", type: "number" },
+  { key: "codigo_material", label: "Código Fornecedor", type: "text" },
 ];
 
 export function ImportTable({

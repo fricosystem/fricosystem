@@ -78,7 +78,10 @@ const ImportarPlanilha = () => {
               nome: String(row["TEXTO BREVE"] || ""),
               quantidade: Number(row["QUANTIDADE"] || 0),
               unidade_de_medida: String(row["U.M"] || ""),
-              detalhes: String(row["DESCRICAO"] || "")
+              detalhes: String(row["DESCRICAO"] || ""),
+              valor_unitario: Number(row["VALOR UNIT"] || 0),
+              quantidade_minima: Number(row["QUANTIDADE MINIMA"] || 0),
+              codigo_material: String(row["CODIGO FORNECEDOR"] || "")
             }));
             
             setImportedData(products);

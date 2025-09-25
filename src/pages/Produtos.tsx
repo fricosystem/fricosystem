@@ -273,6 +273,7 @@ const Produtos = () => {
     setCurrentPage(1);
   }, [searchTerm, sortOption]);
   return <AppLayout title="Produtos">
+    <div className="h-full overflow-hidden flex flex-col">
       <div className="mb-4 flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Input type="text" placeholder="Buscar produto por nome, código ou fornecedor..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
@@ -352,8 +353,8 @@ const Produtos = () => {
           </p>
         </div>}
   
-  
-      {loading ? viewMode === "cards" ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="flex-1 overflow-auto">
+        {loading ? viewMode === "cards" ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array(8).fill(0).map((_, index) => <Card key={index} className="overflow-hidden">
                   <div className="h-56 bg-muted">
                     <Skeleton className="h-full w-full" />
@@ -459,6 +460,7 @@ const Produtos = () => {
               </Pagination>
             </div>}
         </>}
+      </div>
 
       {/* Modal de confirmação de exclusão */}
       <AlertDialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
@@ -485,6 +487,7 @@ const Produtos = () => {
       setIsDetailsModalOpen(false);
       // Abrir modal de edição se necessário
     }} />}
+    </div>
     </AppLayout>;
 };
 export default Produtos;

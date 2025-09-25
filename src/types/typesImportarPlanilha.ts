@@ -30,6 +30,9 @@ export interface ImportedProduct {
   quantidade: number;
   unidade_de_medida: string;
   detalhes: string;
+  valor_unitario: number;
+  quantidade_minima: number;
+  codigo_material: string;
 }
 
 export type ImportedEquipment = {

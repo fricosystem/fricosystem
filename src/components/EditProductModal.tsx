@@ -32,7 +32,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     nome: "",
     quantidade: 0,
     unidade_de_medida: "",
-    detalhes: ""
+    detalhes: "",
+    valor_unitario: 0,
+    quantidade_minima: 0,
+    codigo_material: ""
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -43,7 +46,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
         nome: product.nome || "",
         quantidade: Number(product.quantidade) || 0,
         unidade_de_medida: product.unidade_de_medida || "",
-        detalhes: product.detalhes || ""
+        detalhes: product.detalhes || "",
+        valor_unitario: Number(product.valor_unitario) || 0,
+        quantidade_minima: Number(product.quantidade_minima) || 0,
+        codigo_material: product.codigo_material || ""
       });
       setErrors({});
     }
@@ -79,7 +85,9 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     
     setFormData(prev => ({
       ...prev,
-      [name]: name === "quantidade" ? parseFloat(value) || 0 : value
+      [name]: name === "quantidade" || name === "valor_unitario" || name === "quantidade_minima" 
+        ? parseFloat(value) || 0 
+        : value
     }));
   };
 
@@ -97,7 +105,9 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     
     onSave({
       ...formData,
-      quantidade: Number(formData.quantidade)
+      quantidade: Number(formData.quantidade),
+      valor_unitario: Number(formData.valor_unitario),
+      quantidade_minima: Number(formData.quantidade_minima)
     });
   };
 
@@ -170,6 +180,44 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                   <p className="text-sm text-red-500">{errors.unidade_de_medida}</p>
                 )}
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="valor_unitario">Valor Unitário</Label>
+                <Input
+                  id="valor_unitario"
+                  name="valor_unitario"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.valor_unitario}
+                  onChange={handleChange}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="quantidade_minima">Quantidade Mínima</Label>
+                <Input
+                  id="quantidade_minima"
+                  name="quantidade_minima"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.quantidade_minima}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="codigo_material">Código Fornecedor</Label>
+              <Input
+                id="codigo_material"
+                name="codigo_material"
+                value={formData.codigo_material}
+                onChange={handleChange}
+              />
             </div>
             
             <div className="grid gap-2">
