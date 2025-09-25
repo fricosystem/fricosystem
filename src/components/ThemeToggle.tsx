@@ -328,7 +328,7 @@ const AppSidebar = () => {
         <SidebarGroup>
           <div className="flex justify-center py-4">
             <img
-              src="/images/IconeFrico3D.png"
+              src="/Uploads/IconeFrico3D.png"
               alt="Logo"
               className="h-12 w-auto rounded-md"
             />

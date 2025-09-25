@@ -38,6 +38,7 @@ const CommitPanel: React.FC = () => {
   const [showCustomRepoDialog, setShowCustomRepoDialog] = useState(false);
   const [showCustomRepoConfirm, setShowCustomRepoConfirm] = useState(false);
   const [showCommitTrocadoDialog, setShowCommitTrocadoDialog] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [commitTrocadoConfig, setCommitTrocadoConfig] = useState({
     sourceOwner: '',
     sourceRepo: '',
@@ -716,49 +717,29 @@ const CommitPanel: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-border/40 bg-gradient-to-r from-muted/30 to-muted/10 flex-shrink-0">
         <span className="text-sm font-semibold text-foreground">Commits</span>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={loadCommitHistory}
-          disabled={loading}
-          className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary transition-colors"
-          title="Atualizar commits"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </Button>
-      </div>
-      
-      {/* Opções de Commit */}
-      <div className="p-3 border-b border-border/40 bg-gradient-to-b from-muted/10 to-transparent flex-shrink-0">
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Save className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-semibold text-foreground">Opções de Commit</span>
-          </div>
-          
-          <div className="space-y-2">
-            <Button
-              onClick={handleOpenCustomFlow}
-              className="w-full h-8 bg-primary hover:bg-primary/90 justify-start"
-              size="sm"
-            >
-              <Upload className="mr-2 h-3 w-3" />
-              <span className="text-xs">Personalizado</span>
-            </Button>
-            
-            <Button
-              onClick={() => setShowCommitTrocadoDialog(true)}
-              variant="outline"
-              className="w-full h-8 border-orange-500/20 hover:bg-orange-500/10 hover:border-orange-500/40 justify-start"
-              size="sm"
-            >
-              <GitCommit className="mr-2 h-3 w-3" />
-              <span className="text-xs">Commit Trocado</span>
-            </Button>
-          </div>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowTransferModal(true)}
+            className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary transition-colors"
+            title="Transferir código"
+          >
+            <Upload className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={loadCommitHistory}
+            disabled={loading}
+            className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary transition-colors"
+            title="Atualizar commits"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       </div>
-
+      
       {/* Lista de Commits - ScrollArea simples */}
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-1 space-y-1 pb-4">
@@ -1368,6 +1349,62 @@ const CommitPanel: React.FC = () => {
             >
               <Upload className="mr-2 h-4 w-4" />
               Confirmar Envio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Opções de Transferência */}
+      <Dialog open={showTransferModal} onOpenChange={setShowTransferModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Opções de Transferência
+            </DialogTitle>
+            <DialogDescription>
+              Escolha o tipo de transferência que deseja realizar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Button
+              onClick={() => {
+                setShowTransferModal(false);
+                handleOpenCustomFlow();
+              }}
+              className="w-full h-12 bg-primary hover:bg-primary/90 justify-start text-left"
+              size="sm"
+            >
+              <div className="flex items-center gap-3">
+                <Upload className="h-5 w-5" />
+                <div>
+                  <div className="font-medium">Commit Entrada</div>
+                  <div className="text-xs text-muted-foreground">Transferir de outro repositório para o atual</div>
+                </div>
+              </div>
+            </Button>
+            
+            <Button
+              onClick={() => {
+                setShowTransferModal(false);
+                setShowCommitTrocadoDialog(true);
+              }}
+              variant="outline"
+              className="w-full h-12 border-orange-500/20 hover:bg-orange-500/10 hover:border-orange-500/40 justify-start text-left"
+              size="sm"
+            >
+              <div className="flex items-center gap-3">
+                <GitCommit className="h-5 w-5 text-orange-500" />
+                <div>
+                  <div className="font-medium">Commit Externo</div>
+                  <div className="text-xs text-muted-foreground">Transferir entre repositórios diferentes</div>
+                </div>
+              </div>
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTransferModal(false)}>
+              Cancelar
             </Button>
           </DialogFooter>
         </DialogContent>

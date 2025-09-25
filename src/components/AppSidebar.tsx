@@ -485,7 +485,7 @@ const AppSidebar = () => {
     }
   };
   return <Sidebar className="border-r border-[#2b3341] h-screen">
-      <SidebarContent className="relative h-full">
+      <SidebarContent className="flex flex-col h-full">
         <style>
           {`
             @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
@@ -541,20 +541,20 @@ const AppSidebar = () => {
             }
           `}
         </style>
-        <SidebarGroup className="flex-1 relative">
+        <div className="flex-shrink-0">
           <img 
-            src="/images/IconeFrico3D.png" 
+            src="/Uploads/IconeFrico3D.png" 
             alt="Fricó Alimentos Logo" 
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = "/images/IconeFrico.png";
+              target.src = "/Uploads/IconeFrico.png";
             }} 
             className="w-auto h-32 sm:h-36 md:h-40 rounded-xl object-contain p-2 mx-auto transition-all duration-200" 
           />
-          
-          <div className="overflow-y-auto flex-1 pb-16" style={{
-          height: "calc(100vh - 160px)"
-        }}>
+        </div>
+        
+        <SidebarGroup className="flex-1 min-h-0">
+          <div className="overflow-y-auto h-full">
             {sidebarCategories.map((category, index) => <SidebarGroup key={index}>
                 {category.items.length > 0 && <>
                     <div className={`${categoryBtnClasses} ${expandedCategories[category.label] ? firebaseClasses.categoryBtn.active : firebaseClasses.categoryBtn.hover} ${firebaseClasses.text.normal}`} onClick={() => toggleCategoryExpansion(category.label)}>
@@ -599,7 +599,7 @@ const AppSidebar = () => {
           </div>
         </SidebarGroup>
         
-        <SidebarGroup className="absolute bottom-0 left-0 right-0 z-10 bg-[#111827] border-t border-[#2b3341]">
+        <SidebarGroup className="flex-shrink-0 bg-[#111827] border-t border-[#2b3341]">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>

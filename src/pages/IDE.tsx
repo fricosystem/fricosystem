@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Shield, UserX, Code, Eye } from "lucide-react";
+import { Shield, UserX, Code, Eye, Paintbrush } from "lucide-react";
 import { githubService } from '@/services/githubService';
 import { auth } from '@/firebase/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -15,6 +15,9 @@ import GitHubConfigComponent from '@/components/IDE/GitHubConfig';
 import CommitPanel from '@/components/IDE/CommitPanel';
 import CodespacesManager from '@/components/IDE/CodespacesManager';
 import PasswordModal from '@/components/IDE/PasswordModal';
+import VisualEditModal from '@/components/IDE/VisualEditModal';
+import PreviewOverlay from '@/components/IDE/PreviewOverlay';
+import { useVisualEditor } from '@/hooks/useVisualEditor';
 
 const IDE: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -32,7 +35,19 @@ const IDE: React.FC = () => {
   const [currentInitStep, setCurrentInitStep] = useState<'install' | 'dev' | 'complete'>('install');
   
   // Estado para controlar as abas do editor
-  const [activeEditorTab, setActiveEditorTab] = useState<'editor' | 'preview'>('editor');
+  const [activeEditorTab, setActiveEditorTab] = useState<'editor' | 'preview' | 'elementor'>('editor');
+  
+  // Hook do editor visual
+  const {
+    isEditMode,
+    selectedElement,
+    isModalOpen,
+    enableEditMode,
+    disableEditMode,
+    applyChanges,
+    handleMessage,
+    setIsModalOpen
+  } = useVisualEditor();
 
   useEffect(() => {
     const initializeService = async () => {
@@ -247,8 +262,8 @@ const IDE: React.FC = () => {
                     <>
                       {/* Abas do Editor */}
                       <div className="px-4 py-2 bg-background/80 backdrop-blur-sm border-b border-border/40 flex-shrink-0 overflow-hidden">
-                        <Tabs value={activeEditorTab} onValueChange={(value) => setActiveEditorTab(value as 'editor' | 'preview')} className="w-full">
-                          <TabsList className="grid w-full grid-cols-2 h-10 max-w-sm bg-muted/40 p-1">
+                        <Tabs value={activeEditorTab} onValueChange={(value) => setActiveEditorTab(value as 'editor' | 'preview' | 'elementor')} className="w-full">
+                          <TabsList className="grid w-full grid-cols-3 h-10 max-w-md bg-muted/40 p-1">
                             <TabsTrigger 
                               value="editor" 
                               className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
@@ -263,6 +278,13 @@ const IDE: React.FC = () => {
                               <Eye className="h-3.5 w-3.5 flex-shrink-0" />
                               <span className="hidden sm:inline">Prévia</span>
                             </TabsTrigger>
+                            <TabsTrigger 
+                              value="elementor" 
+                              className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                            >
+                              <Paintbrush className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="hidden sm:inline">Elementor</span>
+                            </TabsTrigger>
                           </TabsList>
                         </Tabs>
                       </div>
@@ -274,13 +296,27 @@ const IDE: React.FC = () => {
                             selectedFile={selectedFile} 
                             theme={theme}
                           />
-                        ) : (
+                        ) : activeEditorTab === 'preview' ? (
                           <div className="h-full w-full overflow-hidden">
                             <iframe
                               src={window.location.origin}
                               className="w-full h-full border-0"
                               title="Prévia"
                               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-full w-full overflow-hidden relative">
+                            <iframe
+                              src={window.location.origin}
+                              className="w-full h-full border-0"
+                              title="Elementor"
+                              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                            />
+                            <PreviewOverlay
+                              isEditMode={isEditMode}
+                              onToggleEditMode={isEditMode ? disableEditMode : enableEditMode}
+                              onMessage={handleMessage}
                             />
                           </div>
                         )}
@@ -365,6 +401,14 @@ const IDE: React.FC = () => {
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Modal de Edição Visual */}
+            <VisualEditModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              selectedElement={selectedElement}
+              onApplyChanges={applyChanges}
+            />
           </div>
         )}
       </div>
