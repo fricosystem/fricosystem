@@ -18,6 +18,7 @@ import { DeleteConfirmModal } from "@/components/GestaoProdutos/DeleteConfirmMod
 import { EditProductModal } from "@/components/GestaoProdutos/EditProductModal";
 import AddProdutoModal from "@/components/AddProdutoModal";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Produto {
   id: string;
@@ -158,7 +159,8 @@ const GestaoProdutos = () => {
   const [produtoToDelete, setProdutoToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const rowsPerPage = 20;
+  const isMobile = useIsMobile();
+  const rowsPerPage = isMobile ? 10 : 20;
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -336,15 +338,22 @@ const GestaoProdutos = () => {
 
     return (
       <>
-        <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
-          <SearchBar 
-            searchTerm={searchTerm} 
-            onSearchChange={setSearchTerm} 
-          />
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Produto
-          </Button>
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+            <div className="flex-1 max-w-full sm:max-w-md">
+              <SearchBar 
+                searchTerm={searchTerm} 
+                onSearchChange={setSearchTerm} 
+              />
+            </div>
+            <Button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {isMobile ? "Adicionar" : "Adicionar Produto"}
+            </Button>
+          </div>
         </div>
         
         <ProductTable
