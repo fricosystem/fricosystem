@@ -5,11 +5,17 @@ import StatsCard from "@/components/StatsCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { Progress } from "@/components/ui/progress";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ScatterChart, Scatter, ZAxis, ComposedChart, FunnelChart, Funnel, Label } from "recharts";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { usePostMessageFix } from "@/hooks/usePostMessageFix";
 
 // Tipos para os dados do Firestore
 type Usuario = {
@@ -61,9 +67,14 @@ type Requisicao = {
 };
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#A4DE6C', '#D0ED57', '#FFC658'];
 const Dashboard = () => {
-  const [period, setPeriod] = useState<"hoje" | "semana" | "mes" | "ano">("hoje");
-  const [loading, setLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState(0);
+  // Aplica correção para DataCloneError
+  usePostMessageFix();
+
+  const [period, setPeriod] = useState<"hoje" | "semana" | "mes" | "ano" | "personalizado">("hoje");
+  const [customStartDate, setCustomStartDate] = useState<Date>();
+  const [customEndDate, setCustomEndDate] = useState<Date>();
+  const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const {
     toast
   } = useToast();
@@ -83,10 +94,21 @@ const Dashboard = () => {
   const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
 
   // Função para converter timestamp do Firestore para Date
-  const convertFirebaseTimestamp = (timestamp: Date | {
-    toDate: () => Date;
-  }): Date => {
-    return timestamp instanceof Date ? timestamp : timestamp.toDate();
+  const convertFirebaseTimestamp = (timestamp: Date | { toDate: () => Date } | number | string): Date => {
+    if (timestamp instanceof Date) {
+      return timestamp;
+    }
+    if (typeof timestamp === 'number') {
+      return new Date(timestamp);
+    }
+    if (typeof timestamp === 'string') {
+      return new Date(timestamp);
+    }
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate();
+    }
+    // Fallback para casos inesperados
+    return new Date();
   };
 
   // Formatadores
@@ -115,167 +137,255 @@ const Dashboard = () => {
     return result;
   };
 
-  // Carregar dados do Firestore
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setLoadingProgress(0);
-      try {
-        // 1. Carregar usuários
-        setLoadingProgress(10);
-        const usuariosSnapshot = await getDocs(collection(db, "usuarios"));
-        const usuariosData = usuariosSnapshot.docs.map(doc => doc.data() as Usuario);
-        setTotalUsuarios(usuariosData.length);
-        const ativos = usuariosData.filter(u => u.ativo).length;
-        setUsuariosAtivos(ativos);
+  // Cache keys
+  const CACHE_KEYS = {
+    dashboard: 'dashboard_data_cache',
+    timestamp: 'dashboard_cache_timestamp',
+    version: 'dashboard_cache_version'
+  };
 
-        // 2. Carregar produtos
-        setLoadingProgress(30);
-        const produtosSnapshot = await getDocs(collection(db, "produtos"));
-        console.log(`=== CARREGAMENTO DE PRODUTOS ===`);
-        console.log(`Documentos encontrados: ${produtosSnapshot.docs.length}`);
-        const produtosData = produtosSnapshot.docs.map((doc, index) => {
-          const data = doc.data() as Produto;
-          console.log(`[${index + 1}] Documento ${doc.id}:`, data);
+  const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 horas
+  const CACHE_VERSION = '1.0';
 
-          // Converter valor_unitario para número
-          const valorOriginal = data.valor_unitario;
-          data.valor_unitario = parseCurrencyValue(data.valor_unitario?.toString() || '0');
-          console.log(`  Valor original: ${valorOriginal}, Valor convertido: ${data.valor_unitario}`);
-          return data;
-        });
-        setProdutos(produtosData);
-        setTotalProdutos(produtosData.length);
+  // Verificar se o cache é válido
+  const isCacheValid = () => {
+    const cacheTimestamp = localStorage.getItem(CACHE_KEYS.timestamp);
+    const cacheVersion = localStorage.getItem(CACHE_KEYS.version);
+    
+    if (!cacheTimestamp || !cacheVersion || cacheVersion !== CACHE_VERSION) {
+      return false;
+    }
+    
+    const now = Date.now();
+    const timestamp = parseInt(cacheTimestamp);
+    return (now - timestamp) < CACHE_DURATION;
+  };
 
-        // Calcular valor total do estoque
-        console.log('=== INÍCIO DO CÁLCULO DE VALOR EM ESTOQUE ===');
-        console.log(`Total de produtos encontrados: ${produtosData.length}`);
-        let valorTotal = 0;
-        let produtosComValor = 0;
-        let produtosSemValor = 0;
-        produtosData.forEach((produto, index) => {
-          const valorUnitarioOriginal = produto.valor_unitario;
-          const quantidadeOriginal = produto.quantidade;
-          const valorUnitario = Number(produto.valor_unitario) || 0;
-          const quantidade = Number(produto.quantidade) || 0;
-          const valorTotalProduto = valorUnitario * quantidade;
-          if (valorUnitario > 0 && quantidade > 0) {
-            produtosComValor++;
-          } else {
-            produtosSemValor++;
-          }
-          valorTotal += valorTotalProduto;
-          console.log(`[${index + 1}] ${produto.nome}`);
-          console.log(`  - Valor Original: ${valorUnitarioOriginal} (tipo: ${typeof valorUnitarioOriginal})`);
-          console.log(`  - Quantidade Original: ${quantidadeOriginal} (tipo: ${typeof quantidadeOriginal})`);
-          console.log(`  - Valor Convertido: ${valorUnitario}`);
-          console.log(`  - Quantidade Convertida: ${quantidade}`);
-          console.log(`  - Total do Produto: ${valorTotalProduto}`);
-          console.log(`  - Valor Acumulado: ${valorTotal}`);
-          console.log('  ---');
-        });
-        console.log(`=== RESUMO DO CÁLCULO ===`);
-        console.log(`Produtos com valor: ${produtosComValor}`);
-        console.log(`Produtos sem valor: ${produtosSemValor}`);
-        console.log(`Valor total final: ${valorTotal}`);
-        console.log('=== FIM DO CÁLCULO ===');
-        setValorEstoque(valorTotal);
-
-        // Identificar produtos com baixo estoque (quantidade < 5)
-        const baixoEstoque = produtosData.filter(p => p.quantidade && p.quantidade < 5);
-        setProdutosBaixoEstoque(baixoEstoque);
-
-        // Calcular produtos baseado no período selecionado
-        const now = new Date();
-        const produtosFiltrados = produtosData.filter(produto => {
-          if (!produto.data_criacao) return false;
-          const dataCriacao = new Date(produto.data_criacao);
-          if (period === 'hoje') {
-            // Mostrar dados de hoje
-            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const endOfToday = new Date(startOfToday);
-            endOfToday.setHours(23, 59, 59, 999);
-            return dataCriacao >= startOfToday && dataCriacao <= endOfToday;
-          } else if (period === 'semana') {
-            const startOfWeek = new Date(now);
-            startOfWeek.setDate(now.getDate() - now.getDay());
-            startOfWeek.setHours(0, 0, 0, 0);
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(startOfWeek.getDate() + 6);
-            endOfWeek.setHours(23, 59, 59, 999);
-            return dataCriacao >= startOfWeek && dataCriacao <= endOfWeek;
-          } else if (period === 'mes') {
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            endOfMonth.setHours(23, 59, 59, 999);
-            return dataCriacao >= startOfMonth && dataCriacao <= endOfMonth;
-          } else if (period === 'ano') {
-            const startOfYear = new Date(now.getFullYear(), 0, 1);
-            const endOfYear = new Date(now.getFullYear(), 11, 31);
-            endOfYear.setHours(23, 59, 59, 999);
-            return dataCriacao >= startOfYear && dataCriacao <= endOfYear;
-          }
-          return false;
-        }).length;
-        setProdutosEsteMes(produtosFiltrados);
-
-        // 3. Carregar transferências
-        setLoadingProgress(50);
-        const transferenciasSnapshot = await getDocs(collection(db, "transferencias"));
-        const transferenciasData = transferenciasSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            ...data,
-            data_transferencia: data.data_transferencia
-          } as Transferencia;
-        });
-        setTransferencias(transferenciasData);
-
-        // 4. Carregar depósitos
-        setLoadingProgress(70);
-        const depositosSnapshot = await getDocs(collection(db, "depositos"));
-        const depositosData = depositosSnapshot.docs.map(doc => doc.data() as Deposito);
-        setDepositos(depositosData);
-        const unidadesUnicas = [...new Set(depositosData.map(d => d.unidade))];
-        setUnidades(unidadesUnicas);
-
-        // 5. Carregar fornecedores
-        setLoadingProgress(80);
-        const fornecedoresSnapshot = await getDocs(collection(db, "fornecedores"));
-        const fornecedoresData = fornecedoresSnapshot.docs.map(doc => {
-          const data = doc.data() as Fornecedor;
-          if (!data.razao_social && data.nome) {
-            data.razao_social = data.nome;
-          }
-          return data;
-        });
-        setFornecedores(fornecedoresData);
-
-        // 6. Carregar requisições
-        setLoadingProgress(90);
-        const requisicoesSnapshot = await getDocs(collection(db, "requisicoes"));
-        const requisicoesData = requisicoesSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            ...data,
-            data_criacao: data.data_criacao
-          } as Requisicao;
-        });
-        setRequisicoes(requisicoesData);
-        setLoadingProgress(100);
-      } catch (error) {
-        console.error("Error loading data:", error);
-        toast({
-          title: "Erro ao carregar dados",
-          description: "Não foi possível carregar os dados do Firestore.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
+  // Carregar dados do cache
+  const loadFromCache = () => {
+    try {
+      const cachedData = localStorage.getItem(CACHE_KEYS.dashboard);
+      if (cachedData) {
+        const data = JSON.parse(cachedData);
+        setTotalUsuarios(data.totalUsuarios || 0);
+        setUsuariosAtivos(data.usuariosAtivos || 0);
+        setTotalProdutos(data.totalProdutos || 0);
+        setValorEstoque(data.valorEstoque || 0);
+        setUnidades(data.unidades || []);
+        setFornecedores(data.fornecedores || []);
+        setTransferencias(data.transferencias || []);
+        setProdutos(data.produtos || []);
+        setDepositos(data.depositos || []);
+        setProdutosEsteMes(data.produtosEsteMes || 0);
+        setProdutosBaixoEstoque(data.produtosBaixoEstoque || []);
+        setRequisicoes(data.requisicoes || []);
+        setDataLoaded(true);
+        return true;
       }
-    };
-    fetchData();
-  }, [period, toast]); // Recarregar quando o período mudar
+    } catch (error) {
+      console.error("Erro ao carregar cache:", error);
+      localStorage.removeItem(CACHE_KEYS.dashboard);
+      localStorage.removeItem(CACHE_KEYS.timestamp);
+    }
+    return false;
+  };
+
+  // Salvar dados no cache
+  const saveToCache = (data: any) => {
+    try {
+      localStorage.setItem(CACHE_KEYS.dashboard, JSON.stringify(data));
+      localStorage.setItem(CACHE_KEYS.timestamp, Date.now().toString());
+      localStorage.setItem(CACHE_KEYS.version, CACHE_VERSION);
+    } catch (error) {
+      console.error("Erro ao salvar cache:", error);
+    }
+  };
+
+  // Carregar dados do Firestore
+  const fetchFirestoreData = async () => {
+    setLoading(true);
+    try {
+      // Realizar todas as consultas em paralelo para melhor performance
+      const [
+        usuariosSnapshot,
+        produtosSnapshot,
+        transferenciasSnapshot,
+        depositosSnapshot,
+        fornecedoresSnapshot,
+        requisicoesSnapshot
+      ] = await Promise.all([
+        getDocs(collection(db, "usuarios")),
+        getDocs(collection(db, "produtos")),
+        getDocs(collection(db, "transferencias")),
+        getDocs(collection(db, "depositos")),
+        getDocs(collection(db, "fornecedores")),
+        getDocs(collection(db, "requisicoes"))
+      ]);
+
+      // Processar usuários
+      const usuariosData = usuariosSnapshot.docs.map(doc => doc.data() as Usuario);
+      const totalUsuarios = usuariosData.length;
+      const usuariosAtivos = usuariosData.filter(u => u.ativo).length;
+
+      // Processar produtos
+      const produtosData = produtosSnapshot.docs.map((doc) => {
+        const data = doc.data() as Produto;
+        data.valor_unitario = parseCurrencyValue(data.valor_unitario?.toString() || '0');
+        return data;
+      });
+      const totalProdutos = produtosData.length;
+
+      // Calcular valor total do estoque de forma otimizada
+      const valorEstoque = produtosData.reduce((total, produto) => {
+        const valorUnitario = Number(produto.valor_unitario) || 0;
+        const quantidade = Number(produto.quantidade) || 0;
+        return total + (valorUnitario * quantidade);
+      }, 0);
+
+      // Produtos com baixo estoque
+      const produtosBaixoEstoque = produtosData.filter(p => p.quantidade && p.quantidade < 5);
+
+      // Processar transferências
+      const transferenciasData = transferenciasSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { ...data, data_transferencia: data.data_transferencia } as Transferencia;
+      });
+
+      // Processar depósitos
+      const depositosData = depositosSnapshot.docs.map(doc => doc.data() as Deposito);
+      const unidades = [...new Set(depositosData.map(d => d.unidade))];
+
+      // Processar fornecedores
+      const fornecedoresData = fornecedoresSnapshot.docs.map(doc => {
+        const data = doc.data() as Fornecedor;
+        if (!data.razao_social && data.nome) {
+          data.razao_social = data.nome;
+        }
+        return data;
+      });
+
+      // Processar requisições
+      const requisicoesData = requisicoesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { ...data, data_criacao: data.data_criacao } as Requisicao;
+      });
+
+      // Calcular produtos do período atual (otimizado)
+      const produtosEsteMes = calculatePeriodProducts(produtosData);
+
+      // Dados para cache
+      const dataToCache = {
+        totalUsuarios,
+        usuariosAtivos,
+        totalProdutos,
+        valorEstoque,
+        unidades,
+        fornecedores: fornecedoresData,
+        transferencias: transferenciasData,
+        produtos: produtosData,
+        depositos: depositosData,
+        produtosEsteMes,
+        produtosBaixoEstoque,
+        requisicoes: requisicoesData
+      };
+
+      // Atualizar estados
+      setTotalUsuarios(totalUsuarios);
+      setUsuariosAtivos(usuariosAtivos);
+      setTotalProdutos(totalProdutos);
+      setValorEstoque(valorEstoque);
+      setUnidades(unidades);
+      setFornecedores(fornecedoresData);
+      setTransferencias(transferenciasData);
+      setProdutos(produtosData);
+      setDepositos(depositosData);
+      setProdutosEsteMes(produtosEsteMes);
+      setProdutosBaixoEstoque(produtosBaixoEstoque);
+      setRequisicoes(requisicoesData);
+      setDataLoaded(true);
+
+      // Salvar no cache
+      saveToCache(dataToCache);
+
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar os dados do Firestore.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função otimizada para calcular produtos do período
+  const calculatePeriodProducts = (produtosData: Produto[]) => {
+    if (!produtosData.length) return 0;
+    
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (period) {
+      case 'hoje':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'semana':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - now.getDay());
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'mes':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'ano':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'personalizado':
+        if (!customStartDate || !customEndDate) return 0;
+        startDate = new Date(customStartDate);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(customEndDate);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      default:
+        return 0;
+    }
+
+    return produtosData.filter(produto => {
+      if (!produto.data_criacao) return false;
+      const dataCriacao = new Date(produto.data_criacao);
+      return dataCriacao >= startDate && dataCriacao <= endDate;
+    }).length;
+  };
+
+  // Carregar dados inicial
+  useEffect(() => {
+    if (isCacheValid() && loadFromCache()) {
+      console.log("Dados carregados do cache");
+    } else {
+      console.log("Cache inválido ou não encontrado, carregando do Firestore");
+      fetchFirestoreData();
+    }
+  }, []); // Carregar apenas uma vez
+
+  // Recalcular apenas produtos do período quando mudar
+  useEffect(() => {
+    if (dataLoaded && produtos.length > 0) {
+      const produtosNoPeriodo = calculatePeriodProducts(produtos);
+      setProdutosEsteMes(produtosNoPeriodo);
+    }
+  }, [period, produtos, dataLoaded, customStartDate, customEndDate]);
 
   // Calcular porcentagem de usuários ativos
   const porcentagemAtivos = totalUsuarios > 0 ? usuariosAtivos / totalUsuarios * 100 : 0;
@@ -690,8 +800,8 @@ const Dashboard = () => {
   return <AppLayout title="Dashboard Geral">
       {/* Seletor de período */}
       <div className="mb-6">
-        <Tabs defaultValue="hoje" value={period} onValueChange={v => setPeriod(v as "hoje" | "semana" | "mes" | "ano")}>
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800">
+        <Tabs defaultValue="hoje" value={period} onValueChange={v => setPeriod(v as "hoje" | "semana" | "mes" | "ano" | "personalizado")}>
+          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800">
             <TabsTrigger value="hoje" className="flex items-center gap-2">
               <Clock className="h-4 w-4" /> Hoje
             </TabsTrigger>
@@ -704,18 +814,85 @@ const Dashboard = () => {
             <TabsTrigger value="ano" className="flex items-center gap-2">
               <BarChart2 className="h-4 w-4" /> Ano
             </TabsTrigger>
+            <TabsTrigger value="personalizado" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" /> Personalizado
+            </TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* Período personalizado */}
+        {period === 'personalizado' && (
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Período Personalizado</CardTitle>
+              <CardDescription>Selecione o intervalo de datas desejado</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Início</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !customStartDate && "text-muted-foreground"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {customStartDate ? format(customStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={customStartDate}
+                        onSelect={setCustomStartDate}
+                        disabled={(date) => date > new Date() || (customEndDate && date > customEndDate)}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Fim</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !customEndDate && "text-muted-foreground"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {customEndDate ? format(customEndDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={customEndDate}
+                        onSelect={setCustomEndDate}
+                        disabled={(date) => date > new Date() || (customStartDate && date < customStartDate)}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {loading ? <Card className="mb-6">
           <div className="flex flex-col items-center justify-center p-8 space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="text-lg font-medium">Carregando dados do dashboard...</p>
-            <div className="w-full max-w-md">
-              <Progress value={loadingProgress} className="h-2" />
-              <p className="text-sm text-muted-foreground text-center mt-2">{loadingProgress}%</p>
-            </div>
           </div>
         </Card> : <>
           {/* Cards de estatísticas */}
