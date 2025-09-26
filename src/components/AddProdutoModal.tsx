@@ -514,7 +514,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] w-[95%] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+      <DialogContent className="w-[95vw] sm:w-[95%] sm:max-w-4xl max-h-[95vh] overflow-y-auto p-3 sm:p-6">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Produto</DialogTitle>
           <DialogDescription>
@@ -522,9 +522,9 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 sm:py-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3 sm:space-y-4 py-2 sm:py-4">
             {/* Grid adaptativo para código and código estoque */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <FormField
                 control={form.control}
                 name="codigo"
