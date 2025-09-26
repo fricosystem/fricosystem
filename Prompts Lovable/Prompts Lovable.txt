@@ -1,0 +1,5 @@
+me dê um prompt para eu pedir para o lovable ai criar um site de cubagem de lenha onde terá as seguintes abas:
+
+Cálculo de cubagem: Modal com 6 inputs para o usuário inserir as 6 medidas das lenhas, inputs separados para o usuário colocar o comprimento e largura das medidas outro campo que terá o resultado em média das medidas
+
+com modal para adicionar do dia atual com as colunas: "Data"( Data e hora atual),  "Cubagem" que é números, Fornecedor, "NFe" como string, "Resp. pela medida", 
