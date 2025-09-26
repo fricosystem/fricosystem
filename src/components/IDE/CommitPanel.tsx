@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { collection, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
+import { usePostMessageFix } from '@/hooks/usePostMessageFix';
 
 interface CommitData {
   sha: string;
@@ -31,6 +32,9 @@ interface CustomRepoConfig {
 }
 
 const CommitPanel: React.FC = () => {
+  // Aplica correção para DataCloneError
+  usePostMessageFix();
+
   const [commits, setCommits] = useState<CommitData[]>([]);
   const [loading, setLoading] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -366,8 +370,8 @@ const CommitPanel: React.FC = () => {
           }
         }
 
-        // Processar arquivos em lotes menores para evitar erro do GitHub
-        const batchSize = 50; // Reduzir tamanho do lote
+        // Processar arquivos em lotes muito menores para evitar erro do GitHub
+        const batchSize = 10; // Reduzir drasticamente o tamanho do lote
         let currentSha = baseSha;
         let lastCommitSha = baseSha;
         
@@ -375,13 +379,27 @@ const CommitPanel: React.FC = () => {
           const batch = downloads.slice(i, i + batchSize);
           setUploadProgress(Math.round((i / downloads.length) * 100));
           
-          // Criar árvore com lote de arquivos
-          const treeItems = batch.map(file => ({
-            path: file.path,
-            mode: '100644' as const,
-            type: 'blob' as const,
-            content: file.content,
-          }));
+          // Estratégia melhorada: criar blobs primeiro, depois árvore com SHAs
+          const blobPromises = batch.map(async (file) => {
+            const { data: blob } = await destOctokit.rest.git.createBlob({
+              owner: currentConfig.owner,
+              repo: currentConfig.repo,
+              content: btoa(unescape(encodeURIComponent(file.content))),
+              encoding: 'base64'
+            });
+            return {
+              path: file.path,
+              mode: '100644' as const,
+              type: 'blob' as const,
+              sha: blob.sha,
+            };
+          });
+
+          // Aguardar criação de todos os blobs do lote
+          const treeItems = await Promise.all(blobPromises);
+
+          // Adicionar throttling para evitar rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
 
           const { data: newTree } = await destOctokit.rest.git.createTree({
             owner: currentConfig.owner,
