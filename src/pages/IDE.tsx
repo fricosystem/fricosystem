@@ -145,7 +145,7 @@ const IDE: React.FC = () => {
   };
 
   return (
-    <AppLayout title="FR - Fusion IDE Mod 1.0">
+    <AppLayout title="FR - Fusion IDE">
       <div className="flex flex-col h-full min-h-0 w-full overflow-hidden relative">
         {loading || initializing ? (
           <div className="flex items-center justify-center h-full">
