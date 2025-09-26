@@ -34,7 +34,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
     saveFileWithStatus, 
     closeSaveModal, 
     retryLastSave, 
-    cancelSave 
+    cancelSave,
+    modalType 
   } = useSaveStatus();
 
   const getLanguageFromPath = (filePath: string): string => {
@@ -470,6 +471,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
         onRetry={retryLastSave}
         canCancel={steps.some(step => step.status === 'in-progress')}
         onCancel={cancelSave}
+        modalType={modalType}
       />
     </div>
   );

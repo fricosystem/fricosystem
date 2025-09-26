@@ -161,7 +161,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="/images/IconeFrico3D.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
               </div>
               <div class="recibo-header">
                 <h1>Comprovante de Entrega de Lenha</h1>
@@ -215,7 +215,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="/images/IconeFrico3D.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
               </div>
               <div class="recibo-header">
                 <h1>Comprovante de Entrega de Lenha</h1>

@@ -39,6 +39,7 @@ const CommitPanel: React.FC = () => {
   const [showCustomRepoConfirm, setShowCustomRepoConfirm] = useState(false);
   const [showCommitTrocadoDialog, setShowCommitTrocadoDialog] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferType, setTransferType] = useState<'entrada' | 'externo'>('entrada');
   const [commitTrocadoConfig, setCommitTrocadoConfig] = useState({
     sourceOwner: '',
     sourceRepo: '',
@@ -222,6 +223,7 @@ const CommitPanel: React.FC = () => {
     }
     
     setShowSourceRepoDialog(false);
+    setTransferType('entrada');
     setShowDownloadDialog(true);
     startDownloadProcess();
   };
@@ -364,37 +366,56 @@ const CommitPanel: React.FC = () => {
           }
         }
 
-        // Criar árvore com todos os arquivos
-        const treeItems = downloads.map(file => ({
-          path: file.path,
-          mode: '100644' as const,
-          type: 'blob' as const,
-          content: file.content,
-        }));
+        // Processar arquivos em lotes menores para evitar erro do GitHub
+        const batchSize = 50; // Reduzir tamanho do lote
+        let currentSha = baseSha;
+        let lastCommitSha = baseSha;
+        
+        for (let i = 0; i < downloads.length; i += batchSize) {
+          const batch = downloads.slice(i, i + batchSize);
+          setUploadProgress(Math.round((i / downloads.length) * 100));
+          
+          // Criar árvore com lote de arquivos
+          const treeItems = batch.map(file => ({
+            path: file.path,
+            mode: '100644' as const,
+            type: 'blob' as const,
+            content: file.content,
+          }));
 
-        const { data: newTree } = await destOctokit.rest.git.createTree({
-          owner: currentConfig.owner,
-          repo: currentConfig.repo,
-          tree: treeItems,
-          base_tree: baseSha,
-        });
+          const { data: newTree } = await destOctokit.rest.git.createTree({
+            owner: currentConfig.owner,
+            repo: currentConfig.repo,
+            tree: treeItems,
+            base_tree: currentSha,
+          });
 
-        // Criar commit único com todos os arquivos
-        const { data: newCommit } = await destOctokit.rest.git.createCommit({
-          owner: currentConfig.owner,
-          repo: currentConfig.repo,
-          message: `Cópia de ${sourceOwner}/${sourceRepo}`,
-          tree: newTree.sha,
-          parents: baseSha ? [baseSha] : [],
-        });
+          // Criar commit para este lote
+          const isLastBatch = i + batchSize >= downloads.length;
+          const batchNumber = Math.floor(i / batchSize) + 1;
+          const totalBatches = Math.ceil(downloads.length / batchSize);
+          
+          const { data: newCommit } = await destOctokit.rest.git.createCommit({
+            owner: currentConfig.owner,
+            repo: currentConfig.repo,
+            message: isLastBatch 
+              ? `Cópia completa de ${sourceOwner}/${sourceRepo} (${downloads.length} arquivos)`
+              : `Cópia de ${sourceOwner}/${sourceRepo} - Lote ${batchNumber}/${totalBatches}`,
+            tree: newTree.sha,
+            parents: currentSha ? [currentSha] : [],
+          });
 
-        // Atualizar referência da branch
-        await destOctokit.rest.git.updateRef({
-          owner: currentConfig.owner,
-          repo: currentConfig.repo,
-          ref: 'heads/main',
-          sha: newCommit.sha,
-        });
+          currentSha = newCommit.sha;
+          lastCommitSha = newCommit.sha;
+          
+          // Atualizar referência da branch
+          await destOctokit.rest.git.updateRef({
+            owner: currentConfig.owner,
+            repo: currentConfig.repo,
+            ref: 'heads/main',
+            sha: newCommit.sha,
+          });
+        }
 
         setUploadProgress(100);
         setOverallProgress(100);
@@ -446,6 +467,7 @@ const CommitPanel: React.FC = () => {
       }
 
       setShowCommitTrocadoDialog(false);
+      setTransferType('externo');
       setShowDownloadDialog(true);
       
       // Configurar para usar o commit trocado
@@ -590,37 +612,58 @@ const CommitPanel: React.FC = () => {
           }
         }
 
-        // Criar árvore com todos os arquivos
-        const treeItems = downloads.map(file => ({
-          path: file.path,
-          mode: '100644' as const,
-          type: 'blob' as const,
-          content: file.content,
-        }));
+        // Processar arquivos em lotes menores para evitar erro do GitHub
+        const batchSize = 50; // Reduzir tamanho do lote
+        let currentSha = baseSha;
+        
+        for (let i = 0; i < downloads.length; i += batchSize) {
+          const batch = downloads.slice(i, i + batchSize);
+          setUploadProgress(Math.round((i / downloads.length) * 100));
+          
+          // Criar árvore com lote de arquivos
+          const treeItems = batch.map(file => ({
+            path: file.path,
+            mode: '100644' as const,
+            type: 'blob' as const,
+            content: file.content,
+          }));
 
-        const { data: newTree } = await octokit.rest.git.createTree({
-          owner: destOwner,
-          repo: destRepo,
-          tree: treeItems,
-          base_tree: baseSha,
-        });
+          const { data: newTree } = await octokit.rest.git.createTree({
+            owner: destOwner,
+            repo: destRepo,
+            tree: treeItems,
+            base_tree: currentSha,
+          });
 
-        // Criar commit único com mensagem personalizada
-        const { data: newCommit } = await octokit.rest.git.createCommit({
-          owner: destOwner,
-          repo: destRepo,
-          message: commitTrocadoConfig.commitMessage || `Transferência de ${sourceOwner}/${sourceRepo}`,
-          tree: newTree.sha,
-          parents: baseSha ? [baseSha] : [],
-        });
+          // Criar commit para este lote
+          const isLastBatch = i + batchSize >= downloads.length;
+          const batchNumber = Math.floor(i / batchSize) + 1;
+          const totalBatches = Math.ceil(downloads.length / batchSize);
+          
+          const commitMessage = isLastBatch && commitTrocadoConfig.commitMessage
+            ? commitTrocadoConfig.commitMessage
+            : isLastBatch
+              ? `Transferência completa de ${sourceOwner}/${sourceRepo} (${downloads.length} arquivos)`
+              : `Transferência de ${sourceOwner}/${sourceRepo} - Lote ${batchNumber}/${totalBatches}`;
 
-        // Atualizar referência da branch
-        await octokit.rest.git.updateRef({
-          owner: destOwner,
-          repo: destRepo,
-          ref: `heads/${destBranch}`,
-          sha: newCommit.sha,
-        });
+          const { data: newCommit } = await octokit.rest.git.createCommit({
+            owner: destOwner,
+            repo: destRepo,
+            message: commitMessage,
+            tree: newTree.sha,
+            parents: currentSha ? [currentSha] : [],
+          });
+
+          currentSha = newCommit.sha;
+          
+          // Atualizar referência da branch
+          await octokit.rest.git.updateRef({
+            owner: destOwner,
+            repo: destRepo,
+            ref: `heads/${destBranch}`,
+            sha: newCommit.sha,
+          });
+        }
 
         setUploadProgress(100);
         setOverallProgress(100);
@@ -1166,7 +1209,7 @@ const CommitPanel: React.FC = () => {
                   )}
                 </div>
               </div>
-              <Progress value={overallProgress} className="h-3" />
+              <Progress value={overallProgress} className="h-3" progressType={transferType} />
             </div>
 
             <Separator />
@@ -1180,7 +1223,7 @@ const CommitPanel: React.FC = () => {
                     {isDownloading ? 'Baixando...' : downloadProgress === 100 ? 'Concluído' : 'Aguardando'}
                   </span>
                 </div>
-                <Progress value={downloadProgress} className="h-2" />
+                <Progress value={downloadProgress} className="h-2" progressType={transferType} />
               </div>
               
               {/* Upload Progress */}
@@ -1191,7 +1234,7 @@ const CommitPanel: React.FC = () => {
                     {isUploading ? 'Enviando...' : uploadProgress === 100 ? 'Concluído' : 'Aguardando'}
                   </span>
                 </div>
-                <Progress value={uploadProgress} className="h-2" />
+                <Progress value={uploadProgress} className="h-2" progressType={transferType} />
               </div>
             </div>
 

@@ -34,6 +34,7 @@ export interface SaveStatusModalProps {
   onRetry?: () => void;
   canCancel?: boolean;
   onCancel?: () => void;
+  modalType?: 'entrada' | 'externo';
 }
 
 const SaveStatusModal: React.FC<SaveStatusModalProps> = ({
@@ -43,7 +44,8 @@ const SaveStatusModal: React.FC<SaveStatusModalProps> = ({
   fileName,
   onRetry,
   canCancel,
-  onCancel
+  onCancel,
+  modalType
 }) => {
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
@@ -91,6 +93,24 @@ const SaveStatusModal: React.FC<SaveStatusModalProps> = ({
 
   const deploymentUrl = steps.find(step => step.url)?.url;
 
+  const getProgressStyle = () => {
+    if (modalType === 'entrada') {
+      return 'bg-gradient-to-r from-blue-500 to-cyan-500';
+    } else if (modalType === 'externo') {
+      return 'bg-gradient-to-r from-orange-500 to-red-500';
+    }
+    return 'bg-primary';
+  };
+
+  const getStepProgressStyle = () => {
+    if (modalType === 'entrada') {
+      return 'bg-gradient-to-r from-blue-400 to-cyan-400';
+    } else if (modalType === 'externo') {
+      return 'bg-gradient-to-r from-orange-400 to-red-400';
+    }
+    return 'bg-primary';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -118,10 +138,23 @@ const SaveStatusModal: React.FC<SaveStatusModalProps> = ({
           {/* Progresso Geral */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Progresso Geral</span>
+              <span className="text-sm font-medium">
+                Progresso Geral
+                {modalType === 'entrada' && (
+                  <span className="ml-2 text-xs text-blue-500 font-normal">(Commit Entrada)</span>
+                )}
+                {modalType === 'externo' && (
+                  <span className="ml-2 text-xs text-orange-500 font-normal">(Commit Externo)</span>
+                )}
+              </span>
               <span className="text-sm text-muted-foreground">{overallProgress}%</span>
             </div>
-            <Progress value={overallProgress} className="h-2" />
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+              <div
+                className={`h-full transition-all ${getProgressStyle()}`}
+                style={{ width: `${overallProgress}%` }}
+              />
+            </div>
           </div>
 
           {/* Etapas Detalhadas */}
@@ -145,7 +178,12 @@ const SaveStatusModal: React.FC<SaveStatusModalProps> = ({
                 </div>
 
                 {step.status === 'in-progress' && step.progress !== undefined && (
-                  <Progress value={step.progress} className="h-1" />
+                  <div className="relative h-1 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className={`h-full transition-all ${getStepProgressStyle()}`}
+                      style={{ width: `${step.progress}%` }}
+                    />
+                  </div>
                 )}
 
                 {step.message && (
