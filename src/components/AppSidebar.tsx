@@ -513,7 +513,7 @@ const AppSidebar = () => {
     const target = e.target as HTMLImageElement;
     const currentSrc = target.src;
     
-    target.src = '/images/IconeFrico3D.png';
+    target.src = '/favicon.ico';
   };
 
   return (
@@ -612,7 +612,7 @@ const AppSidebar = () => {
           <div className="logo-container flex-shrink-0">
             {!logoError ? (
               <img 
-                src="/images/IconeFrico3D.png" 
+                src="/favicon.ico" 
                 alt="Fricó Alimentos Logo" 
                 onError={handleImageError}
                 className="logo-image w-20 h-20"
