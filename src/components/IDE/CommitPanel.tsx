@@ -48,6 +48,18 @@ const CommitPanel: React.FC = () => {
     destBranch: 'main',
     commitMessage: ''
   });
+  const [commitMessage, setCommitMessage] = useState(() => {
+    const now = new Date();
+    const formatTime = (date: Date) => {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${day}/${month}/${year} às ${hours}:${minutes}`;
+    };
+    return `nomemy-repo ${formatTime(now)}`;
+  });
   const [selectedCommit, setSelectedCommit] = useState<CommitData | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [customRepoConfig, setCustomRepoConfig] = useState<CustomRepoConfig>({
@@ -1103,8 +1115,8 @@ const CommitPanel: React.FC = () => {
               <Textarea
                 id="commitMessage"
                 placeholder="Digite a mensagem do commit..."
-                value=""
-                onChange={() => {}}
+                value={commitMessage}
+                onChange={(e) => setCommitMessage(e.target.value)}
                 className="min-h-[70px]"
               />
             </div>
