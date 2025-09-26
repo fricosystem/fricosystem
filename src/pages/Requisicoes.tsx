@@ -555,7 +555,7 @@ const Requisicoes = () => {
       comprovanteElement.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #374151;">
           <div style="display: flex; align-items: center; gap: 16px;">
-            <img src="/images/IconeFrico3D.png" alt="Fricó Logo" style="width: 48px; height: 48px; object-fit: contain;" />
+            <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Logo" style="width: 48px; height: 48px; object-fit: contain;" />
             <div>
               <h1 style="font-size: 24px; margin-bottom: 5px; font-weight: bold; margin: 0; color: #111827;">Requisição ${selectedRequisicao.requisicao_id}</h1>
               <p style="font-size: 14px; color: #6b7280; margin: 5px 0 0 0;">Criada em ${dataFormatada}</p>
