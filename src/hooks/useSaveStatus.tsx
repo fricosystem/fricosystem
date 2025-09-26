@@ -172,50 +172,37 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
       });
 
       const fileName = filePath.split('/').pop() || filePath;
-      // Implementa estratégia para commits grandes
+      // Implementa estratégia para commits grandes usando chunking inteligente
       let result;
       const contentSize = new Blob([content]).size;
       
-      if (contentSize > 1024 * 1024) { // > 1MB
-        // Para arquivos grandes, quebra o conteúdo em commits menores
+      if (contentSize > 800 * 1024) { // > 800KB - limite mais conservador
         updateStep('github', { 
-          message: 'Arquivo grande detectado, processando em partes...' 
+          message: 'Arquivo grande detectado, usando estratégia incremental...' 
         });
         
-        const chunkSize = 500 * 1024; // 500KB por chunk
-        const chunks = [];
-        for (let i = 0; i < content.length; i += chunkSize) {
-          chunks.push(content.slice(i, i + chunkSize));
-        }
-        
-        // Salva em chunks para evitar erro do GitHub
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
-          const isLastChunk = i === chunks.length - 1;
-          const tempPath = isLastChunk ? filePath : `${filePath}.temp${i}`;
-          
-          updateStep('github', { 
-            progress: Math.round((i / chunks.length) * 100),
-            message: `Enviando parte ${i + 1} de ${chunks.length}...` 
-          });
-          
-          await githubService.updateFile(
-            tempPath,
-            isLastChunk ? content : chunk,
-            `${commitMessage || `Atualizar ${fileName} via IDE`} - Parte ${i + 1}`
-          );
-          
-          if (!isLastChunk) {
-            // Remove arquivo temporário após processamento
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            try {
-              await githubService.deleteFile(tempPath, `Limpeza arquivo temporário ${i + 1}`);
-            } catch (error) {
-              console.warn('Erro ao limpar arquivo temporário:', error);
+        try {
+          // Estratégia 1: Usar updateFileIncremental do GitHub service
+          result = await githubService.updateFileIncremental(
+            filePath,
+            content,
+            commitMessage || `Atualizar ${fileName} via IDE`,
+            (progress, message) => {
+              updateStep('github', { 
+                progress,
+                message 
+              });
             }
-          }
+          );
+        } catch (error) {
+          console.error('Erro na estratégia incremental, tentando método tradicional:', error);
+          // Fallback para método tradicional se incremental falhar
+          result = await githubService.updateFile(
+            filePath,
+            content,
+            commitMessage || `Atualizar ${fileName} via IDE`
+          );
         }
-        result = true;
       } else {
         result = await githubService.updateFile(
           filePath,
