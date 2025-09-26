@@ -45,6 +45,7 @@ const AppSidebar = () => {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [logoError, setLogoError] = useState(false);
+  const [logoLoaded, setLogoLoaded] = useState(false);
   const isAdmin = userData?.cargo === "DESENVOLVEDOR";
   const isDesenvolvedor = userData?.cargo === "DESENVOLVEDOR";
 
@@ -508,13 +509,26 @@ const AppSidebar = () => {
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     console.error("Erro ao carregar imagem do logo:", e);
     setLogoError(true);
-    
-    // Tentar caminhos alternativos
-    const target = e.target as HTMLImageElement;
-    const currentSrc = target.src;
-    
-    target.src = '/images/IconeFrico3D.png';
+    setLogoLoaded(false);
   };
+
+  // Função para quando a imagem carrega com sucesso
+  const handleImageLoad = () => {
+    setLogoLoaded(true);
+    setLogoError(false);
+  };
+
+  // Testar diferentes caminhos para a imagem
+  const logoPaths = [
+    '/IconeFrico3D.png',
+    '/images/IconeFrico3D.png',
+    '/public/IconeFrico3D.png',
+    '/public/images/IconeFrico3D.png',
+    'IconeFrico3D.png',
+    './IconeFrico3D.png',
+    '../IconeFrico3D.png',
+    '../../IconeFrico3D.png'
+  ];
 
   return (
     <Sidebar className="border-r border-[#2b3341] h-screen">
@@ -580,13 +594,14 @@ const AppSidebar = () => {
               align-items: center;
               padding: 1rem 0.5rem;
               background: transparent;
+              min-height: 100px;
             }
             
             .logo-image {
               max-width: 100%;
-              height: auto;
+              max-height: 80px;
               object-fit: contain;
-              border-radius: 0.75rem;
+              border-radius: 0.5rem;
               display: block;
             }
             
@@ -594,14 +609,29 @@ const AppSidebar = () => {
               display: flex;
               justify-content: center;
               align-items: center;
-              width: 160px;
-              height: 160px;
+              width: 80px;
+              height: 80px;
               background: linear-gradient(135deg, #0e7490 0%, #0891b2 100%);
               border-radius: 0.75rem;
               color: white;
-              font-size: 1.5rem;
+              font-size: 1.2rem;
               font-weight: bold;
               text-align: center;
+              cursor: pointer;
+              transition: all 0.3s ease;
+            }
+            
+            .logo-fallback:hover {
+              transform: scale(1.05);
+              box-shadow: 0 4px 12px rgba(14, 116, 144, 0.3);
+            }
+            
+            .logo-link {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              text-decoration: none;
+              color: inherit;
             }
           `}
         </style>
@@ -611,24 +641,45 @@ const AppSidebar = () => {
           {/* Logo - fixo no topo */}
           <div className="logo-container flex-shrink-0">
             {!logoError ? (
-              <img 
-                src="/IconeFrico3D.png" 
-                alt="Fricó Alimentos Logo" 
-                onError={handleImageError}
-                className="logo-image w-20 h-20"
-                onLoad={(e) => {
-                  console.log("Imagem carregada com sucesso");
-                  const target = e.target as HTMLImageElement;
-                  console.log("Dimensões da imagem:", target.naturalWidth, "x", target.naturalHeight);
-                }}
-              />
+              <>
+                {/* Tentativa com imagem */}
+                <img 
+                  src={logoPaths[0]} 
+                  alt="Fricó Alimentos Logo" 
+                  onError={handleImageError}
+                  onLoad={handleImageLoad}
+                  className="logo-image"
+                  style={{ 
+                    display: logoLoaded ? 'block' : 'none',
+                    width: 'auto',
+                    height: 'auto'
+                  }}
+                />
+                {!logoLoaded && !logoError && (
+                  <div className="logo-fallback">
+                    <div>Carregando...</div>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="logo-fallback">
-                <div>
-                  <div>FRICÓ</div>
-                  <div style={{fontSize: '0.875rem', marginTop: '0.5rem'}}>ALIMENTOS</div>
+              /* Fallback como link/ícone quando a imagem falha */
+              <a 
+                href="/dashboard" 
+                className="logo-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/dashboard');
+                }}
+                title="Fricó Alimentos - Ir para Dashboard"
+              >
+                <div className="logo-fallback">
+                  <div>
+                    <div style={{ fontSize: '1.5rem', lineHeight: '1.2' }}>🏭</div>
+                    <div style={{ fontSize: '0.7rem', marginTop: '0.3rem', fontWeight: 'bold' }}>FRICÓ</div>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 'normal' }}>ALIMENTOS</div>
+                  </div>
                 </div>
-              </div>
+              </a>
             )}
           </div>
           
