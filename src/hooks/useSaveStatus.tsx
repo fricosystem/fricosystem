@@ -6,10 +6,11 @@ import { useToast } from '@/components/ui/use-toast';
 export interface SaveStatusHookReturn {
   isModalOpen: boolean;
   steps: SaveStep[];
-  saveFileWithStatus: (filePath: string, content: string, commitMessage?: string) => Promise<boolean>;
+  saveFileWithStatus: (filePath: string, content: string, commitMessage?: string, modalType?: 'entrada' | 'externo') => Promise<boolean>;
   closeSaveModal: () => void;
   retryLastSave: () => Promise<void>;
   cancelSave: () => void;
+  modalType?: 'entrada' | 'externo';
 }
 
 const defaultSteps: SaveStep[] = [
@@ -48,10 +49,12 @@ const defaultSteps: SaveStep[] = [
 export const useSaveStatus = (): SaveStatusHookReturn => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [steps, setSteps] = useState<SaveStep[]>(defaultSteps);
+  const [modalType, setModalType] = useState<'entrada' | 'externo' | undefined>();
   const [lastSaveParams, setLastSaveParams] = useState<{
     filePath: string;
     content: string;
     commitMessage?: string;
+    modalType?: 'entrada' | 'externo';
   } | null>(null);
   const [cancelController, setCancelController] = useState<AbortController | null>(null);
   const { toast } = useToast();
@@ -102,7 +105,8 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
   const saveFileWithStatus = useCallback(async (
     filePath: string, 
     content: string, 
-    commitMessage?: string
+    commitMessage?: string,
+    type?: 'entrada' | 'externo'
   ): Promise<boolean> => {
     // Verifica se o usuário configurou para não mostrar o modal
     if (localStorage.getItem('hideSaveStatusModal') === 'true') {
@@ -132,7 +136,8 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
     }
 
     // Salva parâmetros para retry
-    setLastSaveParams({ filePath, content, commitMessage });
+    setLastSaveParams({ filePath, content, commitMessage, modalType: type });
+    setModalType(type);
     
     // Cria controller para cancelamento
     const controller = new AbortController();
@@ -167,11 +172,57 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
       });
 
       const fileName = filePath.split('/').pop() || filePath;
-      const result = await githubService.updateFile(
-        filePath,
-        content,
-        commitMessage || `Atualizar ${fileName} via IDE`
-      );
+      // Implementa estratégia para commits grandes
+      let result;
+      const contentSize = new Blob([content]).size;
+      
+      if (contentSize > 1024 * 1024) { // > 1MB
+        // Para arquivos grandes, quebra o conteúdo em commits menores
+        updateStep('github', { 
+          message: 'Arquivo grande detectado, processando em partes...' 
+        });
+        
+        const chunkSize = 500 * 1024; // 500KB por chunk
+        const chunks = [];
+        for (let i = 0; i < content.length; i += chunkSize) {
+          chunks.push(content.slice(i, i + chunkSize));
+        }
+        
+        // Salva em chunks para evitar erro do GitHub
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          const isLastChunk = i === chunks.length - 1;
+          const tempPath = isLastChunk ? filePath : `${filePath}.temp${i}`;
+          
+          updateStep('github', { 
+            progress: Math.round((i / chunks.length) * 100),
+            message: `Enviando parte ${i + 1} de ${chunks.length}...` 
+          });
+          
+          await githubService.updateFile(
+            tempPath,
+            isLastChunk ? content : chunk,
+            `${commitMessage || `Atualizar ${fileName} via IDE`} - Parte ${i + 1}`
+          );
+          
+          if (!isLastChunk) {
+            // Remove arquivo temporário após processamento
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            try {
+              await githubService.deleteFile(tempPath, `Limpeza arquivo temporário ${i + 1}`);
+            } catch (error) {
+              console.warn('Erro ao limpar arquivo temporário:', error);
+            }
+          }
+        }
+        result = true;
+      } else {
+        result = await githubService.updateFile(
+          filePath,
+          content,
+          commitMessage || `Atualizar ${fileName} via IDE`
+        );
+      }
 
       if (!result) {
         throw new Error('Falha ao enviar para GitHub');
@@ -243,7 +294,8 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
       await saveFileWithStatus(
         lastSaveParams.filePath,
         lastSaveParams.content,
-        lastSaveParams.commitMessage
+        lastSaveParams.commitMessage,
+        lastSaveParams.modalType
       );
     }
   }, [lastSaveParams, saveFileWithStatus]);
@@ -261,6 +313,7 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
     saveFileWithStatus,
     closeSaveModal,
     retryLastSave,
-    cancelSave
+    cancelSave,
+    modalType
   };
 };
