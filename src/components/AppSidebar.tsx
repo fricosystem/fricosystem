@@ -11,7 +11,6 @@ import { db } from "@/firebase/firebase";
 import { collection, query, where, getDocs, doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
-
 interface SidebarItem {
   to: string;
   icon: React.ElementType;
@@ -19,14 +18,12 @@ interface SidebarItem {
   badgeCount?: number;
   permission?: string;
 }
-
 interface SidebarCategory {
   label: string;
   icon: React.ElementType;
   items: SidebarItem[];
   badgeCount?: number;
 }
-
 const AppSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -74,7 +71,6 @@ const AppSidebar = () => {
       return userData.permissoes.includes(item.permission);
     });
   };
-
   const getUserEmail = () => {
     if (!user) return null;
     return user.email || null;
@@ -87,7 +83,6 @@ const AppSidebar = () => {
       items: filterItemsByPermission(category.items)
     })).filter(category => category.items.length > 0); // Remove categorias vazias
   };
-
   const allSidebarCategories: SidebarCategory[] = useMemo(() => [{
     label: "Principal",
     icon: Layers,
@@ -273,7 +268,6 @@ const AppSidebar = () => {
 
   // Aplicar filtro para mostrar apenas categorias que tenham itens válidos
   const sidebarCategories = useMemo(() => filterCategoriesWithItems(allSidebarCategories), [allSidebarCategories, userData?.permissoes]);
-
   useEffect(() => {
     const initialExpandedState: Record<string, boolean> = {};
     sidebarCategories.forEach(category => {
@@ -282,7 +276,6 @@ const AppSidebar = () => {
     });
     setExpandedCategories(initialExpandedState);
   }, [location.pathname, sidebarCategories]);
-
   useEffect(() => {
     if (!user || !userData?.unidade) return;
     const unsubscribe = onSnapshot(query(collection(db, "requisicoes"), where("unidade", "==", userData.unidade)), snapshot => {
@@ -305,7 +298,6 @@ const AppSidebar = () => {
     });
     return () => unsubscribe();
   }, [user, userData?.unidade]);
-
   useEffect(() => {
     const loadTheme = async () => {
       const userEmail = getUserEmail();
@@ -358,7 +350,6 @@ const AppSidebar = () => {
     };
     addRobotoFont();
   }, [user]);
-
   const toggleTheme = async () => {
     const userEmail = getUserEmail();
     if (!userEmail) return;
@@ -397,21 +388,18 @@ const AppSidebar = () => {
       });
     }
   };
-
   const getUserUnidade = () => {
     if (userData?.unidade) {
       return userData.unidade;
     }
     return "";
   };
-
   const toggleCategoryExpansion = (categoryLabel: string) => {
     setExpandedCategories(prev => ({
       ...prev,
       [categoryLabel]: !prev[categoryLabel]
     }));
   };
-
   const handleSignOut = async () => {
     try {
       await logout();
@@ -429,7 +417,6 @@ const AppSidebar = () => {
       });
     }
   };
-
   const getUserInitial = () => {
     if (userData?.nome) {
       return userData.nome.charAt(0).toUpperCase();
@@ -440,7 +427,6 @@ const AppSidebar = () => {
     }
     return "U";
   };
-
   const getDisplayName = () => {
     if (userData?.nome) {
       return userData.nome;
@@ -451,14 +437,12 @@ const AppSidebar = () => {
     }
     return "Usuário";
   };
-
   const getUserCargo = () => {
     if (userData?.cargo) {
       return userData.cargo;
     }
     return "";
   };
-
   const contentVariants = {
     hidden: {
       opacity: 0,
@@ -475,12 +459,10 @@ const AppSidebar = () => {
       }
     }
   };
-
   const categoryBtnClasses = `
     flex items-center justify-between px-3 h-10 cursor-pointer transition-all duration-200
     rounded-md mx-1 my-0.5 font-medium
   `;
-
   const firebaseClasses = {
     sidebar: "bg-[#111827] border-none",
     categoryBtn: {
@@ -519,19 +501,8 @@ const AppSidebar = () => {
   };
 
   // Testar diferentes caminhos para a imagem
-  const logoPaths = [
-    '/IconeFrico3D.png',
-    '/images/IconeFrico3D.png',
-    '/public/IconeFrico3D.png',
-    '/public/images/IconeFrico3D.png',
-    'IconeFrico3D.png',
-    './IconeFrico3D.png',
-    '../IconeFrico3D.png',
-    '../../IconeFrico3D.png'
-  ];
-
-  return (
-    <Sidebar className="border-r border-[#2b3341] h-screen">
+  const logoPaths = ['/IconeFrico3D.png', '/images/IconeFrico3D.png', '/public/IconeFrico3D.png', '/public/images/IconeFrico3D.png', 'IconeFrico3D.png', './IconeFrico3D.png', '../IconeFrico3D.png', '../../IconeFrico3D.png'];
+  return <Sidebar className="border-r border-[#2b3341] h-screen">
       <SidebarContent className="relative h-full overflow-hidden">
         <style>
           {`
@@ -640,132 +611,54 @@ const AppSidebar = () => {
         <div className="flex flex-col h-full">
           {/* Logo - fixo no topo */}
           <div className="logo-container flex-shrink-0">
-            {!logoError ? (
-              <>
-                {/* Tentativa com imagem */}
-                <img 
-                  src={logoPaths[0]} 
-                  alt="Fricó Alimentos Logo" 
-                  onError={handleImageError}
-                  onLoad={handleImageLoad}
-                  className="logo-image"
-                  style={{ 
-                    display: logoLoaded ? 'block' : 'none',
-                    width: 'auto',
-                    height: 'auto'
-                  }}
-                />
-                {!logoLoaded && !logoError && (
-                  <div className="logo-fallback">
-                    <div>Carregando...</div>
-                  </div>
-                )}
-              </>
-            ) : (
-              /* Fallback como link/ícone quando a imagem falha */
-              <a 
-                href="/dashboard" 
-                className="logo-link"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate('/dashboard');
-                }}
-                title="Fricó Alimentos - Ir para Dashboard"
-              >
-                <div className="logo-fallback">
-                  <div>
-                    <div style={{ fontSize: '1.5rem', lineHeight: '1.2' }}>🏭</div>
-                    <div style={{ fontSize: '0.7rem', marginTop: '0.3rem', fontWeight: 'bold' }}>FRICÓ</div>
-                    <div style={{ fontSize: '0.6rem', fontWeight: 'normal' }}>ALIMENTOS</div>
-                  </div>
-                </div>
-              </a>
-            )}
+            <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" className="w-24 h-24 object-contain mx-auto" />
           </div>
           
           {/* Área de navegação - scrollável */}
           <div className="flex-1 overflow-y-auto pb-24">
-            {sidebarCategories.map((category, index) => (
-              <SidebarGroup key={index}>
-                {category.items.length > 0 && (
-                  <>
-                    <div 
-                      className={`${categoryBtnClasses} ${
-                        expandedCategories[category.label] 
-                          ? firebaseClasses.categoryBtn.active 
-                          : firebaseClasses.categoryBtn.hover
-                      } ${firebaseClasses.text.normal}`} 
-                      onClick={() => toggleCategoryExpansion(category.label)}
-                    >
+            {sidebarCategories.map((category, index) => <SidebarGroup key={index}>
+                {category.items.length > 0 && <>
+                    <div className={`${categoryBtnClasses} ${expandedCategories[category.label] ? firebaseClasses.categoryBtn.active : firebaseClasses.categoryBtn.hover} ${firebaseClasses.text.normal}`} onClick={() => toggleCategoryExpansion(category.label)}>
                       <div className="flex items-center gap-1">
                         <category.icon className="h-5 w-5" />
                         <SidebarGroupLabel className="flex-1 text-1xl font-bold">
                           {category.label}
                         </SidebarGroupLabel>
-                        {category.badgeCount && category.badgeCount > 0 && (
-                          <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                        {category.badgeCount && category.badgeCount > 0 && <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
                             {category.badgeCount}
-                          </span>
-                        )}
+                          </span>}
                       </div>
-                      <motion.div 
-                        animate={{
-                          rotate: expandedCategories[category.label] ? 180 : 0
-                        }} 
-                        transition={{
-                          duration: 0.3
-                        }}
-                      >
+                      <motion.div animate={{
+                  rotate: expandedCategories[category.label] ? 180 : 0
+                }} transition={{
+                  duration: 0.3
+                }}>
                         <ChevronDown className="h-4 w-4" />
                       </motion.div>
                     </div>
                     
                     <AnimatePresence>
-                      {expandedCategories[category.label] && (
-                        <motion.div 
-                          initial="hidden" 
-                          animate="visible" 
-                          exit="hidden" 
-                          variants={contentVariants} 
-                          className="overflow-hidden"
-                        >
+                      {expandedCategories[category.label] && <motion.div initial="hidden" animate="visible" exit="hidden" variants={contentVariants} className="overflow-hidden">
                           <SidebarGroupContent className="pl-8 pr-1 mt-0.4">
                             <SidebarMenu>
-                              {category.items.map(item => (
-                                <SidebarMenuItem key={item.to}>
-                                  <SidebarMenuButton 
-                                    isActive={location.pathname === item.to} 
-                                    onClick={() => navigate(item.to)} 
-                                    className={`flex items-center h-10 transition-all duration-200 rounded-md ${
-                                      location.pathname === item.to 
-                                        ? firebaseClasses.menuItem.active 
-                                        : firebaseClasses.menuItem.hover
-                                    }`}
-                                  >
+                              {category.items.map(item => <SidebarMenuItem key={item.to}>
+                                  <SidebarMenuButton isActive={location.pathname === item.to} onClick={() => navigate(item.to)} className={`flex items-center h-10 transition-all duration-200 rounded-md ${location.pathname === item.to ? firebaseClasses.menuItem.active : firebaseClasses.menuItem.hover}`}>
                                     <item.icon className="mr-2 h-6 w-6" />
                                     <span className="flex-1 text-1xl font-bold">{item.label}</span>
-                                    {item.to === "/carrinho" && totalItens > 0 && (
-                                      <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                                    {item.to === "/carrinho" && totalItens > 0 && <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
                                         {totalItens}
-                                      </span>
-                                    )}
-                                    {item.to === "/requisicoes" && pendingRequestsCount > 0 && (
-                                      <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
+                                      </span>}
+                                    {item.to === "/requisicoes" && pendingRequestsCount > 0 && <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-[#ff7a59] rounded-full">
                                         {pendingRequestsCount}
-                                      </span>
-                                    )}
+                                      </span>}
                                   </SidebarMenuButton>
-                                </SidebarMenuItem>
-                              ))}
+                                </SidebarMenuItem>)}
                             </SidebarMenu>
                           </SidebarGroupContent>
-                        </motion.div>
-                      )}
+                        </motion.div>}
                     </AnimatePresence>
-                  </>
-                )}
-              </SidebarGroup>
-            ))}
+                  </>}
+              </SidebarGroup>)}
           </div>
           
           {/* Card de perfil - fixo no fundo */}
@@ -776,48 +669,33 @@ const AppSidebar = () => {
                   <SidebarMenuItem>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <SidebarMenuButton 
-                          className={`flex items-center justify-center w-full p-2 h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-auto my-1`}
-                        >
+                        <SidebarMenuButton className={`flex items-center justify-center w-full p-2 h-12 ${firebaseClasses.menuItem.hover} rounded-md mx-auto my-1`}>
                           <div className="flex items-center justify-center space-x-2 w-full">
-                            {userData?.imagem_perfil ? (
-                              <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
+                            {userData?.imagem_perfil ? <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
                                 <img src={userData.imagem_perfil} alt="Profile" className="w-full h-full object-cover" />
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ff7a59] text-white shrink-0">
+                              </div> : <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ff7a59] text-white shrink-0">
                                 {getUserInitial()}
-                              </div>
-                            )}
+                              </div>}
                             <div className="flex flex-col items-start min-w-0">
                               <span className={`font-medium text-xs text-gray-300 truncate w-full uppercase ${firebaseClasses.text.small}`}>
                                 {getDisplayName()}
                               </span>
-                              {getUserCargo() && (
-                                <span className={`text-xs text-gray-400 truncate w-full ${firebaseClasses.text.tiny}`}>
+                              {getUserCargo() && <span className={`text-xs text-gray-400 truncate w-full ${firebaseClasses.text.tiny}`}>
                                   {getUserCargo()}
-                                </span>
-                              )}
+                                </span>}
                             </div>
                             <ChevronUp className="h-3 w-3 shrink-0" />
                           </div>
                         </SidebarMenuButton>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent 
-                        align="end" 
-                        className={`w-64 bg-card border-border text-card-foreground ${firebaseClasses.text.normal}`}
-                      >
+                      <DropdownMenuContent align="end" className={`w-64 bg-card border-border text-card-foreground ${firebaseClasses.text.normal}`}>
                         <div className="p-2 border-b border-border">
                           <div className="flex items-center space-x-3">
-                            {userData?.imagem_perfil ? (
-                              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
+                            {userData?.imagem_perfil ? <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
                                 <img src={userData.imagem_perfil} alt="Profile" className="w-full h-full object-cover" />
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ff7a59] text-white">
+                              </div> : <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#ff7a59] text-white">
                                 {getUserInitial()}
-                              </div>
-                            )}
+                              </div>}
                             <div className="space-y-1">
                               <p className="font-bold text-sm">{getDisplayName()}</p>
                               <p className="text-xs text-muted-foreground flex items-start">
@@ -826,19 +704,15 @@ const AppSidebar = () => {
                               </p>
                               
                               <div className="flex flex-wrap gap-y-1">
-                                {getUserCargo() && (
-                                  <div className="flex items-center mr-3">
+                                {getUserCargo() && <div className="flex items-center mr-3">
                                     <Briefcase className="h-3 w-3 mr-1 text-muted-foreground" />
                                     <span className="text-xs text-muted-foreground">{getUserCargo()}</span>
-                                  </div>
-                                )}
+                                  </div>}
                                 
-                                {getUserUnidade() && (
-                                  <div className="flex items-center">
+                                {getUserUnidade() && <div className="flex items-center">
                                     <Building2 className="h-3 w-3 mr-1 text-muted-foreground" />
                                     <span className="text-xs text-muted-foreground">{getUserUnidade()}</span>
-                                  </div>
-                                )}
+                                  </div>}
                               </div>
                             </div>
                           </div>
@@ -874,8 +748,6 @@ const AppSidebar = () => {
           </div>
         </div>
       </SidebarContent>
-    </Sidebar>
-  );
+    </Sidebar>;
 };
-
 export default AppSidebar;
