@@ -251,6 +251,15 @@ class GitHubService {
     }
 
     try {
+      // Verifica o tamanho do conteúdo
+      const contentSize = new Blob([content]).size;
+      
+      // Se for muito grande, usa estratégia incremental automaticamente
+      if (contentSize > 800 * 1024) { // 800KB
+        console.log(`Arquivo ${path} é grande (${Math.round(contentSize / 1024)}KB), usando estratégia incremental`);
+        return this.updateFileIncremental(path, content, message);
+      }
+
       // Primeiro, tenta buscar o arquivo existente para obter o SHA
       let sha: string | undefined;
       try {
@@ -272,7 +281,7 @@ class GitHubService {
       const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm:ss');
       const commitMessage = `${message} - ${timestamp}`;
 
-      // Codificação correta para UTF-8 - método mais simples e confiável
+      // Codificação correta para UTF-8
       const encodedContent = btoa(unescape(encodeURIComponent(content)));
 
       const response = await this.octokit.rest.repos.createOrUpdateFileContents({
@@ -281,10 +290,9 @@ class GitHubService {
         path,
         message: commitMessage,
         content: encodedContent,
-        sha, // SHA é obrigatório para atualizações, opcional para criações
+        sha,
       });
 
-      // Log de sucesso para debug
       console.log(`Arquivo ${path} atualizado com sucesso:`, {
         commit: response.data.commit?.sha,
         url: response.data.content?.html_url,
@@ -293,11 +301,114 @@ class GitHubService {
 
       return true;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      // Se o erro é sobre tamanho, tenta estratégia incremental
+      if (errorMessage.includes('too large to process') || errorMessage.includes('file too large')) {
+        console.log('Arquivo muito grande, tentando estratégia incremental...');
+        try {
+          return this.updateFileIncremental(path, content, message);
+        } catch (incrementalError) {
+          console.error('Estratégia incremental também falhou:', incrementalError);
+          throw new Error(`Arquivo muito grande para ser processado: ${errorMessage}`);
+        }
+      }
+
       console.error('Erro detalhado ao atualizar arquivo:', {
         path,
-        error: error instanceof Error ? error.message : error,
+        error: errorMessage,
         details: error
       });
+      throw error;
+    }
+  }
+
+  public async updateFileIncremental(
+    path: string, 
+    content: string, 
+    message: string,
+    progressCallback?: (progress: number, message: string) => void
+  ): Promise<boolean> {
+    if (!this.octokit || !this.config) {
+      throw new Error('GitHub não configurado');
+    }
+
+    try {
+      progressCallback?.(10, 'Iniciando processo incremental...');
+
+      // Estratégia: criar commits menores dividindo o conteúdo logicamente
+      const lines = content.split('\n');
+      const maxLinesPerCommit = Math.max(100, Math.floor(lines.length / 10)); // Máximo 10 commits
+      
+      let currentSha: string | undefined;
+      
+      // Busca SHA atual se arquivo existe
+      try {
+        const { data } = await this.octokit.rest.repos.getContent({
+          owner: this.config.owner,
+          repo: this.config.repo,
+          path,
+        });
+        
+        if ('sha' in data) {
+          currentSha = data.sha;
+        }
+      } catch (error) {
+        console.log('Arquivo não existe, será criado incrementalmente');
+      }
+
+      progressCallback?.(20, 'Dividindo conteúdo em partes...');
+
+      // Divide em chunks lógicos
+      const chunks: string[] = [];
+      for (let i = 0; i < lines.length; i += maxLinesPerCommit) {
+        const chunk = lines.slice(0, i + maxLinesPerCommit).join('\n');
+        chunks.push(chunk);
+      }
+
+      progressCallback?.(30, `Processando ${chunks.length} partes...`);
+
+      const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm:ss');
+
+      // Processa cada chunk
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const isLastChunk = i === chunks.length - 1;
+        
+        const progress = 30 + Math.round((i / chunks.length) * 60);
+        progressCallback?.(progress, `Enviando parte ${i + 1} de ${chunks.length}...`);
+
+        const chunkMessage = isLastChunk 
+          ? `${message} - ${timestamp}` 
+          : `${message} (Parte ${i + 1}/${chunks.length}) - ${timestamp}`;
+
+        const encodedContent = btoa(unescape(encodeURIComponent(chunk)));
+
+        const response = await this.octokit.rest.repos.createOrUpdateFileContents({
+          owner: this.config.owner,
+          repo: this.config.repo,
+          path,
+          message: chunkMessage,
+          content: encodedContent,
+          sha: currentSha,
+        });
+
+        // Atualiza SHA para próximo commit
+        currentSha = response.data.content?.sha;
+
+        // Pequena pausa entre commits para evitar rate limiting
+        if (!isLastChunk) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      progressCallback?.(100, 'Processo incremental concluído!');
+      
+      console.log(`Arquivo ${path} atualizado incrementalmente com sucesso`);
+      return true;
+
+    } catch (error) {
+      console.error('Erro na atualização incremental:', error);
       throw error;
     }
   }
