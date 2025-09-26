@@ -4,21 +4,21 @@ const solutions = [
   {
     title: "Otimize seu Controle de Estoque",
     description: "Reduza custos operacionais e evite perdas com um sistema preciso que mantém seus níveis de estoque sempre ideais, através de previsões baseadas em dados históricos e sazonalidade.",
-    imageSrc: "/imagens/inventory.jpg",
+    imageSrc: "/images/inventory.jpg",
     reverse: false,
     quote: "A excelência no controle de estoque é o primeiro passo para uma operação eficiente."
   },
   {
     title: "Gerencie suas Finanças com Precisão",
     description: "Tenha visibilidade completa sobre a saúde financeira da sua empresa, com dashboards personalizados que destacam oportunidades de crescimento e pontos de atenção em tempo real.",
-    imageSrc: "/imagens/dashboard.jpg",
+    imageSrc: "/images/dashboard.jpg",
     reverse: true,
     quote: "Informações financeiras precisas são a base para decisões estratégicas acertadas."
   },
   {
     title: "Potencialize sua Gestão de Pessoas",
     description: "Centralize todo o ciclo de vida do colaborador, desde o recrutamento até avaliações de desempenho, promovendo uma cultura organizacional forte e alinhada com seus objetivos.",
-    imageSrc: "/imagens/recursos-humanos.jpg",
+    imageSrc: "/images/recursos-humanos.jpg",
     reverse: false,
     quote: "Pessoas motivadas e bem gerenciadas são o maior ativo de qualquer organização."
   }
