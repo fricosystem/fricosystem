@@ -224,8 +224,8 @@ export const EditProductModal = ({
   if (!isOpen || !produto) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-background border border-border rounded-lg p-4 sm:p-6 w-full max-w-4xl max-h-[95vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">Editar Produto</h3>
           <button
@@ -236,7 +236,7 @@ export const EditProductModal = ({
           </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {/* Código do Produto */}
           <div className="space-y-2">
             <Label>Código do produto*</Label>
@@ -319,7 +319,7 @@ export const EditProductModal = ({
           </div>
 
           {/* Estoque Mínimo */}
-          <div className="md:col-span-2 border rounded-md p-4">
+          <div className="lg:col-span-2 border rounded-md p-4">
             <div className="flex items-center space-x-2">
               <Switch
                 id="calc-minimo"
@@ -413,7 +413,7 @@ export const EditProductModal = ({
                   <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
+              <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
                 <Command>
                   <CommandInput 
                     placeholder="Buscar fornecedor..." 
@@ -421,7 +421,7 @@ export const EditProductModal = ({
                     value={fornecedorSearch}
                     onValueChange={setFornecedorSearch}
                   />
-                  <CommandList className="max-h-[50vh] sm:max-h-[300px]">
+                  <CommandList className="max-h-[40vh] sm:max-h-[300px]">
                     <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
                     <CommandGroup>
                       <CommandItem
@@ -524,15 +524,15 @@ export const EditProductModal = ({
           </div>
         </div>
         
-        <div className="flex justify-end gap-3 mt-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
           <button
-            className="px-4 py-2 border rounded hover:bg-muted"
+            className="px-4 py-2 border rounded hover:bg-muted order-2 sm:order-1"
             onClick={onClose}
           >
             Cancelar
           </button>
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 order-1 sm:order-2"
             onClick={handleSave}
           >
             Salvar Alterações
