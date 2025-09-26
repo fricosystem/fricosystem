@@ -4,6 +4,7 @@ import AppSidebar from "@/components/AppSidebar";
 import AppHeader from "@/components/AppHeader";
 import { useLocation } from "react-router-dom";
 import FloatingActionBar from "@/components/meuFlutuante";
+import { usePostMessageFix } from "@/hooks/usePostMessageFix";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -11,6 +12,9 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children, title }: AppLayoutProps) => {
+  // Aplica correção para DataCloneError globalmente
+  usePostMessageFix();
+  
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
 
