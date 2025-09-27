@@ -631,7 +631,7 @@ const CommitPanel: React.FC = () => {
         }
 
         // Processar arquivos em lotes menores para evitar erro do GitHub
-        const batchSize = 50; // Reduzir tamanho do lote
+        const batchSize = 20; // Reduzir tamanho do lote
         let currentSha = baseSha;
         
         for (let i = 0; i < downloads.length; i += batchSize) {
