@@ -10,11 +10,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { collection, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { usePostMessageFix } from '@/hooks/usePostMessageFix';
+import FileComparisonPreview from './FileComparisonPreview';
 
 interface CommitData {
   sha: string;
@@ -29,6 +31,14 @@ interface CustomRepoConfig {
   owner: string;
   repo: string;
   branch?: string;
+}
+
+interface FileComparison {
+  path: string;
+  status: 'new' | 'modified' | 'deleted' | 'unchanged';
+  sourceHash?: string;
+  targetHash?: string;
+  sizeDiff?: number;
 }
 
 const CommitPanel: React.FC = () => {
@@ -91,6 +101,12 @@ const CommitPanel: React.FC = () => {
   const [downloadedFiles, setDownloadedFiles] = useState<{name: string, path: string}[]>([]);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<string>('');
   const [startTime, setStartTime] = useState<number>(0);
+  // New states for smart transfer
+  const [showComparisonDialog, setShowComparisonDialog] = useState(false);
+  const [comparisons, setComparisons] = useState<FileComparison[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [smartTransferMode, setSmartTransferMode] = useState(false);
   const { toast } = useToast();
 
   const loadCommitHistory = async () => {
@@ -266,7 +282,7 @@ const CommitPanel: React.FC = () => {
     setShowCustomRepoConfirm(true);
   };
 
-  const handleSourceRepoSubmit = () => {
+  const handleSourceRepoSubmit = async () => {
     if (!sourceRepoConfig.owner.trim() || !sourceRepoConfig.repo.trim()) {
       toast({
         title: "Erro",
@@ -277,9 +293,182 @@ const CommitPanel: React.FC = () => {
     }
     
     setShowSourceRepoDialog(false);
-    setTransferType('entrada');
+    
+    if (smartTransferMode) {
+      // Show comparison dialog for smart transfer
+      await startComparison();
+    } else {
+      // Use traditional full transfer
+      setTransferType('entrada');
+      setShowDownloadDialog(true);
+      startDownloadProcess();
+    }
+  };
+
+  const startComparison = async () => {
+    setCompareLoading(true);
+    setShowComparisonDialog(true);
+    
+    try {
+      toast({
+        title: "Comparando repositórios",
+        description: "Analisando diferenças entre os repositórios...",
+      });
+
+      const sourceOwner = sourceRepoConfig.owner.trim();
+      const sourceRepo = sourceRepoConfig.repo.trim();
+      const sourceBranch = sourceRepoConfig.branch || 'main';
+
+      // Call comparison method from githubService
+      const fileComparisons = await githubService.compareRepositories(
+        sourceOwner,
+        sourceRepo,
+        sourceBranch
+      );
+
+      setComparisons(fileComparisons);
+      
+      // Auto-select modified and new files
+      const autoSelected = new Set<string>();
+      fileComparisons.forEach(comp => {
+        if (comp.status === 'new' || comp.status === 'modified') {
+          autoSelected.add(comp.path);
+        }
+      });
+      setSelectedFiles(autoSelected);
+
+      const stats = {
+        new: fileComparisons.filter(c => c.status === 'new').length,
+        modified: fileComparisons.filter(c => c.status === 'modified').length,
+        deleted: fileComparisons.filter(c => c.status === 'deleted').length,
+        unchanged: fileComparisons.filter(c => c.status === 'unchanged').length
+      };
+
+      toast({
+        title: "Comparação concluída",
+        description: `${stats.new} novos, ${stats.modified} modificados, ${stats.deleted} deletados`,
+      });
+
+    } catch (error) {
+      console.error('Erro na comparação:', error);
+      toast({
+        title: "Erro na comparação",
+        description: "Falha ao comparar repositórios. Tente novamente.",
+        variant: "destructive",
+      });
+      setShowComparisonDialog(false);
+    } finally {
+      setCompareLoading(false);
+    }
+  };
+
+  const handleSmartTransfer = async () => {
+    if (selectedFiles.size === 0) {
+      toast({
+        title: "Nenhum arquivo selecionado",
+        description: "Selecione pelo menos um arquivo para transferir",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setShowComparisonDialog(false);
     setShowDownloadDialog(true);
-    startDownloadProcess();
+    
+    try {
+      const sourceOwner = sourceRepoConfig.owner.trim();
+      const sourceRepo = sourceRepoConfig.repo.trim();
+      const sourceBranch = sourceRepoConfig.branch || 'main';
+
+      // Filter comparisons to only selected files
+      const selectedComparisons = comparisons.filter(comp => 
+        selectedFiles.has(comp.path) && comp.status !== 'unchanged'
+      );
+
+      const now = new Date();
+      const formatTime = (date: Date) => {
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${day}/${month}/${year} às ${hours}:${minutes}`;
+      };
+
+      const transferMessage = `Transferência inteligente de ${sourceOwner}/${sourceRepo} - ${formatTime(now)}`;
+
+      const success = await githubService.transferModifiedFiles(
+        selectedComparisons,
+        sourceOwner,
+        sourceRepo,
+        sourceBranch,
+        transferMessage,
+        {
+          includeNew: true,
+          includeModified: true,
+          includeDeleted: false
+        },
+        (progress, message, details) => {
+          setOverallProgress(progress);
+          setEstimatedTimeRemaining(message);
+          if (details) {
+            setDownloadedFiles([{ 
+              name: `${details.transferred}/${details.total} arquivos processados`, 
+              path: '' 
+            }]);
+          }
+        }
+      );
+
+      if (success) {
+        setProcessComplete(true);
+        toast({
+          title: "Transferência concluída",
+          description: `${selectedFiles.size} arquivos transferidos com sucesso!`,
+        });
+        await loadCommitHistory(); // Reload commit history
+      } else {
+        throw new Error('Falha na transferência');
+      }
+
+    } catch (error) {
+      console.error('Erro na transferência inteligente:', error);
+      toast({
+        title: "Erro na transferência",
+        description: "Falha ao transferir arquivos. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFileToggle = (path: string, selected: boolean) => {
+    setSelectedFiles(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(path);
+      } else {
+        newSet.delete(path);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (status: string, selected: boolean) => {
+    const statusFiles = comparisons
+      .filter(comp => comp.status === status)
+      .map(comp => comp.path);
+    
+    setSelectedFiles(prev => {
+      const newSet = new Set(prev);
+      statusFiles.forEach(path => {
+        if (selected) {
+          newSet.add(path);
+        } else {
+          newSet.delete(path);
+        }
+      });
+      return newSet;
+    });
   };
 
   const startDownloadProcess = async () => {
@@ -1276,7 +1465,15 @@ const CommitPanel: React.FC = () => {
                     value={commitTrocadoConfig.destRepo}
                     onChange={(e) => setCommitTrocadoConfig(prev => ({ ...prev, destRepo: e.target.value }))}
                   />
-                </div>
+                    <Label htmlFor="smartTransfer">
+                      Transferência Inteligente (apenas arquivos modificados)
+                    </Label>
+                    <Checkbox
+                      id="smartTransfer"
+                      checked={smartTransferMode}
+                      onCheckedChange={(checked) => setSmartTransferMode(checked === true)}
+                    />
+                  </div>
                 <div className="space-y-2">
                   <Label htmlFor="destBranch">Branch</Label>
                   <Input
