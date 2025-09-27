@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { GitCommit, History, ExternalLink, RefreshCw, Save, AlertTriangle, RotateCcw, Upload, Settings, Download, CheckCircle } from 'lucide-react';
+import { GitCommit, History, ExternalLink, RefreshCw, Save, AlertTriangle, RotateCcw, Upload, Settings, Download, CheckCircle, ArrowLeftRight } from 'lucide-react';
 import { githubService } from '@/services/githubService';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
@@ -373,8 +373,8 @@ const CommitPanel: React.FC = () => {
         const MAX_BATCH_SIZE_BYTES = 500000; // ~500KB por lote
         
         // Primeiro, calcular quantos batches serão necessários
-        const batches: typeof downloads[][] = [];
-        let currentBatchFiles: typeof downloads = [];
+        const batches: Array<Array<{ path: string; content: string; size: number }>> = [];
+        let currentBatchFiles: Array<{ path: string; content: string; size: number }> = [];
         let currentBatchTotalSize = 0;
 
         for (const file of downloads) {
@@ -393,17 +393,16 @@ const CommitPanel: React.FC = () => {
 
         // Adicionar o último batch se houver arquivos
         if (currentBatchFiles.length > 0) {
-          batches.push(currentBatchFiles);
+          batches.push([...currentBatchFiles]);
         }
 
         const totalBatches = batches.length;
         let currentSha = baseSha;
-        let batchNumber = 0;
 
         // Processar cada batch
         for (let i = 0; i < batches.length; i++) {
           const batch = batches[i];
-          batchNumber = i + 1;
+          const batchNumber = i + 1;
           
           setUploadProgress(Math.round((i / batches.length) * 100));
           
@@ -437,8 +436,6 @@ const CommitPanel: React.FC = () => {
 
           // Criar commit para este batch
           const isLastBatch = i === batches.length - 1;
-          const batchNumber = Math.floor(i / MAX_BATCH_SIZE) + 1;
-          const totalBatches = Math.ceil(downloads.length / MAX_BATCH_SIZE);
           
           const { data: newCommit } = await destOctokit.rest.git.createCommit({
             owner: currentConfig.owner,
@@ -486,7 +483,7 @@ const CommitPanel: React.FC = () => {
 
       toast({
         title: 'Sucesso',
-        description: `${downloads.length} arquivos enviados para ${currentConfig.owner}/${currentConfig.repo} em ${totalBatches} lotes!`,
+        description: `${downloads.length} arquivos enviados para ${currentConfig.owner}/${currentConfig.repo} com sucesso!`,
       });
     } catch (error: any) {
       console.error('Erro no processo de transferência:', error);
@@ -675,8 +672,8 @@ const CommitPanel: React.FC = () => {
         const MAX_BATCH_SIZE_BYTES = 500000; // ~500KB por lote
         
         // Primeiro, calcular quantos batches serão necessários
-        const batches: typeof downloads[][] = [];
-        let currentBatchFiles: typeof downloads = [];
+        const batches: Array<Array<{ path: string; content: string; size: number }>> = [];
+        let currentBatchFiles: Array<{ path: string; content: string; size: number }> = [];
         let currentBatchTotalSize = 0;
 
         for (const file of downloads) {
@@ -695,17 +692,16 @@ const CommitPanel: React.FC = () => {
 
         // Adicionar o último batch se houver arquivos
         if (currentBatchFiles.length > 0) {
-          batches.push(currentBatchFiles);
+          batches.push([...currentBatchFiles]);
         }
 
         const totalBatches = batches.length;
         let currentSha = baseSha;
-        let batchNumber = 0;
 
         // Processar cada batch
         for (let i = 0; i < batches.length; i++) {
           const batch = batches[i];
-          batchNumber = i + 1;
+          const batchNumber = i + 1;
           
           setUploadProgress(Math.round((i / batches.length) * 100));
           
@@ -789,7 +785,7 @@ const CommitPanel: React.FC = () => {
 
       toast({
         title: 'Commit Trocado Concluído!',
-        description: `${downloads.length} arquivos transferidos em ${totalBatches} lotes!`,
+        description: `${downloads.length} arquivos transferidos com sucesso!`,
       });
       
       // Limpar configuração
@@ -893,7 +889,7 @@ const CommitPanel: React.FC = () => {
             className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary transition-colors"
             title="Transferir código"
           >
-            <Upload className="h-3.5 w-3.5" />
+            <ArrowLeftRight className="h-3.5 w-3.5" />
           </Button>
           <Button
             size="sm"
