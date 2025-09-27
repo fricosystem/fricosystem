@@ -65,6 +65,38 @@ type Requisicao = {
   };
   valor_total: number;
 };
+type Relatorio = {
+  id: string;
+  requisicao_id: string;
+  produto_id: string;
+  codigo_material: string;
+  nome_produto: string;
+  quantidade: number;
+  valor_unitario: number;
+  valor_total: number;
+  status: 'entrada' | 'saida';
+  tipo?: string;
+  solicitante: {
+    id: string;
+    nome: string;
+    cargo: string;
+  };
+  usuario: {
+    id: string;
+    nome: string;
+    email: string;
+  };
+  deposito?: string;
+  prateleira?: string;
+  centro_de_custo: string;
+  unidade: string;
+  data_saida: Date | {
+    toDate: () => Date;
+  };
+  data_registro: Date | {
+    toDate: () => Date;
+  };
+};
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#A4DE6C', '#D0ED57', '#FFC658'];
 const Dashboard = () => {
   // Aplica correção para DataCloneError
@@ -92,22 +124,56 @@ const Dashboard = () => {
   const [produtosEsteMes, setProdutosEsteMes] = useState(0);
   const [produtosBaixoEstoque, setProdutosBaixoEstoque] = useState<Produto[]>([]);
   const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
+  const [relatorios, setRelatorios] = useState<Relatorio[]>([]);
 
   // Função para converter timestamp do Firestore para Date
-  const convertFirebaseTimestamp = (timestamp: Date | { toDate: () => Date } | number | string): Date => {
+  const convertFirebaseTimestamp = (timestamp: any): Date => {
+    if (!timestamp) {
+      console.warn('convertFirebaseTimestamp: timestamp is null/undefined, using current date');
+      return new Date();
+    }
+    
     if (timestamp instanceof Date) {
       return timestamp;
     }
+    
+    // Formato específico do Firestore com seconds e nanoseconds
+    if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
+      try {
+        // Converter segundos para milissegundos e adicionar nanossegundos convertidos
+        const milliseconds = timestamp.seconds * 1000 + Math.floor(timestamp.nanoseconds / 1000000);
+        const date = new Date(milliseconds);
+        console.log(`Converted Firestore timestamp: seconds=${timestamp.seconds}, nanoseconds=${timestamp.nanoseconds} -> ${date.toISOString()}`);
+        return date;
+      } catch (error) {
+        console.warn('convertFirebaseTimestamp: error converting Firestore timestamp:', error);
+        return new Date();
+      }
+    }
+    
     if (typeof timestamp === 'number') {
       return new Date(timestamp);
     }
+    
     if (typeof timestamp === 'string') {
-      return new Date(timestamp);
+      const parsedDate = new Date(timestamp);
+      if (isNaN(parsedDate.getTime())) {
+        console.warn('convertFirebaseTimestamp: invalid date string:', timestamp);
+        return new Date();
+      }
+      return parsedDate;
     }
+    
     if (timestamp && typeof timestamp.toDate === 'function') {
-      return timestamp.toDate();
+      try {
+        return timestamp.toDate();
+      } catch (error) {
+        console.warn('convertFirebaseTimestamp: error calling toDate():', error);
+        return new Date();
+      }
     }
-    // Fallback para casos inesperados
+    
+    console.warn('convertFirebaseTimestamp: unexpected timestamp type:', typeof timestamp, timestamp);
     return new Date();
   };
 
@@ -179,6 +245,7 @@ const Dashboard = () => {
         setProdutosEsteMes(data.produtosEsteMes || 0);
         setProdutosBaixoEstoque(data.produtosBaixoEstoque || []);
         setRequisicoes(data.requisicoes || []);
+        setRelatorios(data.relatorios || []);
         setDataLoaded(true);
         return true;
       }
@@ -212,14 +279,16 @@ const Dashboard = () => {
         transferenciasSnapshot,
         depositosSnapshot,
         fornecedoresSnapshot,
-        requisicoesSnapshot
+        requisicoesSnapshot,
+        relatoriosSnapshot
       ] = await Promise.all([
         getDocs(collection(db, "usuarios")),
         getDocs(collection(db, "produtos")),
         getDocs(collection(db, "transferencias")),
         getDocs(collection(db, "depositos")),
         getDocs(collection(db, "fornecedores")),
-        getDocs(collection(db, "requisicoes"))
+        getDocs(collection(db, "requisicoes")),
+        getDocs(collection(db, "relatorios"))
       ]);
 
       // Processar usuários
@@ -270,6 +339,24 @@ const Dashboard = () => {
         return { ...data, data_criacao: data.data_criacao } as Requisicao;
       });
 
+      // Processar relatórios
+      const relatoriosData = relatoriosSnapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log(`Processando relatório ${doc.id}:`, {
+          centro_de_custo: data.centro_de_custo,
+          data_registro: data.data_registro,
+          quantidade: data.quantidade
+        });
+        return { 
+          id: doc.id,
+          ...data, 
+          data_registro: data.data_registro,
+          data_saida: data.data_saida 
+        } as Relatorio;
+      });
+
+      console.log(`Total de relatórios carregados: ${relatoriosData.length}`);
+
       // Calcular produtos do período atual (otimizado)
       const produtosEsteMes = calculatePeriodProducts(produtosData);
 
@@ -286,7 +373,8 @@ const Dashboard = () => {
         depositos: depositosData,
         produtosEsteMes,
         produtosBaixoEstoque,
-        requisicoes: requisicoesData
+        requisicoes: requisicoesData,
+        relatorios: relatoriosData
       };
 
       // Atualizar estados
@@ -302,6 +390,7 @@ const Dashboard = () => {
       setProdutosEsteMes(produtosEsteMes);
       setProdutosBaixoEstoque(produtosBaixoEstoque);
       setRequisicoes(requisicoesData);
+      setRelatorios(relatoriosData);
       setDataLoaded(true);
 
       // Salvar no cache
@@ -446,7 +535,7 @@ const Dashboard = () => {
       value
     })).sort((a, b) => b.value - a.value);
   };
-  const requisicoesMovimentacaoPorPeriodo = () => {
+  const relatoriosMovimentacaoPorPeriodo = () => {
     const now = new Date();
     let timeLabels: string[] = [];
     let data: Record<string, any>[] = [];
@@ -467,15 +556,44 @@ const Dashboard = () => {
       timeLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'];
     }
 
-    // Filtrar requisições por período
-    const filteredRequisicoes = requisicoes.filter(requisicao => {
-      if (!requisicao.data_criacao) return false;
-      const dataCriacao = convertFirebaseTimestamp(requisicao.data_criacao);
+    // Verificar se existe dados reais na coleção
+    if (!relatorios || relatorios.length === 0) {
+      console.warn('Nenhum relatório encontrado na coleção');
+      return {
+        data: [],
+        centrosCusto: []
+      };
+    }
+
+    // Filtrar relatórios por período
+    const filteredRelatorios = relatorios.filter(relatorio => {
+      if (!relatorio.data_registro) {
+        console.warn('Relatório sem data_registro:', relatorio.id);
+        return false;
+      }
+      
+      if (!relatorio.centro_de_custo) {
+        console.warn('Relatório sem centro_de_custo:', relatorio.id);
+        return false;
+      }
+      
+      const dataRegistro = convertFirebaseTimestamp(relatorio.data_registro);
+      
+      // Verificar se a data convertida é válida
+      if (isNaN(dataRegistro.getTime())) {
+        console.warn('Data inválida no relatório:', relatorio.id, relatorio.data_registro);
+        return false;
+      }
+      
+      console.log(`Filtrando relatório ${relatorio.id}: data=${dataRegistro.toISOString()}, centro=${relatorio.centro_de_custo}, period=${period}`);
+      
       if (period === 'hoje') {
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const endOfToday = new Date(startOfToday);
         endOfToday.setHours(23, 59, 59, 999);
-        return dataCriacao >= startOfToday && dataCriacao <= endOfToday;
+        const isInPeriod = dataRegistro >= startOfToday && dataRegistro <= endOfToday;
+        console.log(`Hoje: ${startOfToday.toISOString()} <= ${dataRegistro.toISOString()} <= ${endOfToday.toISOString()} = ${isInPeriod}`);
+        return isInPeriod;
       } else if (period === 'semana') {
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
@@ -483,30 +601,42 @@ const Dashboard = () => {
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
-        return dataCriacao >= startOfWeek && dataCriacao <= endOfWeek;
+        const isInPeriod = dataRegistro >= startOfWeek && dataRegistro <= endOfWeek;
+        console.log(`Semana: ${startOfWeek.toISOString()} <= ${dataRegistro.toISOString()} <= ${endOfWeek.toISOString()} = ${isInPeriod}`);
+        return isInPeriod;
       } else if (period === 'mes') {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         endOfMonth.setHours(23, 59, 59, 999);
-        return dataCriacao >= startOfMonth && dataCriacao <= endOfMonth;
+        const isInPeriod = dataRegistro >= startOfMonth && dataRegistro <= endOfMonth;
+        console.log(`Mês: ${startOfMonth.toISOString()} <= ${dataRegistro.toISOString()} <= ${endOfMonth.toISOString()} = ${isInPeriod}`);
+        return isInPeriod;
       } else if (period === 'ano') {
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31);
         endOfYear.setHours(23, 59, 59, 999);
-        return dataCriacao >= startOfYear && dataCriacao <= endOfYear;
+        const isInPeriod = dataRegistro >= startOfYear && dataRegistro <= endOfYear;
+        console.log(`Ano: ${startOfYear.toISOString()} <= ${dataRegistro.toISOString()} <= ${endOfYear.toISOString()} = ${isInPeriod}`);
+        return isInPeriod;
+      } else if (period === 'personalizado' && customStartDate && customEndDate) {
+        const startDate = new Date(customStartDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(customEndDate);
+        endDate.setHours(23, 59, 59, 999);
+        const isInPeriod = dataRegistro >= startDate && dataRegistro <= endDate;
+        console.log(`Personalizado: ${startDate.toISOString()} <= ${dataRegistro.toISOString()} <= ${endDate.toISOString()} = ${isInPeriod}`);
+        return isInPeriod;
       }
       return false;
     });
 
-    // Extrair todos os centros de custo únicos
+    console.log(`Total de relatórios disponíveis: ${relatorios.length}, Filtrados para ${period}: ${filteredRelatorios.length}`);
+
+    // Extrair todos os centros de custo únicos dos relatórios
     const centrosCusto = new Set<string>();
-    filteredRequisicoes.forEach(requisicao => {
-      if (requisicao.itens && Array.isArray(requisicao.itens)) {
-        requisicao.itens.forEach(item => {
-          if (item.centro_de_custo) {
-            centrosCusto.add(item.centro_de_custo);
-          }
-        });
+    filteredRelatorios.forEach(relatorio => {
+      if (relatorio.centro_de_custo) {
+        centrosCusto.add(relatorio.centro_de_custo);
       }
     });
 
@@ -516,38 +646,46 @@ const Dashboard = () => {
         name: label
       };
 
-      // Para cada centro de custo, calcular as requisições neste período
+      // Para cada centro de custo, calcular as movimentações neste período
       Array.from(centrosCusto).forEach(centroCusto => {
         let quantidade = 0;
-        filteredRequisicoes.forEach(requisicao => {
-          const dataCriacao = convertFirebaseTimestamp(requisicao.data_criacao);
+        filteredRelatorios.forEach(relatorio => {
+          const dataRegistro = convertFirebaseTimestamp(relatorio.data_registro);
           let matches = false;
 
-          // Verificar se a requisição está no período correto
+          // Verificar se o relatório está no período correto
           if (period === "hoje") {
-            matches = dataCriacao.getHours() === labelIndex;
+            matches = dataRegistro.getHours() === labelIndex;
           } else if (period === "semana") {
-            const dayOfWeek = dataCriacao.getDay();
+            const dayOfWeek = dataRegistro.getDay();
             matches = dayOfWeek === labelIndex;
           } else if (period === "mes") {
-            const dayOfMonth = dataCriacao.getDate();
+            const dayOfMonth = dataRegistro.getDate();
             matches = dayOfMonth === labelIndex + 1;
-          } else {
-            const month = dataCriacao.getMonth();
+          } else if (period === "ano") {
+            const month = dataRegistro.getMonth();
             matches = month === labelIndex;
-          }
-          if (matches && requisicao.itens) {
-            requisicao.itens.forEach(item => {
-              if (item.centro_de_custo === centroCusto) {
-                quantidade += item.quantidade || 0;
+          } else if (period === "personalizado") {
+            // Para período personalizado, agrupamos por dias
+            if (customStartDate && customEndDate) {
+              const diffTime = Math.abs(customEndDate.getTime() - customStartDate.getTime());
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              if (diffDays <= 31) {
+                const dayOfMonth = dataRegistro.getDate();
+                matches = dayOfMonth === labelIndex + 1;
               }
-            });
+            }
+          }
+          
+          if (matches && relatorio.centro_de_custo === centroCusto) {
+            quantidade += relatorio.quantidade || 0;
           }
         });
         timeData[centroCusto] = quantidade;
       });
       return timeData;
     });
+    
     return {
       data,
       centrosCusto: Array.from(centrosCusto)
@@ -723,15 +861,25 @@ const Dashboard = () => {
         quantidade: 0
       }];
     }
-    const unidadeMap: Record<string, number> = {};
+    
+    const unidadeMap: Record<string, { valor: number; quantidade: number }> = {};
+    
     produtos.forEach(produto => {
-      if (produto.unidade) {
+      if (produto.unidade && produto.unidade.trim() !== '') {
+        const unidadeNome = produto.unidade.trim();
         const valorUnitario = Number(produto.valor_unitario) || 0;
-        const quantidade = Number(produto.quantidade) || 0;
-        const valor = valorUnitario * quantidade;
-        unidadeMap[produto.unidade] = (unidadeMap[produto.unidade] || 0) + valor;
+        const quantidadeProduto = Number(produto.quantidade) || 0;
+        const valorTotal = valorUnitario * quantidadeProduto;
+        
+        if (!unidadeMap[unidadeNome]) {
+          unidadeMap[unidadeNome] = { valor: 0, quantidade: 0 };
+        }
+        
+        unidadeMap[unidadeNome].valor += valorTotal;
+        unidadeMap[unidadeNome].quantidade += 1; // Conta o número de produtos
       }
     });
+    
     if (Object.keys(unidadeMap).length === 0) {
       return [{
         name: 'Sem unidades',
@@ -739,27 +887,48 @@ const Dashboard = () => {
         quantidade: 0
       }];
     }
-    return Object.entries(unidadeMap).map(([name, value]) => ({
+    
+    return Object.entries(unidadeMap).map(([name, data]) => ({
       name: name || 'Unidade sem nome',
-      valor: value || 0,
-      quantidade: produtos.filter(p => p.unidade === name).length || 0
-    }));
+      valor: data.valor || 0,
+      quantidade: data.quantidade || 0
+    })).sort((a, b) => b.valor - a.valor);
   };
 
-  // Dados para gráfico de requisições por centro de custo
-  const requisicoesPorentoCusto = () => {
-    if (!requisicoes || requisicoes.length === 0) {
+  // Dados para gráfico de relatórios por centro de custo
+  const relatoriosPorCentroCusto = () => {
+    if (!relatorios || relatorios.length === 0) {
+      console.warn('Nenhum relatório disponível para centro de custo');
       return [];
     }
+    
+    console.log(`Analisando ${relatorios.length} relatórios para centro de custo no período: ${period}`);
+    
     const now = new Date();
-    const filteredRequisicoes = requisicoes.filter(requisicao => {
-      if (!requisicao.data_criacao) return false;
-      const dataCriacao = convertFirebaseTimestamp(requisicao.data_criacao);
+    const filteredRelatorios = relatorios.filter(relatorio => {
+      if (!relatorio.data_registro) {
+        console.warn('Relatório sem data_registro no centro de custo:', relatorio.id);
+        return false;
+      }
+      
+      if (!relatorio.centro_de_custo) {
+        console.warn('Relatório sem centro_de_custo:', relatorio.id);
+        return false;
+      }
+      
+      const dataRegistro = convertFirebaseTimestamp(relatorio.data_registro);
+      
+      // Verificar se a data convertida é válida
+      if (isNaN(dataRegistro.getTime())) {
+        console.warn('Data inválida no relatório (centro custo):', relatorio.id, relatorio.data_registro);
+        return false;
+      }
+      
       if (period === 'hoje') {
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const endOfToday = new Date(startOfToday);
         endOfToday.setHours(23, 59, 59, 999);
-        return dataCriacao >= startOfToday && dataCriacao <= endOfToday;
+        return dataRegistro >= startOfToday && dataRegistro <= endOfToday;
       } else if (period === 'semana') {
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
@@ -767,35 +936,46 @@ const Dashboard = () => {
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
-        return dataCriacao >= startOfWeek && dataCriacao <= endOfWeek;
+        return dataRegistro >= startOfWeek && dataRegistro <= endOfWeek;
       } else if (period === 'mes') {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         endOfMonth.setHours(23, 59, 59, 999);
-        return dataCriacao >= startOfMonth && dataCriacao <= endOfMonth;
+        return dataRegistro >= startOfMonth && dataRegistro <= endOfMonth;
       } else if (period === 'ano') {
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31);
         endOfYear.setHours(23, 59, 59, 999);
-        return dataCriacao >= startOfYear && dataCriacao <= endOfYear;
+        return dataRegistro >= startOfYear && dataRegistro <= endOfYear;
+      } else if (period === 'personalizado' && customStartDate && customEndDate) {
+        const startDate = new Date(customStartDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(customEndDate);
+        endDate.setHours(23, 59, 59, 999);
+        return dataRegistro >= startDate && dataRegistro <= endDate;
       }
       return false;
     });
+    
+    console.log(`Relatórios filtrados por centro de custo (${period}): ${filteredRelatorios.length}`);
+    
     const centroCustoMap: Record<string, number> = {};
-    filteredRequisicoes.forEach(requisicao => {
-      if (requisicao.itens && Array.isArray(requisicao.itens)) {
-        requisicao.itens.forEach(item => {
-          if (item.centro_de_custo) {
-            centroCustoMap[item.centro_de_custo] = (centroCustoMap[item.centro_de_custo] || 0) + item.quantidade;
-          }
-        });
+    filteredRelatorios.forEach(relatorio => {
+      if (relatorio.centro_de_custo) {
+        const quantidade = relatorio.quantidade || 0;
+        centroCustoMap[relatorio.centro_de_custo] = (centroCustoMap[relatorio.centro_de_custo] || 0) + quantidade;
+        console.log(`Adicionando ${quantidade} ao centro ${relatorio.centro_de_custo}`);
       }
     });
-    return Object.entries(centroCustoMap).map(([name, value], index) => ({
+    
+    const result = Object.entries(centroCustoMap).map(([name, value], index) => ({
       name: name || 'Centro não definido',
       value: value || 0,
       fill: COLORS[index % COLORS.length]
     })).sort((a, b) => b.value - a.value);
+    
+    console.log('Resultado final do centro de custo:', result);
+    return result;
   };
   return <AppLayout title="Dashboard Geral">
       {/* Seletor de período */}
@@ -931,9 +1111,9 @@ const Dashboard = () => {
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={requisicoesMovimentacaoPorPeriodo().data}>
+                    <AreaChart data={relatoriosMovimentacaoPorPeriodo().data}>
                       <defs>
-                        {requisicoesMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => <linearGradient key={centro} id={`color${centro.replace(/\s+/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                        {relatoriosMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => <linearGradient key={centro} id={`color${centro.replace(/\s+/g, '')}`} x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.8} />
                             <stop offset="95%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.1} />
                           </linearGradient>)}
@@ -947,7 +1127,7 @@ const Dashboard = () => {
                     borderRadius: 'var(--radius)'
                   }} formatter={(value, name) => [`${value} itens`, name]} />
                       <Legend />
-                      {requisicoesMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => <Area key={centro} type="monotone" dataKey={centro} stackId="1" stroke={COLORS[index % COLORS.length]} fillOpacity={1} fill={`url(#color${centro.replace(/\s+/g, '')})`} />)}
+                      {relatoriosMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => <Area key={centro} type="monotone" dataKey={centro} stackId="1" stroke={COLORS[index % COLORS.length]} fillOpacity={1} fill={`url(#color${centro.replace(/\s+/g, '')})`} />)}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -1090,14 +1270,14 @@ const Dashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" /> Requisições por Centro de Custo
+                  <FileText className="h-5 w-5" /> Movimentações por Centro de Custo
                 </CardTitle>
-                <CardDescription>Distribuição de requisições {getPeriodText()}</CardDescription>
+                <CardDescription>Distribuição de movimentações {getPeriodText()}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={requisicoesPorentoCusto()}>
+                    <BarChart data={relatoriosPorCentroCusto()}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                       <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} interval={0} />
                       <YAxis />
