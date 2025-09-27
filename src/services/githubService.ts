@@ -1064,7 +1064,176 @@ class GitHubService {
     this.config = null;
     this.configId = null;
   }
+
+  /**
+   * Compare two repositories and return list of file differences
+   */
+  public async compareRepositories(
+    sourceOwner: string,
+    sourceRepo: string,
+    sourceBranch: string = 'main',
+    targetOwner?: string,
+    targetRepo?: string,  
+    targetBranch: string = 'main'
+  ): Promise<FileComparison[]> {
+    if (!this.octokit || !this.config) {
+      throw new Error('GitHub não configurado');
+    }
+
+    const target = {
+      owner: targetOwner || this.config.owner,
+      repo: targetRepo || this.config.repo,
+      branch: targetBranch
+    };
+
+    try {
+      const sourceTree = await this.getRepositoryTreeWithSHA(sourceOwner, sourceRepo, sourceBranch);
+      const targetTree = await this.getRepositoryTreeWithSHA(target.owner, target.repo, target.branch);
+
+      const sourceFiles = new Map<string, { sha: string; size?: number }>();
+      const targetFiles = new Map<string, { sha: string; size?: number }>();
+
+      sourceTree.forEach(file => {
+        if (file.type === 'file') {
+          sourceFiles.set(file.path, { sha: file.sha || '', size: file.size });
+        }
+      });
+
+      targetTree.forEach(file => {
+        if (file.type === 'file') {
+          targetFiles.set(file.path, { sha: file.sha || '', size: file.size });
+        }
+      });
+
+      const comparisons: FileComparison[] = [];
+
+      for (const [path, sourceFile] of sourceFiles) {
+        if (this.shouldIgnoreFile(path)) continue;
+        
+        const targetFile = targetFiles.get(path);
+        
+        if (!targetFile) {
+          comparisons.push({
+            path,
+            status: 'new',
+            sourceHash: sourceFile.sha,
+            sizeDiff: sourceFile.size || 0
+          });
+        } else if (sourceFile.sha !== targetFile.sha) {
+          comparisons.push({
+            path,
+            status: 'modified',
+            sourceHash: sourceFile.sha,
+            targetHash: targetFile.sha,
+            sizeDiff: (sourceFile.size || 0) - (targetFile.size || 0)
+          });
+        }
+      }
+
+      return comparisons;
+    } catch (error) {
+      console.error('Erro ao comparar repositórios:', error);
+      throw error;
+    }
+  }
+
+  private async getRepositoryTreeWithSHA(owner: string, repo: string, branch: string = 'main') {
+    try {
+      const { data: refData } = await this.octokit!.rest.git.getRef({
+        owner, repo, ref: `heads/${branch}`,
+      });
+
+      const { data: commitData } = await this.octokit!.rest.git.getCommit({
+        owner, repo, commit_sha: refData.object.sha,
+      });
+
+      const { data: treeData } = await this.octokit!.rest.git.getTree({
+        owner, repo, tree_sha: commitData.tree.sha, recursive: 'true',
+      });
+
+      return (treeData.tree || []).map(item => ({
+        path: item.path || '',
+        type: item.type === 'blob' ? 'file' as const : 'dir' as const,
+        sha: item.sha,
+        size: item.size
+      }));
+    } catch (error: any) {
+      if (error?.status === 404) return [];
+      throw error;
+    }
+  }
+
+  public async transferModifiedFiles(
+    comparisons: FileComparison[],
+    sourceOwner: string,
+    sourceRepo: string,
+    sourceBranch: string = 'main',
+    commitMessage: string,
+    options: any = {},
+    progressCallback?: (progress: number, message: string, details?: any) => void
+  ): Promise<boolean> {
+    if (!this.octokit || !this.config) {
+      throw new Error('GitHub não configurado');
+    }
+
+    try {
+      const filesToTransfer = comparisons.filter(comp => comp.status !== 'unchanged');
+      
+      if (filesToTransfer.length === 0) {
+        progressCallback?.(100, 'Nenhum arquivo para transferir');
+        return true;
+      }
+
+      const downloads: { path: string; content: string }[] = [];
+      const sourceOctokit = new Octokit({ auth: this.config.token });
+
+      for (let i = 0; i < filesToTransfer.length; i++) {
+        const file = filesToTransfer[i];
+        if (file.status === 'deleted') continue;
+        
+        progressCallback?.(10 + (i / filesToTransfer.length) * 40, `Baixando ${file.path}...`);
+
+        try {
+          const { data: blob } = await sourceOctokit.rest.git.getBlob({
+            owner: sourceOwner, repo: sourceRepo, file_sha: file.sourceHash!,
+          });
+
+          const decoded = decodeURIComponent(escape(atob(blob.content.replace(/\n/g, ''))));
+          downloads.push({ path: file.path, content: decoded });
+        } catch (error) {
+          console.warn(`Erro ao baixar ${file.path}:`, error);
+        }
+      }
+
+      progressCallback?.(50, 'Enviando arquivos...');
+      
+      const uploadResult = await this.uploadMultipleFiles(downloads, commitMessage);
+      
+      progressCallback?.(100, `Transferência concluída: ${downloads.length} arquivos`);
+      return uploadResult.success;
+    } catch (error) {
+      console.error('Erro na transferência:', error);
+      throw error;
+    }
+  }
 }
 
 export const githubService = new GitHubService();
 export type { FileNode, GitHubConfig, StoredGitHubConfig, Codespace, CodespaceConfig };
+
+export interface FileComparison {
+  path: string;
+  status: 'new' | 'modified' | 'deleted' | 'unchanged';
+  sourceHash?: string;
+  targetHash?: string;
+  sizeDiff?: number;
+}
+
+// Export interface for file comparison
+export interface FileComparison {
+  path: string;
+  status: 'new' | 'modified' | 'deleted' | 'unchanged';
+  sourceHash?: string;
+  targetHash?: string;
+  sizeDiff?: number;
+}
