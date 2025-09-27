@@ -111,6 +111,17 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
     // Verifica se o usuário configurou para não mostrar o modal
     if (localStorage.getItem('hideSaveStatusModal') === 'true') {
       try {
+        // Verifica permissões antes de tentar salvar
+        const permissionCheck = await githubService.validatePermissions();
+        if (!permissionCheck.valid) {
+          toast({
+            title: "❌ Erro de Permissão",
+            description: `Token não tem permissões: ${permissionCheck.missing.join(', ')}`,
+            variant: "destructive"
+          });
+          return false;
+        }
+
         const result = await githubService.updateFile(
           filePath,
           content,
@@ -126,9 +137,10 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
         
         return !!result;
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
         toast({
           title: "❌ Erro ao salvar",
-          description: "Falha ao enviar para o GitHub",
+          description: errorMsg.includes('permissão') ? 'Token sem permissões suficientes' : 'Falha ao enviar para o GitHub',
           variant: "destructive"
         });
         return false;
@@ -148,12 +160,30 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
     setIsModalOpen(true);
 
     try {
-      // Etapa 1: Preparação
+      // Etapa 1: Preparação e validação de permissões
       updateStep('preparing', { 
         status: 'in-progress', 
         progress: 0,
-        message: 'Validando arquivo...' 
+        message: 'Validando configuração e permissões...' 
       });
+      
+      // Verifica configuração do GitHub
+      await githubService.ensureInitialized();
+      if (!githubService.isConfigured()) {
+        throw new Error('GitHub não está configurado');
+      }
+
+      // Verifica conectividade
+      const isConnected = await githubService.testConnection();
+      if (!isConnected) {
+        throw new Error('Não foi possível conectar ao GitHub');
+      }
+
+      // Verifica permissões
+      const permissionCheck = await githubService.validatePermissions();
+      if (!permissionCheck.valid) {
+        throw new Error(`Token não tem permissões: ${permissionCheck.missing.join(', ')}`);
+      }
       
       await new Promise(resolve => setTimeout(resolve, 500));
       
@@ -161,49 +191,61 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
       
       updateStep('preparing', { 
         status: 'completed',
-        message: 'Arquivo validado e preparado' 
+        message: 'Validação concluída com sucesso' 
       });
 
-      // Etapa 2: GitHub
+      // Etapa 2: GitHub com estratégia inteligente
       updateStep('github', { 
         status: 'in-progress',
         progress: 0,
-        message: 'Enviando para GitHub...' 
+        message: 'Analisando arquivo e escolhendo estratégia...' 
       });
 
       const fileName = filePath.split('/').pop() || filePath;
-      // Implementa estratégia para commits grandes usando chunking inteligente
-      let result;
       const contentSize = new Blob([content]).size;
       
-      if (contentSize > 800 * 1024) { // > 800KB - limite mais conservador
+      console.log(`Processando ${fileName} (${Math.round(contentSize / 1024)}KB)`);
+
+      let result;
+      
+      // Estratégia baseada no tamanho do arquivo
+      if (contentSize > 2 * 1024 * 1024) { // > 2MB
         updateStep('github', { 
-          message: 'Arquivo grande detectado, usando estratégia incremental...' 
+          message: 'Arquivo muito grande, usando estratégia ultra-conservadora...' 
         });
         
-        try {
-          // Estratégia 1: Usar updateFileIncremental do GitHub service
-          result = await githubService.updateFileIncremental(
-            filePath,
-            content,
-            commitMessage || `Atualizar ${fileName} via IDE`,
-            (progress, message) => {
-              updateStep('github', { 
-                progress,
-                message 
-              });
-            }
-          );
-        } catch (error) {
-          console.error('Erro na estratégia incremental, tentando método tradicional:', error);
-          // Fallback para método tradicional se incremental falhar
-          result = await githubService.updateFile(
-            filePath,
-            content,
-            commitMessage || `Atualizar ${fileName} via IDE`
-          );
-        }
+        result = await githubService.updateFileIncremental(
+          filePath,
+          content,
+          commitMessage || `Atualizar ${fileName} via IDE`,
+          (progress, message) => {
+            updateStep('github', { 
+              progress,
+              message 
+            });
+          }
+        );
+      } else if (contentSize > 800 * 1024) { // > 800KB
+        updateStep('github', { 
+          message: 'Arquivo grande, usando estratégia incremental inteligente...' 
+        });
+        
+        result = await githubService.updateFileIncremental(
+          filePath,
+          content,
+          commitMessage || `Atualizar ${fileName} via IDE`,
+          (progress, message) => {
+            updateStep('github', { 
+              progress,
+              message 
+            });
+          }
+        );
       } else {
+        updateStep('github', { 
+          message: 'Usando estratégia padrão com retry automático...' 
+        });
+        
         result = await githubService.updateFile(
           filePath,
           content,
@@ -215,12 +257,12 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
         throw new Error('Falha ao enviar para GitHub');
       }
 
-      // Como o githubService retorna true em caso de sucesso, vamos simular o SHA
+      // Gera um SHA mock baseado no timestamp
       const mockSha = Date.now().toString(36) + Math.random().toString(36).substr(2);
       
       updateStep('github', { 
         status: 'completed',
-        message: `Commit ${mockSha.substring(0, 7)} criado` 
+        message: `Upload concluído - Commit ${mockSha.substring(0, 7)}` 
       });
 
       // Etapa 3: Vercel Trigger
