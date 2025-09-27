@@ -37,6 +37,7 @@ const CommitPanel: React.FC = () => {
 
   const [commits, setCommits] = useState<CommitData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [showCustomRepoDialog, setShowCustomRepoDialog] = useState(false);
@@ -120,6 +121,57 @@ const CommitPanel: React.FC = () => {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+    });
+  };
+
+  const isCopyCommit = (message: string) => {
+    return message.includes('Cópia completa de') || 
+           message.includes('Transferência completa de') || 
+           message.includes('Cópia de') ||
+           message.includes('Transferência de');
+  };
+
+  const extractSourceRepo = (message: string) => {
+    const match = message.match(/(?:Cópia|Transferência) (?:completa )?de ([^/]+\/[^(\s]+)/);
+    if (match) {
+      return match[1];
+    }
+    return null;
+  };
+
+  const groupCommits = (commits: CommitData[]) => {
+    const groups: { [key: string]: CommitData[] } = {};
+    const regularCommits: CommitData[] = [];
+
+    commits.forEach(commit => {
+      if (isCopyCommit(commit.message)) {
+        const sourceRepo = extractSourceRepo(commit.message);
+        if (sourceRepo) {
+          const groupKey = `Cópia de ${sourceRepo}`;
+          if (!groups[groupKey]) {
+            groups[groupKey] = [];
+          }
+          groups[groupKey].push(commit);
+        } else {
+          regularCommits.push(commit);
+        }
+      } else {
+        regularCommits.push(commit);
+      }
+    });
+
+    return { groups, regularCommits };
+  };
+
+  const toggleGroup = (groupKey: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
     });
   };
 
@@ -923,55 +975,144 @@ const CommitPanel: React.FC = () => {
             </div>
           ) : (
             <>
-              {commits.map((commit) => (
-                <div
-                  key={commit.sha}
-                  className="p-3 mx-1 rounded-md border border-border/20 bg-card/30 hover:bg-card/50 hover:border-border/40 transition-all duration-200 group"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-3">
-                      <GitCommit className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors break-words">
-                          {commit.message}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground ml-7 flex-wrap">
-                      <span className="truncate max-w-[120px]">{commit.author}</span>
-                      <span className="whitespace-nowrap">{formatDate(commit.date)}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between ml-7">
-                      <Badge variant="secondary" className="text-xs bg-muted/40 px-2 py-1">
-                        {truncateSha(commit.sha)}
-                      </Badge>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-500/20 hover:text-orange-600"
-                          onClick={() => handleRestoreCommit(commit)}
-                          title="Restaurar para esta versão"
+              {(() => {
+                const { groups, regularCommits } = groupCommits(commits);
+                return (
+                  <>
+                    {/* Grupos de commits de cópia */}
+                    {Object.entries(groups).map(([groupKey, groupCommits]) => (
+                      <div key={groupKey} className="space-y-1">
+                        <div
+                          className="p-3 mx-1 rounded-md border border-border/20 bg-muted/20 hover:bg-muted/30 transition-all duration-200 cursor-pointer"
+                          onClick={() => toggleGroup(groupKey)}
                         >
-                          <RotateCcw className="h-3 w-3 mr-1" />
-                          Restaurar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => window.open(commit.url, '_blank')}
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          GitHub
-                        </Button>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <GitCommit className="h-4 w-4 text-primary" />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-foreground">
+                                  {groupKey}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {groupCommits.length} commit{groupCommits.length !== 1 ? 's' : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-muted-foreground">
+                              {expandedGroups.has(groupKey) ? '▼' : '▶'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {expandedGroups.has(groupKey) && (
+                          <div className="ml-4 space-y-1">
+                            {groupCommits.map((commit) => (
+                              <div
+                                key={commit.sha}
+                                className="p-3 mx-1 rounded-md border border-border/10 bg-card/20 hover:bg-card/40 hover:border-border/30 transition-all duration-200 group"
+                              >
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-3">
+                                    <GitCommit className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors break-words">
+                                        {commit.message}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-4 text-xs text-muted-foreground ml-6 flex-wrap">
+                                    <span className="truncate max-w-[120px]">{commit.author}</span>
+                                    <span className="whitespace-nowrap">{formatDate(commit.date)}</span>
+                                  </div>
+
+                                  <div className="flex items-center justify-between ml-6">
+                                    <Badge variant="secondary" className="text-xs bg-muted/40 px-2 py-1">
+                                      {truncateSha(commit.sha)}
+                                    </Badge>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-500/20 hover:text-orange-600"
+                                        onClick={() => handleRestoreCommit(commit)}
+                                        title="Restaurar para esta versão"
+                                      >
+                                        <RotateCcw className="h-2.5 w-2.5 mr-1" />
+                                        Restaurar
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => window.open(commit.url, '_blank')}
+                                      >
+                                        <ExternalLink className="h-2.5 w-2.5 mr-1" />
+                                        GitHub
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                    ))}
+
+                    {/* Commits regulares */}
+                    {regularCommits.map((commit) => (
+                      <div
+                        key={commit.sha}
+                        className="p-3 mx-1 rounded-md border border-border/20 bg-card/30 hover:bg-card/50 hover:border-border/40 transition-all duration-200 group"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-3">
+                            <GitCommit className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors break-words">
+                                {commit.message}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground ml-7 flex-wrap">
+                            <span className="truncate max-w-[120px]">{commit.author}</span>
+                            <span className="whitespace-nowrap">{formatDate(commit.date)}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between ml-7">
+                            <Badge variant="secondary" className="text-xs bg-muted/40 px-2 py-1">
+                              {truncateSha(commit.sha)}
+                            </Badge>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-500/20 hover:text-orange-600"
+                                onClick={() => handleRestoreCommit(commit)}
+                                title="Restaurar para esta versão"
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Restaurar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => window.open(commit.url, '_blank')}
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                GitHub
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
             </>
           )}
         </div>
