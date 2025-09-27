@@ -132,7 +132,6 @@ const CommitPanel: React.FC = () => {
     return sha.substring(0, 7);
   };
 
-
   const handleRestoreCommit = (commit: CommitData) => {
     setSelectedCommit(commit);
     setShowRestoreDialog(true);
@@ -201,7 +200,6 @@ const CommitPanel: React.FC = () => {
       });
     }
   };
-
 
   const handleCustomRepoSubmit = () => {
     if (!customRepoConfig.token || !customRepoConfig.owner || !customRepoConfig.repo) {
@@ -291,7 +289,7 @@ const CommitPanel: React.FC = () => {
       const totalSteps = totalFiles * 2; // Download + Upload
 
       // 3) Download real dos arquivos (atualiza barra de download e lista)
-      const downloads: { path: string; content: string }[] = [];
+      const downloads: { path: string; content: string; size: number }[] = [];
       let downloadedCount = 0;
 
       for (const file of files) {
@@ -310,7 +308,7 @@ const CommitPanel: React.FC = () => {
           decoded = atob(base64);
         }
 
-        downloads.push({ path: file.path, content: decoded });
+        downloads.push({ path: file.path, content: decoded, size: decoded.length });
         downloadedCount++;
         
         const downloadPercent = Math.round((downloadedCount / totalFiles) * 100);
@@ -331,7 +329,7 @@ const CommitPanel: React.FC = () => {
       setDownloadedFiles(files.map((f: any) => ({ name: f.path.split('/').pop() || f.path, path: f.path })));
       setIsDownloading(false);
 
-      // 4) Upload para repositório destino - CRIANDO UM ÚNICO COMMIT
+      // 4) Upload para repositório destino - COM LOTE OTIMIZADO
       setIsUploading(true);
       setUploadProgress(0);
 
@@ -370,16 +368,46 @@ const CommitPanel: React.FC = () => {
           }
         }
 
-        // Processar arquivos em lotes muito menores para evitar erro do GitHub
-        const batchSize = 10; // Reduzir drasticamente o tamanho do lote
-        let currentSha = baseSha;
-        let lastCommitSha = baseSha;
+        // 🔥 **SOLUÇÃO OTIMIZADA: Lotes menores e controle de tamanho**
+        const MAX_BATCH_SIZE = 10; // Reduzido drasticamente
+        const MAX_BATCH_SIZE_BYTES = 500000; // ~500KB por lote
         
-        for (let i = 0; i < downloads.length; i += batchSize) {
-          const batch = downloads.slice(i, i + batchSize);
-          setUploadProgress(Math.round((i / downloads.length) * 100));
+        // Primeiro, calcular quantos batches serão necessários
+        const batches: typeof downloads[][] = [];
+        let currentBatchFiles: typeof downloads = [];
+        let currentBatchTotalSize = 0;
+
+        for (const file of downloads) {
+          // Se adicionar este arquivo exceder o limite, finaliza o batch atual
+          if (currentBatchFiles.length > 0 && 
+              (currentBatchFiles.length >= MAX_BATCH_SIZE || 
+               currentBatchTotalSize + file.size > MAX_BATCH_SIZE_BYTES)) {
+            batches.push([...currentBatchFiles]);
+            currentBatchFiles = [];
+            currentBatchTotalSize = 0;
+          }
           
-          // Estratégia melhorada: criar blobs primeiro, depois árvore com SHAs
+          currentBatchFiles.push(file);
+          currentBatchTotalSize += file.size;
+        }
+
+        // Adicionar o último batch se houver arquivos
+        if (currentBatchFiles.length > 0) {
+          batches.push(currentBatchFiles);
+        }
+
+        const totalBatches = batches.length;
+        let currentSha = baseSha;
+        let batchNumber = 0;
+
+        // Processar cada batch
+        for (let i = 0; i < batches.length; i++) {
+          const batch = batches[i];
+          batchNumber = i + 1;
+          
+          setUploadProgress(Math.round((i / batches.length) * 100));
+          
+          // Criar blobs primeiro para evitar problemas de tamanho
           const blobPromises = batch.map(async (file) => {
             const { data: blob } = await destOctokit.rest.git.createBlob({
               owner: currentConfig.owner,
@@ -395,11 +423,10 @@ const CommitPanel: React.FC = () => {
             };
           });
 
-          // Aguardar criação de todos os blobs do lote
           const treeItems = await Promise.all(blobPromises);
 
-          // Adicionar throttling para evitar rate limiting
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Aguardar entre batches para evitar rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
           const { data: newTree } = await destOctokit.rest.git.createTree({
             owner: currentConfig.owner,
@@ -408,10 +435,10 @@ const CommitPanel: React.FC = () => {
             base_tree: currentSha,
           });
 
-          // Criar commit para este lote
-          const isLastBatch = i + batchSize >= downloads.length;
-          const batchNumber = Math.floor(i / batchSize) + 1;
-          const totalBatches = Math.ceil(downloads.length / batchSize);
+          // Criar commit para este batch
+          const isLastBatch = i === batches.length - 1;
+          const batchNumber = Math.floor(i / MAX_BATCH_SIZE) + 1;
+          const totalBatches = Math.ceil(downloads.length / MAX_BATCH_SIZE);
           
           const { data: newCommit } = await destOctokit.rest.git.createCommit({
             owner: currentConfig.owner,
@@ -424,7 +451,6 @@ const CommitPanel: React.FC = () => {
           });
 
           currentSha = newCommit.sha;
-          lastCommitSha = newCommit.sha;
           
           // Atualizar referência da branch
           await destOctokit.rest.git.updateRef({
@@ -433,12 +459,24 @@ const CommitPanel: React.FC = () => {
             ref: 'heads/main',
             sha: newCommit.sha,
           });
+
+          // Atualizar progresso geral
+          const overallPercent = Math.round(((totalFiles + (i + 1) * batch.length) / totalSteps) * 100);
+          setOverallProgress(overallPercent);
         }
 
         setUploadProgress(100);
         setOverallProgress(100);
-      } catch (uploadError) {
+      } catch (uploadError: any) {
         console.error('Erro no upload:', uploadError);
+        
+        // Tratamento específico para o erro de árvore grande
+        if (uploadError.message?.includes('too large') || uploadError.status === 422) {
+          throw new Error(
+            `Árvore Git muito grande. Tente dividir em repositórios menores ou ` +
+            `reduzir a quantidade de arquivos. Limite do GitHub: ~1MB por tree.`
+          );
+        }
         throw uploadError;
       }
 
@@ -448,7 +486,7 @@ const CommitPanel: React.FC = () => {
 
       toast({
         title: 'Sucesso',
-        description: `${downloads.length} arquivos enviados para ${currentConfig.owner}/${currentConfig.repo} em um único commit!`,
+        description: `${downloads.length} arquivos enviados para ${currentConfig.owner}/${currentConfig.repo} em ${totalBatches} lotes!`,
       });
     } catch (error: any) {
       console.error('Erro no processo de transferência:', error);
@@ -525,10 +563,9 @@ const CommitPanel: React.FC = () => {
       const destRepo = commitTrocadoConfig.destRepo.trim();
       const destBranch = commitTrocadoConfig.destBranch || 'main';
 
-      // Usar o token do GitHub configurado
       await githubService.ensureInitialized();
       if (!githubService.isConfigured()) {
-        throw new Error('GitHub não está configurado. Configure primeiro o GitHub para acessar repositórios.');
+        throw new Error('GitHub não está configurado.');
       }
 
       const { Octokit } = await import('@octokit/rest');
@@ -568,7 +605,7 @@ const CommitPanel: React.FC = () => {
       const totalSteps = totalFiles * 2;
 
       // Download dos arquivos
-      const downloads: { path: string; content: string }[] = [];
+      const downloads: { path: string; content: string; size: number }[] = [];
       let downloadedCount = 0;
 
       for (const file of files) {
@@ -587,7 +624,11 @@ const CommitPanel: React.FC = () => {
           decoded = atob(base64);
         }
 
-        downloads.push({ path: file.path, content: decoded });
+        downloads.push({ 
+          path: file.path, 
+          content: decoded,
+          size: decoded.length 
+        });
         downloadedCount++;
         
         const downloadPercent = Math.round((downloadedCount / totalFiles) * 100);
@@ -600,7 +641,7 @@ const CommitPanel: React.FC = () => {
       setDownloadedFiles(files.map((f: any) => ({ name: f.path.split('/').pop() || f.path, path: f.path })));
       setIsDownloading(false);
 
-      // 2) Upload para repositório destino
+      // 2) Upload para repositório destino - COM LOTE OTIMIZADO
       setIsUploading(true);
       setUploadProgress(0);
       
@@ -616,7 +657,6 @@ const CommitPanel: React.FC = () => {
           baseSha = refData.object.sha;
         } catch (error: any) {
           if (error.status === 404) {
-            // Criar commit inicial se repositório/branch não existe
             const { data: newCommit } = await octokit.rest.repos.createOrUpdateFileContents({
               owner: destOwner,
               repo: destRepo,
@@ -630,21 +670,65 @@ const CommitPanel: React.FC = () => {
           }
         }
 
-        // Processar arquivos em lotes menores para evitar erro do GitHub
-        const batchSize = 20; // Reduzir tamanho do lote
-        let currentSha = baseSha;
+        // 🔥 **SOLUÇÃO PRINCIPAL: Lotes menores e controle de tamanho**
+        const MAX_BATCH_SIZE = 10; // Reduzido drasticamente
+        const MAX_BATCH_SIZE_BYTES = 500000; // ~500KB por lote
         
-        for (let i = 0; i < downloads.length; i += batchSize) {
-          const batch = downloads.slice(i, i + batchSize);
-          setUploadProgress(Math.round((i / downloads.length) * 100));
+        // Primeiro, calcular quantos batches serão necessários
+        const batches: typeof downloads[][] = [];
+        let currentBatchFiles: typeof downloads = [];
+        let currentBatchTotalSize = 0;
+
+        for (const file of downloads) {
+          // Se adicionar este arquivo exceder o limite, finaliza o batch atual
+          if (currentBatchFiles.length > 0 && 
+              (currentBatchFiles.length >= MAX_BATCH_SIZE || 
+               currentBatchTotalSize + file.size > MAX_BATCH_SIZE_BYTES)) {
+            batches.push([...currentBatchFiles]);
+            currentBatchFiles = [];
+            currentBatchTotalSize = 0;
+          }
           
-          // Criar árvore com lote de arquivos
-          const treeItems = batch.map(file => ({
-            path: file.path,
-            mode: '100644' as const,
-            type: 'blob' as const,
-            content: file.content,
-          }));
+          currentBatchFiles.push(file);
+          currentBatchTotalSize += file.size;
+        }
+
+        // Adicionar o último batch se houver arquivos
+        if (currentBatchFiles.length > 0) {
+          batches.push(currentBatchFiles);
+        }
+
+        const totalBatches = batches.length;
+        let currentSha = baseSha;
+        let batchNumber = 0;
+
+        // Processar cada batch
+        for (let i = 0; i < batches.length; i++) {
+          const batch = batches[i];
+          batchNumber = i + 1;
+          
+          setUploadProgress(Math.round((i / batches.length) * 100));
+          
+          // Criar blobs primeiro para evitar problemas de tamanho
+          const blobPromises = batch.map(async (file) => {
+            const { data: blob } = await octokit.rest.git.createBlob({
+              owner: destOwner,
+              repo: destRepo,
+              content: btoa(unescape(encodeURIComponent(file.content))),
+              encoding: 'base64'
+            });
+            return {
+              path: file.path,
+              mode: '100644' as const,
+              type: 'blob' as const,
+              sha: blob.sha,
+            };
+          });
+
+          const treeItems = await Promise.all(blobPromises);
+
+          // Aguardar entre batches para evitar rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
           const { data: newTree } = await octokit.rest.git.createTree({
             owner: destOwner,
@@ -653,16 +737,13 @@ const CommitPanel: React.FC = () => {
             base_tree: currentSha,
           });
 
-          // Criar commit para este lote
-          const isLastBatch = i + batchSize >= downloads.length;
-          const batchNumber = Math.floor(i / batchSize) + 1;
-          const totalBatches = Math.ceil(downloads.length / batchSize);
-          
+          // Criar commit para este batch
+          const isLastBatch = i === batches.length - 1;
           const commitMessage = isLastBatch && commitTrocadoConfig.commitMessage
             ? commitTrocadoConfig.commitMessage
             : isLastBatch
               ? `Transferência completa de ${sourceOwner}/${sourceRepo} (${downloads.length} arquivos)`
-              : `Transferência de ${sourceOwner}/${sourceRepo} - Lote ${batchNumber}/${totalBatches}`;
+              : `Transferência - Lote ${batchNumber}/${totalBatches} (${batch.length} arquivos)`;
 
           const { data: newCommit } = await octokit.rest.git.createCommit({
             owner: destOwner,
@@ -681,12 +762,24 @@ const CommitPanel: React.FC = () => {
             ref: `heads/${destBranch}`,
             sha: newCommit.sha,
           });
+
+          // Atualizar progresso geral
+          const overallPercent = Math.round(((totalFiles + (i + 1) * batch.length) / totalSteps) * 100);
+          setOverallProgress(overallPercent);
         }
 
         setUploadProgress(100);
         setOverallProgress(100);
-      } catch (uploadError) {
+      } catch (uploadError: any) {
         console.error('Erro no upload:', uploadError);
+        
+        // Tratamento específico para o erro de árvore grande
+        if (uploadError.message?.includes('too large') || uploadError.status === 422) {
+          throw new Error(
+            `Árvore Git muito grande. Tente dividir em repositórios menores ou ` +
+            `reduzir a quantidade de arquivos. Limite do GitHub: ~1MB por tree.`
+          );
+        }
         throw uploadError;
       }
 
@@ -696,7 +789,7 @@ const CommitPanel: React.FC = () => {
 
       toast({
         title: 'Commit Trocado Concluído!',
-        description: `${downloads.length} arquivos transferidos de ${sourceOwner}/${sourceRepo} para ${destOwner}/${destRepo}!`,
+        description: `${downloads.length} arquivos transferidos em ${totalBatches} lotes!`,
       });
       
       // Limpar configuração
@@ -715,7 +808,9 @@ const CommitPanel: React.FC = () => {
       let description = 'Erro durante a transferência entre repositórios';
       
       if (error?.status === 404) {
-        description = `Repositório não encontrado. Verifique se os nomes estão corretos e se você tem acesso aos repositórios.`;
+        description = `Repositório não encontrado. Verifique os nomes e acesso.`;
+      } else if (error?.message?.includes('too large')) {
+        description = error.message;
       } else if (error instanceof Error) {
         description = error.message;
       }
@@ -1227,7 +1322,7 @@ const CommitPanel: React.FC = () => {
                   )}
                 </div>
               </div>
-              <Progress value={overallProgress} className="h-3" progressType={transferType} />
+              <Progress value={overallProgress} className="h-3" />
             </div>
 
             <Separator />
@@ -1241,7 +1336,7 @@ const CommitPanel: React.FC = () => {
                     {isDownloading ? 'Baixando...' : downloadProgress === 100 ? 'Concluído' : 'Aguardando'}
                   </span>
                 </div>
-                <Progress value={downloadProgress} className="h-2" progressType={transferType} />
+                <Progress value={downloadProgress} className="h-2" />
               </div>
               
               {/* Upload Progress */}
@@ -1252,7 +1347,7 @@ const CommitPanel: React.FC = () => {
                     {isUploading ? 'Enviando...' : uploadProgress === 100 ? 'Concluído' : 'Aguardando'}
                   </span>
                 </div>
-                <Progress value={uploadProgress} className="h-2" progressType={transferType} />
+                <Progress value={uploadProgress} className="h-2" />
               </div>
             </div>
 
