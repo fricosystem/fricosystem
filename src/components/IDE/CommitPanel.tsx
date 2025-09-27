@@ -106,7 +106,9 @@ const CommitPanel: React.FC = () => {
   const [comparisons, setComparisons] = useState<FileComparison[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [compareLoading, setCompareLoading] = useState(false);
-  const [smartTransferMode, setSmartTransferMode] = useState(false);
+  const [smartTransferMode, setSmartTransferMode] = useState(true); // Ativado por padrão
+  const [compareProgress, setCompareProgress] = useState(0);
+  const [forceFullTransfer, setForceFullTransfer] = useState(false);
   const { toast } = useToast();
 
   const loadCommitHistory = async () => {
@@ -294,20 +296,14 @@ const CommitPanel: React.FC = () => {
     
     setShowSourceRepoDialog(false);
     
-    if (smartTransferMode) {
-      // Show comparison dialog for smart transfer
-      await startComparison();
-    } else {
-      // Use traditional full transfer
-      setTransferType('entrada');
-      setShowDownloadDialog(true);
-      startDownloadProcess();
-    }
+    // Sempre fazer comparação primeiro para mostrar apenas arquivos modificados
+    await startComparison();
   };
 
   const startComparison = async () => {
     setCompareLoading(true);
     setShowComparisonDialog(true);
+    setCompareProgress(0);
     
     try {
       toast({
@@ -319,12 +315,20 @@ const CommitPanel: React.FC = () => {
       const sourceRepo = sourceRepoConfig.repo.trim();
       const sourceBranch = sourceRepoConfig.branch || 'main';
 
+      // Simular progresso da comparação
+      const progressInterval = setInterval(() => {
+        setCompareProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
+
       // Call comparison method from githubService
       const fileComparisons = await githubService.compareRepositories(
         sourceOwner,
         sourceRepo,
         sourceBranch
       );
+
+      clearInterval(progressInterval);
+      setCompareProgress(100);
 
       setComparisons(fileComparisons);
       
@@ -344,19 +348,31 @@ const CommitPanel: React.FC = () => {
         unchanged: fileComparisons.filter(c => c.status === 'unchanged').length
       };
 
-      toast({
-        title: "Comparação concluída",
-        description: `${stats.new} novos, ${stats.modified} modificados, ${stats.deleted} deletados`,
-      });
+      // Se todos os arquivos são diferentes, sugerir transferência completa
+      if (stats.unchanged === 0 && fileComparisons.length > 50) {
+        toast({
+          title: "Repositórios muito diferentes",
+          description: "Considere usar transferência completa para melhor performance",
+        });
+      } else {
+        toast({
+          title: "Comparação concluída",
+          description: `${stats.new} novos, ${stats.modified} modificados`,
+        });
+      }
 
     } catch (error) {
       console.error('Erro na comparação:', error);
       toast({
         title: "Erro na comparação",
-        description: "Falha ao comparar repositórios. Tente novamente.",
+        description: "Falha ao comparar repositórios. Usando transferência completa.",
         variant: "destructive",
       });
+      // Fallback para transferência completa
+      setForceFullTransfer(true);
       setShowComparisonDialog(false);
+      setShowDownloadDialog(true);
+      startDownloadProcess();
     } finally {
       setCompareLoading(false);
     }
@@ -1622,6 +1638,140 @@ const CommitPanel: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Comparação de Arquivos */}
+      <Dialog open={showComparisonDialog} onOpenChange={setShowComparisonDialog}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <GitCommit className="h-5 w-5 text-primary" />
+              Comparação de Repositórios
+            </DialogTitle>
+            <DialogDescription>
+              Selecione os arquivos que deseja transferir. Apenas arquivos modificados são mostrados.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto py-4 space-y-4">
+            {/* Progresso da Comparação */}
+            {compareLoading && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Comparando arquivos...</span>
+                  <span>{compareProgress}%</span>
+                </div>
+                <Progress value={compareProgress} className="h-2" />
+              </div>
+            )}
+
+            {!compareLoading && (
+              <>
+                {/* Estatísticas da Comparação */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-3 rounded border bg-green-50 dark:bg-green-950/20">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-400">
+                      Novos: {comparisons.filter(c => c.status === 'new').length}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded border bg-blue-50 dark:bg-blue-950/20">
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-400">
+                      Modificados: {comparisons.filter(c => c.status === 'modified').length}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded border bg-orange-50 dark:bg-orange-950/20">
+                    <p className="text-sm font-medium text-orange-800 dark:text-orange-400">
+                      Selecionados: {selectedFiles.size}
+                    </p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Controles de Seleção */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSelectAll('new', true)}
+                    >
+                      Selecionar Novos
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSelectAll('modified', true)}
+                    >
+                      Selecionar Modificados
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedFiles(new Set())}
+                    >
+                      Limpar Seleção
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="forceFullTransfer"
+                      checked={forceFullTransfer}
+                      onCheckedChange={(checked) => setForceFullTransfer(checked === true)}
+                    />
+                    <Label htmlFor="forceFullTransfer" className="text-sm">
+                      Transferência completa (todos os arquivos)
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Lista de Arquivos para Comparação */}
+                <ScrollArea className="h-80 border rounded">
+                  <div className="p-4 space-y-2">
+                    {comparisons
+                      .filter(comp => comp.status !== 'unchanged' || forceFullTransfer)
+                      .map((comp, index) => (
+                        <div key={index} className="flex items-center gap-3 p-2 rounded border hover:bg-muted/20">
+                          <Checkbox
+                            checked={selectedFiles.has(comp.path)}
+                            onCheckedChange={(checked) => handleFileToggle(comp.path, checked === true)}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono">{comp.path}</span>
+                              <Badge 
+                                variant={comp.status === 'new' ? 'default' : comp.status === 'modified' ? 'secondary' : 'outline'}
+                                className="text-xs"
+                              >
+                                {comp.status === 'new' ? 'Novo' : comp.status === 'modified' ? 'Modificado' : 'Inalterado'}
+                              </Badge>
+                            </div>
+                            {comp.sizeDiff && (
+                              <p className="text-xs text-muted-foreground">
+                                Diferença: {comp.sizeDiff > 0 ? '+' : ''}{comp.sizeDiff} bytes
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
+          </div>
+          
+          <DialogFooter className="flex-shrink-0">
+            <Button variant="outline" onClick={() => setShowComparisonDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSmartTransfer}
+              disabled={compareLoading || (selectedFiles.size === 0 && !forceFullTransfer)}
+            >
+              Transferir {selectedFiles.size > 0 ? `${selectedFiles.size} arquivos` : forceFullTransfer ? 'todos os arquivos' : ''}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Modal de Download e Upload */}
       <Dialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
@@ -1637,7 +1787,9 @@ const CommitPanel: React.FC = () => {
             <DialogDescription>
               {processComplete 
                 ? 'Os arquivos foram transferidos com sucesso!'
-                : 'Fazendo download dos arquivos do repositório origem e enviando para o destino...'
+                : forceFullTransfer 
+                  ? 'Transferindo todos os arquivos do repositório...'
+                  : 'Transferindo apenas os arquivos modificados...'
               }
             </DialogDescription>
           </DialogHeader>
@@ -1665,7 +1817,7 @@ const CommitPanel: React.FC = () => {
               {/* Download Progress */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>Download dos arquivos</span>
+                  <span>{forceFullTransfer ? 'Download de todos os arquivos' : 'Download dos arquivos modificados'}</span>
                   <span className={isDownloading ? 'text-blue-600' : downloadProgress === 100 ? 'text-green-600' : 'text-muted-foreground'}>
                     {isDownloading ? 'Baixando...' : downloadProgress === 100 ? 'Concluído' : 'Aguardando'}
                   </span>
@@ -1685,10 +1837,12 @@ const CommitPanel: React.FC = () => {
               </div>
             </div>
 
-            {/* Lista de arquivos baixados */}
+            {/* Lista de arquivos processados */}
             {downloadedFiles.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Arquivos baixados ({downloadedFiles.length}):</p>
+                <p className="text-sm font-medium">
+                  Arquivos {forceFullTransfer ? 'transferidos' : 'modificados'} ({downloadedFiles.length}):
+                </p>
                 <ScrollArea className="h-40 border rounded p-2 bg-muted/20">
                   <div className="space-y-1">
                     {downloadedFiles.map((file, index) => (
@@ -1714,6 +1868,7 @@ const CommitPanel: React.FC = () => {
                     const config = githubService.getConfig();
                     return config ? `${config.owner}/${config.repo}` : 'Não configurado';
                   })()}</p>
+                  <p>Tipo: {forceFullTransfer ? 'Completa' : 'Apenas modificados'}</p>
                   <p>Total de arquivos: {downloadedFiles.length}</p>
                 </div>
               </div>
