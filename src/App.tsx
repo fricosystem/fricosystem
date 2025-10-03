@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
-// PÃ¡ginas
+// Páginas
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import TelaBemVindo from "./pages/TelaBemVindo";
@@ -31,23 +31,23 @@ import RelatoriosES from "./pages/Relatorios/Relatorios";
 import PlanejamentoDesenvolvimento from "./pages/Planejamento/PlanejamentoDesenvolvimento";
 import IDE from "./pages/IDE";
 
-// PÃ¡ginas de TransferÃªncia e entrada manual
+// Páginas de Transferência e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
 import TransferenciasET from "./pages/TransferenciasET";
 
-// PÃ¡ginas de Compras e Pedidos
+// Páginas de Compras e Pedidos
 import Compras from "./pages/Compras";
 import GestaoProdutos from "./pages/GestaoProdutos";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
 import CentroCusto from "./pages/CentroCusto";
 import Unidades from "./pages/Unidades";
 
-// PÃ¡ginas de comunicaÃ§Ã£o
+// Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
 import Email from "./pages/Email";
 import Reunioes from "./pages/Agendamento";
 
-// PÃ¡ginas de InventÃ¡rio
+// Páginas de Inventário
 import Inventario from "./pages/Inventario";
 
 // Create a client
@@ -98,7 +98,7 @@ const AppContent = () => {
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Rotas pÃºblicas */}
+          {/* Rotas públicas */}
           <Route path="/" element={<NoAuthGuard><Login /></NoAuthGuard>} />
           
           {/* Rotas protegidas */}
@@ -128,14 +128,14 @@ const AppContent = () => {
            <Route path="/planejamento-desenvolvimento" element={<AuthGuard><PlanejamentoDesenvolvimento /></AuthGuard>} />
            <Route path="/ide" element={<AuthGuard><IDE /></AuthGuard>} />
 
-          {/* Rotas de Entrada Manual e TransferÃªncia */}
+           {/* Rotas de Entrada Manual e Transferência */}
           <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />
           <Route path="/transferencia" element={<AuthGuard><TransferenciasET /></AuthGuard>} />
 
           {/* Rotas de Compras e Pedidos */}
           <Route path="/compras" element={<AuthGuard><Compras /></AuthGuard>} />
 
-          {/* Rotas de ComunicaÃ§Ã£o */}
+          {/* Rotas de Comunicação */}
           <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />
           <Route path="/email" element={<AuthGuard><Email /></AuthGuard>} />
           <Route path="/reunioes" element={<AuthGuard><Reunioes /></AuthGuard>} />
