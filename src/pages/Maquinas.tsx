@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Search, Camera, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
@@ -71,7 +71,8 @@ const Maquinas = () => {
     fetchMaquinas();
   }, []);
 
-  useEffect(() => {
+  // Memoiza a filtragem para evitar recálculos desnecessários
+  const filteredMaquinasData = useMemo(() => {
     let filtered = maquinas;
 
     if (searchTerm) {
@@ -84,8 +85,12 @@ const Maquinas = () => {
       filtered = filtered.filter(maquina => maquina.status === statusFilter);
     }
 
-    setFilteredMaquinas(filtered);
+    return filtered;
   }, [maquinas, searchTerm, statusFilter]);
+
+  useEffect(() => {
+    setFilteredMaquinas(filteredMaquinasData);
+  }, [filteredMaquinasData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,7 +150,7 @@ const Maquinas = () => {
     });
   };
 
-  const handleEdit = (maquina: Maquina) => {
+  const handleEdit = useCallback((maquina: Maquina) => {
     setEditingMaquina(maquina);
     setFormData({
       nome: maquina.nome,
@@ -154,9 +159,9 @@ const Maquinas = () => {
       descricao: maquina.descricao || "",
     });
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir esta máquina?")) return;
     
     try {
@@ -174,22 +179,23 @@ const Maquinas = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const handlePhotoTaken = (imageUrl: string) => {
+  const handlePhotoTaken = useCallback((imageUrl: string) => {
     setFormData(prev => ({ ...prev, imagemUrl: imageUrl }));
     setIsCameraOpen(false);
     toast({
       title: "Foto capturada",
       description: "A foto foi salva com sucesso!",
     });
-  };
+  }, [toast]);
 
-  const stats = {
+  // Memoiza as estatísticas
+  const stats = useMemo(() => ({
     total: maquinas.length,
     ativas: maquinas.filter(m => m.status === "Ativa").length,
     inativas: maquinas.filter(m => m.status === "Inativa").length,
-  };
+  }), [maquinas]);
 
   return (
     <AppLayout title="Máquinas">
@@ -294,6 +300,7 @@ const Maquinas = () => {
                     src={maquina.imagemUrl} 
                     alt={maquina.nome}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = '/placeholder.svg';
