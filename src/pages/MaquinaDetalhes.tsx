@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Layers, BoxSelect, AlertTriangle, TrendingUp, Package, History, Settings, Activity } from "lucide-react";
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize, Maximize2, Minimize2, Layers, BoxSelect, AlertTriangle, TrendingUp, Package, History, Settings, Activity } from "lucide-react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
@@ -250,6 +250,7 @@ const MaquinaDetalhes = () => {
   const [selectedPeca, setSelectedPeca] = useState<Peca | null>(null);
   const [modoExplodido, setModoExplodido] = useState(false);
   const [camadasVisiveis, setCamadasVisiveis] = useState<string[]>(["Mecânica", "Elétrica", "Hidráulica"]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const fetchMaquina = async () => {
@@ -314,22 +315,32 @@ const MaquinaDetalhes = () => {
     );
   };
 
-  const getPecasPorCamada = () => {
+  // Memoiza a filtragem de peças por camada
+  const pecasPorCamada = useMemo(() => {
     return pecasFicticias.filter(peca => camadasVisiveis.includes(peca.categoria));
-  };
+  }, [camadasVisiveis]);
 
-  const getPosicaoExplodida = (peca: Peca) => {
-    if (!modoExplodido) return { x: peca.x, y: peca.y };
+  // Memoiza as posições explodidas
+  const posicoesExplodidas = useMemo(() => {
+    if (!modoExplodido) return null;
     
     const centerX = 400;
     const centerY = 250;
-    const offsetX = (peca.x - centerX) * 0.8;
-    const offsetY = (peca.y - centerY) * 0.8;
     
-    return {
-      x: peca.x + offsetX,
-      y: peca.y + offsetY
-    };
+    return pecasPorCamada.reduce((acc, peca) => {
+      const offsetX = (peca.x - centerX) * 0.8;
+      const offsetY = (peca.y - centerY) * 0.8;
+      acc[peca.id] = {
+        x: peca.x + offsetX,
+        y: peca.y + offsetY
+      };
+      return acc;
+    }, {} as Record<string, { x: number; y: number }>);
+  }, [modoExplodido, pecasPorCamada]);
+
+  const getPosicaoExplodida = (peca: Peca) => {
+    if (!modoExplodido || !posicoesExplodidas) return { x: peca.x, y: peca.y };
+    return posicoesExplodidas[peca.id] || { x: peca.x, y: peca.y };
   };
 
   const getCategoriaIcon = (categoria: string) => {
@@ -358,7 +369,7 @@ const MaquinaDetalhes = () => {
     }
   };
 
-  const pecasExibiveis = getPecasPorCamada();
+  const pecasExibiveis = pecasPorCamada;
 
   if (loading) {
     return (
@@ -497,12 +508,19 @@ const MaquinaDetalhes = () => {
         </Card>
 
         {/* Mapa de Peças */}
-        <Card className="overflow-hidden">
-          <CardHeader>
+        <Card className={`overflow-hidden ${isFullscreen ? "fixed inset-0 z-50 rounded-none" : ""}`}>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Diagrama de Componentes</CardTitle>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="h-[600px] bg-muted/20">
+          <CardContent className="p-0 relative">
+            <div className={`bg-slate-950 ${isFullscreen ? "h-[calc(100vh-80px)]" : "h-[600px]"}`}>
               <TransformWrapper
                 initialScale={1}
                 minScale={0.5}
@@ -511,32 +529,48 @@ const MaquinaDetalhes = () => {
               >
                 {({ zoomIn, zoomOut, resetTransform }) => (
                   <>
-                    <div className="absolute top-4 right-4 z-10 flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => zoomIn()}>
+                    <div className="absolute top-4 right-4 z-10 flex gap-2 bg-background/80 backdrop-blur-sm p-1 rounded-lg border border-border">
+                      <Button size="sm" variant="ghost" onClick={() => zoomIn()}>
                         <ZoomIn className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => zoomOut()}>
+                      <Button size="sm" variant="ghost" onClick={() => zoomOut()}>
                         <ZoomOut className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => resetTransform()}>
+                      <Button size="sm" variant="ghost" onClick={() => resetTransform()}>
                         <Maximize className="h-4 w-4" />
                       </Button>
                     </div>
-                    <TransformComponent wrapperStyle={{ width: "100%", height: "600px" }}>
+                    <TransformComponent wrapperStyle={{ width: "100%", height: isFullscreen ? "calc(100vh - 80px)" : "600px" }}>
                       <svg width="900" height="600" className="bg-background">
                         <defs>
-                          {/* Gradiente para as conexões */}
+                          {/* Gradiente moderno para as conexões */}
                           <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.3 }} />
+                            <stop offset="0%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.6 }} />
+                            <stop offset="50%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.8 }} />
                             <stop offset="100%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.6 }} />
                           </linearGradient>
                           
-                          {/* Sombra para os blocos */}
+                          {/* Gradiente para fundo do card */}
+                          <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style={{ stopColor: "hsl(var(--card))", stopOpacity: 1 }} />
+                            <stop offset="100%" style={{ stopColor: "hsl(var(--muted))", stopOpacity: 0.3 }} />
+                          </linearGradient>
+                          
+                          {/* Glow effect para conexões */}
+                          <filter id="glow">
+                            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                            <feMerge>
+                              <feMergeNode in="coloredBlur"/>
+                              <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                          </filter>
+                          
+                          {/* Sombra moderna e suave para os cards */}
                           <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-                            <feOffset dx="0" dy="2" result="offsetblur"/>
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+                            <feOffset dx="0" dy="4" result="offsetblur"/>
                             <feComponentTransfer>
-                              <feFuncA type="linear" slope="0.2"/>
+                              <feFuncA type="linear" slope="0.3"/>
                             </feComponentTransfer>
                             <feMerge> 
                               <feMergeNode/>
@@ -564,19 +598,33 @@ const MaquinaDetalhes = () => {
                             
                             return (
                               <g key={`${peca.id}-${conectadoId}`}>
+                                {/* Linha de base com glow */}
                                 <path
                                   d={`M ${posOrigem.x + 70} ${posOrigem.y} Q ${controlX} ${controlY} ${posDestino.x - 70} ${posDestino.y}`}
                                   stroke="url(#connectionGradient)"
-                                  strokeWidth="2"
+                                  strokeWidth="3"
                                   fill="none"
-                                  opacity={modoExplodido ? 0.3 : 0.6}
+                                  opacity={modoExplodido ? 0.4 : 0.7}
                                   strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  filter="url(#glow)"
                                 />
-                                {/* Seta no final da linha */}
+                                {/* Linha secundária mais fina para profundidade */}
+                                <path
+                                  d={`M ${posOrigem.x + 70} ${posOrigem.y} Q ${controlX} ${controlY} ${posDestino.x - 70} ${posDestino.y}`}
+                                  stroke="hsl(var(--primary))"
+                                  strokeWidth="1.5"
+                                  fill="none"
+                                  opacity={modoExplodido ? 0.6 : 0.9}
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                {/* Seta moderna no final */}
                                 <polygon
-                                  points={`${posDestino.x - 70},${posDestino.y} ${posDestino.x - 78},${posDestino.y - 4} ${posDestino.x - 78},${posDestino.y + 4}`}
+                                  points={`${posDestino.x - 70},${posDestino.y} ${posDestino.x - 80},${posDestino.y - 5} ${posDestino.x - 80},${posDestino.y + 5}`}
                                   fill="hsl(var(--primary))"
-                                  opacity={modoExplodido ? 0.3 : 0.6}
+                                  opacity={modoExplodido ? 0.6 : 0.9}
+                                  filter="url(#glow)"
                                 />
                               </g>
                             );
@@ -594,33 +642,69 @@ const MaquinaDetalhes = () => {
                               key={peca.id}
                               onClick={() => setSelectedPeca(peca)}
                               style={{ cursor: "pointer" }}
-                              className="transition-all hover:opacity-90"
+                              className="transition-all hover:opacity-95"
                               filter="url(#shadow)"
                             >
-                              {/* Bloco principal */}
+                              {/* Camada de fundo para profundidade */}
+                              <rect
+                                x={pos.x - 69}
+                                y={pos.y - 33}
+                                width="138"
+                                height="68"
+                                rx="16"
+                                ry="16"
+                                fill="hsl(var(--primary))"
+                                opacity="0.05"
+                              />
+                              
+                              {/* Bloco principal com gradiente */}
                               <rect
                                 x={pos.x - 70}
                                 y={pos.y - 35}
                                 width="140"
                                 height="70"
-                                rx="12"
-                                ry="12"
-                                fill="hsl(var(--card))"
+                                rx="16"
+                                ry="16"
+                                fill="url(#cardGradient)"
                                 stroke="hsl(var(--border))"
-                                strokeWidth="2"
+                                strokeWidth="1.5"
                                 className="transition-all"
                               />
                               
-                              {/* Borda colorida superior indicando status */}
+                              {/* Brilho sutil no topo */}
+                              <rect
+                                x={pos.x - 68}
+                                y={pos.y - 33}
+                                width="136"
+                                height="20"
+                                rx="16"
+                                ry="16"
+                                fill="hsl(var(--primary))"
+                                opacity="0.03"
+                              />
+                              
+                              {/* Barra de status moderna no topo */}
                               <rect
                                 x={pos.x - 70}
                                 y={pos.y - 35}
                                 width="140"
-                                height="8"
-                                rx="12"
-                                ry="12"
+                                height="6"
+                                rx="16"
+                                ry="16"
                                 fill={statusColor}
-                                opacity="0.8"
+                                opacity="0.9"
+                              />
+                              
+                              {/* Linha de destaque sutil na lateral */}
+                              <rect
+                                x={pos.x - 70}
+                                y={pos.y - 30}
+                                width="3"
+                                height="60"
+                                rx="2"
+                                ry="2"
+                                fill={statusColor}
+                                opacity="0.4"
                               />
 
                               {/* Ícone de categoria */}
