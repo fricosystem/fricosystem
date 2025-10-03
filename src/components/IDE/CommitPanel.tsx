@@ -550,43 +550,54 @@ const CommitPanel: React.FC = () => {
       let downloadedCount = 0;
 
       for (const file of files) {
-        if (!file.path || !file.sha) continue;
-        const { data: blob } = await sourceOctokit.rest.git.getBlob({
-          owner: sourceOwner,
-          repo: sourceRepo,
-          file_sha: file.sha,
-        });
-
-        const base64 = (blob.content || '').replace(/\n/g, '');
-        let decoded = '';
         try {
-          decoded = decodeURIComponent(escape(atob(base64)));
-        } catch {
-          decoded = atob(base64);
-        }
+          if (!file.path || !file.sha) continue;
+          
+          // Adicionar delay entre requisições para evitar problemas
+          if (downloadedCount > 0 && downloadedCount % 10 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          
+          const { data: blob } = await sourceOctokit.rest.git.getBlob({
+            owner: sourceOwner,
+            repo: sourceRepo,
+            file_sha: file.sha,
+          });
 
-        downloads.push({ path: file.path, content: decoded, size: decoded.length });
-        downloadedCount++;
-        
-        const downloadPercent = Math.round((downloadedCount / totalFiles) * 100);
-        setDownloadProgress(downloadPercent);
-        
-        const overallPercent = Math.round((downloadedCount / totalSteps) * 100);
-        setOverallProgress(overallPercent);
-        
-        // Calcular tempo restante
-        const elapsed = Date.now() - startTime;
-        const remaining = ((totalSteps - downloadedCount) / downloadedCount) * elapsed;
-        const minutes = Math.floor(remaining / 60000);
-        const seconds = Math.floor((remaining % 60000) / 1000);
-        setEstimatedTimeRemaining(minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
+          const base64 = (blob.content || '').replace(/\n/g, '');
+          let decoded = '';
+          try {
+            decoded = decodeURIComponent(escape(atob(base64)));
+          } catch {
+            decoded = atob(base64);
+          }
+
+          downloads.push({ path: file.path, content: decoded, size: decoded.length });
+          downloadedCount++;
+          
+          const downloadPercent = Math.round((downloadedCount / totalFiles) * 100);
+          setDownloadProgress(downloadPercent);
+          
+          const overallPercent = Math.round((downloadedCount / totalSteps) * 100);
+          setOverallProgress(overallPercent);
+          
+          // Calcular tempo restante
+          const elapsed = Date.now() - startTime;
+          const remaining = ((totalSteps - downloadedCount) / downloadedCount) * elapsed;
+          const minutes = Math.floor(remaining / 60000);
+          const seconds = Math.floor((remaining % 60000) / 1000);
+          setEstimatedTimeRemaining(minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
+        } catch (error) {
+          console.error(`Erro ao baixar arquivo ${file.path}:`, error);
+          // Continuar com próximo arquivo em caso de erro
+        }
       }
 
       // Exibir lista de arquivos no modal
       setDownloadedFiles(files.map((f: any) => ({ name: f.path.split('/').pop() || f.path, path: f.path })));
       setIsDownloading(false);
 
-      // 4) Upload para repositório destino - COM LOTE OTIMIZADO
+      // 4) Upload para repositório destino - COM UM ÚNICO COMMIT
       setIsUploading(true);
       setUploadProgress(0);
 
@@ -599,6 +610,11 @@ const CommitPanel: React.FC = () => {
       const destOctokit = new Octokit({ auth: currentConfig.token });
       
       try {
+        toast({
+          title: "Preparando upload",
+          description: "Criando commit único com todos os arquivos...",
+        });
+
         // Obter referência da branch de destino
         let baseSha = '';
         try {
@@ -609,9 +625,8 @@ const CommitPanel: React.FC = () => {
           });
           baseSha = refData.object.sha;
         } catch (error: any) {
-          // Se a branch não existe, criar novo repositório/branch
+          // Se a branch não existe, criar commit inicial
           if (error.status === 404) {
-            // Criar commit inicial se repositório está vazio
             const { data: newCommit } = await destOctokit.rest.repos.createOrUpdateFileContents({
               owner: currentConfig.owner,
               repo: currentConfig.repo,
@@ -625,99 +640,106 @@ const CommitPanel: React.FC = () => {
           }
         }
 
-        // 🔥 **SOLUÇÃO OTIMIZADA: Lotes menores e controle de tamanho**
-        const MAX_BATCH_SIZE = 10; // Reduzido drasticamente
-        const MAX_BATCH_SIZE_BYTES = 500000; // ~500KB por lote
+        toast({
+          title: "Criando blobs",
+          description: `Processando ${downloads.length} arquivos...`,
+        });
+
+        // Criar todos os blobs primeiro
+        const treeItems = [];
+        let processedFiles = 0;
         
-        // Primeiro, calcular quantos batches serão necessários
-        const batches: Array<Array<{ path: string; content: string; size: number }>> = [];
-        let currentBatchFiles: Array<{ path: string; content: string; size: number }> = [];
-        let currentBatchTotalSize = 0;
-
         for (const file of downloads) {
-          // Se adicionar este arquivo exceder o limite, finaliza o batch atual
-          if (currentBatchFiles.length > 0 && 
-              (currentBatchFiles.length >= MAX_BATCH_SIZE || 
-               currentBatchTotalSize + file.size > MAX_BATCH_SIZE_BYTES)) {
-            batches.push([...currentBatchFiles]);
-            currentBatchFiles = [];
-            currentBatchTotalSize = 0;
-          }
-          
-          currentBatchFiles.push(file);
-          currentBatchTotalSize += file.size;
-        }
-
-        // Adicionar o último batch se houver arquivos
-        if (currentBatchFiles.length > 0) {
-          batches.push([...currentBatchFiles]);
-        }
-
-        const totalBatches = batches.length;
-        let currentSha = baseSha;
-
-        // Processar cada batch
-        for (let i = 0; i < batches.length; i++) {
-          const batch = batches[i];
-          const batchNumber = i + 1;
-          
-          setUploadProgress(Math.round((i / batches.length) * 100));
-          
-          // Criar blobs primeiro para evitar problemas de tamanho
-          const blobPromises = batch.map(async (file) => {
+          try {
+            setUploadProgress(Math.round((processedFiles / downloads.length) * 50));
+            
             const { data: blob } = await destOctokit.rest.git.createBlob({
               owner: currentConfig.owner,
               repo: currentConfig.repo,
               content: btoa(unescape(encodeURIComponent(file.content))),
               encoding: 'base64'
             });
-            return {
+            
+            treeItems.push({
               path: file.path,
               mode: '100644' as const,
               type: 'blob' as const,
               sha: blob.sha,
-            };
-          });
-
-          const treeItems = await Promise.all(blobPromises);
-
-          // Aguardar entre batches para evitar rate limiting
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          const { data: newTree } = await destOctokit.rest.git.createTree({
-            owner: currentConfig.owner,
-            repo: currentConfig.repo,
-            tree: treeItems,
-            base_tree: currentSha,
-          });
-
-          // Criar commit para este batch
-          const isLastBatch = i === batches.length - 1;
-          
-          const { data: newCommit } = await destOctokit.rest.git.createCommit({
-            owner: currentConfig.owner,
-            repo: currentConfig.repo,
-            message: isLastBatch 
-              ? `Cópia completa de ${sourceOwner}/${sourceRepo} (${downloads.length} arquivos)`
-              : `Cópia de ${sourceOwner}/${sourceRepo} - Lote ${batchNumber}/${totalBatches}`,
-            tree: newTree.sha,
-            parents: currentSha ? [currentSha] : [],
-          });
-
-          currentSha = newCommit.sha;
-          
-          // Atualizar referência da branch
-          await destOctokit.rest.git.updateRef({
-            owner: currentConfig.owner,
-            repo: currentConfig.repo,
-            ref: 'heads/main',
-            sha: newCommit.sha,
-          });
-
-          // Atualizar progresso geral
-          const overallPercent = Math.round(((totalFiles + (i + 1) * batch.length) / totalSteps) * 100);
-          setOverallProgress(overallPercent);
+            });
+            
+            processedFiles++;
+            
+            // Pequeno delay a cada 10 arquivos para evitar rate limit
+            if (processedFiles % 10 === 0) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          } catch (error) {
+            console.error(`Erro ao criar blob para ${file.path}:`, error);
+            throw new Error(`Falha ao processar arquivo ${file.path}: ${error.message}`);
+          }
         }
+
+        setUploadProgress(60);
+        toast({
+          title: "Criando árvore Git",
+          description: "Montando estrutura de arquivos...",
+        });
+
+        // Criar uma única árvore com todos os arquivos
+        const { data: newTree } = await destOctokit.rest.git.createTree({
+          owner: currentConfig.owner,
+          repo: currentConfig.repo,
+          tree: treeItems,
+          base_tree: baseSha,
+        });
+
+        setUploadProgress(80);
+        toast({
+          title: "Criando commit",
+          description: "Finalizando transferência...",
+        });
+
+        // Criar mensagem do commit
+        const now = new Date();
+        const formatTime = (date: Date) => {
+          const day = date.getDate().toString().padStart(2, '0');
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const year = date.getFullYear();
+          const hours = date.getHours().toString().padStart(2, '0');
+          const minutes = date.getMinutes().toString().padStart(2, '0');
+          const seconds = date.getSeconds().toString().padStart(2, '0');
+          return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+        };
+
+        const finalCommitMessage = `Transferência completa de ${sourceOwner}/${sourceRepo} - ${formatTime(now)} - ${downloads[downloads.length - 1]?.path || ''} - ${formatTime(now)}`;
+
+        // Criar um único commit com toda a árvore
+        const { data: newCommit } = await destOctokit.rest.git.createCommit({
+          owner: currentConfig.owner,
+          repo: currentConfig.repo,
+          message: finalCommitMessage,
+          tree: newTree.sha,
+          parents: [baseSha],
+        });
+
+        setUploadProgress(95);
+
+        // Atualizar a referência da branch
+        await destOctokit.rest.git.updateRef({
+          owner: currentConfig.owner,
+          repo: currentConfig.repo,
+          ref: 'heads/main',
+          sha: newCommit.sha,
+        });
+
+        setUploadProgress(100);
+        setOverallProgress(100);
+        setProcessComplete(true);
+
+        toast({
+          title: "Transferência concluída!",
+          description: `${downloads.length} arquivos transferidos em um único commit`,
+        });
 
         setUploadProgress(100);
         setOverallProgress(100);
