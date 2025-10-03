@@ -131,9 +131,9 @@ const AppSidebar = () => {
       label: "Endereçamento",
       permission: "enderecamento"
     }, {
-      to: "/enderecamento",
+      to: "/maquinas",
       icon: WashingMachine,
-      label: "Máqunas",
+      label: "Máquinas",
       permission: "maquinas"
     }, {
       to: "/medida-de-lenha",
