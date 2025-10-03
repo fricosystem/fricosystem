@@ -50,7 +50,13 @@ export const StatsCard = ({
               </TooltipContent>}
           </Tooltip>
         </TooltipProvider>
-        {trend && trend.label}
+        {trend && (
+          <div className={`flex items-center gap-1 text-xs mt-1 ${trend.positive ? "text-green-600" : "text-red-600"}`}>
+            <span>{trend.positive ? '↑' : '↓'}</span>
+            <span>{Math.abs(trend.value)}%</span>
+            {trend.label && <span className="text-muted-foreground">({trend.label})</span>}
+          </div>
+        )}
         {description && description.trim() && <p className="text-xs text-muted-foreground pt-1">{description}</p>}
       </CardContent>
     </Card>;
