@@ -9,6 +9,7 @@ import { Shield, UserX, Code, Eye, Paintbrush } from "lucide-react";
 import { githubService } from '@/services/githubService';
 import { auth } from '@/firebase/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { useNavigate } from 'react-router-dom';
 import FileExplorer from '@/components/IDE/FileExplorer';
 import CodeEditor from '@/components/IDE/CodeEditor';
 import GitHubConfigComponent from '@/components/IDE/GitHubConfig';
@@ -20,6 +21,7 @@ import PreviewOverlay from '@/components/IDE/PreviewOverlay';
 import { useVisualEditor } from '@/hooks/useVisualEditor';
 
 const IDE: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [isConfigured, setIsConfigured] = useState(false);
   const [hasExistingConfig, setHasExistingConfig] = useState(false);
@@ -405,7 +407,10 @@ const IDE: React.FC = () => {
             {/* Modal de Edição Visual */}
             <VisualEditModal
               isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
+              onClose={() => {
+                setIsModalOpen(false);
+                navigate('/dashboard');
+              }}
               selectedElement={selectedElement}
               onApplyChanges={applyChanges}
             />
