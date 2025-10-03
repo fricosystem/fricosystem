@@ -48,16 +48,6 @@ const StatsCard = ({
           </Tooltip>
         </TooltipProvider>
         {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
-        {trend && (
-          <div className={cn(
-            "flex items-center gap-1 text-xs mt-1",
-            trend.positive ? "text-green-600" : "text-red-600"
-          )}>
-            <span>{trend.positive ? '↑' : '↓'}</span>
-            <span>{Math.abs(trend.value)}%</span>
-            {trend.label && <span className="text-muted-foreground">({trend.label})</span>}
-          </div>
-        )}
       </CardContent>
     </Card>;
 };
