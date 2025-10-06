@@ -198,7 +198,7 @@ const Maquinas = () => {
   }), [maquinas]);
 
   return (
-    <AppLayout title="Máquinas">
+    <AppLayout title="Gerenciador de Máquinas">
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
