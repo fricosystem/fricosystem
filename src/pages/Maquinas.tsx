@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Plus, Search, Camera, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Camera, Edit, Trash2, Check } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
@@ -12,11 +12,36 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import CameraModal from "@/components/CameraModal";
+
+interface Equipamento {
+  id: string;
+  patrimonio: string;
+  equipamento: string;
+  setor: string;
+  tag: string;
+}
 
 interface Maquina {
   id: string;
   nome: string;
+  patrimonio: string;
+  setor: string;
+  tag: string;
   imagemUrl: string;
   status: "Ativa" | "Inativa";
   descricao?: string;
@@ -27,14 +52,21 @@ interface Maquina {
 const Maquinas = () => {
   const [maquinas, setMaquinas] = useState<Maquina[]>([]);
   const [filteredMaquinas, setFilteredMaquinas] = useState<Maquina[]>([]);
+  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
+  const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todas");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [editingMaquina, setEditingMaquina] = useState<Maquina | null>(null);
+  const [equipamentoSelecionado, setEquipamentoSelecionado] = useState<string>("");
+  const [openPopover, setOpenPopover] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
+    patrimonio: "",
+    setor: "",
+    tag: "",
     imagemUrl: "",
     status: "Ativa" as "Ativa" | "Inativa",
     descricao: "",
@@ -69,6 +101,42 @@ const Maquinas = () => {
 
   useEffect(() => {
     fetchMaquinas();
+  }, []);
+
+  // Carregar equipamentos do Firebase
+  useEffect(() => {
+    const fetchEquipamentos = async () => {
+      try {
+        setLoadingEquipamentos(true);
+        const equipamentosRef = collection(db, "equipamentos");
+        const snapshot = await getDocs(equipamentosRef);
+        
+        const equipamentosData: Equipamento[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          equipamentosData.push({
+            id: doc.id,
+            patrimonio: data.patrimonio || "",
+            equipamento: data.equipamento || "",
+            setor: data.setor || "",
+            tag: data.tag || "",
+          });
+        });
+        
+        setEquipamentos(equipamentosData);
+      } catch (error) {
+        console.error("Erro ao buscar equipamentos:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar a lista de equipamentos.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingEquipamentos(false);
+      }
+    };
+
+    fetchEquipamentos();
   }, []);
 
   // Memoiza a filtragem para evitar recálculos desnecessários
@@ -144,20 +212,29 @@ const Maquinas = () => {
   const resetForm = () => {
     setFormData({
       nome: "",
+      patrimonio: "",
+      setor: "",
+      tag: "",
       imagemUrl: "",
       status: "Ativa",
       descricao: "",
     });
+    setEquipamentoSelecionado("");
+    setOpenPopover(false);
   };
 
   const handleEdit = useCallback((maquina: Maquina) => {
     setEditingMaquina(maquina);
     setFormData({
       nome: maquina.nome,
+      patrimonio: maquina.patrimonio,
+      setor: maquina.setor,
+      tag: maquina.tag,
       imagemUrl: maquina.imagemUrl,
       status: maquina.status,
       descricao: maquina.descricao || "",
     });
+    setEquipamentoSelecionado(maquina.nome);
     setIsModalOpen(true);
   }, []);
 
@@ -198,7 +275,7 @@ const Maquinas = () => {
   }), [maquinas]);
 
   return (
-    <AppLayout title="Gerenciador de Máquinas">
+    <AppLayout title="Máquinas">
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -365,13 +442,99 @@ const Maquinas = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome da Máquina *</Label>
+                <Label htmlFor="equipamento">Equipamento *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between",
+                        !equipamentoSelecionado && "text-muted-foreground"
+                      )}
+                      disabled={loadingEquipamentos}
+                    >
+                      {loadingEquipamentos
+                        ? "Carregando equipamentos..."
+                        : equipamentoSelecionado
+                          ? equipamentos.find(e => e.equipamento === equipamentoSelecionado)?.patrimonio + " - " + equipamentoSelecionado
+                          : "Selecione o equipamento"}
+                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Buscar equipamento..." className="h-9" />
+                      <CommandList className="max-h-[300px]">
+                        <CommandEmpty>Nenhum equipamento encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {equipamentos.map((equipamento) => (
+                            <CommandItem
+                              key={equipamento.id}
+                              value={`${equipamento.patrimonio} ${equipamento.equipamento} ${equipamento.setor} ${equipamento.tag}`}
+                              onSelect={() => {
+                                setEquipamentoSelecionado(equipamento.equipamento);
+                                setFormData(prev => ({
+                                  ...prev,
+                                  nome: equipamento.equipamento,
+                                  patrimonio: equipamento.patrimonio,
+                                  setor: equipamento.setor,
+                                  tag: equipamento.tag,
+                                }));
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  equipamentoSelecionado === equipamento.equipamento
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span>{equipamento.patrimonio} - {equipamento.equipamento}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  Setor: {equipamento.setor} | Tag: {equipamento.tag}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="patrimonio">Patrimônio</Label>
+                  <Input
+                    id="patrimonio"
+                    value={formData.patrimonio}
+                    readOnly
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tag">Tag</Label>
+                  <Input
+                    id="tag"
+                    value={formData.tag}
+                    readOnly
+                    className="bg-muted"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="setor">Setor</Label>
                 <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  placeholder="Ex: Torno CNC"
-                  required
+                  id="setor"
+                  value={formData.setor}
+                  readOnly
+                  className="bg-muted"
                 />
               </div>
 
