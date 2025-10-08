@@ -15,6 +15,15 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
+interface SubPeca {
+  id: string;
+  nome: string;
+  codigo: string;
+  status: "Normal" | "Atenção" | "Crítico";
+  emEstoque: number;
+  pecaPaiId: string;
+}
+
 interface Peca {
   id: string;
   nome: string;
@@ -34,6 +43,20 @@ interface Peca {
   estoqueMinimo: number;
   fornecedor: string;
   tempoCritico: number;
+  valorUnitario: number;
+  dataUltimaCompra: string;
+  subPecas: string[];
+  maquinaId: string;
+}
+
+interface MaquinaComponente {
+  id: string;
+  nome: string;
+  x: number;
+  y: number;
+  tipo: string;
+  status: "Normal" | "Atenção" | "Crítico";
+  totalPecas: number;
 }
 
 interface Maquina {
@@ -52,13 +75,43 @@ interface HistoricoManutencao {
   descricao: string;
 }
 
+const maquinasComponentes: MaquinaComponente[] = [
+  {
+    id: "maq1",
+    nome: "Sistema Principal",
+    x: 120,
+    y: 150,
+    tipo: "Mecânico-Elétrico",
+    status: "Normal",
+    totalPecas: 4,
+  },
+  {
+    id: "maq2",
+    nome: "Sistema Hidráulico",
+    x: 120,
+    y: 300,
+    tipo: "Hidráulico",
+    status: "Atenção",
+    totalPecas: 3,
+  },
+  {
+    id: "maq3",
+    nome: "Sistema de Transmissão",
+    x: 120,
+    y: 450,
+    tipo: "Mecânico",
+    status: "Crítico",
+    totalPecas: 2,
+  },
+];
+
 const pecasFicticias: Peca[] = [
   {
     id: "motor",
     nome: "Motor Principal",
-    x: 150,
+    x: 400,
     y: 100,
-    conectadoCom: ["eixo", "bomba"],
+    conectadoCom: [],
     descricao: "Motor elétrico trifásico de 50HP",
     codigo: "MOT-001",
     status: "Normal",
@@ -72,13 +125,17 @@ const pecasFicticias: Peca[] = [
     estoqueMinimo: 1,
     fornecedor: "MotorTech LTDA",
     tempoCritico: 240,
+    valorUnitario: 15000,
+    dataUltimaCompra: "2024-06-20",
+    subPecas: ["motor-bobina", "motor-rotor"],
+    maquinaId: "maq1",
   },
   {
     id: "eixo",
     nome: "Eixo de Transmissão",
-    x: 400,
+    x: 550,
     y: 100,
-    conectadoCom: ["motor", "engrenagem"],
+    conectadoCom: [],
     descricao: "Eixo de aço forjado com rolamentos de alta precisão",
     codigo: "EIX-002",
     status: "Normal",
@@ -92,13 +149,17 @@ const pecasFicticias: Peca[] = [
     estoqueMinimo: 1,
     fornecedor: "Mecânica Industrial",
     tempoCritico: 180,
+    valorUnitario: 4500,
+    dataUltimaCompra: "2024-08-10",
+    subPecas: ["eixo-rolamento-a", "eixo-rolamento-b"],
+    maquinaId: "maq1",
   },
   {
     id: "engrenagem",
     nome: "Conjunto de Engrenagens",
-    x: 650,
+    x: 700,
     y: 100,
-    conectadoCom: ["eixo", "redutor"],
+    conectadoCom: [],
     descricao: "Sistema de engrenagens helicoidais",
     codigo: "ENG-003",
     status: "Atenção",
@@ -112,13 +173,17 @@ const pecasFicticias: Peca[] = [
     estoqueMinimo: 1,
     fornecedor: "Engrenagens Premium",
     tempoCritico: 96,
+    valorUnitario: 8700,
+    dataUltimaCompra: "2024-03-15",
+    subPecas: ["eng-primaria", "eng-secundaria", "eng-terciaria"],
+    maquinaId: "maq1",
   },
   {
     id: "redutor",
     nome: "Redutor de Velocidade",
-    x: 650,
-    y: 250,
-    conectadoCom: ["engrenagem", "saida"],
+    x: 400,
+    y: 200,
+    conectadoCom: [],
     descricao: "Redutor planetário com relação 1:10",
     codigo: "RED-004",
     status: "Normal",
@@ -132,13 +197,17 @@ const pecasFicticias: Peca[] = [
     estoqueMinimo: 1,
     fornecedor: "Redutores S.A.",
     tempoCritico: 360,
+    valorUnitario: 12300,
+    dataUltimaCompra: "2024-05-22",
+    subPecas: ["red-engrenagem-planetaria"],
+    maquinaId: "maq1",
   },
   {
     id: "bomba",
     nome: "Bomba Hidráulica",
-    x: 150,
-    y: 250,
-    conectadoCom: ["motor", "valvula"],
+    x: 400,
+    y: 280,
+    conectadoCom: [],
     descricao: "Bomba centrífuga de alta vazão",
     codigo: "BOM-005",
     status: "Normal",
@@ -152,13 +221,17 @@ const pecasFicticias: Peca[] = [
     estoqueMinimo: 1,
     fornecedor: "Hidráulica Pro",
     tempoCritico: 120,
+    valorUnitario: 6800,
+    dataUltimaCompra: "2024-07-08",
+    subPecas: ["bomba-rotor", "bomba-vedacao"],
+    maquinaId: "maq2",
   },
   {
     id: "valvula",
     nome: "Válvula de Controle",
-    x: 400,
-    y: 250,
-    conectadoCom: ["bomba", "tanque"],
+    x: 550,
+    y: 280,
+    conectadoCom: [],
     descricao: "Válvula proporcional eletrônica",
     codigo: "VAL-006",
     status: "Crítico",
@@ -172,13 +245,17 @@ const pecasFicticias: Peca[] = [
     estoqueMinimo: 2,
     fornecedor: "Válvulas Tech",
     tempoCritico: 48,
+    valorUnitario: 3200,
+    dataUltimaCompra: "2024-02-18",
+    subPecas: ["valv-solenoide", "valv-corpo"],
+    maquinaId: "maq2",
   },
   {
     id: "tanque",
     nome: "Tanque Reservatório",
-    x: 400,
-    y: 400,
-    conectadoCom: ["valvula"],
+    x: 700,
+    y: 280,
+    conectadoCom: [],
     descricao: "Tanque de 200L em aço inox",
     codigo: "TAN-007",
     status: "Normal",
@@ -192,27 +269,94 @@ const pecasFicticias: Peca[] = [
     estoqueMinimo: 1,
     fornecedor: "Tanques Industriais",
     tempoCritico: 480,
+    valorUnitario: 5400,
+    dataUltimaCompra: "2024-04-25",
+    subPecas: [],
+    maquinaId: "maq2",
   },
   {
-    id: "saida",
-    nome: "Eixo de Saída",
-    x: 650,
-    y: 400,
-    conectadoCom: ["redutor"],
-    descricao: "Eixo principal de saída com acoplamento",
-    codigo: "SAI-008",
+    id: "acoplamento",
+    nome: "Acoplamento Flexível",
+    x: 400,
+    y: 440,
+    conectadoCom: [],
+    descricao: "Acoplamento de alto torque",
+    codigo: "ACP-009",
     status: "Normal",
     categoria: "Mecânica",
-    vidaUtil: 15000,
-    vidaUtilRestante: 13500,
-    ultimaManutencao: "2025-08-25",
-    proximaManutencao: "2026-01-25",
-    custoManutencao: 750,
+    vidaUtil: 18000,
+    vidaUtilRestante: 16500,
+    ultimaManutencao: "2025-08-01",
+    proximaManutencao: "2026-01-01",
+    custoManutencao: 650,
     emEstoque: 2,
     estoqueMinimo: 1,
     fornecedor: "Mecânica Industrial",
-    tempoCritico: 200,
+    tempoCritico: 220,
+    valorUnitario: 2800,
+    dataUltimaCompra: "2024-06-12",
+    subPecas: ["acp-elemento-elastico"],
+    maquinaId: "maq3",
   },
+  {
+    id: "correia",
+    nome: "Correia Transportadora",
+    x: 550,
+    y: 440,
+    conectadoCom: [],
+    descricao: "Correia de alta resistência",
+    codigo: "COR-010",
+    status: "Atenção",
+    categoria: "Mecânica",
+    vidaUtil: 6000,
+    vidaUtilRestante: 1500,
+    ultimaManutencao: "2025-07-05",
+    proximaManutencao: "2025-10-25",
+    custoManutencao: 450,
+    emEstoque: 1,
+    estoqueMinimo: 2,
+    fornecedor: "Correias Express",
+    tempoCritico: 85,
+    valorUnitario: 1900,
+    dataUltimaCompra: "2024-09-03",
+    subPecas: [],
+    maquinaId: "maq3",
+  },
+];
+
+const subPecasFicticias: SubPeca[] = [
+  // Sub-peças do Motor
+  { id: "motor-bobina", nome: "Bobina Principal", codigo: "MOT-001-A", status: "Normal", emEstoque: 2, pecaPaiId: "motor" },
+  { id: "motor-rotor", nome: "Rotor", codigo: "MOT-001-B", status: "Normal", emEstoque: 1, pecaPaiId: "motor" },
+  { id: "motor-estator", nome: "Estator", codigo: "MOT-001-C", status: "Atenção", emEstoque: 1, pecaPaiId: "motor" },
+  
+  // Sub-peças do Eixo
+  { id: "eixo-rolamento-a", nome: "Rolamento Frontal", codigo: "EIX-002-A", status: "Normal", emEstoque: 3, pecaPaiId: "eixo" },
+  { id: "eixo-rolamento-b", nome: "Rolamento Traseiro", codigo: "EIX-002-B", status: "Normal", emEstoque: 3, pecaPaiId: "eixo" },
+  { id: "eixo-retentor", nome: "Retentor", codigo: "EIX-002-C", status: "Normal", emEstoque: 5, pecaPaiId: "eixo" },
+  
+  // Sub-peças das Engrenagens
+  { id: "eng-primaria", nome: "Engrenagem Primária", codigo: "ENG-003-A", status: "Atenção", emEstoque: 1, pecaPaiId: "engrenagem" },
+  { id: "eng-secundaria", nome: "Engrenagem Secundária", codigo: "ENG-003-B", status: "Normal", emEstoque: 2, pecaPaiId: "engrenagem" },
+  { id: "eng-terciaria", nome: "Engrenagem Terciária", codigo: "ENG-003-C", status: "Crítico", emEstoque: 0, pecaPaiId: "engrenagem" },
+  
+  // Sub-peças do Redutor
+  { id: "red-engrenagem-planetaria", nome: "Engrenagem Planetária", codigo: "RED-004-A", status: "Normal", emEstoque: 2, pecaPaiId: "redutor" },
+  { id: "red-coroa", nome: "Coroa Dentada", codigo: "RED-004-B", status: "Normal", emEstoque: 1, pecaPaiId: "redutor" },
+  
+  // Sub-peças da Bomba
+  { id: "bomba-rotor", nome: "Rotor da Bomba", codigo: "BOM-005-A", status: "Normal", emEstoque: 2, pecaPaiId: "bomba" },
+  { id: "bomba-vedacao", nome: "Vedação Mecânica", codigo: "BOM-005-B", status: "Atenção", emEstoque: 1, pecaPaiId: "bomba" },
+  { id: "bomba-impulsor", nome: "Impulsor", codigo: "BOM-005-C", status: "Normal", emEstoque: 2, pecaPaiId: "bomba" },
+  
+  // Sub-peças da Válvula
+  { id: "valv-solenoide", nome: "Solenoide", codigo: "VAL-006-A", status: "Crítico", emEstoque: 0, pecaPaiId: "valvula" },
+  { id: "valv-corpo", nome: "Corpo da Válvula", codigo: "VAL-006-B", status: "Normal", emEstoque: 1, pecaPaiId: "valvula" },
+  { id: "valv-carretel", nome: "Carretel", codigo: "VAL-006-C", status: "Atenção", emEstoque: 1, pecaPaiId: "valvula" },
+  
+  // Sub-peças do Acoplamento
+  { id: "acp-elemento-elastico", nome: "Elemento Elástico", codigo: "ACP-009-A", status: "Normal", emEstoque: 3, pecaPaiId: "acoplamento" },
+  { id: "acp-flanges", nome: "Flanges", codigo: "ACP-009-B", status: "Normal", emEstoque: 2, pecaPaiId: "acoplamento" },
 ];
 
 const historicoManutencoes: HistoricoManutencao[] = [
@@ -248,6 +392,10 @@ const MaquinaDetalhes = () => {
   const [maquina, setMaquina] = useState<Maquina | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeca, setSelectedPeca] = useState<Peca | null>(null);
+  const [selectedSubPeca, setSelectedSubPeca] = useState<SubPeca | null>(null);
+  const [selectedSistema, setSelectedSistema] = useState<MaquinaComponente | null>(null);
+  const [selectedMaquina, setSelectedMaquina] = useState<string | null>(null);
+  const [expandedPecaId, setExpandedPecaId] = useState<string | null>(null);
   const [modoExplodido, setModoExplodido] = useState(false);
   const [camadasVisiveis, setCamadasVisiveis] = useState<string[]>(["Mecânica", "Elétrica", "Hidráulica"]);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -315,28 +463,46 @@ const MaquinaDetalhes = () => {
     );
   };
 
-  // Memoiza a filtragem de peças por camada
+  // Memoiza a filtragem de peças por camada e máquina
   const pecasPorCamada = useMemo(() => {
-    return pecasFicticias.filter(peca => camadasVisiveis.includes(peca.categoria));
-  }, [camadasVisiveis]);
+    if (!selectedMaquina) return [];
+    return pecasFicticias.filter(peca => 
+      camadasVisiveis.includes(peca.categoria) && peca.maquinaId === selectedMaquina
+    );
+  }, [camadasVisiveis, selectedMaquina]);
 
-  // Memoiza as posições explodidas
+  // Memoiza as posições explodidas ou em coluna vertical
   const posicoesExplodidas = useMemo(() => {
-    if (!modoExplodido) return null;
+    if (!selectedMaquina && !modoExplodido) return null;
     
-    const centerX = 400;
-    const centerY = 250;
+    if (modoExplodido) {
+      const centerX = 550;
+      const centerY = 300;
+      
+      return pecasPorCamada.reduce((acc, peca) => {
+        const offsetX = (peca.x - centerX) * 0.3;
+        const offsetY = (peca.y - centerY) * 0.3;
+        acc[peca.id] = {
+          x: peca.x + offsetX,
+          y: peca.y + offsetY
+        };
+        return acc;
+      }, {} as Record<string, { x: number; y: number }>);
+    }
     
-    return pecasPorCamada.reduce((acc, peca) => {
-      const offsetX = (peca.x - centerX) * 0.8;
-      const offsetY = (peca.y - centerY) * 0.8;
+    // Posições em coluna vertical no lado direito
+    const startX = 500;
+    const startY = 80;
+    const spacing = 100;
+    
+    return pecasPorCamada.reduce((acc, peca, index) => {
       acc[peca.id] = {
-        x: peca.x + offsetX,
-        y: peca.y + offsetY
+        x: startX,
+        y: startY + (index * spacing)
       };
       return acc;
     }, {} as Record<string, { x: number; y: number }>);
-  }, [modoExplodido, pecasPorCamada]);
+  }, [modoExplodido, pecasPorCamada, selectedMaquina]);
 
   const getPosicaoExplodida = (peca: Peca) => {
     if (!modoExplodido || !posicoesExplodidas) return { x: peca.x, y: peca.y };
@@ -370,6 +536,44 @@ const MaquinaDetalhes = () => {
   };
 
   const pecasExibiveis = pecasPorCamada;
+  
+  const handleMaquinaClick = (maquinaId: string) => {
+    setSelectedMaquina(maquinaId);
+  };
+
+  const handleSistemaInfo = (sistema: MaquinaComponente, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedSistema(sistema);
+    setSelectedPeca(null);
+    setSelectedSubPeca(null);
+  };
+  
+  const handleVoltar = () => {
+    setSelectedMaquina(null);
+    setExpandedPecaId(null);
+  };
+  
+  const handlePecaClick = (peca: Peca) => {
+    if (expandedPecaId === peca.id) {
+      setExpandedPecaId(null);
+    } else {
+      setExpandedPecaId(peca.id);
+    }
+  };
+
+  const handlePecaInfo = (peca: Peca, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedPeca(peca);
+    setSelectedSubPeca(null);
+    setSelectedSistema(null);
+  };
+
+  const handleSubPecaInfo = (subPeca: SubPeca, peca: Peca, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedSubPeca(subPeca);
+    setSelectedPeca(peca);
+    setSelectedSistema(null);
+  };
 
   if (loading) {
     return (
@@ -405,6 +609,554 @@ const MaquinaDetalhes = () => {
             {maquina.status}
           </Badge>
         </div>
+
+        {/* Mapa de Peças */}
+        <Card className={`overflow-hidden ${isFullscreen ? "fixed inset-0 z-50 rounded-none" : ""}`}>
+          <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <CardTitle>Diagrama de Componentes</CardTitle>
+              
+              {selectedMaquina && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleVoltar}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Voltar
+                  </Button>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={modoExplodido ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setModoExplodido(!modoExplodido)}
+                    >
+                      <BoxSelect className="h-4 w-4 mr-2" />
+                      Modo Explodido
+                    </Button>
+                  </div>
+                  
+                  <Separator orientation="vertical" className="h-6" />
+                  
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Camadas:</span>
+                    <Button
+                      variant={camadasVisiveis.includes("Mecânica") ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleCamada("Mecânica")}
+                    >
+                      Mecânica
+                    </Button>
+                    <Button
+                      variant={camadasVisiveis.includes("Elétrica") ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleCamada("Elétrica")}
+                    >
+                      Elétrica
+                    </Button>
+                    <Button
+                      variant={camadasVisiveis.includes("Hidráulica") ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleCamada("Hidráulica")}
+                    >
+                      Hidráulica
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0 relative">
+            <div className={`bg-slate-950 ${isFullscreen ? "h-[calc(100vh-80px)]" : "h-[600px]"}`}>
+              <TransformWrapper
+                initialScale={1}
+                minScale={0.5}
+                maxScale={3}
+                centerOnInit
+              >
+                {({ zoomIn, zoomOut, resetTransform }) => (
+                  <>
+                    <div className="absolute top-4 right-4 z-10 flex gap-2 bg-background/80 backdrop-blur-sm p-1 rounded-lg border border-border">
+                      <Button size="sm" variant="ghost" onClick={() => zoomIn()}>
+                        <ZoomIn className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => zoomOut()}>
+                        <ZoomOut className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => resetTransform()}>
+                        <Maximize className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <TransformComponent wrapperStyle={{ width: "100%", height: isFullscreen ? "calc(100vh - 80px)" : "600px" }}>
+                      <svg width="900" height="600" className="bg-background">
+                        <defs>
+                          {/* Sombra suave para os cards */}
+                          <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                            <feOffset dx="0" dy="2" result="offsetblur"/>
+                            <feComponentTransfer>
+                              <feFuncA type="linear" slope="0.15"/>
+                            </feComponentTransfer>
+                            <feMerge> 
+                              <feMergeNode/>
+                              <feMergeNode in="SourceGraphic"/> 
+                            </feMerge>
+                          </filter>
+                        </defs>
+
+                        {/* Renderizar Máquinas no lado esquerdo sempre */}
+                        {maquinasComponentes.map((maquina) => {
+                          const statusColor = maquina.status === "Crítico" ? "#ef4444" : 
+                                            maquina.status === "Atenção" ? "#f59e0b" : "#10b981";
+                          const isSelected = selectedMaquina === maquina.id;
+                          
+                          return (
+                            <g
+                              key={maquina.id}
+                              style={{ cursor: "pointer" }}
+                              className="transition-all hover:opacity-90"
+                              filter="url(#cardShadow)"
+                            >
+                              {/* Card principal */}
+                              <rect
+                                x={maquina.x - 85}
+                                y={maquina.y - 50}
+                                width="170"
+                                height="100"
+                                rx="8"
+                                ry="8"
+                                fill="hsl(var(--card))"
+                                stroke={isSelected ? "hsl(var(--primary))" : "hsl(var(--border))"}
+                                strokeWidth={isSelected ? "2" : "1"}
+                                className="transition-all"
+                                onClick={() => handleMaquinaClick(maquina.id)}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  handleSistemaInfo(maquina, e as any);
+                                }}
+                              />
+                              
+                              {/* Barra de status no topo */}
+                              <rect
+                                x={maquina.x - 85}
+                                y={maquina.y - 50}
+                                width="170"
+                                height="4"
+                                rx="8"
+                                ry="8"
+                                fill={statusColor}
+                              />
+
+                              {/* Nome da máquina */}
+                              <text
+                                x={maquina.x}
+                                y={maquina.y - 15}
+                                textAnchor="middle"
+                                className="text-sm font-bold fill-foreground"
+                                style={{ pointerEvents: "none" }}
+                              >
+                                {maquina.nome}
+                              </text>
+
+                              {/* Tipo */}
+                              <text
+                                x={maquina.x}
+                                y={maquina.y + 5}
+                                textAnchor="middle"
+                                className="text-xs fill-muted-foreground"
+                                style={{ pointerEvents: "none" }}
+                              >
+                                {maquina.tipo}
+                              </text>
+
+                              {/* Total de peças */}
+                              <text
+                                x={maquina.x}
+                                y={maquina.y + 25}
+                                textAnchor="middle"
+                                className="text-xs fill-muted-foreground"
+                                style={{ pointerEvents: "none" }}
+                              >
+                                {maquina.totalPecas} peças
+                              </text>
+
+                              {/* Ícone de status no canto superior direito */}
+                              <g transform={`translate(${maquina.x + 70}, ${maquina.y - 35})`}>
+                                <circle
+                                  r="10"
+                                  fill={statusColor}
+                                />
+                                <text
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                  fontSize="10"
+                                  fill="white"
+                                  style={{ pointerEvents: "none" }}
+                                >
+                                  {maquina.status === "Crítico" ? "!" : maquina.status === "Atenção" ? "!" : "✓"}
+                                </text>
+                              </g>
+                            </g>
+                          );
+                        })}
+
+                        {/* Renderizar peças no lado direito quando uma máquina for selecionada */}
+                        {selectedMaquina && (
+                          <>
+                            {/* Linhas de conexão da máquina selecionada para cada peça */}
+                            {pecasExibiveis.map((peca, index) => {
+                              const maquinaSelecionada = maquinasComponentes.find(m => m.id === selectedMaquina);
+                              const centerX = maquinaSelecionada?.x || 120;
+                              const centerY = maquinaSelecionada?.y || 300;
+                              
+                              const startX = 400;
+                              const startY = 80;
+                              const spacing = 100;
+                              const pecaX = startX;
+                              const pecaY = startY + (index * spacing);
+                              
+                              // Ponto de saída do card da máquina (lado direito)
+                              const startPointX = centerX + 85;
+                              const startPointY = centerY;
+                              
+                              // Ponto de entrada do card da peça (lado esquerdo)
+                              const endPointX = pecaX - 70;
+                              const endPointY = pecaY;
+                              
+                              // Criar curva bezier suave
+                              const controlX1 = startPointX + 80;
+                              const controlX2 = endPointX - 80;
+                              
+                              return (
+                                <g key={`conn-${peca.id}`}>
+                                  {/* Linha de conexão */}
+                                  <path
+                                    d={`M ${startPointX} ${startPointY} C ${controlX1} ${startPointY}, ${controlX2} ${endPointY}, ${endPointX} ${endPointY}`}
+                                    stroke="hsl(var(--primary))"
+                                    strokeWidth="2"
+                                    fill="none"
+                                    opacity={0.5}
+                                    strokeLinecap="round"
+                                  />
+                                  {/* Seta apontando para a peça */}
+                                  <polygon
+                                    points={`${endPointX},${endPointY} ${endPointX - 6},${endPointY - 4} ${endPointX - 6},${endPointY + 4}`}
+                                    fill="hsl(var(--primary))"
+                                    opacity={0.7}
+                                  />
+                                </g>
+                              );
+                            })}
+                            
+                            {/* Linhas de conexão para subpeças se uma peça estiver expandida */}
+                            {expandedPecaId && subPecasFicticias
+                              .filter(sp => sp.pecaPaiId === expandedPecaId)
+                              .map((subPeca, subIndex) => {
+                                const pecaIndex = pecasExibiveis.findIndex(p => p.id === expandedPecaId);
+                                const startX = 400;
+                                const startY = 80;
+                                const spacing = 100;
+                                const pecaX = startX;
+                                const pecaY = startY + (pecaIndex * spacing);
+                                
+                                const subStartX = 650;
+                                const subSpacing = 70;
+                                const subPecaX = subStartX;
+                                const subPecaY = pecaY - 30 + (subIndex * subSpacing);
+                                
+                                // Ponto de saída da peça (lado direito)
+                                const startPointX = pecaX + 70;
+                                const startPointY = pecaY;
+                                
+                                // Ponto de entrada da subpeça (lado esquerdo)
+                                const endPointX = subPecaX - 60;
+                                const endPointY = subPecaY;
+                                
+                                return (
+                                  <g key={`subconn-${subPeca.id}`}>
+                                    <line
+                                      x1={startPointX}
+                                      y1={startPointY}
+                                      x2={endPointX}
+                                      y2={endPointY}
+                                      stroke="hsl(var(--primary))"
+                                      strokeWidth="1.5"
+                                      opacity={0.4}
+                                      strokeDasharray="4,4"
+                                    />
+                                    {/* Seta apontando para a subpeça */}
+                                    <polygon
+                                      points={`${endPointX},${endPointY} ${endPointX - 5},${endPointY - 3} ${endPointX - 5},${endPointY + 3}`}
+                                      fill="hsl(var(--primary))"
+                                      opacity={0.6}
+                                    />
+                                  </g>
+                                );
+                              })}
+
+                            {/* Blocos de peças em coluna vertical */}
+                            {pecasExibiveis.map((peca, index) => {
+                              const startX = 400;
+                              const startY = 80;
+                              const spacing = 100;
+                              const pecaX = startX;
+                              const pecaY = startY + (index * spacing);
+                              
+                              const statusColor = peca.status === "Crítico" ? "#ef4444" : 
+                                                peca.status === "Atenção" ? "#f59e0b" : "#10b981";
+                              const isExpanded = expandedPecaId === peca.id;
+                              
+                              return (
+                                <g key={peca.id}>
+                                  <g
+                                    style={{ cursor: "pointer" }}
+                                    className="transition-all hover:opacity-90"
+                                    filter="url(#cardShadow)"
+                                  >
+                                    {/* Card principal */}
+                                    <rect
+                                      x={pecaX - 70}
+                                      y={pecaY - 35}
+                                      width="140"
+                                      height="70"
+                                      rx="8"
+                                      ry="8"
+                                      fill="hsl(var(--card))"
+                                      stroke={isExpanded ? "hsl(var(--primary))" : "hsl(var(--border))"}
+                                      strokeWidth={isExpanded ? "2" : "1"}
+                                      className="transition-all"
+                                      onClick={() => handlePecaClick(peca)}
+                                      onContextMenu={(e) => handlePecaInfo(peca, e as any)}
+                                    />
+                                    
+                                    {/* Barra de status no topo */}
+                                    <rect
+                                      x={pecaX - 70}
+                                      y={pecaY - 35}
+                                      width="140"
+                                      height="4"
+                                      rx="8"
+                                      ry="8"
+                                      fill={statusColor}
+                                    />
+
+                                    {/* Ícone de categoria */}
+                                    <text
+                                      x={pecaX - 55}
+                                      y={pecaY - 8}
+                                      fontSize="18"
+                                      style={{ pointerEvents: "none" }}
+                                    >
+                                      {getCategoriaIcon(peca.categoria)}
+                                    </text>
+
+                                    {/* Código da peça */}
+                                    <text
+                                      x={pecaX - 30}
+                                      y={pecaY - 12}
+                                      textAnchor="start"
+                                      className="text-xs font-semibold fill-foreground"
+                                      style={{ pointerEvents: "none" }}
+                                    >
+                                      {peca.codigo}
+                                    </text>
+
+                                    {/* Nome da peça */}
+                                    <text
+                                      x={pecaX}
+                                      y={pecaY + 6}
+                                      textAnchor="middle"
+                                      className="text-[10px] fill-muted-foreground"
+                                      style={{ pointerEvents: "none" }}
+                                    >
+                                      {peca.nome.length > 20 ? peca.nome.substring(0, 18) + "..." : peca.nome}
+                                    </text>
+
+                                    {/* Ícone de status no canto superior direito */}
+                                    <g transform={`translate(${pecaX + 55}, ${pecaY - 25})`}>
+                                      <circle
+                                        r="8"
+                                        fill={statusColor}
+                                      />
+                                      <text
+                                        textAnchor="middle"
+                                        dominantBaseline="middle"
+                                        fontSize="9"
+                                        fill="white"
+                                        fontWeight="bold"
+                                        style={{ pointerEvents: "none" }}
+                                      >
+                                        {peca.status === "Crítico" || peca.status === "Atenção" ? "!" : "✓"}
+                                      </text>
+                                    </g>
+
+                                    {/* Indicador de estoque baixo */}
+                                    {peca.emEstoque <= peca.estoqueMinimo && (
+                                      <g transform={`translate(${pecaX + 55}, ${pecaY - 10})`}>
+                                        <circle
+                                          r="7"
+                                          fill="#f59e0b"
+                                        />
+                                        <text
+                                          textAnchor="middle"
+                                          dominantBaseline="middle"
+                                          fontSize="10"
+                                          fill="white"
+                                          fontWeight="bold"
+                                          style={{ pointerEvents: "none" }}
+                                        >
+                                          !
+                                        </text>
+                                      </g>
+                                    )}
+
+                                    {/* Barra de vida útil */}
+                                    <g transform={`translate(${pecaX - 60}, ${pecaY + 18})`}>
+                                      <rect
+                                        width="120"
+                                        height="3"
+                                        rx="1.5"
+                                        fill="hsl(var(--muted))"
+                                      />
+                                      <rect
+                                        width={120 * (peca.vidaUtilRestante / peca.vidaUtil)}
+                                        height="3"
+                                        rx="1.5"
+                                        fill={peca.vidaUtilRestante / peca.vidaUtil > 0.5 ? "#10b981" : 
+                                             peca.vidaUtilRestante / peca.vidaUtil > 0.3 ? "#f59e0b" : "#ef4444"}
+                                      />
+                                    </g>
+                                    
+                                    {/* Indicador de subpeças disponíveis */}
+                                    {peca.subPecas.length > 0 && (
+                                      <g transform={`translate(${pecaX - 58}, ${pecaY - 25})`}>
+                                        <circle
+                                          r="7"
+                                          fill="hsl(var(--primary))"
+                                        />
+                                        <text
+                                          textAnchor="middle"
+                                          dominantBaseline="middle"
+                                          fontSize="10"
+                                          fill="white"
+                                          fontWeight="bold"
+                                          style={{ pointerEvents: "none" }}
+                                        >
+                                          {isExpanded ? "−" : "+"}
+                                        </text>
+                                      </g>
+                                    )}
+                                  </g>
+                                  
+                                  {/* Renderizar subpeças se esta peça estiver expandida */}
+                                  {isExpanded && subPecasFicticias
+                                    .filter(sp => sp.pecaPaiId === peca.id)
+                                    .map((subPeca, subIndex) => {
+                                      const subStartX = 650;
+                                      const subSpacing = 70;
+                                      const subPecaX = subStartX;
+                                      const subPecaY = pecaY - 30 + (subIndex * subSpacing);
+                                      const subStatusColor = subPeca.status === "Crítico" ? "#ef4444" : 
+                                                           subPeca.status === "Atenção" ? "#f59e0b" : "#10b981";
+                                      
+                                      return (
+                                        <g
+                                          key={subPeca.id}
+                                          style={{ cursor: "pointer" }}
+                                          className="transition-all hover:opacity-90"
+                                          filter="url(#cardShadow)"
+                                        >
+                                          {/* Card da subpeça */}
+                                          <rect
+                                            x={subPecaX - 60}
+                                            y={subPecaY - 25}
+                                            width="120"
+                                            height="50"
+                                            rx="6"
+                                            ry="6"
+                                            fill="hsl(var(--card))"
+                                            stroke="hsl(var(--border))"
+                                            strokeWidth="1"
+                                            onClick={(e) => handleSubPecaInfo(subPeca, peca, e as any)}
+                                          />
+                                          
+                                          {/* Barra de status */}
+                                          <rect
+                                            x={subPecaX - 60}
+                                            y={subPecaY - 25}
+                                            width="120"
+                                            height="3"
+                                            rx="6"
+                                            ry="6"
+                                            fill={subStatusColor}
+                                          />
+                                          
+                                          {/* Código */}
+                                          <text
+                                            x={subPecaX}
+                                            y={subPecaY - 8}
+                                            textAnchor="middle"
+                                            className="text-[9px] font-bold fill-foreground"
+                                            style={{ pointerEvents: "none" }}
+                                          >
+                                            {subPeca.codigo}
+                                          </text>
+                                          
+                                          {/* Nome */}
+                                          <text
+                                            x={subPecaX}
+                                            y={subPecaY + 5}
+                                            textAnchor="middle"
+                                            className="text-[8px] fill-muted-foreground"
+                                            style={{ pointerEvents: "none" }}
+                                          >
+                                            {subPeca.nome.length > 18 ? subPeca.nome.substring(0, 16) + "..." : subPeca.nome}
+                                          </text>
+                                          
+                                          {/* Ícone de status */}
+                                          <g transform={`translate(${subPecaX + 48}, ${subPecaY - 18})`}>
+                                            <circle
+                                              r="6"
+                                              fill={subStatusColor}
+                                            />
+                                            <text
+                                              textAnchor="middle"
+                                              dominantBaseline="middle"
+                                              fontSize="8"
+                                              fill="white"
+                                              fontWeight="bold"
+                                              style={{ pointerEvents: "none" }}
+                                            >
+                                              {subPeca.emEstoque === 0 ? "!" : subPeca.emEstoque}
+                                            </text>
+                                          </g>
+                                        </g>
+                                      );
+                                    })}
+                                </g>
+                              );
+                            })}
+                          </>
+                        )}
+                      </svg>
+                    </TransformComponent>
+                  </>
+                )}
+              </TransformWrapper>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Indicadores de Saúde */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -461,351 +1213,6 @@ const MaquinaDetalhes = () => {
           </Card>
         </div>
 
-        {/* Controles e Filtros */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={modoExplodido ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setModoExplodido(!modoExplodido)}
-                >
-                  <BoxSelect className="h-4 w-4 mr-2" />
-                  Modo Explodido
-                </Button>
-              </div>
-              
-              <Separator orientation="vertical" className="h-6" />
-              
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Camadas:</span>
-                <Button
-                  variant={camadasVisiveis.includes("Mecânica") ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleCamada("Mecânica")}
-                >
-                  Mecânica
-                </Button>
-                <Button
-                  variant={camadasVisiveis.includes("Elétrica") ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleCamada("Elétrica")}
-                >
-                  Elétrica
-                </Button>
-                <Button
-                  variant={camadasVisiveis.includes("Hidráulica") ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleCamada("Hidráulica")}
-                >
-                  Hidráulica
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Mapa de Peças */}
-        <Card className={`overflow-hidden ${isFullscreen ? "fixed inset-0 z-50 rounded-none" : ""}`}>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Diagrama de Componentes</CardTitle>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsFullscreen(!isFullscreen)}
-            >
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0 relative">
-            <div className={`bg-slate-950 ${isFullscreen ? "h-[calc(100vh-80px)]" : "h-[600px]"}`}>
-              <TransformWrapper
-                initialScale={1}
-                minScale={0.5}
-                maxScale={3}
-                centerOnInit
-              >
-                {({ zoomIn, zoomOut, resetTransform }) => (
-                  <>
-                    <div className="absolute top-4 right-4 z-10 flex gap-2 bg-background/80 backdrop-blur-sm p-1 rounded-lg border border-border">
-                      <Button size="sm" variant="ghost" onClick={() => zoomIn()}>
-                        <ZoomIn className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => zoomOut()}>
-                        <ZoomOut className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => resetTransform()}>
-                        <Maximize className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <TransformComponent wrapperStyle={{ width: "100%", height: isFullscreen ? "calc(100vh - 80px)" : "600px" }}>
-                      <svg width="900" height="600" className="bg-background">
-                        <defs>
-                          {/* Gradiente moderno para as conexões */}
-                          <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.6 }} />
-                            <stop offset="50%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.8 }} />
-                            <stop offset="100%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.6 }} />
-                          </linearGradient>
-                          
-                          {/* Gradiente para fundo do card */}
-                          <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" style={{ stopColor: "hsl(var(--card))", stopOpacity: 1 }} />
-                            <stop offset="100%" style={{ stopColor: "hsl(var(--muted))", stopOpacity: 0.3 }} />
-                          </linearGradient>
-                          
-                          {/* Glow effect para conexões */}
-                          <filter id="glow">
-                            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                            <feMerge>
-                              <feMergeNode in="coloredBlur"/>
-                              <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                          </filter>
-                          
-                          {/* Sombra moderna e suave para os cards */}
-                          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
-                            <feOffset dx="0" dy="4" result="offsetblur"/>
-                            <feComponentTransfer>
-                              <feFuncA type="linear" slope="0.3"/>
-                            </feComponentTransfer>
-                            <feMerge> 
-                              <feMergeNode/>
-                              <feMergeNode in="SourceGraphic"/> 
-                            </feMerge>
-                          </filter>
-                        </defs>
-
-                        {/* Linhas de conexão com curvas suaves */}
-                        {pecasExibiveis.map((peca) =>
-                          peca.conectadoCom.map((conectadoId) => {
-                            const pecaConectada = pecasFicticias.find(
-                              (p) => p.id === conectadoId
-                            );
-                            if (!pecaConectada || !camadasVisiveis.includes(pecaConectada.categoria)) return null;
-                            
-                            const posOrigem = getPosicaoExplodida(peca);
-                            const posDestino = getPosicaoExplodida(pecaConectada);
-                            
-                            // Criar path curvo entre os blocos
-                            const midX = (posOrigem.x + posDestino.x) / 2;
-                            const midY = (posOrigem.y + posDestino.y) / 2;
-                            const controlX = midX;
-                            const controlY = midY + (posDestino.y > posOrigem.y ? -30 : 30);
-                            
-                            return (
-                              <g key={`${peca.id}-${conectadoId}`}>
-                                {/* Linha de base com glow */}
-                                <path
-                                  d={`M ${posOrigem.x + 70} ${posOrigem.y} Q ${controlX} ${controlY} ${posDestino.x - 70} ${posDestino.y}`}
-                                  stroke="url(#connectionGradient)"
-                                  strokeWidth="3"
-                                  fill="none"
-                                  opacity={modoExplodido ? 0.4 : 0.7}
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  filter="url(#glow)"
-                                />
-                                {/* Linha secundária mais fina para profundidade */}
-                                <path
-                                  d={`M ${posOrigem.x + 70} ${posOrigem.y} Q ${controlX} ${controlY} ${posDestino.x - 70} ${posDestino.y}`}
-                                  stroke="hsl(var(--primary))"
-                                  strokeWidth="1.5"
-                                  fill="none"
-                                  opacity={modoExplodido ? 0.6 : 0.9}
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                                {/* Seta moderna no final */}
-                                <polygon
-                                  points={`${posDestino.x - 70},${posDestino.y} ${posDestino.x - 80},${posDestino.y - 5} ${posDestino.x - 80},${posDestino.y + 5}`}
-                                  fill="hsl(var(--primary))"
-                                  opacity={modoExplodido ? 0.6 : 0.9}
-                                  filter="url(#glow)"
-                                />
-                              </g>
-                            );
-                          })
-                        )}
-
-                        {/* Blocos de peças estilo flowchart */}
-                        {pecasExibiveis.map((peca) => {
-                          const pos = getPosicaoExplodida(peca);
-                          const statusColor = peca.status === "Crítico" ? "#ef4444" : 
-                                            peca.status === "Atenção" ? "#f59e0b" : "#10b981";
-                          
-                          return (
-                            <g
-                              key={peca.id}
-                              onClick={() => setSelectedPeca(peca)}
-                              style={{ cursor: "pointer" }}
-                              className="transition-all hover:opacity-95"
-                              filter="url(#shadow)"
-                            >
-                              {/* Camada de fundo para profundidade */}
-                              <rect
-                                x={pos.x - 69}
-                                y={pos.y - 33}
-                                width="138"
-                                height="68"
-                                rx="16"
-                                ry="16"
-                                fill="hsl(var(--primary))"
-                                opacity="0.05"
-                              />
-                              
-                              {/* Bloco principal com gradiente */}
-                              <rect
-                                x={pos.x - 70}
-                                y={pos.y - 35}
-                                width="140"
-                                height="70"
-                                rx="16"
-                                ry="16"
-                                fill="url(#cardGradient)"
-                                stroke="hsl(var(--border))"
-                                strokeWidth="1.5"
-                                className="transition-all"
-                              />
-                              
-                              {/* Brilho sutil no topo */}
-                              <rect
-                                x={pos.x - 68}
-                                y={pos.y - 33}
-                                width="136"
-                                height="20"
-                                rx="16"
-                                ry="16"
-                                fill="hsl(var(--primary))"
-                                opacity="0.03"
-                              />
-                              
-                              {/* Barra de status moderna no topo */}
-                              <rect
-                                x={pos.x - 70}
-                                y={pos.y - 35}
-                                width="140"
-                                height="6"
-                                rx="16"
-                                ry="16"
-                                fill={statusColor}
-                                opacity="0.9"
-                              />
-                              
-                              {/* Linha de destaque sutil na lateral */}
-                              <rect
-                                x={pos.x - 70}
-                                y={pos.y - 30}
-                                width="3"
-                                height="60"
-                                rx="2"
-                                ry="2"
-                                fill={statusColor}
-                                opacity="0.4"
-                              />
-
-                              {/* Ícone de categoria */}
-                              <text
-                                x={pos.x - 55}
-                                y={pos.y - 8}
-                                fontSize="20"
-                                style={{ pointerEvents: "none" }}
-                              >
-                                {getCategoriaIcon(peca.categoria)}
-                              </text>
-
-                              {/* Código da peça */}
-                              <text
-                                x={pos.x - 25}
-                                y={pos.y - 12}
-                                textAnchor="start"
-                                className="text-xs font-bold fill-foreground"
-                                style={{ pointerEvents: "none" }}
-                              >
-                                {peca.codigo}
-                              </text>
-
-                              {/* Nome da peça */}
-                              <text
-                                x={pos.x}
-                                y={pos.y + 8}
-                                textAnchor="middle"
-                                className="text-[10px] fill-muted-foreground"
-                                style={{ pointerEvents: "none" }}
-                              >
-                                {peca.nome.length > 20 ? peca.nome.substring(0, 18) + '...' : peca.nome}
-                              </text>
-
-                              {/* Badge de status */}
-                              <g transform={`translate(${pos.x + 40}, ${pos.y - 8})`}>
-                                <circle
-                                  r="10"
-                                  fill={statusColor}
-                                  opacity="0.9"
-                                />
-                                <text
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                  fontSize="10"
-                                  fill="white"
-                                  style={{ pointerEvents: "none" }}
-                                >
-                                  {getStatusIcon(peca.status)}
-                                </text>
-                              </g>
-
-                              {/* Indicador de estoque baixo */}
-                              {peca.emEstoque <= peca.estoqueMinimo && (
-                                <g transform={`translate(${pos.x + 55}, ${pos.y + 15})`}>
-                                  <circle
-                                    r="8"
-                                    fill="#f59e0b"
-                                    opacity="0.9"
-                                  />
-                                  <text
-                                    textAnchor="middle"
-                                    dominantBaseline="middle"
-                                    fontSize="10"
-                                    fill="white"
-                                    fontWeight="bold"
-                                    style={{ pointerEvents: "none" }}
-                                  >
-                                    !
-                                  </text>
-                                </g>
-                              )}
-
-                              {/* Barra de vida útil */}
-                              <g transform={`translate(${pos.x - 60}, ${pos.y + 20})`}>
-                                <rect
-                                  width="120"
-                                  height="4"
-                                  rx="2"
-                                  fill="hsl(var(--muted))"
-                                />
-                                <rect
-                                  width={120 * (peca.vidaUtilRestante / peca.vidaUtil)}
-                                  height="4"
-                                  rx="2"
-                                  fill={peca.vidaUtilRestante / peca.vidaUtil > 0.5 ? "#10b981" : 
-                                       peca.vidaUtilRestante / peca.vidaUtil > 0.3 ? "#f59e0b" : "#ef4444"}
-                                />
-                              </g>
-                            </g>
-                          );
-                        })}
-                      </svg>
-                    </TransformComponent>
-                  </>
-                )}
-              </TransformWrapper>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Legenda */}
         <Card>
           <CardHeader>
@@ -829,8 +1236,202 @@ const MaquinaDetalhes = () => {
           </CardContent>
         </Card>
 
-        {/* Modal de Detalhes da Peça */}
-        <Dialog open={!!selectedPeca} onOpenChange={() => setSelectedPeca(null)}>
+        {/* Modal de Detalhes - Sistema */}
+        <Dialog open={!!selectedSistema} onOpenChange={() => setSelectedSistema(null)}>
+          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {selectedSistema?.nome}
+                <Badge variant={getStatusVariant(selectedSistema?.status || "Normal")}>
+                  {selectedSistema?.status}
+                </Badge>
+                <Badge variant="outline">{selectedSistema?.tipo}</Badge>
+              </DialogTitle>
+            </DialogHeader>
+            {selectedSistema && (
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Informações do Sistema</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-1">
+                          Nome do Sistema
+                        </h4>
+                        <p className="text-lg">{selectedSistema.nome}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-1">
+                          Tipo
+                        </h4>
+                        <p className="text-lg">{selectedSistema.tipo}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-1">
+                          Status
+                        </h4>
+                        <Badge variant={getStatusVariant(selectedSistema.status)}>
+                          {selectedSistema.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-1">
+                          Total de Peças
+                        </h4>
+                        <p className="text-lg font-bold">{selectedSistema.totalPecas} peças</p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-2">
+                        Peças do Sistema
+                      </h4>
+                      <div className="space-y-2">
+                        {pecasFicticias
+                          .filter(p => p.maquinaId === selectedSistema.id)
+                          .map(peca => (
+                            <div
+                              key={peca.id}
+                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer"
+                              onClick={() => {
+                                setSelectedPeca(peca);
+                                setSelectedSistema(null);
+                              }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-xl">{getCategoriaIcon(peca.categoria)}</span>
+                                <div>
+                                  <p className="font-medium">{peca.nome}</p>
+                                  <p className="text-xs text-muted-foreground">{peca.codigo}</p>
+                                </div>
+                              </div>
+                              <Badge variant={getStatusVariant(peca.status)}>
+                                {peca.status}
+                              </Badge>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Detalhes - Sub-Peça */}
+        <Dialog open={!!selectedSubPeca && !selectedSistema} onOpenChange={() => setSelectedSubPeca(null)}>
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {selectedSubPeca?.nome}
+                <Badge variant={getStatusVariant(selectedSubPeca?.status || "Normal")}>
+                  {selectedSubPeca?.status}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            {selectedSubPeca && selectedPeca && (
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Informações da Sub-Peça</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-1">
+                          Código
+                        </h4>
+                        <p className="text-lg">{selectedSubPeca.codigo}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-1">
+                          Status
+                        </h4>
+                        <Badge variant={getStatusVariant(selectedSubPeca.status)}>
+                          {selectedSubPeca.status}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-1">
+                        Peça Principal
+                      </h4>
+                      <div
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer"
+                        onClick={() => {
+                          setSelectedSubPeca(null);
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{getCategoriaIcon(selectedPeca.categoria)}</span>
+                          <div>
+                            <p className="font-medium">{selectedPeca.nome}</p>
+                            <p className="text-xs text-muted-foreground">{selectedPeca.codigo}</p>
+                          </div>
+                        </div>
+                        <Badge variant={getStatusVariant(selectedPeca.status)}>
+                          {selectedPeca.status}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-2">
+                        Estoque
+                      </h4>
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground">Em Estoque</p>
+                          <p className="text-2xl font-bold">{selectedSubPeca.emEstoque} un</p>
+                        </div>
+                        {selectedSubPeca.emEstoque === 0 && (
+                          <Badge variant="destructive">
+                            Sem estoque
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {selectedSubPeca.emEstoque === 0 && (
+                      <Card className="border-destructive">
+                        <CardHeader>
+                          <CardTitle className="text-sm text-destructive flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            Alerta de Estoque
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm">
+                            Esta sub-peça está sem estoque. Recomenda-se solicitar reposição urgente.
+                          </p>
+                          <Button className="w-full mt-3">
+                            Solicitar Reposição
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Detalhes - Peça */}
+        <Dialog open={!!selectedPeca && !selectedSubPeca && !selectedSistema} onOpenChange={() => setSelectedPeca(null)}>
           <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -867,6 +1468,25 @@ const MaquinaDetalhes = () => {
                     </div>
                   </div>
                   
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-1">
+                        Valor Unitário
+                      </h4>
+                      <p className="text-lg font-bold text-green-600 dark:text-green-500">
+                        R$ {selectedPeca.valorUnitario.toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-1">
+                        Data Última Compra
+                      </h4>
+                      <p className="text-lg">
+                        {new Date(selectedPeca.dataUltimaCompra).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                  
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-1">
                       Descrição
@@ -896,28 +1516,24 @@ const MaquinaDetalhes = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">
-                      Conectado com
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedPeca.conectadoCom.map((conectadoId) => {
-                        const pecaConectada = pecasFicticias.find(
-                          (p) => p.id === conectadoId
-                        );
-                        return (
+                  {selectedPeca.subPecas.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-2">
+                        Sub-Peças
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedPeca.subPecas.map((subPecaId, index) => (
                           <Badge
-                            key={conectadoId}
+                            key={index}
                             variant="outline"
-                            className="cursor-pointer hover:bg-accent"
-                            onClick={() => setSelectedPeca(pecaConectada || null)}
+                            className="text-xs"
                           >
-                            {pecaConectada?.nome}
+                            {subPecaId}
                           </Badge>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </TabsContent>
 
                 {/* Aba Manutenção */}
