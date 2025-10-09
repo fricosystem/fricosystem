@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Upload, Check, Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Upload, Check, Search, ChevronsUpDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,7 +72,8 @@ export const AddPecaModal = ({
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtosLoading, setProdutosLoading] = useState(false);
   const [selectedProdutoId, setSelectedProdutoId] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const commandListRef = useRef<HTMLDivElement>(null);
   
   const [formData, setFormData] = useState<Partial<Peca>>(
     editingPeca || {
@@ -102,6 +103,14 @@ export const AddPecaModal = ({
   useEffect(() => {
     if (open && produtos.length === 0) {
       fetchProdutos();
+    }
+  }, [open]);
+
+  // Resetar seleção quando modal fechar
+  useEffect(() => {
+    if (!open) {
+      setSelectedProdutoId("");
+      setIsPopoverOpen(false);
     }
   }, [open]);
 
@@ -152,20 +161,13 @@ export const AddPecaModal = ({
         valorUnitario: produto.valor_unitario,
         fornecedor: produto.fornecedor_nome || "",
       });
+      setIsPopoverOpen(false);
       toast({
         title: "Produto selecionado",
         description: `Campos preenchidos com dados de ${produto.nome}`,
       });
     }
   };
-
-  // Filtrar produtos baseado na pesquisa
-  const filteredProdutos = produtos.filter(produto =>
-    produto.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    produto.codigo_estoque.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    produto.codigo_material.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (produto.fornecedor_nome && produto.fornecedor_nome.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,6 +237,8 @@ export const AddPecaModal = ({
     }
   };
 
+  const selectedProduto = produtos.find(p => p.id === selectedProdutoId);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -242,70 +246,92 @@ export const AddPecaModal = ({
           <DialogTitle>{editingPeca ? "Editar Peça" : "Adicionar Nova Peça"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Dropdown de seleção de produto */}
+          {/* Combobox de seleção de produto */}
           <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
-            <Label>Buscar Produto Existente (Opcional)</Label>
-            <Popover>
+            <Label htmlFor="produto-combobox">Buscar Produto Existente (Opcional)</Label>
+            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
-                  className={cn(
-                    "w-full justify-between",
-                    !selectedProdutoId && "text-muted-foreground"
-                  )}
+                  aria-expanded={isPopoverOpen}
+                  className="w-full justify-between"
                   disabled={produtosLoading}
                 >
-                  {produtosLoading
-                    ? "Carregando produtos..."
-                    : selectedProdutoId
-                      ? produtos.find((p) => p.id === selectedProdutoId)?.nome
-                      : "Selecione um produto para preencher os campos..."}
-                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <span className="truncate">
+                    {produtosLoading
+                      ? "Carregando produtos..."
+                      : selectedProduto
+                        ? `${selectedProduto.nome} (${selectedProduto.codigo_estoque || selectedProduto.codigo_material})`
+                        : "Selecione um produto para preencher os campos..."}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
-                <Command className="border rounded-lg">
+              <PopoverContent 
+                className="w-full p-0" 
+                align="start"
+                style={{ width: 'var(--radix-popover-trigger-width)' }}
+              >
+                <Command className="rounded-lg border shadow-md">
                   <CommandInput 
                     placeholder="Buscar produto por nome, código ou fornecedor..." 
-                    className="h-9 border-0 focus:ring-0"
-                    value={searchQuery}
-                    onValueChange={setSearchQuery}
+                    className="h-12 text-base"
                   />
-                  <CommandList className="max-h-[300px] overflow-y-auto">
-                    <CommandEmpty className="py-6 text-center text-sm">
+                  <CommandList 
+                    ref={commandListRef}
+                    className="max-h-64 overflow-y-auto thin-scrollbar"
+                  >
+                    <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
                       {produtosLoading ? "Carregando produtos..." : "Nenhum produto encontrado."}
                     </CommandEmpty>
-                    <CommandGroup className="overflow-auto">
-                      {filteredProdutos.map((produto) => (
+                    <CommandGroup className="overflow-visible">
+                      {produtos.map((produto) => (
                         <CommandItem
                           key={produto.id}
                           value={produto.id}
                           onSelect={() => handleProdutoSelect(produto.id)}
-                          className="cursor-pointer py-2 px-3 flex items-center justify-between hover:bg-accent"
+                          className="cursor-pointer py-3 px-4 flex items-start space-x-3 hover:bg-accent transition-colors aria-selected:bg-accent"
                         >
-                          <div className="flex items-center space-x-2 flex-1 min-w-0">
-                            <Check
-                              className={cn(
-                                "h-4 w-4 flex-shrink-0",
-                                selectedProdutoId === produto.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="flex flex-col flex-1 min-w-0">
-                              <span className="font-medium truncate">{produto.nome}</span>
-                              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1">
-                                {produto.codigo_estoque && (
-                                  <span>Estoque: {produto.codigo_estoque}</span>
-                                )}
-                                {produto.codigo_material && (
-                                  <span>Material: {produto.codigo_material}</span>
-                                )}
-                                <span>Qtd: {produto.quantidade}</span>
-                                {produto.fornecedor_nome && (
-                                  <span className="truncate">Fornecedor: {produto.fornecedor_nome}</span>
-                                )}
-                              </div>
+                          <Check
+                            className={cn(
+                              "h-4 w-4 mt-0.5 flex-shrink-0",
+                              selectedProdutoId === produto.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="font-medium text-sm leading-tight truncate">
+                              {produto.nome}
                             </div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                              {produto.codigo_estoque && (
+                                <span className="flex items-center">
+                                  <span className="font-medium mr-1">Estoque:</span>
+                                  {produto.codigo_estoque}
+                                </span>
+                              )}
+                              {produto.codigo_material && (
+                                <span className="flex items-center">
+                                  <span className="font-medium mr-1">Material:</span>
+                                  {produto.codigo_material}
+                                </span>
+                              )}
+                              <span className="flex items-center">
+                                <span className="font-medium mr-1">Qtd:</span>
+                                {produto.quantidade}
+                              </span>
+                              {produto.fornecedor_nome && (
+                                <span className="flex items-center truncate max-w-[120px]">
+                                  <span className="font-medium mr-1">Fornecedor:</span>
+                                  {produto.fornecedor_nome}
+                                </span>
+                              )}
+                            </div>
+                            {produto.detalhes && (
+                              <div className="text-xs text-muted-foreground line-clamp-2">
+                                {produto.detalhes}
+                              </div>
+                            )}
                           </div>
                         </CommandItem>
                       ))}
@@ -314,7 +340,7 @@ export const AddPecaModal = ({
                 </Command>
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-2">
               Selecione um produto da lista para preencher automaticamente os campos abaixo
             </p>
           </div>
@@ -328,7 +354,6 @@ export const AddPecaModal = ({
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 placeholder="Ex: Motor Principal"
                 required
-                disabled
               />
             </div>
             <div className="space-y-2">
@@ -339,7 +364,6 @@ export const AddPecaModal = ({
                 onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
                 placeholder="Ex: MOT-001"
                 required
-                disabled
               />
             </div>
           </div>
@@ -352,7 +376,6 @@ export const AddPecaModal = ({
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
               placeholder="Descrição detalhada da peça"
               rows={3}
-              disabled
             />
           </div>
 
@@ -464,7 +487,6 @@ export const AddPecaModal = ({
                 type="number"
                 value={formData.emEstoque}
                 onChange={(e) => setFormData({ ...formData, emEstoque: Number(e.target.value) })}
-                disabled
               />
             </div>
             <div className="space-y-2">
@@ -474,7 +496,6 @@ export const AddPecaModal = ({
                 type="number"
                 value={formData.estoqueMinimo}
                 onChange={(e) => setFormData({ ...formData, estoqueMinimo: Number(e.target.value) })}
-                disabled
               />
             </div>
             <div className="space-y-2">
@@ -485,7 +506,6 @@ export const AddPecaModal = ({
                 step="0.01"
                 value={formData.valorUnitario}
                 onChange={(e) => setFormData({ ...formData, valorUnitario: Number(e.target.value) })}
-                disabled
               />
             </div>
           </div>
@@ -519,7 +539,6 @@ export const AddPecaModal = ({
               value={formData.fornecedor}
               onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
               placeholder="Nome do fornecedor"
-              disabled
             />
           </div>
 
