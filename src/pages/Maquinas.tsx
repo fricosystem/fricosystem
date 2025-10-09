@@ -38,15 +38,15 @@ interface Equipamento {
 
 interface Maquina {
   id: string;
-  nome: string;
+  equipamento: string;
   patrimonio: string;
   setor: string;
   tag: string;
   imagemUrl: string;
   status: "Ativa" | "Inativa";
   descricao?: string;
-  dataCriacao: any;
-  dataAtualizacao: any;
+  createdAt: any;
+  updatedAt: any;
 }
 
 const Maquinas = () => {
@@ -63,7 +63,7 @@ const Maquinas = () => {
   const [equipamentoSelecionado, setEquipamentoSelecionado] = useState<string>("");
   const [openPopover, setOpenPopover] = useState(false);
   const [formData, setFormData] = useState({
-    nome: "",
+    equipamento: "",
     patrimonio: "",
     setor: "",
     tag: "",
@@ -76,14 +76,31 @@ const Maquinas = () => {
   const fetchMaquinas = async () => {
     try {
       setLoading(true);
-      const maquinasRef = collection(db, "maquinas");
-      const q = query(maquinasRef, orderBy("dataCriacao", "desc"));
-      const snapshot = await getDocs(q);
+      const equipamentosRef = collection(db, "equipamentos");
+      const snapshot = await getDocs(equipamentosRef);
       
-      const maquinasData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as Maquina));
+      const maquinasData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          equipamento: data.equipamento || "",
+          patrimonio: data.patrimonio || "",
+          setor: data.setor || "",
+          tag: data.tag || "",
+          imagemUrl: data.imagemUrl || "",
+          status: data.status || "Ativa",
+          descricao: data.descricao || "",
+          createdAt: data.createdAt || data.dataCriacao || null,
+          updatedAt: data.updatedAt || data.dataAtualizacao || null,
+        } as Maquina;
+      });
+      
+      // Ordenar por data de criação (mais recentes primeiro)
+      maquinasData.sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt.seconds - a.createdAt.seconds;
+      });
       
       setMaquinas(maquinasData);
       setFilteredMaquinas(maquinasData);
@@ -145,7 +162,9 @@ const Maquinas = () => {
 
     if (searchTerm) {
       filtered = filtered.filter(maquina => 
-        maquina.nome.toLowerCase().includes(searchTerm.toLowerCase())
+        maquina.equipamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        maquina.patrimonio.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        maquina.setor.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -174,20 +193,20 @@ const Maquinas = () => {
     
     try {
       if (editingMaquina) {
-        const maquinaRef = doc(db, "maquinas", editingMaquina.id);
-        await updateDoc(maquinaRef, {
+        const equipamentoRef = doc(db, "equipamentos", editingMaquina.id);
+        await updateDoc(equipamentoRef, {
           ...formData,
-          dataAtualizacao: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         });
         toast({
           title: "Sucesso",
           description: "Máquina atualizada com sucesso!",
         });
       } else {
-        await addDoc(collection(db, "maquinas"), {
+        await addDoc(collection(db, "equipamentos"), {
           ...formData,
-          dataCriacao: serverTimestamp(),
-          dataAtualizacao: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         });
         toast({
           title: "Sucesso",
@@ -211,7 +230,7 @@ const Maquinas = () => {
 
   const resetForm = () => {
     setFormData({
-      nome: "",
+      equipamento: "",
       patrimonio: "",
       setor: "",
       tag: "",
@@ -226,7 +245,7 @@ const Maquinas = () => {
   const handleEdit = useCallback((maquina: Maquina) => {
     setEditingMaquina(maquina);
     setFormData({
-      nome: maquina.nome,
+      equipamento: maquina.equipamento,
       patrimonio: maquina.patrimonio,
       setor: maquina.setor,
       tag: maquina.tag,
@@ -234,7 +253,7 @@ const Maquinas = () => {
       status: maquina.status,
       descricao: maquina.descricao || "",
     });
-    setEquipamentoSelecionado(maquina.nome);
+    setEquipamentoSelecionado(maquina.equipamento);
     setIsModalOpen(true);
   }, []);
 
@@ -242,7 +261,7 @@ const Maquinas = () => {
     if (!confirm("Tem certeza que deseja excluir esta máquina?")) return;
     
     try {
-      await deleteDoc(doc(db, "maquinas", id));
+      await deleteDoc(doc(db, "equipamentos", id));
       toast({
         title: "Sucesso",
         description: "Máquina excluída com sucesso!",
@@ -375,7 +394,7 @@ const Maquinas = () => {
                 <div className="aspect-video relative bg-muted">
                   <img 
                     src={maquina.imagemUrl} 
-                    alt={maquina.nome}
+                    alt={maquina.equipamento}
                     className="w-full h-full object-cover"
                     loading="lazy"
                     onError={(e) => {
@@ -390,9 +409,14 @@ const Maquinas = () => {
                   </div>
                 </div>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">{maquina.nome}</CardTitle>
+                  <CardTitle className="text-lg">{maquina.equipamento}</CardTitle>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>Patrimônio: {maquina.patrimonio}</p>
+                    <p>Setor: {maquina.setor}</p>
+                    <p>Tag: {maquina.tag}</p>
+                  </div>
                   {maquina.descricao && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
                       {maquina.descricao}
                     </p>
                   )}
@@ -463,10 +487,10 @@ const Maquinas = () => {
                       <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
+                  <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                     <Command>
                       <CommandInput placeholder="Buscar equipamento..." className="h-9" />
-                      <CommandList className="max-h-[300px]">
+                      <CommandList className="max-h-[300px] overflow-y-auto">
                         <CommandEmpty>Nenhum equipamento encontrado.</CommandEmpty>
                         <CommandGroup>
                           {equipamentos.map((equipamento) => (
@@ -474,10 +498,10 @@ const Maquinas = () => {
                               key={equipamento.id}
                               value={`${equipamento.patrimonio} ${equipamento.equipamento} ${equipamento.setor} ${equipamento.tag}`}
                               onSelect={() => {
-                                setEquipamentoSelecionado(equipamento.equipamento);
+                               setEquipamentoSelecionado(equipamento.equipamento);
                                 setFormData(prev => ({
                                   ...prev,
-                                  nome: equipamento.equipamento,
+                                  equipamento: equipamento.equipamento,
                                   patrimonio: equipamento.patrimonio,
                                   setor: equipamento.setor,
                                   tag: equipamento.tag,
