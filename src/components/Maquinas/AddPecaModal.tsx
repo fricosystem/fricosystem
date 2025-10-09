@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Upload, Check, ChevronsUpDown, Search } from "lucide-react";
+import { Plus, Upload, Check, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ interface Peca {
   nome: string;
   codigo: string;
   descricao: string;
-  categoria: "Mecânica" | "Elétrica" | "Hidráulica";
+  categoria: "Mecânica" | "Elétrica" | "Hidráulica" | "Pneumática" | "Eletrônica" | "Estrutural" | "Rolamentos" | "Vedação" | "Lubrificação" | "Transmissão" | "Instrumentação" | "Refrigeração" | "Controle";
   status: "Normal" | "Atenção" | "Crítico";
   equipamentoId: string;
   vidaUtil: number;
@@ -71,7 +71,6 @@ export const AddPecaModal = ({
   const [loading, setLoading] = useState(false);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtosLoading, setProdutosLoading] = useState(false);
-  const [openProdutoCombo, setOpenProdutoCombo] = useState(false);
   const [selectedProdutoId, setSelectedProdutoId] = useState<string>("");
   
   const [formData, setFormData] = useState<Partial<Peca>>(
@@ -152,7 +151,6 @@ export const AddPecaModal = ({
         valorUnitario: produto.valor_unitario,
         fornecedor: produto.fornecedor_nome || "",
       });
-      setOpenProdutoCombo(false);
       toast({
         title: "Produto selecionado",
         description: `Campos preenchidos com dados de ${produto.nome}`,
@@ -238,32 +236,35 @@ export const AddPecaModal = ({
           {/* Dropdown de seleção de produto */}
           <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
             <Label>Buscar Produto Existente (Opcional)</Label>
-            <Popover open={openProdutoCombo} onOpenChange={setOpenProdutoCombo}>
+            <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-expanded={openProdutoCombo}
-                  className="w-full justify-between"
+                  className={cn(
+                    "w-full justify-between",
+                    !selectedProdutoId && "text-muted-foreground"
+                  )}
+                  disabled={produtosLoading}
                 >
-                  {selectedProdutoId
-                    ? produtos.find((p) => p.id === selectedProdutoId)?.nome
-                    : "Selecione um produto para preencher os campos..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  {produtosLoading
+                    ? "Carregando produtos..."
+                    : selectedProdutoId
+                      ? produtos.find((p) => p.id === selectedProdutoId)?.nome
+                      : "Selecione um produto para preencher os campos..."}
+                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
+              <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                 <Command>
-                  <CommandInput placeholder="Buscar produto..." />
-                  <CommandList className="max-h-[300px] overflow-y-auto">
-                    <CommandEmpty>
-                      {produtosLoading ? "Carregando..." : "Nenhum produto encontrado."}
-                    </CommandEmpty>
+                  <CommandInput placeholder="Buscar produto..." className="h-9" />
+                  <CommandList className="max-h-[300px] overflow-y-auto overscroll-contain">
+                    <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                     <CommandGroup>
                       {produtos.map((produto) => (
                         <CommandItem
                           key={produto.id}
-                          value={produto.nome}
+                          value={`${produto.nome} ${produto.codigo_estoque} ${produto.codigo_material}`}
                           onSelect={() => handleProdutoSelect(produto.id)}
                         >
                           <Check
@@ -273,9 +274,9 @@ export const AddPecaModal = ({
                             )}
                           />
                           <div className="flex flex-col">
-                            <span className="font-medium">{produto.nome}</span>
+                            <span>{produto.nome}</span>
                             <span className="text-xs text-muted-foreground">
-                              {produto.codigo_estoque || produto.codigo_material} • Estoque: {produto.quantidade}
+                              Código: {produto.codigo_estoque || produto.codigo_material} • Estoque: {produto.quantidade}
                             </span>
                           </div>
                         </CommandItem>
@@ -299,6 +300,7 @@ export const AddPecaModal = ({
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 placeholder="Ex: Motor Principal"
                 required
+                disabled
               />
             </div>
             <div className="space-y-2">
@@ -309,6 +311,7 @@ export const AddPecaModal = ({
                 onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
                 placeholder="Ex: MOT-001"
                 required
+                disabled
               />
             </div>
           </div>
@@ -321,6 +324,7 @@ export const AddPecaModal = ({
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
               placeholder="Descrição detalhada da peça"
               rows={3}
+              disabled
             />
           </div>
 
@@ -329,7 +333,7 @@ export const AddPecaModal = ({
               <Label htmlFor="categoria">Categoria</Label>
               <Select
                 value={formData.categoria}
-                onValueChange={(value: "Mecânica" | "Elétrica" | "Hidráulica") =>
+                onValueChange={(value: any) =>
                   setFormData({ ...formData, categoria: value })
                 }
               >
@@ -340,6 +344,16 @@ export const AddPecaModal = ({
                   <SelectItem value="Mecânica">Mecânica</SelectItem>
                   <SelectItem value="Elétrica">Elétrica</SelectItem>
                   <SelectItem value="Hidráulica">Hidráulica</SelectItem>
+                  <SelectItem value="Pneumática">Pneumática</SelectItem>
+                  <SelectItem value="Eletrônica">Eletrônica</SelectItem>
+                  <SelectItem value="Estrutural">Estrutural</SelectItem>
+                  <SelectItem value="Rolamentos">Rolamentos</SelectItem>
+                  <SelectItem value="Vedação">Vedação</SelectItem>
+                  <SelectItem value="Lubrificação">Lubrificação</SelectItem>
+                  <SelectItem value="Transmissão">Transmissão</SelectItem>
+                  <SelectItem value="Instrumentação">Instrumentação</SelectItem>
+                  <SelectItem value="Refrigeração">Refrigeração</SelectItem>
+                  <SelectItem value="Controle">Controle</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -422,6 +436,7 @@ export const AddPecaModal = ({
                 type="number"
                 value={formData.emEstoque}
                 onChange={(e) => setFormData({ ...formData, emEstoque: Number(e.target.value) })}
+                disabled
               />
             </div>
             <div className="space-y-2">
@@ -431,6 +446,7 @@ export const AddPecaModal = ({
                 type="number"
                 value={formData.estoqueMinimo}
                 onChange={(e) => setFormData({ ...formData, estoqueMinimo: Number(e.target.value) })}
+                disabled
               />
             </div>
             <div className="space-y-2">
@@ -441,6 +457,7 @@ export const AddPecaModal = ({
                 step="0.01"
                 value={formData.valorUnitario}
                 onChange={(e) => setFormData({ ...formData, valorUnitario: Number(e.target.value) })}
+                disabled
               />
             </div>
           </div>
@@ -474,6 +491,7 @@ export const AddPecaModal = ({
               value={formData.fornecedor}
               onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
               placeholder="Nome do fornecedor"
+              disabled
             />
           </div>
 
