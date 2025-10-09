@@ -7,6 +7,12 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     port: 8080,
+    hmr: {
+      clientPort: 8080,
+    },
+  },
+  define: {
+    '__WS_TOKEN__': JSON.stringify(''),
   },
   plugins: [
     react(),
