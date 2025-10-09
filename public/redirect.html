@@ -1,0 +1,94 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rest Recovery Wellness - Redirecting</title>
+    <meta name="description" content="Our website has moved" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="icon" href="/lovable-uploads/e97728c9-5b21-4ade-a76e-25e2872f2ac8.png" type="image/png" />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #000000;
+        color: white;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        text-align: center;
+      }
+      .logo {
+        width: 96px;
+        height: 96px;
+        object-fit: contain;
+        margin-bottom: 24px;
+      }
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 16px;
+      }
+      p {
+        font-size: 1.25rem;
+        margin-bottom: 32px;
+        max-width: 500px;
+        padding: 0 20px;
+      }
+      .button {
+        background-color: white;
+        color: black;
+        border: none;
+        padding: 16px 32px;
+        font-size: 1.125rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: opacity 0.2s;
+      }
+      .button:hover {
+        opacity: 0.9;
+      }
+    </style>
+    <script>
+      window.onload = function() {
+        // Set this to your Lovable URL
+        const lovableUrl = "https://be2b6496-4d2c-45db-818f-6fb03f2dfd6e.lovableproject.com";
+        
+        // Add timestamp to prevent caching
+        const timestamp = new Date().getTime();
+        const urlWithTimestamp = lovableUrl + "?t=" + timestamp;
+        
+        // Auto redirect after 5 seconds
+        setTimeout(function() {
+          window.location.href = urlWithTimestamp;
+        }, 5000);
+      }
+      
+      function redirectNow() {
+        // Set this to your Lovable URL
+        const lovableUrl = "https://be2b6496-4d2c-45db-818f-6fb03f2dfd6e.lovableproject.com";
+        const timestamp = new Date().getTime();
+        window.location.href = lovableUrl + "?t=" + timestamp;
+      }
+    </script>
+  </head>
+  <body>
+    <img 
+      src="https://be2b6496-4d2c-45db-818f-6fb03f2dfd6e.lovableproject.com/lovable-uploads/b75b628b-2cba-4748-8f80-792a5ae8ee1d.png" 
+      alt="Rest Recovery Wellness" 
+      class="logo"
+    />
+    <h1>Rest Recovery Wellness</h1>
+    <p>Our website has moved! You will be redirected in 5 seconds...</p>
+    <a href="#" onclick="redirectNow(); return false;" class="button">
+      Go to new website now
+    </a>
+  </body>
+</html>
