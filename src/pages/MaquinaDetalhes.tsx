@@ -687,7 +687,7 @@ const MaquinaDetalhes = () => {
           </CardHeader>
 
           <CardContent>
-            <div className="border rounded-lg overflow-hidden bg-card">
+            <div className="border rounded-lg overflow-hidden bg-card relative">
               <TransformWrapper
                 initialScale={1}
                 minScale={0.5}
@@ -1147,7 +1147,7 @@ const MaquinaDetalhes = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {metricas.length > 0 ? `${metricas[0].disponibilidade}%` : "N/A"}
+                {metricas.length > 0 ? `${metricas[0].disponibilidade}%` : "0%"}
               </div>
               <Progress value={metricas.length > 0 ? metricas[0].disponibilidade : 0} className="mt-2" />
             </CardContent>
@@ -1159,7 +1159,7 @@ const MaquinaDetalhes = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {metricas.length > 0 ? `${metricas[0].performance}%` : "N/A"}
+                {metricas.length > 0 ? `${metricas[0].performance}%` : "0%"}
               </div>
               <Progress value={metricas.length > 0 ? metricas[0].performance : 0} className="mt-2" />
             </CardContent>
