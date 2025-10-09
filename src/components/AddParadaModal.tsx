@@ -417,10 +417,10 @@ const AddParadaModal = ({ open, onOpenChange, onSuccess }: AddParadaModalProps) 
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full md:w-[400px] p-0">
+                    <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                       <Command>
                         <CommandInput placeholder="Buscar usuário..." className="h-9" />
-                        <CommandList className="max-h-[300px]">
+                        <CommandList className="max-h-[300px] overflow-y-auto">
                           <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
                           <CommandGroup>
                             {usuarios.map((usuario) => (
