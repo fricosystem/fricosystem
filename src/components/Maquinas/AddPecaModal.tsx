@@ -161,6 +161,7 @@ export const AddPecaModal = ({
         estoqueMinimo: produto.quantidade_minima,
         valorUnitario: produto.valor_unitario,
         fornecedor: produto.fornecedor_nome || "",
+        dataUltimaCompra: new Date().toISOString().split('T')[0] // Data atual como padrão
       });
       setProdutosPopoverOpen(false);
       setSearchTerm("");
@@ -255,7 +256,7 @@ export const AddPecaModal = ({
         <DialogHeader>
           <DialogTitle>{editingPeca ? "Editar Peça" : "Adicionar Nova Peça"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Combobox de seleção de produto - Modelo igual ao da Ordem de Serviço */}
           <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
             <Label>Buscar Produto Existente (Opcional)</Label>
@@ -324,172 +325,217 @@ export const AddPecaModal = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Campos NÃO editáveis - Preenchidos automaticamente pelo produto selecionado */}
+          <div className="space-y-4 p-4 bg-slate-50 rounded-lg border">
+            <h3 className="font-medium text-sm text-muted-foreground">Informações do Produto (Preenchidas Automaticamente)</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome da Peça *</Label>
+                <Input
+                  id="nome"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  placeholder="Ex: Motor Principal"
+                  required
+                  disabled
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="codigo">Código *</Label>
+                <Input
+                  id="codigo"
+                  value={formData.codigo}
+                  onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                  placeholder="Ex: MOT-001"
+                  required
+                  disabled
+                  className="bg-white"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="nome">Nome da Peça *</Label>
-              <Input
-                id="nome"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Ex: Motor Principal"
-                required
+              <Label htmlFor="descricao">Descrição</Label>
+              <Textarea
+                id="descricao"
+                value={formData.descricao}
+                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                placeholder="Descrição detalhada da peça"
+                rows={3}
+                disabled
+                className="bg-white"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="codigo">Código *</Label>
-              <Input
-                id="codigo"
-                value={formData.codigo}
-                onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                placeholder="Ex: MOT-001"
-                required
-              />
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="emEstoque">Em Estoque</Label>
+                <Input
+                  id="emEstoque"
+                  type="number"
+                  value={formData.emEstoque}
+                  onChange={(e) => setFormData({ ...formData, emEstoque: Number(e.target.value) })}
+                  disabled
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="estoqueMinimo">Estoque Mínimo</Label>
+                <Input
+                  id="estoqueMinimo"
+                  type="number"
+                  value={formData.estoqueMinimo}
+                  onChange={(e) => setFormData({ ...formData, estoqueMinimo: Number(e.target.value) })}
+                  disabled
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="valorUnitario">Valor Unitário (R$)</Label>
+                <Input
+                  id="valorUnitario"
+                  type="number"
+                  step="0.01"
+                  value={formData.valorUnitario}
+                  onChange={(e) => setFormData({ ...formData, valorUnitario: Number(e.target.value) })}
+                  disabled
+                  className="bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dataUltimaCompra">Última Compra</Label>
+                <Input
+                  id="dataUltimaCompra"
+                  type="date"
+                  value={formData.dataUltimaCompra}
+                  onChange={(e) => setFormData({ ...formData, dataUltimaCompra: e.target.value })}
+                  disabled
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fornecedor">Fornecedor</Label>
+                <Input
+                  id="fornecedor"
+                  value={formData.fornecedor}
+                  onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
+                  placeholder="Nome do fornecedor"
+                  disabled
+                  className="bg-white"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="descricao">Descrição</Label>
-            <Textarea
-              id="descricao"
-              value={formData.descricao}
-              onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-              placeholder="Descrição detalhada da peça"
-              rows={3}
-            />
-          </div>
+          {/* Campos EDITÁVEIS - Configurações específicas da peça no equipamento */}
+          <div className="space-y-4 p-4 bg-blue-50 rounded-lg border">
+            <h3 className="font-medium text-sm text-muted-foreground">Configurações da Peça no Equipamento (Editáveis)</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="categoria">Categoria</Label>
+                <Select
+                  value={formData.categoria}
+                  onValueChange={(value: any) =>
+                    setFormData({ ...formData, categoria: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Mecânica">Mecânica</SelectItem>
+                    <SelectItem value="Elétrica">Elétrica</SelectItem>
+                    <SelectItem value="Hidráulica">Hidráulica</SelectItem>
+                    <SelectItem value="Pneumática">Pneumática</SelectItem>
+                    <SelectItem value="Eletrônica">Eletrônica</SelectItem>
+                    <SelectItem value="Estrutural">Estrutural</SelectItem>
+                    <SelectItem value="Rolamentos">Rolamentos</SelectItem>
+                    <SelectItem value="Vedação">Vedação</SelectItem>
+                    <SelectItem value="Lubrificação">Lubrificação</SelectItem>
+                    <SelectItem value="Transmissão">Transmissão</SelectItem>
+                    <SelectItem value="Instrumentação">Instrumentação</SelectItem>
+                    <SelectItem value="Refrigeração">Refrigeração</SelectItem>
+                    <SelectItem value="Controle">Controle</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: "Normal" | "Atenção" | "Crítico") =>
+                    setFormData({ ...formData, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Normal">Normal</SelectItem>
+                    <SelectItem value="Atenção">Atenção</SelectItem>
+                    <SelectItem value="Crítico">Crítico</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="categoria">Categoria</Label>
-              <Select
-                value={formData.categoria}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, categoria: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Mecânica">Mecânica</SelectItem>
-                  <SelectItem value="Elétrica">Elétrica</SelectItem>
-                  <SelectItem value="Hidráulica">Hidráulica</SelectItem>
-                  <SelectItem value="Pneumática">Pneumática</SelectItem>
-                  <SelectItem value="Eletrônica">Eletrônica</SelectItem>
-                  <SelectItem value="Estrutural">Estrutural</SelectItem>
-                  <SelectItem value="Rolamentos">Rolamentos</SelectItem>
-                  <SelectItem value="Vedação">Vedação</SelectItem>
-                  <SelectItem value="Lubrificação">Lubrificação</SelectItem>
-                  <SelectItem value="Transmissão">Transmissão</SelectItem>
-                  <SelectItem value="Instrumentação">Instrumentação</SelectItem>
-                  <SelectItem value="Refrigeração">Refrigeração</SelectItem>
-                  <SelectItem value="Controle">Controle</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="vidaUtil">Vida Útil (horas)</Label>
+                <Input
+                  id="vidaUtil"
+                  type="number"
+                  value={formData.vidaUtil}
+                  onChange={(e) => setFormData({ ...formData, vidaUtil: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vidaUtilRestante">Vida Útil Restante</Label>
+                <Input
+                  id="vidaUtilRestante"
+                  type="number"
+                  value={formData.vidaUtilRestante}
+                  onChange={(e) => setFormData({ ...formData, vidaUtilRestante: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tempoCritico">Tempo Crítico (h)</Label>
+                <Input
+                  id="tempoCritico"
+                  type="number"
+                  value={formData.tempoCritico}
+                  onChange={(e) => setFormData({ ...formData, tempoCritico: Number(e.target.value) })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value: "Normal" | "Atenção" | "Crítico") =>
-                  setFormData({ ...formData, status: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Normal">Normal</SelectItem>
-                  <SelectItem value="Atenção">Atenção</SelectItem>
-                  <SelectItem value="Crítico">Crítico</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="vidaUtil">Vida Útil (horas)</Label>
-              <Input
-                id="vidaUtil"
-                type="number"
-                value={formData.vidaUtil}
-                onChange={(e) => setFormData({ ...formData, vidaUtil: Number(e.target.value) })}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ultimaManutencao">Última Manutenção</Label>
+                <Input
+                  id="ultimaManutencao"
+                  type="date"
+                  value={formData.ultimaManutencao}
+                  onChange={(e) => setFormData({ ...formData, ultimaManutencao: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="proximaManutencao">Próxima Manutenção</Label>
+                <Input
+                  id="proximaManutencao"
+                  type="date"
+                  value={formData.proximaManutencao}
+                  onChange={(e) => setFormData({ ...formData, proximaManutencao: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="vidaUtilRestante">Vida Útil Restante</Label>
-              <Input
-                id="vidaUtilRestante"
-                type="number"
-                value={formData.vidaUtilRestante}
-                onChange={(e) => setFormData({ ...formData, vidaUtilRestante: Number(e.target.value) })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tempoCritico">Tempo Crítico (h)</Label>
-              <Input
-                id="tempoCritico"
-                type="number"
-                value={formData.tempoCritico}
-                onChange={(e) => setFormData({ ...formData, tempoCritico: Number(e.target.value) })}
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="ultimaManutencao">Última Manutenção</Label>
-              <Input
-                id="ultimaManutencao"
-                type="date"
-                value={formData.ultimaManutencao}
-                onChange={(e) => setFormData({ ...formData, ultimaManutencao: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="proximaManutencao">Próxima Manutenção</Label>
-              <Input
-                id="proximaManutencao"
-                type="date"
-                value={formData.proximaManutencao}
-                onChange={(e) => setFormData({ ...formData, proximaManutencao: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="emEstoque">Em Estoque</Label>
-              <Input
-                id="emEstoque"
-                type="number"
-                value={formData.emEstoque}
-                onChange={(e) => setFormData({ ...formData, emEstoque: Number(e.target.value) })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="estoqueMinimo">Estoque Mínimo</Label>
-              <Input
-                id="estoqueMinimo"
-                type="number"
-                value={formData.estoqueMinimo}
-                onChange={(e) => setFormData({ ...formData, estoqueMinimo: Number(e.target.value) })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="valorUnitario">Valor Unitário (R$)</Label>
-              <Input
-                id="valorUnitario"
-                type="number"
-                step="0.01"
-                value={formData.valorUnitario}
-                onChange={(e) => setFormData({ ...formData, valorUnitario: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="custoManutencao">Custo Manutenção (R$)</Label>
               <Input
@@ -500,25 +546,6 @@ export const AddPecaModal = ({
                 onChange={(e) => setFormData({ ...formData, custoManutencao: Number(e.target.value) })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="dataUltimaCompra">Última Compra</Label>
-              <Input
-                id="dataUltimaCompra"
-                type="date"
-                value={formData.dataUltimaCompra}
-                onChange={(e) => setFormData({ ...formData, dataUltimaCompra: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="fornecedor">Fornecedor</Label>
-            <Input
-              id="fornecedor"
-              value={formData.fornecedor}
-              onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
-              placeholder="Nome do fornecedor"
-            />
           </div>
 
           <DialogFooter>
