@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Upload, Check, Search, ChevronsUpDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -72,8 +72,8 @@ export const AddPecaModal = ({
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtosLoading, setProdutosLoading] = useState(false);
   const [selectedProdutoId, setSelectedProdutoId] = useState<string>("");
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const commandListRef = useRef<HTMLDivElement>(null);
+  const [produtosPopoverOpen, setProdutosPopoverOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   
   const [formData, setFormData] = useState<Partial<Peca>>(
     editingPeca || {
@@ -110,7 +110,8 @@ export const AddPecaModal = ({
   useEffect(() => {
     if (!open) {
       setSelectedProdutoId("");
-      setIsPopoverOpen(false);
+      setProdutosPopoverOpen(false);
+      setSearchTerm("");
     }
   }, [open]);
 
@@ -161,13 +162,22 @@ export const AddPecaModal = ({
         valorUnitario: produto.valor_unitario,
         fornecedor: produto.fornecedor_nome || "",
       });
-      setIsPopoverOpen(false);
+      setProdutosPopoverOpen(false);
+      setSearchTerm("");
       toast({
         title: "Produto selecionado",
         description: `Campos preenchidos com dados de ${produto.nome}`,
       });
     }
   };
+
+  // Filtrar produtos baseado na pesquisa
+  const produtosDisponiveis = produtos.filter(produto =>
+    produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    produto.codigo_estoque.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    produto.codigo_material.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (produto.fornecedor_nome && produto.fornecedor_nome.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -246,92 +256,61 @@ export const AddPecaModal = ({
           <DialogTitle>{editingPeca ? "Editar Peça" : "Adicionar Nova Peça"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Combobox de seleção de produto */}
+          {/* Combobox de seleção de produto - Modelo igual ao da Ordem de Serviço */}
           <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
-            <Label htmlFor="produto-combobox">Buscar Produto Existente (Opcional)</Label>
-            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+            <Label>Buscar Produto Existente (Opcional)</Label>
+            <Popover 
+              open={produtosPopoverOpen} 
+              onOpenChange={setProdutosPopoverOpen}
+            >
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-expanded={isPopoverOpen}
-                  className="w-full justify-between"
+                  className={cn(
+                    "w-full justify-between",
+                    !selectedProdutoId && "text-muted-foreground"
+                  )}
                   disabled={produtosLoading}
                 >
-                  <span className="truncate">
-                    {produtosLoading
-                      ? "Carregando produtos..."
-                      : selectedProduto
-                        ? `${selectedProduto.nome} (${selectedProduto.codigo_estoque || selectedProduto.codigo_material})`
-                        : "Selecione um produto para preencher os campos..."}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  {produtosLoading
+                    ? "Carregando produtos..."
+                    : selectedProdutoId
+                      ? selectedProduto?.nome
+                      : "Selecione um produto para preencher os campos..."}
+                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent 
-                className="w-full p-0" 
-                align="start"
-                style={{ width: 'var(--radix-popover-trigger-width)' }}
-              >
-                <Command className="rounded-lg border shadow-md">
+              <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
+                <Command>
                   <CommandInput 
-                    placeholder="Buscar produto por nome, código ou fornecedor..." 
-                    className="h-12 text-base"
+                    placeholder="Buscar produto..." 
+                    className="h-9" 
+                    value={searchTerm}
+                    onValueChange={setSearchTerm}
                   />
-                  <CommandList 
-                    ref={commandListRef}
-                    className="max-h-64 overflow-y-auto thin-scrollbar"
-                  >
-                    <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+                  <CommandList className="max-h-[300px] overflow-y-auto">
+                    <CommandEmpty>
                       {produtosLoading ? "Carregando produtos..." : "Nenhum produto encontrado."}
                     </CommandEmpty>
-                    <CommandGroup className="overflow-visible">
-                      {produtos.map((produto) => (
+                    <CommandGroup>
+                      {produtosDisponiveis.map((produto) => (
                         <CommandItem
                           key={produto.id}
-                          value={produto.id}
+                          value={`${produto.nome} ${produto.codigo_estoque} ${produto.codigo_material}`}
                           onSelect={() => handleProdutoSelect(produto.id)}
-                          className="cursor-pointer py-3 px-4 flex items-start space-x-3 hover:bg-accent transition-colors aria-selected:bg-accent"
                         >
                           <Check
                             className={cn(
-                              "h-4 w-4 mt-0.5 flex-shrink-0",
+                              "mr-2 h-4 w-4",
                               selectedProdutoId === produto.id ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <div className="font-medium text-sm leading-tight truncate">
-                              {produto.nome}
-                            </div>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              {produto.codigo_estoque && (
-                                <span className="flex items-center">
-                                  <span className="font-medium mr-1">Estoque:</span>
-                                  {produto.codigo_estoque}
-                                </span>
-                              )}
-                              {produto.codigo_material && (
-                                <span className="flex items-center">
-                                  <span className="font-medium mr-1">Material:</span>
-                                  {produto.codigo_material}
-                                </span>
-                              )}
-                              <span className="flex items-center">
-                                <span className="font-medium mr-1">Qtd:</span>
-                                {produto.quantidade}
-                              </span>
-                              {produto.fornecedor_nome && (
-                                <span className="flex items-center truncate max-w-[120px]">
-                                  <span className="font-medium mr-1">Fornecedor:</span>
-                                  {produto.fornecedor_nome}
-                                </span>
-                              )}
-                            </div>
-                            {produto.detalhes && (
-                              <div className="text-xs text-muted-foreground line-clamp-2">
-                                {produto.detalhes}
-                              </div>
-                            )}
+                          <div className="flex flex-col">
+                            <span>{produto.nome}</span>
+                            <span className="text-xs text-muted-foreground">
+                              Código: {produto.codigo_estoque || produto.codigo_material} • Estoque: {produto.quantidade}
+                            </span>
                           </div>
                         </CommandItem>
                       ))}
@@ -340,7 +319,7 @@ export const AddPecaModal = ({
                 </Command>
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-muted-foreground">
               Selecione um produto da lista para preencher automaticamente os campos abaixo
             </p>
           </div>
