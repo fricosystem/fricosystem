@@ -257,8 +257,8 @@ export const AddPecaModal = ({
           <DialogTitle>{editingPeca ? "Editar Peça" : "Adicionar Nova Peça"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Combobox de seleção de produto - Modelo igual ao da Ordem de Serviço */}
-          <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
+          {/* Combobox de seleção de produto */}
+          <div className="space-y-2">
             <Label>Buscar Produto Existente (Opcional)</Label>
             <Popover 
               open={produtosPopoverOpen} 
@@ -326,7 +326,7 @@ export const AddPecaModal = ({
           </div>
 
           {/* Campos NÃO editáveis - Preenchidos automaticamente pelo produto selecionado */}
-          <div className="space-y-4 p-4 bg-slate-50 rounded-lg border">
+          <div className="space-y-4">
             <h3 className="font-medium text-sm text-muted-foreground">Informações do Produto (Preenchidas Automaticamente)</h3>
             
             <div className="grid grid-cols-2 gap-4">
@@ -339,7 +339,6 @@ export const AddPecaModal = ({
                   placeholder="Ex: Motor Principal"
                   required
                   disabled
-                  className="bg-white"
                 />
               </div>
               <div className="space-y-2">
@@ -351,7 +350,6 @@ export const AddPecaModal = ({
                   placeholder="Ex: MOT-001"
                   required
                   disabled
-                  className="bg-white"
                 />
               </div>
             </div>
@@ -365,7 +363,6 @@ export const AddPecaModal = ({
                 placeholder="Descrição detalhada da peça"
                 rows={3}
                 disabled
-                className="bg-white"
               />
             </div>
 
@@ -378,7 +375,6 @@ export const AddPecaModal = ({
                   value={formData.emEstoque}
                   onChange={(e) => setFormData({ ...formData, emEstoque: Number(e.target.value) })}
                   disabled
-                  className="bg-white"
                 />
               </div>
               <div className="space-y-2">
@@ -389,7 +385,6 @@ export const AddPecaModal = ({
                   value={formData.estoqueMinimo}
                   onChange={(e) => setFormData({ ...formData, estoqueMinimo: Number(e.target.value) })}
                   disabled
-                  className="bg-white"
                 />
               </div>
               <div className="space-y-2">
@@ -401,7 +396,6 @@ export const AddPecaModal = ({
                   value={formData.valorUnitario}
                   onChange={(e) => setFormData({ ...formData, valorUnitario: Number(e.target.value) })}
                   disabled
-                  className="bg-white"
                 />
               </div>
             </div>
@@ -415,7 +409,6 @@ export const AddPecaModal = ({
                   value={formData.dataUltimaCompra}
                   onChange={(e) => setFormData({ ...formData, dataUltimaCompra: e.target.value })}
                   disabled
-                  className="bg-white"
                 />
               </div>
               <div className="space-y-2">
@@ -426,14 +419,13 @@ export const AddPecaModal = ({
                   onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
                   placeholder="Nome do fornecedor"
                   disabled
-                  className="bg-white"
                 />
               </div>
             </div>
           </div>
 
           {/* Campos EDITÁVEIS - Configurações específicas da peça no equipamento */}
-          <div className="space-y-4 p-4 bg-blue-50 rounded-lg border">
+          <div className="space-y-4">
             <h3 className="font-medium text-sm text-muted-foreground">Configurações da Peça no Equipamento (Editáveis)</h3>
             
             <div className="grid grid-cols-2 gap-4">
