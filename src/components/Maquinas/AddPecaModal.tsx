@@ -72,6 +72,7 @@ export const AddPecaModal = ({
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtosLoading, setProdutosLoading] = useState(false);
   const [selectedProdutoId, setSelectedProdutoId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   
   const [formData, setFormData] = useState<Partial<Peca>>(
     editingPeca || {
@@ -157,6 +158,14 @@ export const AddPecaModal = ({
       });
     }
   };
+
+  // Filtrar produtos baseado na pesquisa
+  const filteredProdutos = produtos.filter(produto =>
+    produto.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    produto.codigo_estoque.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    produto.codigo_material.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (produto.fornecedor_nome && produto.fornecedor_nome.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -255,29 +264,48 @@ export const AddPecaModal = ({
                   <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
-                <Command>
-                  <CommandInput placeholder="Buscar produto..." className="h-9" />
-                  <CommandList className="max-h-[300px] overflow-y-auto overscroll-contain">
-                    <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-                    <CommandGroup>
-                      {produtos.map((produto) => (
+              <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
+                <Command className="border rounded-lg">
+                  <CommandInput 
+                    placeholder="Buscar produto por nome, código ou fornecedor..." 
+                    className="h-9 border-0 focus:ring-0"
+                    value={searchQuery}
+                    onValueChange={setSearchQuery}
+                  />
+                  <CommandList className="max-h-[300px] overflow-y-auto">
+                    <CommandEmpty className="py-6 text-center text-sm">
+                      {produtosLoading ? "Carregando produtos..." : "Nenhum produto encontrado."}
+                    </CommandEmpty>
+                    <CommandGroup className="overflow-auto">
+                      {filteredProdutos.map((produto) => (
                         <CommandItem
                           key={produto.id}
-                          value={`${produto.nome} ${produto.codigo_estoque} ${produto.codigo_material}`}
+                          value={produto.id}
                           onSelect={() => handleProdutoSelect(produto.id)}
+                          className="cursor-pointer py-2 px-3 flex items-center justify-between hover:bg-accent"
                         >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedProdutoId === produto.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          <div className="flex flex-col">
-                            <span>{produto.nome}</span>
-                            <span className="text-xs text-muted-foreground">
-                              Código: {produto.codigo_estoque || produto.codigo_material} • Estoque: {produto.quantidade}
-                            </span>
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <Check
+                              className={cn(
+                                "h-4 w-4 flex-shrink-0",
+                                selectedProdutoId === produto.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className="font-medium truncate">{produto.nome}</span>
+                              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1">
+                                {produto.codigo_estoque && (
+                                  <span>Estoque: {produto.codigo_estoque}</span>
+                                )}
+                                {produto.codigo_material && (
+                                  <span>Material: {produto.codigo_material}</span>
+                                )}
+                                <span>Qtd: {produto.quantidade}</span>
+                                {produto.fornecedor_nome && (
+                                  <span className="truncate">Fornecedor: {produto.fornecedor_nome}</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </CommandItem>
                       ))}
