@@ -596,7 +596,7 @@ const NotasFiscaisLancamento = () => {
                         {nota.emissor || "Selecione um fornecedor..."}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0">
+                    <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                       <Command>
                         <CommandInput 
                           placeholder="Buscar fornecedor por CNPJ ou Razão Social..."
