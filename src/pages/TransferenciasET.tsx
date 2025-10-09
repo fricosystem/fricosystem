@@ -521,10 +521,10 @@ const TransferenciasETContent = () => {
                               </Button>
                             </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0 dark:bg-gray-950 dark:border-gray-700">
+                            <PopoverContent className="w-[95vw] sm:w-[400px] p-0 dark:bg-gray-950 dark:border-gray-700">
                               <Command className="dark:bg-gray-950">
                                 <CommandInput placeholder="Buscar depósito..." className="h-9 dark:bg-gray-950" />
-                                <CommandList className="max-h-[300px]">
+                                <CommandList className="max-h-[300px] overflow-y-auto">
                                   <CommandEmpty className="dark:text-gray-300">Nenhum depósito encontrado.</CommandEmpty>
                                   <CommandGroup className="dark:bg-gray-950">
                                     {depositos.map((deposito) => (
@@ -596,10 +596,10 @@ const TransferenciasETContent = () => {
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0 dark:bg-gray-950 dark:border-gray-700">
+                            <PopoverContent className="w-[95vw] sm:w-[400px] p-0 dark:bg-gray-950 dark:border-gray-700">
                               <Command className="dark:bg-gray-950">
                                 <CommandInput placeholder="Buscar depósito..." className="h-9 dark:bg-gray-950" />
-                                <CommandList className="max-h-[300px]">
+                                <CommandList className="max-h-[300px] overflow-y-auto">
                                   <CommandEmpty className="dark:text-gray-300">Nenhum depósito encontrado.</CommandEmpty>
                                   <CommandGroup className="dark:bg-gray-950">
                                     {depositos.map((deposito) => (
