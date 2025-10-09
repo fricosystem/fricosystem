@@ -473,10 +473,10 @@ const NovaOrdemServico = () => {
                     <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
+                <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                   <Command>
                     <CommandInput placeholder="Buscar equipamento..." className="h-9" />
-                    <CommandList className="max-h-[300px]">
+                    <CommandList className="max-h-[300px] overflow-y-auto">
                       <CommandEmpty>Nenhum equipamento encontrado.</CommandEmpty>
                       <CommandGroup>
                         {equipamentos.map((equipamento) => (
@@ -573,7 +573,7 @@ const NovaOrdemServico = () => {
                   Adicionar Produto
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-full md:w-[400px] p-0">
+              <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                 <Command>
                   <CommandInput 
                     placeholder="Buscar produto..." 
@@ -581,7 +581,7 @@ const NovaOrdemServico = () => {
                     value={searchTerm}
                     onValueChange={setSearchTerm}
                   />
-                  <CommandList className="max-h-[300px]">
+                  <CommandList className="max-h-[300px] overflow-y-auto">
                     <CommandEmpty>Nenhum produto encontrado ou todos já foram selecionados.</CommandEmpty>
                     <CommandGroup>
                       {produtosDisponiveis.map((produto) => (
@@ -691,10 +691,10 @@ const NovaOrdemServico = () => {
                   <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-full md:w-[400px] p-0">
+              <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                 <Command>
                   <CommandInput placeholder="Buscar usuário..." className="h-9" />
-                  <CommandList className="max-h-[300px]">
+                  <CommandList className="max-h-[300px] overflow-y-auto">
                     <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
                     <CommandGroup>
                       {usuarios.map((usuario) => (
