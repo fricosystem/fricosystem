@@ -916,10 +916,10 @@ const EntradaProdutosETContent = () => {
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0">
+                            <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                               <Command>
                                 <CommandInput placeholder="Buscar fornecedor..." className="h-9" />
-                                <CommandList className="max-h-[300px]">
+                                <CommandList className="max-h-[300px] overflow-y-auto">
                                   <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
                                   <CommandGroup>
                                     {fornecedores.map((fornecedor) => (
@@ -1215,10 +1215,10 @@ const EntradaProdutosETContent = () => {
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0">
+                            <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                               <Command>
                                 <CommandInput placeholder="Buscar depósito..." className="h-9" />
-                                <CommandList className="max-h-[300px]">
+                                <CommandList className="max-h-[300px] overflow-y-auto">
                                   <CommandEmpty>Nenhum depósito encontrado.</CommandEmpty>
                                   <CommandGroup>
                                     {depositos
