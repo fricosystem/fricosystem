@@ -658,7 +658,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                       <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                         <Command>
                           <CommandInput placeholder="Buscar unidade..." className="h-9" />
-                          <CommandList className="max-h-[50vh] sm:max-h-[300px]">
+                          <CommandList className="max-h-[50vh] sm:max-h-[300px] overflow-y-auto">
                             <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
                             <CommandGroup>
                               {unidades.map((unidade) => (
@@ -775,7 +775,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                       <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                         <Command>
                           <CommandInput placeholder="Buscar fornecedor..." className="h-9" />
-                          <CommandList className="max-h-[50vh] sm:max-h-[300px]">
+                          <CommandList className="max-h-[50vh] sm:max-h-[300px] overflow-y-auto">
                             <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
                             <CommandGroup>
                               {fornecedores.map((fornecedor) => (
@@ -870,7 +870,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                     <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                       <Command>
                         <CommandInput placeholder="Buscar centro de custo..." className="h-9" />
-                        <CommandList className="max-h-[50vh] sm:max-h-[300px]">
+                        <CommandList className="max-h-[50vh] sm:max-h-[300px] overflow-y-auto">
                           <CommandEmpty>Nenhum centro de custo encontrado.</CommandEmpty>
                           <CommandGroup>
                             {centrosCusto.map((centroCusto) => (
