@@ -1,1 +1,553 @@
-// Novo arquivo criado via IDE
+================================================================================
+                    DIAGNÓSTICO DE CONFORMIDADE REGULATÓRIA
+                              FRICÓ ALIMENTOS
+                    Análise Completa - Sistema de Gestão
+================================================================================
+
+DATA DA ANÁLISE: 2025-10-11
+AUDITOR: Consultor de Compliance - Sistema Lovable
+BASE REGULATÓRIA: ANVISA RDC 275/2002, Portaria 1428/93, RDC 216/2004
+
+
+================================================================================
+RESUMO EXECUTIVO - NÃO CONFORMIDADES CRÍTICAS
+================================================================================
+
+⚠️ CONFORMIDADE GERAL: ~30% CONFORME | 25% PARCIAL | 45% NÃO CONFORME
+
+🔴 BLOQUEADORES PARA AUDITORIA ANVISA:
+   1. Ausência de Rastreabilidade por Lote (número_lote, data_fabricação)
+   2. Sem Controle de Qualidade na Entrada de Produtos
+   3. Sistema PCP sem Pontos Críticos de Controle (APPCC/HACCP)
+   4. Incapacidade de Realizar Recall em <5 minutos
+   5. FEFO não automatizado (risco de uso de produtos vencidos)
+   6. Fornecedores sem Homologação Sanitária
+   7. Máquinas sem Registro de Calibração
+   8. Sem Registro de Treinamentos em BPF
+
+⏱️ PRIORIZAÇÃO:
+   - URGÊNCIA MÁXIMA (0-30 dias): Itens 1, 2, 4, 5
+   - URGÊNCIA ALTA (30-60 dias): Itens 3, 6, 7
+   - URGÊNCIA MÉDIA (60-90 dias): Item 8 + Documentação
+
+
+================================================================================
+1. MÓDULO: PRODUTOS (Gestão de Produtos)
+================================================================================
+
+PÁGINA: src/pages/GestaoProdutos.tsx
+FUNCIONALIDADES EXISTENTES:
+   ✅ Cadastro de produtos (nome, código, unidade)
+   ✅ Campo data_vencimento
+   ✅ Controle de quantidade e estoque mínimo
+   ✅ Upload de imagem
+   ✅ Busca e filtros
+   ✅ Edição e exclusão
+
+❌ NÃO CONFORMIDADES CRÍTICAS:
+   1. AUSÊNCIA DE NÚMERO DE LOTE (obrigatório RDC 259/2002)
+      → Campo "numero_lote" inexistente em src/types/typesProducao.ts
+   
+   2. FALTA DATA DE FABRICAÇÃO (obrigatório para rastreabilidade)
+      → Campo "data_fabricacao" inexistente
+   
+   3. FALTA DATA DE ENTRADA NO ESTOQUE
+      → Campo "data_entrada_estoque" inexistente
+   
+   4. AUSÊNCIA DE STATUS DE QUALIDADE
+      → Não há aprovação/rejeição de lotes (RDC 275/2002 item 4.5)
+   
+   5. FALTA CERTIFICADO DE ANÁLISE
+      → Campo "certificado_qualidade_url" inexistente
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - Código de estoque existe, mas não segue padrão lote
+   - Prateleira existe, mas não valida FEFO
+   - Data de vencimento existe, mas sem alertas automáticos
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Adicionar campos obrigatórios: numero_lote, data_fabricacao
+   [ ] Criar validação: data_fabricacao ≤ data atual ≤ data_vencimento
+   [ ] Implementar campo status_qualidade (enum: aprovado/pendente/rejeitado)
+   [ ] Adicionar upload de certificado de qualidade
+   [ ] Criar índice de busca rápida por lote
+
+
+================================================================================
+2. MÓDULO: ENTRADA MANUAL DE PRODUTOS
+================================================================================
+
+PÁGINA: src/pages/EntradaProdutosET.tsx
+FUNCIONALIDADES EXISTENTES:
+   ✅ Entrada manual de produtos por transferência
+   ✅ Seleção de origem e destino
+   ✅ Controle de quantidade
+   ✅ Registro de usuário responsável
+
+❌ NÃO CONFORMIDADES CRÍTICAS:
+   1. ENTRADA SEM INSPEÇÃO DE QUALIDADE
+      → Não há checklist de recebimento (RDC 275/2002)
+   
+   2. FALTA TEMPERATURA DE RECEBIMENTO
+      → Obrigatório para produtos perecíveis (Portaria 1428/93)
+   
+   3. SEM REGISTRO DE LOTE NA ENTRADA
+      → Impossibilita rastreabilidade
+   
+   4. FALTA CERTIFICADO SANITÁRIO DO FORNECEDOR
+      → Não valida se fornecedor está homologado
+   
+   5. SEM APROVAÇÃO/REJEIÇÃO DE ENTRADA
+      → Produtos entram direto no estoque sem quarentena
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - Registro de data/hora existe
+   - Rastreabilidade de usuário responsável existe
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Criar modal de inspeção com checklist obrigatório
+   [ ] Adicionar campo "temperatura_recebimento" (min/max por produto)
+   [ ] Vincular entrada ao número do lote
+   [ ] Bloquear entrada se fornecedor não homologado
+   [ ] Implementar status "aguardando_inspecao" → "aprovado" → "liberado"
+   [ ] Adicionar upload de foto da mercadoria recebida
+
+
+================================================================================
+3. MÓDULO: IMPORTAÇÃO XML (NF-e)
+================================================================================
+
+PÁGINA: src/pages/NotasFiscaisParse.tsx
+HOOK: src/hooks/useNotasFiscais.ts
+FUNCIONALIDADES EXISTENTES:
+   ✅ Importação de XML de NF-e
+   ✅ Extração de dados básicos (produtos, valores, fornecedor)
+   ✅ Validação de estrutura XML
+
+❌ NÃO CONFORMIDADES CRÍTICAS:
+   1. NÃO EXTRAI NÚMERO DE LOTE DO XML
+      → Campo "infAdProd" do XML não é parseado
+   
+   2. NÃO EXTRAI DATA DE FABRICAÇÃO
+      → Informação presente no XML mas ignorada
+   
+   3. VALIDAÇÃO SEFAZ SIMULADA
+      → Hook usa validação fake (linha 45: "// Simular validação")
+   
+   4. SEM BLOQUEIO PARA XML SEM LOTE
+      → Permite importar produtos sem rastreabilidade
+   
+   5. NÃO CRIA ORDEM DE SERVIÇO DE INSPEÇÃO AUTOMÁTICA
+      → Produtos importados entram direto no estoque
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - Extração de CNPJ do fornecedor funciona
+   - Extração de quantidade e valor unitário funciona
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Implementar regex para extrair lote de "infAdProd"
+   [ ] Extrair data de fabricação do XML
+   [ ] Integrar validação real com SEFAZ (API Receita Federal)
+   [ ] Bloquear importação se <infAdProd> não contém lote
+   [ ] Criar OS de inspeção automática ao importar NF-e
+   [ ] Adicionar campo "nfe_chave_acesso" para rastreabilidade fiscal
+
+
+================================================================================
+4. MÓDULO: ESTOQUE / INVENTÁRIO
+================================================================================
+
+PÁGINA: src/pages/Inventario.tsx
+COMPONENTE: src/components/Inventory.tsx
+FUNCIONALIDADES EXISTENTES:
+   ✅ Visualização de estoque atual
+   ✅ Controle de endereçamento (prateleira/depósito)
+   ✅ Alertas de estoque mínimo
+   ✅ Contagem de inventário
+
+❌ NÃO CONFORMIDADES CRÍTICAS:
+   1. ENDEREÇAMENTO NÃO OBRIGATÓRIO
+      → Permite produtos sem localização física (RDC 275 item 4.3.4)
+   
+   2. SEM VALIDAÇÃO FEFO (First Expired, First Out)
+      → Sistema não impede uso de lote com vencimento posterior antes
+   
+   3. PERMITE MISTURA DE LOTES NA MESMA PRATELEIRA
+      → Viola princípio de segregação de lotes
+   
+   4. SEM RELATÓRIO DE PRODUTOS PRÓXIMOS AO VENCIMENTO
+      → Não alerta automaticamente para vencimentos <30 dias
+   
+   5. CONTAGEM DE INVENTÁRIO SEM ASSINATURA DIGITAL
+      → Não identifica responsável pela contagem
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - Campo "prateleira" existe mas é opcional
+   - Campo "data_vencimento" existe
+   - Controle de quantidade funciona
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Tornar campos "prateleira" e "deposito" obrigatórios
+   [ ] Implementar validação FEFO no momento da requisição
+   [ ] Bloquear cadastro se prateleira já tem outro lote do mesmo produto
+   [ ] Criar relatório automático: vencimento em 30/15/7 dias
+   [ ] Adicionar campo "responsavel_contagem" + timestamp na contagem
+   [ ] Implementar busca por "Lote + Prateleira"
+
+
+================================================================================
+5. MÓDULO: REQUISIÇÕES DE MATERIAIS
+================================================================================
+
+PÁGINA: src/pages/Requisicoes.tsx
+FUNCIONALIDADES EXISTENTES:
+   ✅ Solicitação de materiais por funcionário
+   ✅ Aprovação de requisições
+   ✅ Controle de quantidade solicitada
+   ✅ Histórico de requisições
+
+❌ NÃO CONFORMIDADES CRÍTICAS:
+   1. SEM VALIDAÇÃO FEFO NA BAIXA DO ESTOQUE
+      → Sistema não força saída do lote mais próximo ao vencimento
+   
+   2. NÃO REGISTRA LOTE UTILIZADO
+      → Perda de rastreabilidade na saída
+   
+   3. FALTA MOTIVO DA REQUISIÇÃO
+      → Não identifica se é para produção/perda/devolução
+   
+   4. SEM REGISTRO DE TEMPERATURA (produtos perecíveis)
+      → Não registra condição de transporte interno
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - Aprovação por superior existe
+   - Registro de data/hora existe
+   - Histórico de movimentações existe
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Sugerir automaticamente o lote mais próximo ao vencimento
+   [ ] Adicionar campo obrigatório "lote_utilizado" na requisição
+   [ ] Criar campo "motivo" (producao/manutencao/perda/outros)
+   [ ] Adicionar "temperatura_transporte" para produtos críticos
+   [ ] Implementar "Confirmação de Retirada" com assinatura
+
+
+================================================================================
+6. MÓDULO: FORNECEDORES
+================================================================================
+
+PÁGINA: src/pages/Fornecedores.tsx
+FUNCIONALIDADES EXISTENTES:
+   ✅ Cadastro de fornecedores (CNPJ, endereço, contato)
+   ✅ Vínculo fornecedor-produto
+   ✅ Histórico de compras
+
+❌ NÃO CONFORMIDADES CRÍTICAS:
+   1. SEM HOMOLOGAÇÃO SANITÁRIA
+      → Não há campo "certificado_sanitario" (RDC 275 item 4.6.1)
+   
+   2. FALTA INSPEÇÃO DE FORNECEDOR
+      → Não registra visitas técnicas obrigatórias
+   
+   3. SEM STATUS DE APROVAÇÃO
+      → Permite comprar de fornecedor não homologado
+   
+   4. FALTA CERTIFICADO ANVISA (fornecedores de alimentos)
+      → Campo "numero_alvara_sanitario" inexistente
+   
+   5. SEM DATA DE VALIDADE DO CERTIFICADO
+      → Não alerta quando certificado vence
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - CNPJ validado
+   - Endereço completo registrado
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Adicionar campo "certificado_sanitario_url" (PDF/imagem)
+   [ ] Criar campo "data_validade_certificado" com alerta de vencimento
+   [ ] Implementar status: pendente/em_analise/aprovado/reprovado/suspenso
+   [ ] Adicionar campo "numero_alvara_sanitario"
+   [ ] Criar sub-módulo "Inspeções de Fornecedor" com checklist
+   [ ] Bloquear compra se fornecedor status ≠ "aprovado"
+
+
+================================================================================
+7. MÓDULO: PCP (PLANEJAMENTO E CONTROLE DE PRODUÇÃO)
+================================================================================
+
+PÁGINAS: 
+   - src/pages/PCP/PCP.tsx
+   - src/pages/PCP/1turno.tsx
+   - src/pages/PCP/2turno.tsx
+   - src/pages/PCP/Processamento.tsx
+
+FUNCIONALIDADES EXISTENTES:
+   ✅ Apontamento de produção por turno
+   ✅ Registro de quantidades produzidas
+   ✅ Controle de paradas
+   ✅ Cálculo de métricas (OEE, eficiência)
+
+❌ NÃO CONFORMIDADES CRÍTICAS (APPCC/HACCP):
+   1. SEM REGISTRO DE PONTOS CRÍTICOS DE CONTROLE (PCCs)
+      → Temperatura de processamento não registrada (RDC 216 item 4.5)
+   
+   2. FALTA REGISTRO DE pH DO PRODUTO
+      → Obrigatório para produtos acidificados
+   
+   3. NÃO REGISTRA TEMPO DE EXPOSIÇÃO
+      → Crítico para perecíveis (máx 2h fora refrigeração)
+   
+   4. SEM VALIDAÇÃO EM TEMPO REAL DOS PCCs
+      → Sistema não alerta se PCC fora do limite
+   
+   5. FALTA AÇÃO CORRETIVA PREDEFINIDA
+      → Não há protocolo de resposta a desvio
+   
+   6. NÃO VINCULA LOTE AO TURNO DE PRODUÇÃO
+      → Perda de rastreabilidade lote-produção
+   
+   7. SEM HIGIENIZAÇÃO DE EQUIPAMENTOS
+      → Não registra limpeza pré/pós produção
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - Registro de data/hora do turno existe
+   - Identificação de responsável existe
+   - Histórico de produção existe
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Criar coleção "pontos_criticos_controle" no Firebase
+   [ ] Adicionar campos obrigatórios no apontamento:
+       • temperatura_processamento (min/max)
+       • ph_produto (min/max)
+       • tempo_exposicao_ambiente
+       • higienizacao_pre_producao (sim/não + responsável)
+   [ ] Implementar validação em tempo real com alertas visuais
+   [ ] Criar campo "acao_corretiva_aplicada" se PCC fora do limite
+   [ ] Vincular "numero_lote_produzido" ao turno
+   [ ] Gerar relatório APPCC exportável (PDF para auditoria)
+
+
+================================================================================
+8. MÓDULO: MÁQUINAS E MANUTENÇÃO
+================================================================================
+
+PÁGINAS:
+   - src/pages/Maquinas.tsx
+   - src/pages/MaquinaDetalhes.tsx
+
+FUNCIONALIDADES EXISTENTES:
+   ✅ Cadastro de máquinas
+   ✅ Registro de manutenções
+   ✅ Histórico de falhas
+   ✅ Controle de peças
+
+❌ NÃO CONFORMIDADES CRÍTICAS:
+   1. SEM CERTIFICADO DE CALIBRAÇÃO
+      → Obrigatório para equipamentos de medição (RDC 275 item 4.1.12)
+   
+   2. FALTA DATA DA ÚLTIMA CALIBRAÇÃO
+      → Não há controle de periodicidade
+   
+   3. SEM PLANO DE MANUTENÇÃO PREVENTIVA OBRIGATÓRIA
+      → Não força manutenções regulares
+   
+   4. NÃO BLOQUEIA USO DE MÁQUINA VENCIDA
+      → Permite produção com equipamento sem calibração válida
+   
+   5. FALTA REGISTRO DE SANITIZAÇÃO (equipamentos contato com alimento)
+      → RDC 216 item 4.4.1
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - Registro de manutenções corretivas existe
+   - Histórico de peças trocadas existe
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Adicionar campo "certificado_calibracao_url"
+   [ ] Criar campo "data_ultima_calibracao" + "proxima_calibracao"
+   [ ] Implementar alerta: calibração vence em 30/15/7 dias
+   [ ] Bloquear uso da máquina se calibração vencida (override supervisor)
+   [ ] Adicionar checklist de sanitização diária (checkbox + responsável)
+   [ ] Criar relatório de conformidade de equipamentos para auditoria
+
+
+================================================================================
+9. MÓDULO: ORDENS DE SERVIÇO
+================================================================================
+
+PÁGINA: src/pages/OrdensServico.tsx
+COMPONENTES:
+   - src/components/NovaOrdemServico.tsx
+   - src/components/ListaOrdensServico.tsx
+
+FUNCIONALIDADES EXISTENTES:
+   ✅ Criação de OS para manutenção
+   ✅ Atribuição de responsável
+   ✅ Controle de status (aberta/em andamento/concluída)
+   ✅ Descrição do problema
+
+❌ NÃO CONFORMIDADES CRÍTICAS:
+   1. FALTA TIPO "INSPEÇÃO DE QUALIDADE"
+      → Sistema só tem OS de manutenção
+   
+   2. NÃO HÁ CHECKLIST DE INSPEÇÃO
+      → Inspeções não padronizadas (RDC 275 item 4.5.2)
+   
+   3. SEM UPLOAD DE FOTOS/EVIDÊNCIAS
+      → Não comprova inspeção visual
+   
+   4. FALTA ASSINATURA DIGITAL DO RESPONSÁVEL
+      → Não identifica aprovador da inspeção
+   
+   5. NÃO VINCULA OS A LOTE INSPECIONADO
+      → Perda de rastreabilidade lote-qualidade
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - Controle de status existe
+   - Campo de observações existe
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Adicionar tipo de OS: "inspecao_entrada" / "inspecao_processo" / "inspecao_final"
+   [ ] Criar checklist customizável por tipo de inspeção
+   [ ] Implementar upload de fotos (máx 5 por OS)
+   [ ] Adicionar campo "assinatura_digital" (canvas HTML5)
+   [ ] Vincular campo "lote_inspecionado"
+   [ ] Bloquear lote no estoque até aprovação da OS
+   [ ] Criar dashboard de lotes pendentes de inspeção
+
+
+================================================================================
+10. MÓDULO: RELATÓRIOS E DOCUMENTAÇÃO
+================================================================================
+
+PÁGINA: src/pages/Relatorios/Relatorios.tsx
+
+FUNCIONALIDADES EXISTENTES:
+   ✅ Relatórios gerenciais básicos
+   ✅ Exportação para Excel/PDF
+   ✅ Filtros por período
+
+❌ NÃO CONFORMIDADES CRÍTICAS:
+   1. FALTA RELATÓRIO DE RASTREABILIDADE POR LOTE
+      → Obrigatório para recall (RDC 259/2002)
+   
+   2. NÃO HÁ RELATÓRIO APPCC
+      → Exigido para auditoria (registros de PCCs)
+   
+   3. SEM RELATÓRIO DE PRODUTOS VENCIDOS/PRÓXIMOS AO VENCIMENTO
+      → Não cumpre controle de validade
+   
+   4. FALTA RELATÓRIO DE FORNECEDORES HOMOLOGADOS
+      → Não comprova seleção adequada de fornecedores
+   
+   5. NÃO GERA MANUAL DE BPF
+      → Documento obrigatório para ANVISA
+   
+   6. SEM REGISTRO DE TREINAMENTOS
+      → RDC 216 item 4.7 (manipuladores capacitados)
+
+⚠️ CONFORMIDADES PARCIAIS:
+   - Relatórios de movimentação de estoque existem
+   - Exportação para PDF/Excel funciona
+
+📋 AÇÕES CORRETIVAS NECESSÁRIAS:
+   [ ] Criar "Relatório de Rastreabilidade de Lote":
+       • Buscar por lote → listar: NF-e entrada → movimentações → saída
+       • Incluir dados de fornecedor, inspeções, PCCs do turno
+   
+   [ ] Criar "Relatório APPCC":
+       • Listar todos os PCCs registrados no período
+       • Identificar desvios e ações corretivas
+       • Assinatura do responsável técnico
+   
+   [ ] Criar "Relatório de Produtos Vencendo":
+       • Listar produtos com vencimento em 30/15/7 dias
+       • Alertar produtos vencidos (vermelho crítico)
+   
+   [ ] Criar "Relatório de Fornecedores":
+       • Status de homologação
+       • Validade de certificados
+       • Histórico de não-conformidades
+   
+   [ ] Gerar "Manual de BPF" (template editável):
+       • Procedimentos de higiene
+       • Fluxo de produção
+       • Controles de qualidade
+       • Responsabilidades
+   
+   [ ] Criar "Registro de Treinamentos":
+       • Integrar com módulo de usuários
+       • Listar treinamentos realizados (data, tema, participantes)
+       • Assinatura digital dos participantes
+
+
+================================================================================
+MÓDULOS CONFORMES (SEM ALTERAÇÕES NECESSÁRIAS PARA ANVISA)
+================================================================================
+
+✅ 11. ADMINISTRATIVO (Centro de Custo)
+   → Controle financeiro não impacta BPF
+
+✅ 12. COMPRAS
+   → Funcional para gestão de pedidos (não regulado diretamente)
+
+✅ 13. USUÁRIOS E PERFIS
+   → Controle de acesso adequado (RDC 275 item 4.11)
+
+✅ 14. UNIDADES
+   → Cadastro de filiais/depósitos adequado
+
+
+================================================================================
+PLANO DE AÇÃO PARA REGULARIZAÇÃO
+================================================================================
+
+🔴 FASE 1 - URGÊNCIA MÁXIMA (0-30 DIAS) - BLOQUEADORES
+   [ ] Implementar campos de lote em todos os módulos
+   [ ] Criar módulo de Controle de Qualidade (inspeção de entrada)
+   [ ] Implementar busca por lote e rastreabilidade completa
+   [ ] Criar funcionalidade de Recall
+   [ ] Tornar endereçamento obrigatório + FEFO automático
+
+🟠 FASE 2 - URGÊNCIA ALTA (30-60 DIAS) - CONFORMIDADE PARCIAL
+   [ ] Integrar APPCC no PCP (PCCs + validações)
+   [ ] Implementar homologação de fornecedores
+   [ ] Adicionar certificados de calibração em máquinas
+   [ ] Expandir Ordens de Serviço para inspeções de qualidade
+
+🟡 FASE 3 - URGÊNCIA MÉDIA (60-90 DIAS) - DOCUMENTAÇÃO
+   [ ] Criar todos os relatórios regulatórios
+   [ ] Implementar registro de treinamentos
+   [ ] Gerar Manual de BPF
+   [ ] Preparar documentação para auditoria
+
+
+================================================================================
+ESTIMATIVA DE ESFORÇO
+================================================================================
+
+⏱️ TEMPO ESTIMADO: 60-80 horas de desenvolvimento
+💰 CUSTO ESTIMADO DE LICENÇAS: R$ 1.500 - R$ 3.000/mês
+👥 EQUIPE NECESSÁRIA: 1 dev full-stack + 1 responsável técnico (RT)
+📅 PRAZO TOTAL: 8-10 semanas (2,5 meses)
+
+
+================================================================================
+CONCLUSÃO
+================================================================================
+
+O sistema atual da Fricó Alimentos possui uma base sólida de gestão operacional,
+mas NÃO ESTÁ PREPARADO PARA AUDITORIA ANVISA devido à ausência de:
+
+1. Rastreabilidade completa por lote
+2. Controle de Qualidade integrado
+3. Registros de APPCC/HACCP
+4. Capacidade de Recall
+
+RECOMENDAÇÃO: Implementar FASE 1 com PRIORIDADE MÁXIMA antes de qualquer
+inspeção sanitária. O sistema pode operar internamente, mas está em 
+NÃO-CONFORMIDADE com RDC 275/2002 e RDC 216/2004.
+
+
+================================================================================
+FIM DO DIAGNÓSTICO
+================================================================================
