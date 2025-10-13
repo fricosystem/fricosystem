@@ -743,34 +743,43 @@ const MaquinaDetalhes = () => {
                               className="transition-all hover:opacity-90"
                               filter="url(#cardShadow)"
                             >
+                              {/* Card do Sistema */}
                               <rect
-                                x={sistema.x - 85}
-                                y={sistema.y - 50}
-                                width="170"
-                                height="100"
-                                rx="8"
-                                ry="8"
+                                x={sistema.x - 100}
+                                y={sistema.y - 40}
+                                width="200"
+                                height="80"
+                                rx="12"
+                                ry="12"
                                 fill="hsl(var(--card))"
                                 stroke={isSelected ? "hsl(var(--primary))" : "hsl(var(--border))"}
-                                strokeWidth={isSelected ? "2" : "1"}
-                                className="transition-all"
+                                strokeWidth={isSelected ? "3" : "1"}
+                                className="transition-all duration-200"
                                 onClick={() => handleMaquinaClick(sistema.id)}
-                                onContextMenu={(e) => {
-                                  e.preventDefault();
-                                  handleSistemaInfo(sistema, e as any);
-                                }}
                               />
                               
+                              {/* Barra de status superior */}
                               <rect
-                                x={sistema.x - 85}
-                                y={sistema.y - 50}
-                                width="170"
-                                height="4"
-                                rx="8"
-                                ry="8"
+                                x={sistema.x - 100}
+                                y={sistema.y - 40}
+                                width="200"
+                                height="6"
+                                rx="12"
+                                ry="12"
                                 fill={statusColor}
                               />
 
+                              {/* Ícone do sistema */}
+                              <text
+                                x={sistema.x - 80}
+                                y={sistema.y - 10}
+                                fontSize="20"
+                                style={{ pointerEvents: "none" }}
+                              >
+                                {getCategoriaIcon(sistema.tipo)}
+                              </text>
+
+                              {/* Informações do sistema */}
                               <text
                                 x={sistema.x}
                                 y={sistema.y - 15}
@@ -801,13 +810,15 @@ const MaquinaDetalhes = () => {
                                 {sistema.totalPecas} peças
                               </text>
 
-                              <g transform={`translate(${sistema.x + 70}, ${sistema.y - 35})`}>
-                                <circle r="10" fill={statusColor} />
+                              {/* Indicador de status */}
+                              <g transform={`translate(${sistema.x + 75}, ${sistema.y - 30})`}>
+                                <circle r="8" fill={statusColor} />
                                 <text
                                   textAnchor="middle"
                                   dominantBaseline="middle"
-                                  fontSize="10"
+                                  fontSize="9"
                                   fill="white"
+                                  fontWeight="bold"
                                   style={{ pointerEvents: "none" }}
                                 >
                                   {sistema.status === "Crítico" ? "!" : 
@@ -815,19 +826,20 @@ const MaquinaDetalhes = () => {
                                 </text>
                               </g>
 
+                              {/* Botão de informações */}
                               <g 
-                                transform={`translate(${sistema.x + 70}, ${sistema.y + 30})`}
+                                transform={`translate(${sistema.x + 75}, ${sistema.y + 20})`}
                                 style={{ cursor: "pointer" }}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleSistemaInfo(sistema, e as any);
                                 }}
                               >
-                                <circle r="10" fill="hsl(var(--primary))" opacity="0.9" />
+                                <circle r="8" fill="hsl(var(--primary))" opacity="0.9" />
                                 <text
                                   textAnchor="middle"
                                   dominantBaseline="middle"
-                                  fontSize="12"
+                                  fontSize="10"
                                   fill="white"
                                   fontWeight="bold"
                                 >
@@ -841,7 +853,7 @@ const MaquinaDetalhes = () => {
                         {/* Renderizar peças no lado direito quando um sistema for selecionado */}
                         {selectedMaquina && (
                           <>
-                            {/* Linhas de conexão */}
+                            {/* Linhas de conexão entre sistema e peças */}
                             {pecasPorCamada.map((peca, index) => {
                               const sistema = sistemas.find(s => s.id === selectedMaquina);
                               const centerX = sistema?.x || 120;
@@ -852,9 +864,9 @@ const MaquinaDetalhes = () => {
                               const pecaX = startX;
                               const pecaY = startY + index * spacing;
 
-                              const startPointX = centerX + 85;
+                              const startPointX = centerX + 100;
                               const startPointY = centerY;
-                              const endPointX = pecaX - 70;
+                              const endPointX = pecaX - 85;
                               const endPointY = pecaY;
 
                               const controlX1 = startPointX + 80;
@@ -867,13 +879,13 @@ const MaquinaDetalhes = () => {
                                     stroke="hsl(var(--primary))"
                                     strokeWidth="2"
                                     fill="none"
-                                    opacity={0.5}
+                                    opacity={0.6}
                                     strokeLinecap="round"
                                   />
                                   <polygon
-                                    points={`${endPointX},${endPointY} ${endPointX - 6},${endPointY - 4} ${endPointX - 6},${endPointY + 4}`}
+                                    points={`${endPointX},${endPointY} ${endPointX - 8},${endPointY - 5} ${endPointX - 8},${endPointY + 5}`}
                                     fill="hsl(var(--primary))"
-                                    opacity={0.7}
+                                    opacity={0.8}
                                   />
                                 </g>
                               );
@@ -890,11 +902,11 @@ const MaquinaDetalhes = () => {
                               const subStartX = 650;
                               const subSpacing = 70;
                               const subPecaX = subStartX;
-                              const subPecaY = pecaY - 30 + subIndex * subSpacing;
+                              const subPecaY = pecaY - 25 + subIndex * subSpacing;
 
-                              const startPointX = pecaX + 70;
+                              const startPointX = pecaX + 85;
                               const startPointY = pecaY;
-                              const endPointX = subPecaX - 60;
+                              const endPointX = subPecaX - 70;
                               const endPointY = subPecaY;
                               
                               return (
@@ -906,13 +918,13 @@ const MaquinaDetalhes = () => {
                                     y2={endPointY}
                                     stroke="hsl(var(--primary))"
                                     strokeWidth="1.5"
-                                    opacity={0.4}
+                                    opacity={0.5}
                                     strokeDasharray="4,4"
                                   />
                                   <polygon
-                                    points={`${endPointX},${endPointY} ${endPointX - 5},${endPointY - 3} ${endPointX - 5},${endPointY + 3}`}
+                                    points={`${endPointX},${endPointY} ${endPointX - 6},${endPointY - 4} ${endPointX - 6},${endPointY + 4}`}
                                     fill="hsl(var(--primary))"
-                                    opacity={0.6}
+                                    opacity={0.7}
                                   />
                                 </g>
                               );
@@ -936,43 +948,47 @@ const MaquinaDetalhes = () => {
                                     className="transition-all hover:opacity-90"
                                     filter="url(#cardShadow)"
                                   >
+                                    {/* Card da Peça */}
                                     <rect
-                                      x={pecaX - 70}
-                                      y={pecaY - 35}
-                                      width="140"
-                                      height="70"
-                                      rx="8"
-                                      ry="8"
+                                      x={pecaX - 85}
+                                      y={pecaY - 40}
+                                      width="170"
+                                      height="80"
+                                      rx="12"
+                                      ry="12"
                                       fill="hsl(var(--card))"
                                       stroke={isExpanded ? "hsl(var(--primary))" : "hsl(var(--border))"}
-                                      strokeWidth={isExpanded ? "2" : "1"}
-                                      className="transition-all"
+                                      strokeWidth={isExpanded ? "3" : "1"}
+                                      className="transition-all duration-200"
                                       onClick={() => handlePecaClick(peca)}
                                       onContextMenu={(e) => handlePecaInfo(peca, e as any)}
                                     />
                                     
+                                    {/* Barra de status superior */}
                                     <rect
-                                      x={pecaX - 70}
-                                      y={pecaY - 35}
-                                      width="140"
-                                      height="4"
-                                      rx="8"
-                                      ry="8"
+                                      x={pecaX - 85}
+                                      y={pecaY - 40}
+                                      width="170"
+                                      height="6"
+                                      rx="12"
+                                      ry="12"
                                       fill={statusColor}
                                     />
 
+                                    {/* Ícone da categoria */}
                                     <text
-                                      x={pecaX - 55}
-                                      y={pecaY - 8}
+                                      x={pecaX - 70}
+                                      y={pecaY - 15}
                                       fontSize="18"
                                       style={{ pointerEvents: "none" }}
                                     >
                                       {getCategoriaIcon(peca.categoria)}
                                     </text>
 
+                                    {/* Código da peça */}
                                     <text
-                                      x={pecaX - 30}
-                                      y={pecaY - 12}
+                                      x={pecaX - 45}
+                                      y={pecaY - 18}
                                       textAnchor="start"
                                       className="text-xs font-semibold fill-foreground"
                                       style={{ pointerEvents: "none" }}
@@ -980,9 +996,10 @@ const MaquinaDetalhes = () => {
                                       {peca.codigo}
                                     </text>
 
+                                    {/* Nome da peça */}
                                     <text
                                       x={pecaX}
-                                      y={pecaY + 6}
+                                      y={pecaY + 5}
                                       textAnchor="middle"
                                       className="text-[10px] fill-muted-foreground"
                                       style={{ pointerEvents: "none" }}
@@ -990,12 +1007,13 @@ const MaquinaDetalhes = () => {
                                       {peca.nome.length > 20 ? peca.nome.substring(0, 18) + "..." : peca.nome}
                                     </text>
 
-                                    <g transform={`translate(${pecaX + 55}, ${pecaY - 25})`}>
-                                      <circle r="8" fill={statusColor} />
+                                    {/* Indicador de status */}
+                                    <g transform={`translate(${pecaX + 65}, ${pecaY - 30})`}>
+                                      <circle r="7" fill={statusColor} />
                                       <text
                                         textAnchor="middle"
                                         dominantBaseline="middle"
-                                        fontSize="9"
+                                        fontSize="8"
                                         fill="white"
                                         fontWeight="bold"
                                         style={{ pointerEvents: "none" }}
@@ -1004,13 +1022,14 @@ const MaquinaDetalhes = () => {
                                       </text>
                                     </g>
 
+                                    {/* Indicador de estoque baixo */}
                                     {peca.emEstoque <= peca.estoqueMinimo && (
-                                      <g transform={`translate(${pecaX + 55}, ${pecaY - 10})`}>
-                                        <circle r="7" fill="#f59e0b" />
+                                      <g transform={`translate(${pecaX + 65}, ${pecaY - 15})`}>
+                                        <circle r="6" fill="#f59e0b" />
                                         <text
                                           textAnchor="middle"
                                           dominantBaseline="middle"
-                                          fontSize="10"
+                                          fontSize="8"
                                           fill="white"
                                           fontWeight="bold"
                                           style={{ pointerEvents: "none" }}
@@ -1020,12 +1039,13 @@ const MaquinaDetalhes = () => {
                                       </g>
                                     )}
 
-                                    <g transform={`translate(${pecaX - 60}, ${pecaY + 18})`}>
-                                      <rect width="120" height="3" rx="1.5" fill="hsl(var(--muted))" />
+                                    {/* Barra de vida útil */}
+                                    <g transform={`translate(${pecaX - 75}, ${pecaY + 25})`}>
+                                      <rect width="150" height="4" rx="2" fill="hsl(var(--muted))" />
                                       <rect
-                                        width={120 * (peca.vidaUtilRestante / peca.vidaUtil)}
-                                        height="3"
-                                        rx="1.5"
+                                        width={150 * (peca.vidaUtilRestante / peca.vidaUtil)}
+                                        height="4"
+                                        rx="2"
                                         fill={
                                           peca.vidaUtilRestante / peca.vidaUtil > 0.5 ? "#10b981" :
                                           peca.vidaUtilRestante / peca.vidaUtil > 0.3 ? "#f59e0b" : "#ef4444"
@@ -1033,13 +1053,14 @@ const MaquinaDetalhes = () => {
                                       />
                                     </g>
                                     
+                                    {/* Indicador de sub-peças */}
                                     {peca.subPecas && peca.subPecas.length > 0 && (
-                                      <g transform={`translate(${pecaX - 58}, ${pecaY - 25})`}>
-                                        <circle r="7" fill="hsl(var(--primary))" />
+                                      <g transform={`translate(${pecaX - 75}, ${pecaY - 30})`}>
+                                        <circle r="6" fill="hsl(var(--primary))" />
                                         <text
                                           textAnchor="middle"
                                           dominantBaseline="middle"
-                                          fontSize="10"
+                                          fontSize="8"
                                           fill="white"
                                           fontWeight="bold"
                                           style={{ pointerEvents: "none" }}
@@ -1066,32 +1087,35 @@ const MaquinaDetalhes = () => {
                                         className="transition-all hover:opacity-90"
                                         filter="url(#cardShadow)"
                                       >
+                                        {/* Card da Sub-peça */}
                                         <rect
-                                          x={subPecaX - 60}
-                                          y={subPecaY - 25}
-                                          width="120"
-                                          height="50"
-                                          rx="6"
-                                          ry="6"
+                                          x={subPecaX - 70}
+                                          y={subPecaY - 30}
+                                          width="140"
+                                          height="60"
+                                          rx="8"
+                                          ry="8"
                                           fill="hsl(var(--card))"
                                           stroke="hsl(var(--border))"
                                           strokeWidth="1"
                                           onClick={(e) => handleSubPecaInfo(subPeca, peca, e as any)}
                                         />
                                         
+                                        {/* Barra de status superior */}
                                         <rect
-                                          x={subPecaX - 60}
-                                          y={subPecaY - 25}
-                                          width="120"
-                                          height="3"
-                                          rx="6"
-                                          ry="6"
+                                          x={subPecaX - 70}
+                                          y={subPecaY - 30}
+                                          width="140"
+                                          height="4"
+                                          rx="8"
+                                          ry="8"
                                           fill={subStatusColor}
                                         />
                                         
+                                        {/* Código da sub-peça */}
                                         <text
                                           x={subPecaX}
-                                          y={subPecaY - 8}
+                                          y={subPecaY - 12}
                                           textAnchor="middle"
                                           className="text-[9px] font-bold fill-foreground"
                                           style={{ pointerEvents: "none" }}
@@ -1099,9 +1123,10 @@ const MaquinaDetalhes = () => {
                                           {subPeca.codigo}
                                         </text>
                                         
+                                        {/* Nome da sub-peça */}
                                         <text
                                           x={subPecaX}
-                                          y={subPecaY + 5}
+                                          y={subPecaY + 3}
                                           textAnchor="middle"
                                           className="text-[8px] fill-muted-foreground"
                                           style={{ pointerEvents: "none" }}
@@ -1109,12 +1134,13 @@ const MaquinaDetalhes = () => {
                                           {subPeca.nome.length > 18 ? subPeca.nome.substring(0, 16) + "..." : subPeca.nome}
                                         </text>
                                         
-                                        <g transform={`translate(${subPecaX + 48}, ${subPecaY - 18})`}>
-                                          <circle r="6" fill={subStatusColor} />
+                                        {/* Indicador de estoque */}
+                                        <g transform={`translate(${subPecaX + 55}, ${subPecaY - 22})`}>
+                                          <circle r="5" fill={subStatusColor} />
                                           <text
                                             textAnchor="middle"
                                             dominantBaseline="middle"
-                                            fontSize="8"
+                                            fontSize="7"
                                             fill="white"
                                             fontWeight="bold"
                                             style={{ pointerEvents: "none" }}
