@@ -11,9 +11,6 @@ export default defineConfig(({ mode }) => ({
       clientPort: 8080,
     },
   },
-  define: {
-    '__WS_TOKEN__': JSON.stringify(''),
-  },
   plugins: [
     react(),
     mode === 'development' &&
