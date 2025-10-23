@@ -24,8 +24,18 @@ export function Hero() {
         animationDelay: "0.2s"
       }}>
           
-          <Button variant="outline" size="lg" className="bg-white border-white text-black hover:bg-black hover:text-white" asChild>
-            <a href="#features">Saiba Mais</a>
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="bg-white border-white text-black hover:bg-black hover:text-white"
+            onClick={() => {
+              document.getElementById('modulos')?.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+              });
+            }}
+          >
+            Saiba Mais
           </Button>
         </div>
       </div>
