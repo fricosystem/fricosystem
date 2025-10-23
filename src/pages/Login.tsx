@@ -2,6 +2,7 @@ import { Header } from "@/components/Login/Header";
 import { Hero } from "@/components/Login/Hero";
 import { Features } from "@/components/Login/Features";
 import { Solutions } from "@/components/Login/Solutions";
+import { ModulosSection } from "@/components/Login/ModulosSection";
 import { Testimonials } from "@/components/Login/Testimonials";
 import { Contact } from "@/components/Login/Contact";
 import { Footer } from "@/components/Login/Footer";
@@ -14,6 +15,7 @@ const Login = () => {
         <Hero />
         <Features />
         <Solutions />
+        <ModulosSection />
         <Testimonials />
         <Contact />
       </main>
