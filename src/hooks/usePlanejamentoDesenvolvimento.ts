@@ -11,7 +11,34 @@ import {
   query
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
-import { Tarefa } from '@/pages/Planejamento/PlanejamentoDesenvolvimento';
+export interface Etapa {
+  id: string;
+  titulo: string;
+  descricao: string;
+  status: 'pendente' | 'em_andamento' | 'concluido' | 'bloqueado';
+  prioridade: 'baixa' | 'media' | 'alta' | 'urgente';
+  responsavel?: string;
+  dataInicio?: Date;
+  dataFim?: Date;
+  tempoEstimado?: number; // em horas
+  tempoGasto?: number; // em horas
+  tags?: string[];
+  ordem: number;
+}
+
+export interface Tarefa {
+  id: string;
+  nome: string;
+  detalhes: string;
+  categoria: 'frontend' | 'backend' | 'design' | 'teste' | 'documentacao' | 'outro';
+  prioridade: 'baixa' | 'media' | 'alta' | 'urgente';
+  status: 'planejamento' | 'em_andamento' | 'revisao' | 'concluido' | 'pausado';
+  concluido: boolean;
+  etapas: Etapa[];
+  progresso: number; // 0-100
+  criadoEm: Date;
+  atualizadoEm: Date;
+}
 
 export const usePlanejamentoDesenvolvimento = () => {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
@@ -27,11 +54,24 @@ export const usePlanejamentoDesenvolvimento = () => {
       const tarefasData: Tarefa[] = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
+        
+        // Convert etapas dates
+        const etapas = (data.etapas || []).map((etapa: any) => ({
+          ...etapa,
+          dataInicio: etapa.dataInicio?.toDate(),
+          dataFim: etapa.dataFim?.toDate(),
+        }));
+
         tarefasData.push({
           id: doc.id,
           nome: data.nome,
           detalhes: data.detalhes,
+          categoria: data.categoria || 'outro',
+          prioridade: data.prioridade || 'media',
+          status: data.status || 'planejamento',
           concluido: data.concluido,
+          etapas,
+          progresso: data.progresso || 0,
           criadoEm: data.criadoEm?.toDate() || new Date(),
           atualizadoEm: data.atualizadoEm?.toDate() || new Date(),
         });
