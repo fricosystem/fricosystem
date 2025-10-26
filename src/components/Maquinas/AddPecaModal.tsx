@@ -74,6 +74,7 @@ export const AddPecaModal = ({
   const [selectedProdutoId, setSelectedProdutoId] = useState<string>("");
   const [produtosPopoverOpen, setProdutosPopoverOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
   
   const [formData, setFormData] = useState<Partial<Peca>>(
     editingPeca || {
@@ -99,12 +100,18 @@ export const AddPecaModal = ({
     }
   );
 
-  // Buscar produtos quando o modal abrir
+  // Buscar produtos quando o usuário começar a digitar (busca sob demanda)
   useEffect(() => {
-    if (open && produtos.length === 0) {
-      fetchProdutos();
+    if (searchTerm.length >= 2) {
+      const debounceTimer = setTimeout(() => {
+        fetchProdutos(searchTerm);
+      }, 300);
+      return () => clearTimeout(debounceTimer);
+    } else if (searchTerm.length === 0 && hasSearched) {
+      setProdutos([]);
+      setHasSearched(false);
     }
-  }, [open]);
+  }, [searchTerm]);
 
   // Resetar seleção quando modal fechar
   useEffect(() => {
@@ -112,27 +119,41 @@ export const AddPecaModal = ({
       setSelectedProdutoId("");
       setProdutosPopoverOpen(false);
       setSearchTerm("");
+      setProdutos([]);
+      setHasSearched(false);
     }
   }, [open]);
 
-  const fetchProdutos = async () => {
+  const fetchProdutos = async (search: string) => {
     setProdutosLoading(true);
+    setHasSearched(true);
     try {
       const produtosCollection = collection(db, "produtos");
-      const produtosQuery = query(produtosCollection, orderBy("nome"));
-      const snapshot = await getDocs(produtosQuery);
+      const snapshot = await getDocs(produtosCollection);
       
-      const produtosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        nome: doc.data().nome || "",
-        codigo_estoque: doc.data().codigo_estoque || "",
-        codigo_material: doc.data().codigo_material || "",
-        quantidade: doc.data().quantidade || 0,
-        quantidade_minima: doc.data().quantidade_minima || 0,
-        valor_unitario: doc.data().valor_unitario || 0,
-        fornecedor_nome: doc.data().fornecedor_nome || "",
-        detalhes: doc.data().detalhes || "",
-      })) as Produto[];
+      // Filtrar no cliente para busca mais flexível
+      const produtosData = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          nome: doc.data().nome || "",
+          codigo_estoque: doc.data().codigo_estoque || "",
+          codigo_material: doc.data().codigo_material || "",
+          quantidade: doc.data().quantidade || 0,
+          quantidade_minima: doc.data().quantidade_minima || 0,
+          valor_unitario: doc.data().valor_unitario || 0,
+          fornecedor_nome: doc.data().fornecedor_nome || "",
+          detalhes: doc.data().detalhes || "",
+        }))
+        .filter(produto => {
+          const searchLower = search.toLowerCase();
+          return (
+            produto.nome.toLowerCase().includes(searchLower) ||
+            produto.codigo_estoque.toLowerCase().includes(searchLower) ||
+            produto.codigo_material.toLowerCase().includes(searchLower) ||
+            (produto.fornecedor_nome && produto.fornecedor_nome.toLowerCase().includes(searchLower))
+          );
+        })
+        .slice(0, 50) as Produto[]; // Limitar a 50 resultados
       
       setProdutos(produtosData);
     } catch (error) {
@@ -172,13 +193,8 @@ export const AddPecaModal = ({
     }
   };
 
-  // Filtrar produtos baseado na pesquisa
-  const produtosDisponiveis = produtos.filter(produto =>
-    produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    produto.codigo_estoque.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    produto.codigo_material.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (produto.fornecedor_nome && produto.fornecedor_nome.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Produtos já vêm filtrados da busca
+  const produtosDisponiveis = produtos;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,60 +284,65 @@ export const AddPecaModal = ({
                 <Button
                   variant="outline"
                   role="combobox"
+                  type="button"
                   className={cn(
                     "w-full justify-between",
                     !selectedProdutoId && "text-muted-foreground"
                   )}
-                  disabled={produtosLoading}
+                  onClick={() => setProdutosPopoverOpen(!produtosPopoverOpen)}
                 >
-                  {produtosLoading
-                    ? "Carregando produtos..."
-                    : selectedProdutoId
-                      ? selectedProduto?.nome
-                      : "Selecione um produto para preencher os campos..."}
+                  {selectedProdutoId
+                    ? selectedProduto?.nome
+                    : "Digite para buscar um produto..."}
                   <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
-                <Command>
+              <PopoverContent className="w-[95vw] sm:w-[500px] p-0" align="start">
+                <Command shouldFilter={false}>
                   <CommandInput 
-                    placeholder="Buscar produto..." 
+                    placeholder="Digite pelo menos 2 caracteres para buscar..." 
                     className="h-9" 
                     value={searchTerm}
                     onValueChange={setSearchTerm}
                   />
                   <CommandList className="max-h-[300px] overflow-y-auto">
                     <CommandEmpty>
-                      {produtosLoading ? "Carregando produtos..." : "Nenhum produto encontrado."}
+                      {produtosLoading 
+                        ? "Buscando produtos..." 
+                        : searchTerm.length < 2 
+                          ? "Digite pelo menos 2 caracteres para buscar"
+                          : "Nenhum produto encontrado"}
                     </CommandEmpty>
-                    <CommandGroup>
-                      {produtosDisponiveis.map((produto) => (
-                        <CommandItem
-                          key={produto.id}
-                          value={`${produto.nome} ${produto.codigo_estoque} ${produto.codigo_material}`}
-                          onSelect={() => handleProdutoSelect(produto.id)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedProdutoId === produto.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          <div className="flex flex-col">
-                            <span>{produto.nome}</span>
-                            <span className="text-xs text-muted-foreground">
-                              Código: {produto.codigo_estoque || produto.codigo_material} • Estoque: {produto.quantidade}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
+                    {produtosDisponiveis.length > 0 && (
+                      <CommandGroup>
+                        {produtosDisponiveis.map((produto) => (
+                          <CommandItem
+                            key={produto.id}
+                            value={produto.id}
+                            onSelect={() => handleProdutoSelect(produto.id)}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4 shrink-0",
+                                selectedProdutoId === produto.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className="truncate">{produto.nome}</span>
+                              <span className="text-xs text-muted-foreground truncate">
+                                Código: {produto.codigo_estoque || produto.codigo_material} • Estoque: {produto.quantidade}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
                   </CommandList>
                 </Command>
               </PopoverContent>
             </Popover>
             <p className="text-xs text-muted-foreground">
-              Selecione um produto da lista para preencher automaticamente os campos abaixo
+              Digite pelo menos 2 caracteres para buscar e selecionar um produto (máx. 50 resultados)
             </p>
           </div>
 
