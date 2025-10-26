@@ -762,7 +762,7 @@ const MaquinaDetalhes = () => {
                               className="transition-all hover:opacity-90"
                               filter="url(#cardShadow)"
                             >
-                              {/* Card do Sistema */}
+                              {/* Card do Sistema - Layout limpo sem barra verde */}
                               <rect
                                 x={sistema.x - 100}
                                 y={sistema.y - 45}
@@ -777,33 +777,6 @@ const MaquinaDetalhes = () => {
                                 onClick={() => handleMaquinaClick(sistema.id)}
                               />
                               
-                              {/* Barra de status superior - agradiente */}
-                              <defs>
-                                <linearGradient id={`statusGrad-${sistema.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                  <stop offset="0%" style={{ stopColor: statusColor, stopOpacity: 0.8 }} />
-                                  <stop offset="100%" style={{ stopColor: statusColor, stopOpacity: 1 }} />
-                                </linearGradient>
-                              </defs>
-                              <rect
-                                x={sistema.x - 100}
-                                y={sistema.y - 45}
-                                width="200"
-                                height="28"
-                                rx="8"
-                                ry="8"
-                                fill={`url(#statusGrad-${sistema.id})`}
-                                opacity="0.15"
-                              />
-                              <rect
-                                x={sistema.x - 100}
-                                y={sistema.y - 45}
-                                width="200"
-                                height="3"
-                                rx="8"
-                                ry="8"
-                                fill={statusColor}
-                              />
-
                               {/* Ícone do sistema */}
                               <text
                                 x={sistema.x - 85}
@@ -858,7 +831,7 @@ const MaquinaDetalhes = () => {
                                 </text>
                               </g>
 
-                              {/* Indicador de status - reposicionado */}
+                              {/* Indicador de status - estilo badge circular */}
                               <g transform={`translate(${sistema.x + 80}, ${sistema.y - 30})`}>
                                 <circle r="10" fill={statusColor} opacity="0.2" />
                                 <circle r="7" fill={statusColor} />
@@ -875,7 +848,7 @@ const MaquinaDetalhes = () => {
                                 </text>
                               </g>
 
-                              {/* Botão de detalhes - reposicionado */}
+                              {/* Botão de detalhes */}
                               <g 
                                 transform={`translate(${sistema.x + 80}, ${sistema.y - 12})`}
                                 style={{ cursor: "pointer" }}
@@ -1000,7 +973,7 @@ const MaquinaDetalhes = () => {
                                     className="transition-all hover:opacity-90"
                                     filter="url(#cardShadow)"
                                   >
-                                    {/* Card da Peça */}
+                                    {/* Card da Peça - Layout limpo sem barra verde */}
                                     <rect
                                       x={pecaX - 85}
                                       y={pecaY - 42}
@@ -1015,33 +988,6 @@ const MaquinaDetalhes = () => {
                                       onClick={(e) => handlePecaInfo(peca, e as any)}
                                     />
                                     
-                                    {/* Barra de status superior - estilo diferente */}
-                                    <defs>
-                                      <linearGradient id={`pecaGrad-${peca.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" style={{ stopColor: statusColor, stopOpacity: 0.6 }} />
-                                        <stop offset="100%" style={{ stopColor: statusColor, stopOpacity: 1 }} />
-                                      </linearGradient>
-                                    </defs>
-                                    <rect
-                                      x={pecaX - 85}
-                                      y={pecaY - 42}
-                                      width="170"
-                                      height="24"
-                                      rx="6"
-                                      ry="6"
-                                      fill={`url(#pecaGrad-${peca.id})`}
-                                      opacity="0.12"
-                                    />
-                                    <rect
-                                      x={pecaX - 85}
-                                      y={pecaY - 42}
-                                      width="170"
-                                      height="2"
-                                      rx="6"
-                                      ry="6"
-                                      fill={statusColor}
-                                    />
-
                                     {/* Ícone da categoria */}
                                     <text
                                       x={pecaX - 75}
@@ -1074,7 +1020,7 @@ const MaquinaDetalhes = () => {
                                       {peca.nome.length > 16 ? peca.nome.substring(0, 14) + "..." : peca.nome}
                                     </text>
 
-                                    {/* Indicador de status - reposicionado */}
+                                    {/* Indicador de status - estilo badge circular */}
                                     <g transform={`translate(${pecaX + 70}, ${pecaY - 32})`}>
                                       <circle r="8" fill={statusColor} opacity="0.2" />
                                       <circle r="6" fill={statusColor} />
@@ -1135,7 +1081,7 @@ const MaquinaDetalhes = () => {
                                       </text>
                                     </g>
                                     
-                                    {/* Indicador de sub-peças - reposicionado */}
+                                    {/* Indicador de sub-peças */}
                                     {peca.subPecas && peca.subPecas.length > 0 && (
                                       <g 
                                         transform={`translate(${pecaX - 75}, ${pecaY - 32})`}
@@ -1176,7 +1122,7 @@ const MaquinaDetalhes = () => {
                                         className="transition-all hover:opacity-90"
                                         filter="url(#cardShadow)"
                                       >
-                                        {/* Card da Sub-peça - estilo compacto */}
+                                        {/* Card da Sub-peça - Layout limpo sem barra verde */}
                                         <rect
                                           x={subPecaX - 70}
                                           y={subPecaY - 28}
@@ -1188,34 +1134,6 @@ const MaquinaDetalhes = () => {
                                           stroke="hsl(var(--border))"
                                           strokeWidth="1.5"
                                           onClick={(e) => handleSubPecaInfo(subPeca, peca, e as any)}
-                                        />
-                                        
-                                        {/* Barra de status superior - mais sutil */}
-                                        <defs>
-                                          <linearGradient id={`subPecaGrad-${subPeca.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" style={{ stopColor: subStatusColor, stopOpacity: 0.3 }} />
-                                            <stop offset="100%" style={{ stopColor: subStatusColor, stopOpacity: 0.6 }} />
-                                          </linearGradient>
-                                        </defs>
-                                        <rect
-                                          x={subPecaX - 70}
-                                          y={subPecaY - 28}
-                                          width="140"
-                                          height="18"
-                                          rx="5"
-                                          ry="5"
-                                          fill={`url(#subPecaGrad-${subPeca.id})`}
-                                          opacity="0.1"
-                                        />
-                                        <rect
-                                          x={subPecaX - 70}
-                                          y={subPecaY - 28}
-                                          width="140"
-                                          height="2"
-                                          rx="5"
-                                          ry="5"
-                                          fill={subStatusColor}
-                                          opacity="0.8"
                                         />
                                         
                                         {/* Código da sub-peça */}
@@ -1262,7 +1180,7 @@ const MaquinaDetalhes = () => {
                                           </text>
                                         </g>
                                         
-                                        {/* Indicador de status - reposicionado */}
+                                        {/* Indicador de status - estilo badge circular */}
                                         <g transform={`translate(${subPecaX + 60}, ${subPecaY - 20})`}>
                                           <circle r="7" fill={subStatusColor} opacity="0.2" />
                                           <circle r="5" fill={subStatusColor} />
