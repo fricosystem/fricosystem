@@ -21,6 +21,8 @@ import { AddSistemaModal } from "@/components/Maquinas/AddSistemaModal";
 import { AddManutencaoModal } from "@/components/Maquinas/AddManutencaoModal";
 import { AddMetricaModal } from "@/components/Maquinas/AddMetricaModal";
 import { PecaCard } from "@/components/Maquinas/PecaCard";
+import { PecaDetailsModal } from "@/components/Maquinas/PecaDetailsModal";
+import { SubPecaDetailsModal } from "@/components/Maquinas/SubPecaDetailsModal";
 
 interface SubPeca {
   id: string;
@@ -45,7 +47,7 @@ interface Peca {
   descricao: string;
   codigo: string;
   status: "Normal" | "Atenção" | "Crítico";
-  categoria: "Mecânica" | "Elétrica" | "Hidráulica";
+  categoria: "Mecânica" | "Elétrica" | "Hidráulica" | "Pneumática" | "Eletrônica" | "Estrutural" | "Rolamentos" | "Vedação" | "Lubrificação" | "Transmissão" | "Instrumentação" | "Refrigeração" | "Controle";
   vidaUtil: number;
   vidaUtilRestante: number;
   ultimaManutencao: string;
@@ -118,6 +120,7 @@ const MaquinaDetalhes = () => {
   const [selectedMaquina, setSelectedMaquina] = useState<string | null>(null);
   const [expandedPecaId, setExpandedPecaId] = useState<string | null>(null);
   const [camadasVisiveis, setCamadasVisiveis] = useState<string[]>(["Mecânica", "Elétrica", "Hidráulica"]);
+  const [tiposVisiveis, setTiposVisiveis] = useState<string[]>(["Mecânico", "Elétrico", "Mecânico-Elétrico", "Hidráulico", "Pneumático", "Eletrônico", "Automação"]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Estados para gerenciamento de modais
@@ -126,6 +129,8 @@ const MaquinaDetalhes = () => {
   const [isSistemaModalOpen, setIsSistemaModalOpen] = useState(false);
   const [isManutencaoModalOpen, setIsManutencaoModalOpen] = useState(false);
   const [isMetricaModalOpen, setIsMetricaModalOpen] = useState(false);
+  const [isPecaDetailsModalOpen, setIsPecaDetailsModalOpen] = useState(false);
+  const [isSubPecaDetailsModalOpen, setIsSubPecaDetailsModalOpen] = useState(false);
   const [editingPeca, setEditingPeca] = useState<Peca | null>(null);
   const [editingSubPeca, setEditingSubPeca] = useState<SubPeca | null>(null);
   const [editingSistema, setEditingSistema] = useState<Sistema | null>(null);
@@ -556,11 +561,24 @@ const MaquinaDetalhes = () => {
     );
   };
 
+  const toggleTipo = (tipo: string) => {
+    setTiposVisiveis(prev => 
+      prev.includes(tipo) ? prev.filter(t => t !== tipo) : [...prev, tipo]
+    );
+  };
+
   const getCategoriaIcon = (categoria: string) => {
     switch (categoria) {
       case "Mecânica": return "⚙️";
+      case "Mecânico": return "⚙️";
       case "Elétrica": return "⚡";
+      case "Elétrico": return "⚡";
+      case "Mecânico-Elétrico": return "⚙️⚡";
       case "Hidráulica": return "💧";
+      case "Hidráulico": return "💧";
+      case "Pneumático": return "💨";
+      case "Eletrônico": return "🔌";
+      case "Automação": return "🤖";
       default: return "🔧";
     }
   };
@@ -571,6 +589,7 @@ const MaquinaDetalhes = () => {
 
   const handleSistemaInfo = (sistema: Sistema, e: React.MouseEvent) => {
     e.stopPropagation();
+    setSelectedMaquina(sistema.id); // Seleciona o sistema para mostrar as peças
     setSelectedSistema(sistema);
     setSelectedPeca(null);
     setSelectedSubPeca(null);
@@ -592,6 +611,7 @@ const MaquinaDetalhes = () => {
   const handlePecaInfo = (peca: Peca, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedPeca(peca);
+    setIsPecaDetailsModalOpen(true);
     setSelectedSubPeca(null);
     setSelectedSistema(null);
   };
@@ -600,6 +620,7 @@ const MaquinaDetalhes = () => {
     e.stopPropagation();
     setSelectedSubPeca(subPeca);
     setSelectedPeca(peca);
+    setIsSubPecaDetailsModalOpen(true);
     setSelectedSistema(null);
   };
 
@@ -651,17 +672,17 @@ const MaquinaDetalhes = () => {
                   
                   <Separator orientation="vertical" className="h-6" />
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Layers className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Camadas:</span>
-                    {["Mecânica", "Elétrica", "Hidráulica"].map(camada => (
+                    <span className="text-sm text-muted-foreground">Tipos:</span>
+                    {["Mecânico", "Elétrico", "Mecânico-Elétrico", "Hidráulico", "Pneumático", "Eletrônico", "Automação"].map(tipo => (
                       <Button
-                        key={camada}
-                        variant={camadasVisiveis.includes(camada) ? "default" : "outline"}
+                        key={tipo}
+                        variant={tiposVisiveis.includes(tipo) ? "default" : "outline"}
                         size="sm"
-                        onClick={() => toggleCamada(camada)}
+                        onClick={() => toggleTipo(tipo)}
                       >
-                        {getCategoriaIcon(camada)} {camada}
+                        {getCategoriaIcon(tipo)} {tipo}
                       </Button>
                     ))}
                   </div>
@@ -670,12 +691,10 @@ const MaquinaDetalhes = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {!selectedMaquina && (
-                <Button onClick={handleAddSistema} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Sistema
-                </Button>
-              )}
+              <Button onClick={handleAddSistema} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Sistema
+              </Button>
               <Button
                 variant="outline"
                 size="icon"
@@ -731,7 +750,7 @@ const MaquinaDetalhes = () => {
                         </defs>
 
                         {/* Renderizar Sistemas no lado esquerdo */}
-                        {sistemas.map(sistema => {
+                        {sistemas.filter(sistema => tiposVisiveis.includes(sistema.tipo)).map(sistema => {
                           const statusColor = sistema.status === "Crítico" ? "#ef4444" : 
                                             sistema.status === "Atenção" ? "#f59e0b" : "#10b981";
                           const isSelected = selectedMaquina === sistema.id;
@@ -826,13 +845,15 @@ const MaquinaDetalhes = () => {
                                 </text>
                               </g>
 
-                              {/* Botão de informações */}
+                              {/* Botão de detalhes */}
                               <g 
                                 transform={`translate(${sistema.x + 75}, ${sistema.y + 20})`}
                                 style={{ cursor: "pointer" }}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleSistemaInfo(sistema, e as any);
+                                  setSelectedSistema(sistema);
+                                  setSelectedPeca(null);
+                                  setSelectedSubPeca(null);
                                 }}
                               >
                                 <circle r="8" fill="hsl(var(--primary))" opacity="0.9" />
@@ -960,8 +981,7 @@ const MaquinaDetalhes = () => {
                                       stroke={isExpanded ? "hsl(var(--primary))" : "hsl(var(--border))"}
                                       strokeWidth={isExpanded ? "3" : "1"}
                                       className="transition-all duration-200"
-                                      onClick={() => handlePecaClick(peca)}
-                                      onContextMenu={(e) => handlePecaInfo(peca, e as any)}
+                                      onClick={(e) => handlePecaInfo(peca, e as any)}
                                     />
                                     
                                     {/* Barra de status superior */}
@@ -1055,7 +1075,14 @@ const MaquinaDetalhes = () => {
                                     
                                     {/* Indicador de sub-peças */}
                                     {peca.subPecas && peca.subPecas.length > 0 && (
-                                      <g transform={`translate(${pecaX - 75}, ${pecaY - 30})`}>
+                                      <g 
+                                        transform={`translate(${pecaX - 75}, ${pecaY - 30})`}
+                                        style={{ cursor: "pointer" }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handlePecaClick(peca);
+                                        }}
+                                      >
                                         <circle r="6" fill="hsl(var(--primary))" />
                                         <text
                                           textAnchor="middle"
@@ -1063,7 +1090,6 @@ const MaquinaDetalhes = () => {
                                           fontSize="8"
                                           fill="white"
                                           fontWeight="bold"
-                                          style={{ pointerEvents: "none" }}
                                         >
                                           {isExpanded ? "−" : "+"}
                                         </text>
@@ -1272,18 +1298,31 @@ const MaquinaDetalhes = () => {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold">Peças do Sistema</h3>
-                    <Button 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedMaquina(selectedSistema.id);
-                        setSelectedSistema(null);
-                        setEditingPeca(null);
-                        setIsPecaModalOpen(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Peça
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          handleEditSistema(selectedSistema);
+                          setSelectedSistema(null);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar Sistema
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedMaquina(selectedSistema.id);
+                          setSelectedSistema(null);
+                          setEditingPeca(null);
+                          setIsPecaModalOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar Peça
+                      </Button>
+                    </div>
                   </div>
                   
                   {selectedSistema.pecas && selectedSistema.pecas.length > 0 ? (
@@ -1404,6 +1443,37 @@ const MaquinaDetalhes = () => {
           onOpenChange={setIsMetricaModalOpen}
           equipamentoId={id || ""}
           onSuccess={handleMetricaSuccess}
+        />
+        
+        {/* Novos Modais de Detalhes */}
+        <PecaDetailsModal
+          open={isPecaDetailsModalOpen}
+          onOpenChange={setIsPecaDetailsModalOpen}
+          peca={selectedPeca}
+          equipamentoId={id || ""}
+          sistemaId={selectedPeca?.maquinaId || ""}
+          sistemas={sistemas}
+          onSuccess={handlePecaSuccess}
+          onEditPeca={(peca) => {
+            setIsPecaDetailsModalOpen(false);
+            setEditingPeca(peca);
+            setSelectedMaquina(peca.maquinaId || null);
+            setIsPecaModalOpen(true);
+          }}
+          onSelectSubPeca={(subPeca) => {
+            setIsPecaDetailsModalOpen(false);
+            setSelectedSubPeca(subPeca);
+            setIsSubPecaDetailsModalOpen(true);
+          }}
+        />
+        <SubPecaDetailsModal
+          open={isSubPecaDetailsModalOpen}
+          onOpenChange={setIsSubPecaDetailsModalOpen}
+          subPeca={selectedSubPeca}
+          onEdit={(subPeca) => {
+            setIsSubPecaDetailsModalOpen(false);
+            handleEditSubPeca(subPeca);
+          }}
         />
 
         {/* Tabs Principais */}
