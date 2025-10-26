@@ -101,6 +101,7 @@ const CommitPanel: React.FC = () => {
   const [downloadedFiles, setDownloadedFiles] = useState<{name: string, path: string}[]>([]);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<string>('');
   const [startTime, setStartTime] = useState<number>(0);
+  const [totalTransferredFiles, setTotalTransferredFiles] = useState<number>(0);
   // New states for smart transfer
   const [showComparisonDialog, setShowComparisonDialog] = useState(false);
   const [comparisons, setComparisons] = useState<FileComparison[]>([]);
@@ -433,14 +434,25 @@ const CommitPanel: React.FC = () => {
               path: '' 
             }]);
           }
+          // Extrair número de arquivos da mensagem final
+          if (progress === 100 && message.includes('arquivos')) {
+            const match = message.match(/(\d+)\s+arquivos/);
+            if (match) {
+              setTotalTransferredFiles(parseInt(match[1]));
+            }
+          }
         }
       );
 
       if (success) {
+        // Se não capturou do callback, usar o tamanho de selectedFiles
+        if (totalTransferredFiles === 0) {
+          setTotalTransferredFiles(selectedComparisons.length);
+        }
         setProcessComplete(true);
         toast({
           title: "Transferência concluída",
-          description: `${selectedFiles.size} arquivos transferidos com sucesso!`,
+          description: `${selectedComparisons.length} arquivos transferidos com sucesso!`,
         });
         await loadCommitHistory(); // Reload commit history
       } else {
@@ -495,6 +507,7 @@ const CommitPanel: React.FC = () => {
     setOverallProgress(0);
     setProcessComplete(false);
     setDownloadedFiles([]);
+    setTotalTransferredFiles(0);
     setStartTime(Date.now());
 
     try {
@@ -595,6 +608,7 @@ const CommitPanel: React.FC = () => {
 
       // Exibir lista de arquivos no modal
       setDownloadedFiles(files.map((f: any) => ({ name: f.path.split('/').pop() || f.path, path: f.path })));
+      setTotalTransferredFiles(downloads.length);
       setIsDownloading(false);
 
       // 4) Upload para repositório destino - COM UM ÚNICO COMMIT
@@ -757,6 +771,7 @@ const CommitPanel: React.FC = () => {
       }
 
       setIsUploading(false);
+      setTotalTransferredFiles(downloads.length);
       setProcessComplete(true);
       setEstimatedTimeRemaining('');
 
@@ -829,6 +844,7 @@ const CommitPanel: React.FC = () => {
     setOverallProgress(0);
     setProcessComplete(false);
     setDownloadedFiles([]);
+    setTotalTransferredFiles(0);
     setStartTime(Date.now());
 
     try {
@@ -915,6 +931,7 @@ const CommitPanel: React.FC = () => {
       }
 
       setDownloadedFiles(files.map((f: any) => ({ name: f.path.split('/').pop() || f.path, path: f.path })));
+      setTotalTransferredFiles(downloads.length);
       setIsDownloading(false);
 
       // 2) Upload para repositório destino - COM LOTE OTIMIZADO
@@ -1059,6 +1076,7 @@ const CommitPanel: React.FC = () => {
       }
 
       setIsUploading(false);
+      setTotalTransferredFiles(downloads.length);
       setProcessComplete(true);
       setEstimatedTimeRemaining('');
 
@@ -1891,7 +1909,7 @@ const CommitPanel: React.FC = () => {
                     return config ? `${config.owner}/${config.repo}` : 'Não configurado';
                   })()}</p>
                   <p>Tipo: {forceFullTransfer ? 'Completa' : 'Apenas modificados'}</p>
-                  <p>Total de arquivos: {downloadedFiles.length}</p>
+                  <p>Total de arquivos: {totalTransferredFiles || downloadedFiles.length}</p>
                 </div>
               </div>
             )}
@@ -1907,6 +1925,7 @@ const CommitPanel: React.FC = () => {
                 setOverallProgress(0);
                 setProcessComplete(false);
                 setDownloadedFiles([]);
+                setTotalTransferredFiles(0);
                 setEstimatedTimeRemaining('');
               }}>
                 Fechar
