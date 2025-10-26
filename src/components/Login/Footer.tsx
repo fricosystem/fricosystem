@@ -6,7 +6,14 @@ export function Footer() {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div>
-            <h3 className="text-white text-lg font-bold mb-4">Fricó Alimentos</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <img 
+                src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" 
+                alt="Fricó Alimentos Logo" 
+                className="w-12 h-12 rounded-lg object-scale-down" 
+              />
+              <h3 className="text-white text-lg font-bold">Fricó Alimentos</h3>
+            </div>
             <p className="text-gray-400 mb-4">
               Soluções corporativas integradas para maximizar a eficiência operacional 
               da sua empresa no setor alimentício.
