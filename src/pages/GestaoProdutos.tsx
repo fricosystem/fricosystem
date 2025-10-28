@@ -204,6 +204,17 @@ const GestaoProdutos = () => {
           const data = docSnap.data();
           const totalVersions = await ProductVersionService.getTotalVersions(docSnap.id);
           
+          // Parse versão atual corretamente
+          let versaoAtual = 1;
+          if (data.versao_atual !== undefined && data.versao_atual !== null) {
+            if (typeof data.versao_atual === "number") {
+              versaoAtual = Math.floor(data.versao_atual);
+            } else if (typeof data.versao_atual === "string") {
+              const parsed = parseFloat(data.versao_atual.replace(",", "."));
+              versaoAtual = isNaN(parsed) ? 1 : Math.floor(parsed);
+            }
+          }
+          
           return {
             id: docSnap.id,
             codigo_estoque: data.codigo_estoque || "",
@@ -223,9 +234,7 @@ const GestaoProdutos = () => {
             fornecedor_id: data.fornecedor_id || null,
             fornecedor_nome: data.fornecedor_nome || null,
             fornecedor_cnpj: data.fornecedor_cnpj || null,
-            versao_atual: typeof data.versao_atual === "number" 
-              ? data.versao_atual 
-              : parseFloat(String(data.versao_atual ?? "").replace(",", ".")) || 1,
+            versao_atual: versaoAtual,
             total_versoes: totalVersions
           } as Produto;
         })
