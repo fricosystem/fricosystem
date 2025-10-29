@@ -149,16 +149,15 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       // Salva no Firestore
       const medidaRef = await addDoc(collection(db, "medidas_lenha"), novaMedida);
       
-      // Salvar relatório da cubagem/lenha
-      const relatorioData = {
+      // Salvar relatório da cubagem/lenha com ENTRADA e SAÍDA
+      const relatorioDataBase = {
         requisicao_id: medidaRef.id,
         produto_id: medidaRef.id,
-        codigo_material: medidaRef.id, // Usando o ID como código para lenha
+        codigo_material: medidaRef.id,
         nome_produto: `Lenha - ${fornecedor}`,
         quantidade: metrosCubicos,
         valor_unitario: valorUnitario,
         valor_total: valorTotal,
-        status: 'entrada',
         tipo: 'Cubagem/Lenha',
         solicitante: {
           id: userData?.id || 'system',
@@ -178,10 +177,26 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
         data_registro: Timestamp.fromDate(new Date()),
         nfe: nfe || null,
         fornecedor: fornecedor,
-        responsavel: userData?.nome || "Usuário não identificado"
+        responsavel: userData?.nome || "Usuário não identificado",
+        // Campos específicos da medição de lenha
+        medidas: medidas.map(m => m.toString()),
+        comprimento: comprimento,
+        largura: largura,
+        altura_media: alturaMedia,
+        metros_cubicos: metrosCubicos,
       };
 
-      await addDoc(collection(db, "relatorios"), relatorioData);
+      // Criar registro de ENTRADA
+      await addDoc(collection(db, "relatorios"), {
+        ...relatorioDataBase,
+        status: 'entrada'
+      });
+
+      // Criar registro de SAÍDA (consumo imediato)
+      await addDoc(collection(db, "relatorios"), {
+        ...relatorioDataBase,
+        status: 'saida'
+      });
       
       toast({
         title: "Registro salvo com sucesso!",
