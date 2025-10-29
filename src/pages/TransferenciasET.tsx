@@ -88,18 +88,6 @@ const TransferenciasETContent = () => {
     carregarTransferencias();
   }, []);
 
-  useEffect(() => {
-    if (pesquisaProduto.trim() === "") {
-      setProdutosFiltrados([]);
-    } else {
-      const filtrados = produtos.filter(p => 
-        p.nome.toLowerCase().includes(pesquisaProduto.toLowerCase()) ||
-        p.codigo_estoque.toString().includes(pesquisaProduto)
-      );
-      setProdutosFiltrados(filtrados);
-    }
-  }, [pesquisaProduto, produtos]);
-
   const formSchema = z.object({
     origem: z.string().min(1, "Selecione um depósito de origem"),
     destino: z.string().min(1, "Selecione um depósito de destino"),
@@ -112,19 +100,19 @@ const TransferenciasETContent = () => {
   const carregarDepositos = async () => {
     setLoadingDepositos(true);
     try {
-      const depositosRef = collection(db, "depositos");
-      const depositosQuery = query(depositosRef, orderBy("deposito"));
-      const snapshot = await getDocs(depositosQuery);
+      const centroCustoRef = collection(db, "centro_de_custo");
+      const centroCustoQuery = query(centroCustoRef, orderBy("nome"));
+      const snapshot = await getDocs(centroCustoQuery);
       
       const depositosData = snapshot.docs.map(doc => ({
         id: doc.id,
-        deposito: doc.data().deposito,
+        deposito: doc.data().nome,
         unidade: doc.data().unidade
       }));
       
       setDepositos(depositosData);
     } catch (error) {
-      console.error("Erro ao carregar depósitos:", error);
+      console.error("Erro ao carregar centros de custo:", error);
     } finally {
       setLoadingDepositos(false);
     }
@@ -138,6 +126,34 @@ const TransferenciasETContent = () => {
       observacoes: "",
     },
   });
+
+  useEffect(() => {
+    if (pesquisaProduto.trim().length < 2) {
+      setProdutosFiltrados([]);
+    } else {
+      const termoPesquisa = pesquisaProduto.trim().toLowerCase();
+      
+      // Filtrar apenas produtos da unidade de origem selecionada
+      const depositoOrigemSelecionado = formTransferencia.getValues("origem");
+      const depositoOrigem = depositos.find(d => d.id === depositoOrigemSelecionado);
+      
+      let produtosParaFiltrar = produtos;
+      
+      // Se houver depósito de origem selecionado, filtrar apenas produtos dessa unidade
+      if (depositoOrigem) {
+        const depositoTexto = `${depositoOrigem.deposito} - ${depositoOrigem.unidade}`;
+        produtosParaFiltrar = produtos.filter(p => p.deposito === depositoTexto);
+      }
+      
+      const filtrados = produtosParaFiltrar.filter(p => {
+        const nomeMatch = p.nome?.toLowerCase().includes(termoPesquisa);
+        const codigoMatch = String(p.codigo_estoque).toLowerCase().includes(termoPesquisa);
+        return nomeMatch || codigoMatch;
+      });
+      
+      setProdutosFiltrados(filtrados);
+    }
+  }, [pesquisaProduto, produtos, depositos, formTransferencia.watch("origem")]);
 
   const quantidadeSchema = z.object({
     quantidade: z.coerce
