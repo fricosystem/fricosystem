@@ -13,9 +13,6 @@ export default defineConfig(({ mode }) => ({
       protocol: 'ws',
     },
   },
-  define: {
-    '__WS_TOKEN__': JSON.stringify(''),
-  },
   plugins: [
     react(),
     mode === 'development' &&
