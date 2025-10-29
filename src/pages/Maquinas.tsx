@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Search, Camera, Edit, Trash2, Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
@@ -50,6 +51,7 @@ interface Maquina {
 }
 
 const Maquinas = () => {
+  const navigate = useNavigate();
   const [maquinas, setMaquinas] = useState<Maquina[]>([]);
   const [filteredMaquinas, setFilteredMaquinas] = useState<Maquina[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
@@ -424,7 +426,7 @@ const Maquinas = () => {
                 <CardContent>
                   <div className="flex flex-col gap-2">
                     <Button
-                      onClick={() => window.location.href = `/maquinas/${maquina.id}`}
+                      onClick={() => navigate(`/maquinas/${maquina.id}`)}
                       className="w-full"
                     >
                       Ver Detalhes
