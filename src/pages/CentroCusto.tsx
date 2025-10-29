@@ -262,16 +262,16 @@ const CentroCusto = () => {
     return uniqueUnidades.sort();
   }, [centrosCusto]);
 
-  const verificarDuplicatas = async (nome: string, codigo: string): Promise<boolean> => {
+  const verificarDuplicatas = async (nome: string, codigo: string, unidade: string): Promise<boolean> => {
     try {
       const centrosRef = collection(db, "centro_de_custo");
       
-      // Verificar nome duplicado
-      const qNome = query(centrosRef, where("nome", "==", nome));
+      // Verificar nome duplicado na mesma unidade
+      const qNome = query(centrosRef, where("nome", "==", nome), where("unidade", "==", unidade));
       const snapshotNome = await getDocs(qNome);
       
-      // Verificar código duplicado
-      const qCodigo = query(centrosRef, where("codigo", "==", codigo));
+      // Verificar código duplicado na mesma unidade
+      const qCodigo = query(centrosRef, where("codigo", "==", codigo), where("unidade", "==", unidade));
       const snapshotCodigo = await getDocs(qCodigo);
       
       // Se estiver editando, ignorar o próprio registro
@@ -282,7 +282,7 @@ const CentroCusto = () => {
         if (nomeDuplicado) {
           toast({
             title: "Erro",
-            description: "Já existe um centro de custo com este nome.",
+            description: `Já existe um centro de custo com o nome "${nome}" na unidade ${unidade}.`,
             variant: "destructive",
           });
           return false;
@@ -291,17 +291,17 @@ const CentroCusto = () => {
         if (codigoDuplicado) {
           toast({
             title: "Erro",
-            description: "Já existe um centro de custo com este código.",
+            description: `Já existe um centro de custo com o código "${codigo}" na unidade ${unidade}.`,
             variant: "destructive",
           });
           return false;
         }
       } else {
-        // Se estiver criando, verificar se existe qualquer registro
+        // Se estiver criando, verificar se existe qualquer registro na mesma unidade
         if (!snapshotNome.empty) {
           toast({
             title: "Erro",
-            description: "Já existe um centro de custo com este nome.",
+            description: `Já existe um centro de custo com o nome "${nome}" na unidade ${unidade}.`,
             variant: "destructive",
           });
           return false;
@@ -310,7 +310,7 @@ const CentroCusto = () => {
         if (!snapshotCodigo.empty) {
           toast({
             title: "Erro",
-            description: "Já existe um centro de custo com este código.",
+            description: `Já existe um centro de custo com o código "${codigo}" na unidade ${unidade}.`,
             variant: "destructive",
           });
           return false;
@@ -333,8 +333,8 @@ const CentroCusto = () => {
     e.preventDefault();
     
     try {
-      // Verificar duplicatas antes de salvar
-      const isValid = await verificarDuplicatas(formData.nome.trim(), formData.codigo.trim());
+      // Verificar duplicatas antes de salvar (considerando a unidade)
+      const isValid = await verificarDuplicatas(formData.nome.trim(), formData.codigo.trim(), formData.unidade.trim());
       if (!isValid) {
         return;
       }
