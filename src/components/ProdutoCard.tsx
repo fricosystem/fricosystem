@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Info, Calendar, Package, BarChart } from "lucide-react";
+import { Edit, Trash2, Info, Calendar, Tag, Package, BarChart, Home, MapPin, User, DollarSign, Clock, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import AdicionarAoCarrinho from "./AdicionarAoCarrinho";
 import { useState, useEffect } from "react";
@@ -196,157 +196,169 @@ const ProdutoCard = ({
                 <Info className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl w-[95vw] max-h-[95dvh] p-0 overflow-hidden flex flex-col">
-              <div className="flex flex-col h-full overflow-hidden">
-                {/* Header com título e badge de estoque */}
-                <div className="border-b px-4 py-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-bold leading-tight pr-8">
-                      {produto.nome}
-                    </DialogTitle>
-                    <DialogDescription className="text-sm mt-1">
-                      Detalhes completos do produto
-                    </DialogDescription>
-                  </DialogHeader>
+            <DialogContent className="max-w-7xl w-[95vw] max-h-[95dvh] p-0 overflow-hidden flex flex-col">
+              <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+                <div className="relative w-full lg:w-1/2 bg-muted flex-shrink-0 max-h-[40vh] lg:max-h-none">
+                  <img
+                    src={produto.imagem || "/placeholder.svg"}
+                    alt={produto.nome}
+                    loading="eager"
+                    decoding="sync"
+                    className="h-full w-full object-contain p-4 cursor-pointer"
+                    style={{ 
+                      imageRendering: 'crisp-edges'
+                    }}
+                    onClick={() => setImageModalOpen(true)}
+                  />
                   {isLowStock && (
-                    <Badge variant="destructive" className="mt-2 text-xs font-medium">
-                      Estoque Baixo
-                    </Badge>
+                    <div className="absolute top-4 right-4">
+                      <Badge variant="destructive" className="text-sm font-medium">
+                        Estoque Baixo
+                      </Badge>
+                    </div>
                   )}
                 </div>
 
-                {/* Conteúdo scrollável */}
-                <div className="flex-1 overflow-y-auto">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4">
-                    {/* Seção da Imagem - Vertical Full */}
-                    <div className="relative bg-muted rounded-lg overflow-hidden aspect-[9/16] lg:aspect-[3/4] max-h-[60vh] lg:max-h-none mx-auto w-full max-w-sm lg:max-w-none">
-                      <img
-                        src={produto.imagem || "/placeholder.svg"}
-                        alt={produto.nome}
-                        loading="eager"
-                        decoding="sync"
-                        className="h-full w-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
-                        style={{ 
-                          imageRendering: 'crisp-edges'
-                        }}
-                        onClick={() => setImageModalOpen(true)}
-                      />
+                <div className="flex-1 p-4 overflow-y-auto">
+                  <DialogHeader className="mb-4">
+                    <DialogTitle className="text-lg font-bold">
+                      {produto.nome}
+                    </DialogTitle>
+                    <DialogDescription className="text-sm">
+                      Detalhes completos do produto
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="grid grid-cols-1 gap-3 mb-4">
+                    <div className={`p-3 rounded-md ${isLowStock ? "bg-destructive/10" : "bg-muted"}`}>
+                      <p className="text-sm text-muted-foreground">Estoque Atual</p>
+                      <p className={`text-base font-bold ${isLowStock ? "text-destructive" : ""}`}>
+                        {formatQuantidade(quantidade, unidade_de_medida)}
+                      </p>
                     </div>
-
-                    {/* Seção de Detalhes */}
-                    <div className="space-y-4">
-                      {/* Cards de destaque - Estoque e Valor */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className={`p-4 rounded-lg border-2 ${isLowStock ? "bg-destructive/10 border-destructive" : "bg-card border-border"}`}>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Estoque Atual</p>
-                          <p className={`text-2xl font-bold ${isLowStock ? "text-destructive" : "text-foreground"}`}>
-                            {quantidade}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">{unidade_de_medida || "UN"}</p>
-                        </div>
-                        
-                        <div className="p-4 rounded-lg border-2 bg-card border-border">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Valor Unitário</p>
-                          <p className="text-2xl font-bold text-foreground">{formatCurrency(valorUnitario)}</p>
-                          <p className="text-xs text-muted-foreground mt-1">por {unidade_de_medida || "unidade"}</p>
-                        </div>
-                      </div>
-
-                      {/* Identificação */}
-                      <div className="bg-card rounded-lg border p-4 space-y-3">
-                        <h3 className="font-semibold text-primary text-base flex items-center gap-2">
-                          <Package className="h-4 w-4" />
-                          Identificação
-                        </h3>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <p className="text-muted-foreground text-xs mb-1">Cód. Material</p>
-                            <p className="font-medium">{codigo || "N/A"}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs mb-1">Cód. Estoque</p>
-                            <p className="font-medium">{codigoEstoque || "N/A"}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs mb-1">Unidade de Medida</p>
-                            <p className="font-medium">{unidade_de_medida || "N/A"}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs mb-1">Unidade</p>
-                            <p className="font-medium">{unidade || "N/A"}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Informações de Estoque */}
-                      <div className="bg-card rounded-lg border p-4 space-y-3">
-                        <h3 className="font-semibold text-primary text-base flex items-center gap-2">
-                          <BarChart className="h-4 w-4" />
-                          Informações de Estoque
-                        </h3>
-                        <div className="space-y-3 text-sm">
-                          <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-                            <span className="text-muted-foreground">Quantidade Mínima</span>
-                            <span className="font-medium">{formatQuantidade(quantidadeMinima, unidade_de_medida)}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-                            <span className="text-muted-foreground">Depósito</span>
-                            <span className="font-medium">{produto.deposito || "N/A"}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-                            <span className="text-muted-foreground">Prateleira</span>
-                            <span className="font-medium">{produto.prateleira || "N/A"}</span>
-                          </div>
-                          <div className="flex justify-between items-start py-2">
-                            <span className="text-muted-foreground">Fornecedor</span>
-                            <div className="text-right">
-                              <p className="font-medium">{fornecedorNome || "N/A"}</p>
-                              {fornecedorCnpj && (
-                                <p className="text-xs text-muted-foreground">CNPJ: {fornecedorCnpj}</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Informações de Datas */}
-                      <div className="bg-card rounded-lg border p-4 space-y-3">
-                        <h3 className="font-semibold text-primary text-base flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          Datas
-                        </h3>
-                        <div className="space-y-3 text-sm">
-                          <div className="flex justify-between items-center py-2 border-b">
-                            <span className="text-muted-foreground">Data de Vencimento</span>
-                            <span className="font-medium">{formatDate(dataVencimento)}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2">
-                            <span className="text-muted-foreground">Data de Cadastro</span>
-                            <span className="font-medium">{formatDate(dataCriacao)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Descrição Detalhada */}
-                      {produto.detalhes && (
-                        <div className="bg-card rounded-lg border p-4 space-y-2">
-                          <h3 className="font-semibold text-primary text-base">Descrição Detalhada</h3>
-                          <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-                            {produto.detalhes}
-                          </p>
-                        </div>
-                      )}
+                    
+                    <div className={`p-3 rounded-md ${isLowStock ? "bg-destructive/10" : "bg-muted"}`}>
+                      <p className="text-sm text-muted-foreground">Valor Unitário</p>
+                      <p className="text-base font-medium">{formatCurrency(valorUnitario)}</p>
                     </div>
                   </div>
-                </div>
 
-                {/* Footer fixo com botão */}
-                <div className="border-t px-4 py-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                  <div className="flex justify-end">
-                    <AdicionarAoCarrinho 
-                      produto={produto} 
-                      onSuccess={handleCartSuccess}
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-primary mb-2">Identificação</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Código Material</p>
+                          <p className="text-sm">{codigo || "Não informado"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Código Estoque</p>
+                          <p className="text-sm">{codigoEstoque || "Não informado"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Unidade de Medida</p>
+                          <p className="text-sm">{unidade_de_medida || "Não informado"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Unidade</p>
+                          <p className="text-sm">{unidade || "Não informado"}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-semibold text-primary mb-2">Informações de Estoque</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Quantidade Mínima</p>
+                          <p className="text-sm">{formatQuantidade(quantidadeMinima, unidade_de_medida)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Depósito</p>
+                          <p className="text-sm">{produto.deposito || "Não informado"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Prateleira</p>
+                          <p className="text-sm">{produto.prateleira || "Não informado"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Fornecedor</p>
+                          <p className="text-sm">{fornecedorNome || "Não informado"}</p>
+                          {fornecedorCnpj && (
+                            <p className="text-xs text-muted-foreground">CNPJ: {fornecedorCnpj}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-semibold text-primary mb-2">Informações de Datas</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Data de Vencimento</p>
+                          <p className="text-sm">{formatDate(dataVencimento)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Data de Cadastro</p>
+                          <p className="text-sm">{formatDate(dataCriacao)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {produto.detalhes && (
+                      <div>
+                        <h3 className="font-semibold text-primary mb-2">Descrição Detalhada</h3>
+                        <p className="text-sm whitespace-pre-line">{produto.detalhes}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                   <div className="sticky bottom-0 bg-background pt-4 mt-4 border-t">
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      <AdicionarAoCarrinho 
+                        produto={produto} 
+                        onSuccess={handleCartSuccess}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="flex items-center"
+                        onClick={() => produto.id && onEdit(produto.id)}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex items-center text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir o produto "{produto.nome}"? 
+                              Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => produto.id && onDelete(produto.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 </div>
               </div>

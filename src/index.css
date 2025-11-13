@@ -209,4 +209,23 @@
   .scrollbar-thumb-muted::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.3);
   }
+
+  /* Estilo do diagrama n8n-like */
+  .diagram-container {
+    @apply relative overflow-hidden;
+  }
+
+  .diagram-background {
+    background-color: hsl(var(--background));
+    background-image: 
+      radial-gradient(circle, hsl(var(--muted-foreground) / 0.15) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .dark .diagram-background {
+    background-color: hsl(var(--background));
+    background-image: 
+      radial-gradient(circle, hsl(var(--muted-foreground) / 0.25) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
 }

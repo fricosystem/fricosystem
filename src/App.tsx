@@ -43,6 +43,7 @@ import CentroCusto from "./pages/CentroCusto";
 import Unidades from "./pages/Unidades";
 import Maquinas from "./pages/Maquinas";
 import MaquinaDetalhes from "./pages/MaquinaDetalhes";
+import ManutencoesDashboard from "./pages/ManutencoesDashboard";
 
 // Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
@@ -127,6 +128,7 @@ const AppContent = () => {
           <Route path="/unidades" element={<AuthGuard><Unidades /></AuthGuard>} />
           <Route path="/maquinas" element={<AuthGuard><Maquinas /></AuthGuard>} />
           <Route path="/maquinas/:id" element={<AuthGuard><MaquinaDetalhes /></AuthGuard>} />
+          <Route path="/manutencoes-dashboard" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
            <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
            <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
            <Route path="/planejamento-desenvolvimento" element={<AuthGuard><PlanejamentoDesenvolvimento /></AuthGuard>} />

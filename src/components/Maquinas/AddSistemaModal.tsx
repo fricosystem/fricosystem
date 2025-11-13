@@ -41,6 +41,8 @@ export const AddSistemaModal = ({
   const [formData, setFormData] = useState<Partial<Sistema>>(
     editingSistema || {
       nome: "",
+      x: 120,
+      y: 150,
       tipo: "Mecânico",
       status: "Normal",
       totalPecas: 0,
@@ -70,16 +72,12 @@ export const AddSistemaModal = ({
           s.id === editingSistema.id ? { ...s, ...formData } as Sistema : s
         );
       } else {
-        // Adicionar novo sistema com posicionamento automático
-        const espacamento = 120;
-        const yInicial = 100;
-        const yPosicao = yInicial + (sistemas.length * espacamento);
-        
+        // Adicionar novo sistema
         const novoSistema: Sistema = {
           id: `sistema-${Date.now()}`,
           nome: formData.nome || "",
-          x: 120,
-          y: yPosicao,
+          x: formData.x || 120,
+          y: formData.y || 150,
           tipo: formData.tipo || "Mecânico",
           status: formData.status || "Normal",
           totalPecas: 0,
@@ -132,23 +130,12 @@ export const AddSistemaModal = ({
 
           <div className="space-y-2">
             <Label htmlFor="tipo">Tipo</Label>
-            <Select
+            <Input
+              id="tipo"
               value={formData.tipo}
-              onValueChange={(value) => setFormData({ ...formData, tipo: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Mecânico">Mecânico</SelectItem>
-                <SelectItem value="Elétrico">Elétrico</SelectItem>
-                <SelectItem value="Mecânico-Elétrico">Mecânico-Elétrico</SelectItem>
-                <SelectItem value="Hidráulico">Hidráulico</SelectItem>
-                <SelectItem value="Pneumático">Pneumático</SelectItem>
-                <SelectItem value="Eletrônico">Eletrônico</SelectItem>
-                <SelectItem value="Automação">Automação</SelectItem>
-              </SelectContent>
-            </Select>
+              onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+              placeholder="Ex: Mecânico-Elétrico"
+            />
           </div>
 
           <div className="space-y-2">
@@ -168,6 +155,27 @@ export const AddSistemaModal = ({
                 <SelectItem value="Crítico">Crítico</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="x">Posição X</Label>
+              <Input
+                id="x"
+                type="number"
+                value={formData.x}
+                onChange={(e) => setFormData({ ...formData, x: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="y">Posição Y</Label>
+              <Input
+                id="y"
+                type="number"
+                value={formData.y}
+                onChange={(e) => setFormData({ ...formData, y: Number(e.target.value) })}
+              />
+            </div>
           </div>
 
           <DialogFooter>

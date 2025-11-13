@@ -38,52 +38,45 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
         <style>
           @page {
             size: A4;
-            margin: 0;
+            margin: 15mm;
+          }
+          @page {
+            margin-top: 15mm;
+            margin-bottom: 15mm;
+          }
+          /* Remove cabeçalhos e rodapés padrão do navegador */
+          @media print {
+            @page { margin: 0; }
+            body { margin: 15mm; }
           }
           body {
             font-family: Arial, sans-serif;
             color: #000;
             padding: 0;
             margin: 0;
-            font-size: 14px;
-            height: 100vh;
+            font-size: 13px;
           }
           .page-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            padding-top: 20px;
+            padding: 10px 20px;
           }
           .recibo-container {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-          }
-          .recibo-spacer {
-            height: 30px;
+            padding: 10px 0;
           }
           .recibo-header {
             text-align: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
             border-bottom: 1px solid #000;
-            margin-top: 10px;
           }
           .recibo-header h1 {
-            font-size: 18px;
-            margin: 5px 0;
-          }
-          .recibo-header p {
-            margin: 20;
-            font-size: 14px;
+            font-size: 16px;
+            margin: 3px 0;
           }
           .recibo-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px 15px;
-            margin-bottom: 15px;
+            gap: 6px 15px;
+            margin-bottom: 12px;
           }
           .recibo-label {
             font-weight: bold;
@@ -93,25 +86,25 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
           }
           .recibo-fornecedor {
             font-weight: bold;
-            font-size: 18px;
+            font-size: 16px;
             grid-column: span 2;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
           }
           .recibo-total {
             grid-column: span 2;
             text-align: right;
             font-weight: bold;
-            margin-top: 5px;
-            font-size: 15px;
+            margin-top: 4px;
+            font-size: 14px;
           }
           .recibo-recebido {
-            margin-top: 10px;
+            margin-top: 8px;
           }
           .recibo-assinatura {
-            margin-top: 40px;
+            margin-top: 30px;
             text-align: center;
-            padding-top: 10px;
+            padding-top: 8px;
           }
           .recibo-assinatura-line {
             width: 200px;
@@ -122,35 +115,22 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
             font-size: 12px;
             margin-top: 5px;
           }
-          .recibo-chave-pix {
-            margin-top: 10px;
-            font-size: 12px;
-            text-align: center;
-          }
           .logo-container {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
           }
           .logo-container img {
-            height: 80px; /* Ícone maior */
+            height: 60px;
             width: auto;
+          }
+          .recibo-divider {
+            border-top: 2px dashed #000;
+            margin: 40px 0;
           }
           @media print {
             body {
               print-color-adjust: exact;
               -webkit-print-color-adjust: exact;
-              height: 100%;
-            }
-            .page-container {
-              height: 100%;
-              padding-top: 20px;
-            }
-            .recibo-divider {
-              border-top: 2px dashed #000;
-              text-align: center;
-              padding: 5px 0;
-              font-size: 12px;
-              margin: 10px 0;
             }
           }
         </style>
@@ -163,14 +143,19 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
               <div class="logo-container">
                 <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
               </div>
+              
               <div class="recibo-header">
                 <h1>Comprovante de Entrega de Lenha</h1>
-                <div style="height: 20px;"></div>
               </div>
               
               <div class="recibo-fornecedor">${medida.fornecedor}</div>
               
               <div class="recibo-content">
+                ${medida.cnpjFornecedor ? `
+                  <div class="recibo-label">CNPJ Fornecedor:</div>
+                  <div class="recibo-value">${medida.cnpjFornecedor}</div>
+                ` : ''}
+                
                 <div class="recibo-label">Data:</div>
                 <div class="recibo-value">${dataFormatada}</div>
                 
@@ -193,23 +178,39 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
                 <div class="recibo-label">Recebido por:</div>
                 <div>${medida.usuario}</div>
               </div>
+              
+              <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #333;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                  <div class="recibo-label">Comprimento:</div>
+                  <div class="recibo-value">${medida.comprimento.toFixed(2)} m</div>
+                  
+                  <div class="recibo-label">Largura:</div>
+                  <div class="recibo-value">${medida.largura.toFixed(2)} m</div>
+                </div>
+                
+                ${medida.medidas && medida.medidas.length > 0 ? `
+                  <div style="margin-top: 8px;">
+                    <div class="recibo-label" style="margin-bottom: 4px;">Medidas:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                      ${medida.medidas.map((m, index) => `
+                        <div style="font-size: 12px;">
+                          <span class="recibo-label">Medida ${index + 1}:</span> ${m} m³
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
             </div>
             
             <div class="recibo-assinatura">
               <div class="recibo-assinatura-line"></div>
               <div class="recibo-assinatura-text">Assinatura do Funcionário</div>
-              ${medida.chavePixFornecedor ? `
-                <div class="recibo-chave-pix">Chave Pix para pagamento: ${medida.chavePixFornecedor}</div>
-              ` : ''}
             </div>
           </div>
           
-          <!-- Substitui a divisória por espaçamento -->
-          <div style="height: 20px;"></div>
-          <!-- Divisória central -->
+          <!-- Divisória central pontilhada -->
           <div class="recibo-divider"></div>
-          <!-- Substitui a divisória por espaçamento -->
-          <div style="height: 20px;"></div>
           
           <!-- Segundo recibo (cópia) -->
           <div class="recibo-container">
@@ -217,14 +218,19 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
               <div class="logo-container">
                 <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
               </div>
+              
               <div class="recibo-header">
                 <h1>Comprovante de Entrega de Lenha</h1>
-                <div style="height: 20px;"></div>
               </div>
               
               <div class="recibo-fornecedor">${medida.fornecedor}</div>
               
               <div class="recibo-content">
+                ${medida.cnpjFornecedor ? `
+                  <div class="recibo-label">CNPJ Fornecedor:</div>
+                  <div class="recibo-value">${medida.cnpjFornecedor}</div>
+                ` : ''}
+                
                 <div class="recibo-label">Data:</div>
                 <div class="recibo-value">${dataFormatada}</div>
                 
@@ -246,6 +252,12 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
               <div class="recibo-recebido">
                 <div class="recibo-label">Recebido por:</div>
                 <div>${medida.usuario}</div>
+                ${medida.chavePixFornecedor ? `
+                  <div style="margin-top: 10px;">
+                    <div class="recibo-label">Chave PIX Fornecedor:</div>
+                    <div>${medida.chavePixFornecedor}</div>
+                  </div>
+                ` : ''}
               </div>
             </div>
             
@@ -352,12 +364,46 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
               <div className="font-semibold text-gray-300 mb-2">Recebido por:</div>
               <div className="text-white">{medida.usuario}</div>
               
+              <div className="mt-6 pt-4 border-t border-gray-700">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="font-semibold text-gray-300">Comprimento:</div>
+                  <div className="text-right text-white">{medida.comprimento.toFixed(2)} m</div>
+                  
+                  <div className="font-semibold text-gray-300">Largura:</div>
+                  <div className="text-right text-white">{medida.largura.toFixed(2)} m</div>
+                </div>
+                
+                {medida.medidas && medida.medidas.length > 0 && (
+                  <div className="mt-4">
+                    <div className="font-semibold text-gray-300 mb-2">Medidas:</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {medida.medidas.map((m, index) => (
+                        <div key={index} className="text-sm text-white">
+                          <span className="text-gray-400">Medida {index + 1}:</span> {m} m³
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {medida.contatoFornecedor && (
+                <div className="mt-4">
+                  <div className="font-semibold text-gray-300 mb-1">Contato Fornecedor:</div>
+                  <div className="text-white">{medida.contatoFornecedor}</div>
+                </div>
+              )}
+              
+              {medida.chavePixFornecedor && (
+                <div className="mt-4">
+                  <div className="font-semibold text-gray-300 mb-1">Chave PIX Fornecedor:</div>
+                  <div className="text-white">{medida.chavePixFornecedor}</div>
+                </div>
+              )}
+              
               <div className="mt-12 pt-2 text-center">
                 <div className="mx-auto w-3/4 border-t border-dashed border-gray-600 pt-2">
                   <div className="text-sm text-gray-500">Assinatura</div>
-                  {medida.chavePixFornecedor && (
-                    <div className="text-xs text-gray-500 mt-2">Chave Pix para pagamento: {medida.chavePixFornecedor}</div>
-                  )}
                 </div>
               </div>
             </div>

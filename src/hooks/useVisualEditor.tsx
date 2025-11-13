@@ -21,7 +21,6 @@ export const useVisualEditor = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [stagedChanges, setStagedChanges] = useState<Array<{id: string; changes: ElementChanges}>>([]);
   const { toast } = useToast();
 
   const enableEditMode = useCallback(() => {
@@ -39,26 +38,18 @@ export const useVisualEditor = () => {
     setIsModalOpen(true);
   }, []);
 
-  const stageChanges = useCallback((elementId: string, changes: ElementChanges) => {
-    setStagedChanges(prev => {
-      const existing = prev.findIndex(c => c.id === elementId);
-      if (existing >= 0) {
-        const updated = [...prev];
-        updated[existing] = { id: elementId, changes };
-        return updated;
-      }
-      return [...prev, { id: elementId, changes }];
-    });
-  }, []);
-
-  const clearStagedChanges = useCallback(() => {
-    setStagedChanges([]);
-  }, []);
-
   const applyChanges = useCallback(async (changes: ElementChanges) => {
     if (!selectedElement) return;
 
     try {
+      // Aqui seria implementada a lógica de parsing e atualização do código
+      // Por enquanto, vamos simular a aplicação das mudanças
+      
+      toast({
+        title: "Alterações aplicadas",
+        description: "As alterações foram aplicadas com sucesso.",
+      });
+
       // Aplicar mudanças via postMessage para o iframe
       const iframe = document.querySelector('iframe[title="Elementor"]') as HTMLIFrameElement;
       if (iframe && iframe.contentWindow) {
@@ -67,15 +58,7 @@ export const useVisualEditor = () => {
           elementId: selectedElement.id,
           changes
         }, '*');
-        
-        // Adiciona as alterações ao staging
-        stageChanges(selectedElement.id, changes);
       }
-
-      toast({
-        title: "Alterações aplicadas",
-        description: "As mudanças foram aplicadas ao elemento. Use 'Enviar' para salvar.",
-      });
 
       setIsModalOpen(false);
       
@@ -87,7 +70,7 @@ export const useVisualEditor = () => {
         variant: "destructive",
       });
     }
-  }, [selectedElement, toast, stageChanges]);
+  }, [selectedElement, toast]);
 
   const parseElementFromMessage = useCallback((data: any): SelectedElement | null => {
     try {
@@ -121,13 +104,10 @@ export const useVisualEditor = () => {
     isEditMode,
     selectedElement,
     isModalOpen,
-    stagedChanges,
     enableEditMode,
     disableEditMode,
     selectElement,
     applyChanges,
-    stageChanges,
-    clearStagedChanges,
     handleMessage,
     setIsModalOpen
   };

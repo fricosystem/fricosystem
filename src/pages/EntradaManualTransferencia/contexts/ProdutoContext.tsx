@@ -174,8 +174,7 @@ export const ProdutoProvider = ({ children }: ProdutoProviderProps) => {
       
       // Aplicar ordenação
       constraints.push(orderBy(ordenacao, direcao));
-      // Aumentar limite para 1000 produtos para permitir melhor busca
-      constraints.push(limit(1000));
+      constraints.push(limit(10));
       
       const produtosQuery = query(q, ...constraints);
       const querySnapshot = await getDocs(produtosQuery);

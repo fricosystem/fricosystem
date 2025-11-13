@@ -453,9 +453,6 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         centro_de_custo: centroCustoNome || null,
         centro_de_custo_unidade: centroCustoUnidade || null,
         centro_de_custo_id: formData.centroCusto || null,
-        versao_atual: 1,
-        versao_criada_em: Timestamp.now(),
-        esta_ativo: true,
       };
 
       // Add the product to Firestore

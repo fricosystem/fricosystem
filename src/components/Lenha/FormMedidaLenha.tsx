@@ -23,7 +23,9 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
   const [fornecedor, setFornecedor] = useState("");
   const [nfe, setNfe] = useState("");
   const [valorUnitario, setValorUnitario] = useState<number>(0);
-  const [chavePixFornecedor, setChavePixFornecedor] = useState(""); // Novo estado para armazenar a chave Pix
+  const [chavePixFornecedor, setChavePixFornecedor] = useState("");
+  const [contatoFornecedor, setContatoFornecedor] = useState("");
+  const [cnpjFornecedor, setCnpjFornecedor] = useState("");
   
   // Valores calculados
   const [alturaMedia, setAlturaMedia] = useState<number>(0);
@@ -73,7 +75,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
     setFornecedor(novoFornecedor);
     setValorUnitario(novoValorUnitario);
     
-    // Busca a chave Pix do fornecedor no Firestore
+    // Busca a chave Pix e contato do fornecedor no Firestore
     if (novoFornecedor) {
       try {
         const fornecedorRef = doc(db, "fornecedoreslenha", novoFornecedor);
@@ -82,15 +84,22 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
         if (fornecedorDoc.exists()) {
           const fornecedorData = fornecedorDoc.data();
           setChavePixFornecedor(fornecedorData.chavePix || "");
+          setContatoFornecedor(fornecedorData.contato || "");
+          setCnpjFornecedor(fornecedorData.cnpj || "");
         } else {
           setChavePixFornecedor("");
+          setContatoFornecedor("");
+          setCnpjFornecedor("");
         }
       } catch (error) {
-        console.error("Erro ao buscar chave Pix do fornecedor:", error);
+        console.error("Erro ao buscar dados do fornecedor:", error);
         setChavePixFornecedor("");
+        setContatoFornecedor("");
       }
     } else {
       setChavePixFornecedor("");
+      setContatoFornecedor("");
+      setCnpjFornecedor("");
     }
   };
   
@@ -143,21 +152,24 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
         valorUnitario,
         valorTotal,
         usuario: userData?.nome || "Usuário não identificado",
-        chavePixFornecedor, // Adiciona a chave Pix ao objeto que será salvo
+        chavePixFornecedor,
+        contatoFornecedor,
+        cnpjFornecedor,
       };
       
       // Salva no Firestore
       const medidaRef = await addDoc(collection(db, "medidas_lenha"), novaMedida);
       
-      // Salvar relatório da cubagem/lenha com ENTRADA e SAÍDA
-      const relatorioDataBase = {
+      // Salvar relatório da cubagem/lenha
+      const relatorioData = {
         requisicao_id: medidaRef.id,
         produto_id: medidaRef.id,
-        codigo_material: medidaRef.id,
+        codigo_material: medidaRef.id, // Usando o ID como código para lenha
         nome_produto: `Lenha - ${fornecedor}`,
         quantidade: metrosCubicos,
         valor_unitario: valorUnitario,
         valor_total: valorTotal,
+        status: 'entrada',
         tipo: 'Cubagem/Lenha',
         solicitante: {
           id: userData?.id || 'system',
@@ -177,26 +189,10 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
         data_registro: Timestamp.fromDate(new Date()),
         nfe: nfe || null,
         fornecedor: fornecedor,
-        responsavel: userData?.nome || "Usuário não identificado",
-        // Campos específicos da medição de lenha
-        medidas: medidas.map(m => m.toString()),
-        comprimento: comprimento,
-        largura: largura,
-        altura_media: alturaMedia,
-        metros_cubicos: metrosCubicos,
+        responsavel: userData?.nome || "Usuário não identificado"
       };
 
-      // Criar registro de ENTRADA
-      await addDoc(collection(db, "relatorios"), {
-        ...relatorioDataBase,
-        status: 'entrada'
-      });
-
-      // Criar registro de SAÍDA (consumo imediato)
-      await addDoc(collection(db, "relatorios"), {
-        ...relatorioDataBase,
-        status: 'saida'
-      });
+      await addDoc(collection(db, "relatorios"), relatorioData);
       
       toast({
         title: "Registro salvo com sucesso!",
@@ -210,7 +206,8 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       setFornecedor("");
       setNfe("");
       setValorUnitario(0);
-      setChavePixFornecedor(""); // Limpa a chave Pix também
+      setChavePixFornecedor("");
+      setContatoFornecedor("");
       
       // Notifica componente pai sobre sucesso
       onSaveSuccess();

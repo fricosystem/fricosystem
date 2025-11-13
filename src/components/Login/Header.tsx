@@ -83,9 +83,6 @@ export function Header() {
           <a href="#solutions" className="text-white hover:text-gray-300 transition-colors duration-300">
             Soluções
           </a>
-          <a href="#modulos" className="text-white hover:text-gray-300 transition-colors duration-300">
-            Módulos
-          </a>
           <a href="#testimonials" className="text-white hover:text-gray-300 transition-colors duration-300">
             Depoimentos
           </a>

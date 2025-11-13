@@ -19,9 +19,6 @@ import PasswordModal from '@/components/IDE/PasswordModal';
 import VisualEditModal from '@/components/IDE/VisualEditModal';
 import PreviewOverlay from '@/components/IDE/PreviewOverlay';
 import { useVisualEditor } from '@/hooks/useVisualEditor';
-import { useSaveStatus } from '@/hooks/useSaveStatus';
-import { useToast } from '@/hooks/use-toast';
-import SaveStatusModal from '@/components/IDE/SaveStatusModal';
 
 const IDE: React.FC = () => {
   const navigate = useNavigate();
@@ -47,29 +44,12 @@ const IDE: React.FC = () => {
     isEditMode,
     selectedElement,
     isModalOpen,
-    stagedChanges,
     enableEditMode,
     disableEditMode,
-    selectElement,
     applyChanges,
-    stageChanges,
-    clearStagedChanges,
     handleMessage,
     setIsModalOpen
   } = useVisualEditor();
-
-  // Hook para salvar com status
-  const {
-    isModalOpen: isSaveModalOpen,
-    steps: saveSteps,
-    saveFileWithStatus,
-    closeSaveModal,
-    retryLastSave,
-    cancelSave,
-    modalType
-  } = useSaveStatus();
-
-  const { toast } = useToast();
 
   useEffect(() => {
     const initializeService = async () => {
@@ -108,69 +88,6 @@ const IDE: React.FC = () => {
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     setTheme(savedTheme || systemTheme);
   }, [user, loading]);
-
-  // Listener para mensagens do iframe (staging de alterações)
-  useEffect(() => {
-    const handleIframeMessage = (event: MessageEvent) => {
-      if (event.data.type === 'STAGE_CHANGES') {
-        stageChanges(event.data.elementId, event.data.changes);
-        toast({
-          title: "Alteração preparada",
-          description: "Use o botão 'Enviar' para salvar no GitHub",
-        });
-      }
-    };
-
-    window.addEventListener('message', handleIframeMessage);
-    return () => window.removeEventListener('message', handleIframeMessage);
-  }, [stageChanges, toast]);
-
-  const handleCommitChanges = async () => {
-    if (stagedChanges.length === 0) return;
-
-    const now = new Date();
-    const formattedDate = now.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    const commitMessage = `Elementor ${formattedDate}`;
-
-    try {
-      // Aqui você implementaria a lógica para converter as alterações staged
-      // em alterações reais nos arquivos do projeto e fazer commit
-      // Por enquanto, vamos simular um commit bem-sucedido
-      
-      toast({
-        title: "Enviando alterações...",
-        description: `Commit: ${commitMessage}`,
-      });
-
-      // Simula o processo de commit
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      clearStagedChanges();
-      
-      toast({
-        title: "✅ Alterações enviadas",
-        description: "As mudanças foram salvas no GitHub e serão deployadas no Vercel",
-      });
-    } catch (error) {
-      console.error('Erro ao fazer commit:', error);
-      toast({
-        title: "❌ Erro ao enviar",
-        description: "Ocorreu um erro ao salvar as alterações",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleOpenVisualEdit = (element: any) => {
-    selectElement(element);
-  };
 
   const handlePasswordValidated = async () => {
     try {
@@ -343,89 +260,81 @@ const IDE: React.FC = () => {
               {/* Área central - Editor com abas */}
               <ResizablePanel defaultSize={80} className="min-w-0 max-w-full overflow-hidden flex-1">
                 <div className="h-full w-full flex flex-col min-h-0 overflow-hidden">
-                  {/* Abas do Editor */}
-                  <div className="px-4 py-2 bg-background/80 backdrop-blur-sm border-b border-border/40 flex-shrink-0 overflow-hidden">
-                    <Tabs value={activeEditorTab} onValueChange={(value) => setActiveEditorTab(value as 'editor' | 'preview' | 'elementor')} className="w-full">
-                      <TabsList className="grid w-full grid-cols-3 h-10 max-w-md bg-muted/40 p-1">
-                        <TabsTrigger 
-                          value="editor" 
-                          className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                        >
-                          <Code className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="hidden sm:inline">Editor</span>
-                        </TabsTrigger>
-                        <TabsTrigger 
-                          value="preview" 
-                          className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                        >
-                          <Eye className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="hidden sm:inline">Prévia</span>
-                        </TabsTrigger>
-                        <TabsTrigger 
-                          value="elementor" 
-                          className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
-                        >
-                          <Paintbrush className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="hidden sm:inline">Elementor</span>
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
-                  
-                  {/* Conteúdo das abas */}
-                  <div className="flex-1 min-h-0 w-full overflow-hidden">
-                    {activeEditorTab === 'editor' ? (
-                      selectedFile ? (
-                        <CodeEditor 
-                          selectedFile={selectedFile} 
-                          theme={theme}
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center p-4 overflow-hidden">
-                          <div className="text-center space-y-4">
-                            <Code className="h-16 w-16 mx-auto text-muted-foreground/30" />
-                            <div className="space-y-2">
-                              <p className="text-lg font-medium text-muted-foreground">Nenhum arquivo selecionado</p>
-                              <p className="text-sm text-muted-foreground/70">Selecione um arquivo no explorer para começar a editar</p>
-                            </div>
+                  {selectedFile ? (
+                    <>
+                      {/* Abas do Editor */}
+                      <div className="px-4 py-2 bg-background/80 backdrop-blur-sm border-b border-border/40 flex-shrink-0 overflow-hidden">
+                        <Tabs value={activeEditorTab} onValueChange={(value) => setActiveEditorTab(value as 'editor' | 'preview' | 'elementor')} className="w-full">
+                          <TabsList className="grid w-full grid-cols-3 h-10 max-w-md bg-muted/40 p-1">
+                            <TabsTrigger 
+                              value="editor" 
+                              className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                            >
+                              <Code className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="hidden sm:inline">Editor</span>
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="preview" 
+                              className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                            >
+                              <Eye className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="hidden sm:inline">Prévia</span>
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="elementor" 
+                              className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                            >
+                              <Paintbrush className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="hidden sm:inline">Elementor</span>
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+                      
+                      {/* Conteúdo das abas */}
+                      <div className="flex-1 min-h-0 w-full overflow-hidden">
+                        {activeEditorTab === 'editor' ? (
+                          <CodeEditor 
+                            selectedFile={selectedFile} 
+                            theme={theme}
+                          />
+                        ) : activeEditorTab === 'preview' ? (
+                          <div className="h-full w-full overflow-hidden">
+                            <iframe
+                              src={window.location.origin}
+                              className="w-full h-full border-0"
+                              title="Prévia"
+                              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                            />
                           </div>
+                        ) : (
+                          <div className="h-full w-full overflow-hidden relative">
+                            <iframe
+                              src={window.location.origin}
+                              className="w-full h-full border-0"
+                              title="Elementor"
+                              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                            />
+                            <PreviewOverlay
+                              isEditMode={isEditMode}
+                              onToggleEditMode={isEditMode ? disableEditMode : enableEditMode}
+                              onMessage={handleMessage}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center p-4 overflow-hidden">
+                      <div className="text-center space-y-4">
+                        <Code className="h-16 w-16 mx-auto text-muted-foreground/30" />
+                        <div className="space-y-2">
+                          <p className="text-lg font-medium text-muted-foreground">Nenhum arquivo selecionado</p>
+                          <p className="text-sm text-muted-foreground/70">Selecione um arquivo no explorer para começar a editar</p>
                         </div>
-                      )
-                    ) : activeEditorTab === 'preview' ? (
-                      <div className="h-full w-full overflow-hidden">
-                        <iframe
-                          src={window.location.origin}
-                          className="w-full h-full border-0"
-                          title="Prévia"
-                          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-                        />
                       </div>
-                    ) : (
-                      <div className="h-full w-full overflow-hidden relative">
-                        <iframe
-                          src={window.location.origin}
-                          className="w-full h-full border-0"
-                          title="Elementor"
-                          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-                        />
-                        <PreviewOverlay
-                          isEditMode={isEditMode}
-                          onToggleEditMode={isEditMode ? disableEditMode : enableEditMode}
-                          onMessage={handleMessage}
-                          stagedChanges={stagedChanges}
-                          onStageChange={stageChanges}
-                          onCommitChanges={handleCommitChanges}
-                          onOpenVisualEdit={handleOpenVisualEdit}
-                        />
-                        <VisualEditModal
-                          isOpen={isModalOpen}
-                          onClose={() => setIsModalOpen(false)}
-                          selectedElement={selectedElement}
-                          onApplyChanges={applyChanges}
-                        />
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </ResizablePanel>
             </ResizablePanelGroup>
@@ -504,17 +413,6 @@ const IDE: React.FC = () => {
               }}
               selectedElement={selectedElement}
               onApplyChanges={applyChanges}
-            />
-
-            {/* Modal de Status de Save */}
-            <SaveStatusModal
-              isOpen={isSaveModalOpen}
-              onClose={closeSaveModal}
-              steps={saveSteps}
-              onRetry={retryLastSave}
-              canCancel={true}
-              onCancel={cancelSave}
-              modalType={modalType}
             />
           </div>
         )}

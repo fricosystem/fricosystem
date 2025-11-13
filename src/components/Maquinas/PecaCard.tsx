@@ -20,7 +20,7 @@ interface Peca {
   nome: string;
   codigo: string;
   descricao: string;
-  categoria: "Mecânica" | "Elétrica" | "Hidráulica" | "Pneumática" | "Eletrônica" | "Estrutural" | "Rolamentos" | "Vedação" | "Lubrificação" | "Transmissão" | "Instrumentação" | "Refrigeração" | "Controle";
+  categoria: "Mecânica" | "Elétrica" | "Hidráulica";
   status: "Normal" | "Atenção" | "Crítico";
   vidaUtil: number;
   vidaUtilRestante: number;
@@ -29,14 +29,6 @@ interface Peca {
   estoqueMinimo: number;
   custoManutencao: number;
   fornecedor: string;
-  x?: number;
-  y?: number;
-  ultimaManutencao?: string;
-  tempoCritico?: number;
-  valorUnitario?: number;
-  dataUltimaCompra?: string;
-  equipamentoId?: string;
-  maquinaId?: string;
 }
 
 interface PecaCardProps {

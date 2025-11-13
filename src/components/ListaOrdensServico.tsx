@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, query, getDocs, Timestamp, orderBy, doc, updateDoc } from "firebase/firestore";
+import { collection, query, getDocs, Timestamp, orderBy, doc, updateDoc, getDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { calcularProximaManutencao } from "@/utils/manutencaoUtils";
+import { OrdemServico } from "@/types/typesOrdemServico";
 
 interface ProdutoUtilizado {
   produtoId: string;
@@ -25,33 +27,6 @@ interface ProdutoUtilizado {
   quantidade: number;
   valorUnitario: number;
   valorTotal: number;
-}
-
-interface OrdemServico {
-  id: string;
-  setor: string;
-  equipamento: string;
-  hrInicial: string;
-  hrFinal: string;
-  tempoParada: string;
-  linhaParada: string;
-  descricaoMotivo: string;
-  observacao: string;
-  origemParada: {
-    automatizacao: boolean;
-    terceiros: boolean;
-    eletrica: boolean;
-    mecanica: boolean;
-    outro: boolean;
-  };
-  responsavelManutencao: string;
-  tipoManutencao: string;
-  solucaoAplicada: string;
-  produtosUtilizados?: ProdutoUtilizado[];
-  valorTotalProdutos?: number;
-  criadoPor: string;
-  criadoEm: Timestamp;
-  status: string;
 }
 
 interface Usuario {
@@ -143,13 +118,28 @@ const ListaOrdensServico = () => {
   const handleStatusChange = async (ordemId: string, newStatus: string) => {
     try {
       const ordemRef = doc(db, "ordens_servicos", ordemId);
+      const ordemDoc = await getDoc(ordemRef);
+      
+      if (!ordemDoc.exists()) {
+        toast.error("Ordem não encontrada");
+        return;
+      }
+      
+      const ordem = ordemDoc.data() as OrdemServico;
+      
+      // Atualizar status da ordem
       await updateDoc(ordemRef, {
         status: newStatus
       });
       
+      // Se a ordem foi concluída E está vinculada a uma peça/sub-peça, atualizar manutenção
+      if (newStatus === "concluido" && (ordem.pecaId || ordem.subPecaId)) {
+        await atualizarManutencaoPeca(ordem, ordemId);
+      }
+      
       setOrdens(prev => 
-        prev.map(ordem => 
-          ordem.id === ordemId ? { ...ordem, status: newStatus } : ordem
+        prev.map(o => 
+          o.id === ordemId ? { ...o, status: newStatus } : o
         )
       );
       
@@ -157,6 +147,104 @@ const ListaOrdensServico = () => {
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       toast.error("Erro ao atualizar o status");
+    }
+  };
+  
+  // Função auxiliar para atualizar manutenção da peça quando ordem é concluída
+  const atualizarManutencaoPeca = async (ordem: OrdemServico, ordemId: string) => {
+    try {
+      if (!ordem.equipamentoId) {
+        console.warn("Ordem não tem equipamentoId vinculado");
+        return;
+      }
+      
+      // Buscar o equipamento
+      const equipamentoRef = doc(db, "equipamentos", ordem.equipamentoId);
+      const equipamentoDoc = await getDoc(equipamentoRef);
+      
+      if (!equipamentoDoc.exists()) {
+        console.warn("Equipamento não encontrado");
+        return;
+      }
+      
+      const equipamento = equipamentoDoc.data();
+      const sistemas = equipamento.sistemas || [];
+      
+      // Encontrar e atualizar a peça/sub-peça
+      const novosSistemas = sistemas.map((sistema: any) => {
+        if (sistema.id !== ordem.sistemaId) return sistema;
+        
+        const pecas = (sistema.pecas || []).map((peca: any) => {
+          // Se é a peça que estamos procurando
+          if (peca.id === ordem.pecaId) {
+            const config = peca.configuracaoManutencao;
+            const dataAtual = new Date().toISOString().split('T')[0];
+            
+            // Calcular próxima manutenção se configuração existe
+            let proximaManutencao = peca.proximaManutencao;
+            if (config?.intervaloManutencao) {
+              proximaManutencao = calcularProximaManutencao(
+                config.intervaloManutencao,
+                config.tipoIntervalo || "dias"
+              );
+            }
+            
+            return {
+              ...peca,
+              ultimaManutencao: dataAtual,
+              proximaManutencao,
+              vidaUtilRestante: peca.vidaUtil || peca.vidaUtilRestante, // Resetar vida útil
+              status: "Normal", // Resetar status
+              historicoManutencoes: [...(peca.historicoManutencoes || []), ordemId]
+            };
+          }
+          
+          // Verificar sub-peças
+          if (peca.subPecas && Array.isArray(peca.subPecas)) {
+            const subPecas = peca.subPecas.map((subPeca: any) => {
+              if (subPeca.id === ordem.subPecaId) {
+                const config = subPeca.configuracaoManutencao;
+                const dataAtual = new Date().toISOString().split('T')[0];
+                
+                let proximaManutencao = subPeca.proximaManutencao;
+                if (config?.intervaloManutencao) {
+                  proximaManutencao = calcularProximaManutencao(
+                    config.intervaloManutencao,
+                    config.tipoIntervalo || "dias"
+                  );
+                }
+                
+                return {
+                  ...subPeca,
+                  ultimaManutencao: dataAtual,
+                  proximaManutencao,
+                  vidaUtilRestante: subPeca.vidaUtil || subPeca.vidaUtilRestante,
+                  status: "Normal",
+                  historicoManutencoes: [...(subPeca.historicoManutencoes || []), ordemId]
+                };
+              }
+              return subPeca;
+            });
+            
+            return { ...peca, subPecas };
+          }
+          
+          return peca;
+        });
+        
+        return { ...sistema, pecas };
+      });
+      
+      // Atualizar equipamento no Firestore
+      await updateDoc(equipamentoRef, {
+        sistemas: novosSistemas
+      });
+      
+      console.log("Manutenção da peça atualizada com sucesso");
+      toast.success("Manutenção da peça registrada e próxima data calculada!");
+    } catch (error) {
+      console.error("Erro ao atualizar manutenção da peça:", error);
+      // Não exibir erro para o usuário, apenas logar
     }
   };
 
@@ -225,6 +313,7 @@ const ListaOrdensServico = () => {
                 <TableRow>
                   <TableHead>Setor</TableHead>
                   <TableHead>Equipamento</TableHead>
+                  <TableHead>Peça</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Status</TableHead>
@@ -235,7 +324,17 @@ const ListaOrdensServico = () => {
                 {filteredOrdens.map((ordem) => (
                   <TableRow key={ordem.id}>
                     <TableCell>{ordem.setor}</TableCell>
-                    <TableCell>{ordem.equipamento}</TableCell>
+                    <TableCell>
+                      {ordem.equipamento}
+                      {ordem.geradaAutomaticamente && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          Auto
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {ordem.pecaNome || "-"}
+                    </TableCell>
                     <TableCell>{ordem.tipoManutencao}</TableCell>
                     <TableCell>
                       {ordem.criadoEm && format(ordem.criadoEm.toDate(), "dd/MM/yyyy HH:mm")}

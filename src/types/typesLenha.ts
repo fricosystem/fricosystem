@@ -19,8 +19,10 @@ export interface MedidaLenha {
   valorUnitario: number;
   valorTotal: number;
   usuario: string;
-  status_envio?: string; // Add this line
+  status_envio?: string;
   chavePixFornecedor: string;
+  contatoFornecedor: string;
+  cnpjFornecedor?: string;
 }
 
 export interface Fornecedor {

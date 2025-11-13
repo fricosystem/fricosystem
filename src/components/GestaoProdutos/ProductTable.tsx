@@ -10,7 +10,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { VersionBadge } from "./VersionBadge";
 
 interface Produto {
   id: string;
@@ -31,8 +30,6 @@ interface Produto {
   fornecedor_id: string | null;
   fornecedor_nome: string | null;
   fornecedor_cnpj: string | null;
-  versao_atual?: number;
-  total_versoes?: number;
 }
 
 interface ProductTableProps {
@@ -88,13 +85,7 @@ export const ProductTable = ({
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h3 className="font-medium text-sm truncate">{produto.nome}</h3>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-muted-foreground">#{produto.codigo_estoque}</p>
-                          <VersionBadge 
-                            version={produto.versao_atual || 1} 
-                            totalVersions={produto.total_versoes}
-                          />
-                        </div>
+                        <p className="text-xs text-muted-foreground">#{produto.codigo_estoque}</p>
                       </div>
                     </div>
                     
@@ -207,7 +198,6 @@ export const ProductTable = ({
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">IMAGEM</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">CÓDIGO</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">NOME</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">VERSÃO</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">QUANTIDADE</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">VALOR UNIT.</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">FORNECEDOR</th>
@@ -235,12 +225,6 @@ export const ProductTable = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-foreground">{produto.nome}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <VersionBadge 
-                    version={produto.versao_atual || 1} 
-                    totalVersions={produto.total_versoes}
-                  />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-foreground">
                   <div>

@@ -101,7 +101,6 @@ const CommitPanel: React.FC = () => {
   const [downloadedFiles, setDownloadedFiles] = useState<{name: string, path: string}[]>([]);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<string>('');
   const [startTime, setStartTime] = useState<number>(0);
-  const [totalTransferredFiles, setTotalTransferredFiles] = useState<number>(0);
   // New states for smart transfer
   const [showComparisonDialog, setShowComparisonDialog] = useState(false);
   const [comparisons, setComparisons] = useState<FileComparison[]>([]);
@@ -434,25 +433,14 @@ const CommitPanel: React.FC = () => {
               path: '' 
             }]);
           }
-          // Extrair número de arquivos da mensagem final
-          if (progress === 100 && message.includes('arquivos')) {
-            const match = message.match(/(\d+)\s+arquivos/);
-            if (match) {
-              setTotalTransferredFiles(parseInt(match[1]));
-            }
-          }
         }
       );
 
       if (success) {
-        // Se não capturou do callback, usar o tamanho de selectedFiles
-        if (totalTransferredFiles === 0) {
-          setTotalTransferredFiles(selectedComparisons.length);
-        }
         setProcessComplete(true);
         toast({
           title: "Transferência concluída",
-          description: `${selectedComparisons.length} arquivos transferidos com sucesso!`,
+          description: `${selectedFiles.size} arquivos transferidos com sucesso!`,
         });
         await loadCommitHistory(); // Reload commit history
       } else {
@@ -507,7 +495,6 @@ const CommitPanel: React.FC = () => {
     setOverallProgress(0);
     setProcessComplete(false);
     setDownloadedFiles([]);
-    setTotalTransferredFiles(0);
     setStartTime(Date.now());
 
     try {
@@ -524,6 +511,11 @@ const CommitPanel: React.FC = () => {
       const { Octokit } = await import('@octokit/rest');
       const config = githubService.getConfig();
       const sourceOctokit = new Octokit({ auth: config?.token });
+
+      toast({
+        title: "Iniciando download",
+        description: "Buscando arquivos do repositório...",
+      });
 
       // 1) Descobrir a branch padrão e tree SHA corretamente
       const { data: repoData } = await sourceOctokit.rest.repos.get({
@@ -556,60 +548,76 @@ const CommitPanel: React.FC = () => {
 
       const files = (treeData.tree || []).filter((item: any) => item.type === 'blob' && item.path);
       const totalFiles = files.length;
-      const totalSteps = totalFiles * 2; // Download + Upload
 
-      // 3) Download real dos arquivos (atualiza barra de download e lista)
+      toast({
+        title: "Download iniciado",
+        description: `Baixando ${totalFiles} arquivos em paralelo...`,
+      });
+
+      // 3) Download RÁPIDO em paralelo (igual ao Explorer)
       const downloads: { path: string; content: string; size: number }[] = [];
-      let downloadedCount = 0;
+      
+      // Baixar em lotes de 10 arquivos por vez para otimizar velocidade
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        const batch = files.slice(i, i + BATCH_SIZE);
+        
+        const batchResults = await Promise.allSettled(
+          batch.map(async (file: any) => {
+            if (!file.path || !file.sha) return null;
+            
+            try {
+              const { data: blob } = await sourceOctokit.rest.git.getBlob({
+                owner: sourceOwner,
+                repo: sourceRepo,
+                file_sha: file.sha,
+              });
 
-      for (const file of files) {
-        try {
-          if (!file.path || !file.sha) continue;
-          
-          // Adicionar delay entre requisições para evitar problemas
-          if (downloadedCount > 0 && downloadedCount % 10 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+              const base64 = (blob.content || '').replace(/\n/g, '');
+              let decoded = '';
+              try {
+                decoded = decodeURIComponent(escape(atob(base64)));
+              } catch {
+                decoded = atob(base64);
+              }
+
+              return { path: file.path, content: decoded, size: decoded.length };
+            } catch (error) {
+              console.error(`Erro ao baixar arquivo ${file.path}:`, error);
+              return null;
+            }
+          })
+        );
+
+        // Adicionar resultados bem-sucedidos
+        batchResults.forEach(result => {
+          if (result.status === 'fulfilled' && result.value) {
+            downloads.push(result.value);
           }
-          
-          const { data: blob } = await sourceOctokit.rest.git.getBlob({
-            owner: sourceOwner,
-            repo: sourceRepo,
-            file_sha: file.sha,
-          });
+        });
 
-          const base64 = (blob.content || '').replace(/\n/g, '');
-          let decoded = '';
-          try {
-            decoded = decodeURIComponent(escape(atob(base64)));
-          } catch {
-            decoded = atob(base64);
-          }
-
-          downloads.push({ path: file.path, content: decoded, size: decoded.length });
-          downloadedCount++;
-          
-          const downloadPercent = Math.round((downloadedCount / totalFiles) * 100);
-          setDownloadProgress(downloadPercent);
-          
-          const overallPercent = Math.round((downloadedCount / totalSteps) * 100);
-          setOverallProgress(overallPercent);
-          
-          // Calcular tempo restante
-          const elapsed = Date.now() - startTime;
-          const remaining = ((totalSteps - downloadedCount) / downloadedCount) * elapsed;
-          const minutes = Math.floor(remaining / 60000);
-          const seconds = Math.floor((remaining % 60000) / 1000);
-          setEstimatedTimeRemaining(minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
-        } catch (error) {
-          console.error(`Erro ao baixar arquivo ${file.path}:`, error);
-          // Continuar com próximo arquivo em caso de erro
-        }
+        // Atualizar progresso
+        const downloadedCount = downloads.length;
+        const downloadPercent = Math.round((downloadedCount / totalFiles) * 100);
+        setDownloadProgress(downloadPercent);
+        setOverallProgress(Math.round(downloadPercent / 2)); // 50% do total
+        
+        // Calcular tempo restante
+        const elapsed = Date.now() - startTime;
+        const remaining = ((totalFiles - downloadedCount) / downloadedCount) * elapsed;
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        setEstimatedTimeRemaining(minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
       }
 
       // Exibir lista de arquivos no modal
       setDownloadedFiles(files.map((f: any) => ({ name: f.path.split('/').pop() || f.path, path: f.path })));
-      setTotalTransferredFiles(downloads.length);
       setIsDownloading(false);
+
+      toast({
+        title: "Download concluído",
+        description: `${downloads.length} arquivos baixados com sucesso!`,
+      });
 
       // 4) Upload para repositório destino - COM UM ÚNICO COMMIT
       setIsUploading(true);
@@ -631,6 +639,7 @@ const CommitPanel: React.FC = () => {
 
         // Obter referência da branch de destino
         let baseSha = '';
+        let baseTreeSha = '';
         try {
           const { data: refData } = await destOctokit.rest.git.getRef({
             owner: currentConfig.owner,
@@ -638,6 +647,14 @@ const CommitPanel: React.FC = () => {
             ref: `heads/main`,
           });
           baseSha = refData.object.sha;
+          
+          // Buscar o commit para obter o tree SHA
+          const { data: commitData } = await destOctokit.rest.git.getCommit({
+            owner: currentConfig.owner,
+            repo: currentConfig.repo,
+            commit_sha: baseSha,
+          });
+          baseTreeSha = commitData.tree.sha;
         } catch (error: any) {
           // Se a branch não existe, criar commit inicial
           if (error.status === 404) {
@@ -648,7 +665,7 @@ const CommitPanel: React.FC = () => {
               message: 'Initial commit',
               content: btoa(''),
             });
-            baseSha = newCommit.commit.sha;
+            baseSha = newCommit.commit.sha || '';
           } else {
             throw error;
           }
@@ -656,47 +673,59 @@ const CommitPanel: React.FC = () => {
 
         toast({
           title: "Criando blobs",
-          description: `Processando ${downloads.length} arquivos...`,
+          description: `Processando ${downloads.length} arquivos em lotes...`,
         });
 
-        // Criar todos os blobs primeiro
+        // Criar blobs em paralelo (lotes de 5)
         const treeItems = [];
-        let processedFiles = 0;
+        const UPLOAD_BATCH_SIZE = 5;
         
-        for (const file of downloads) {
-          try {
-            setUploadProgress(Math.round((processedFiles / downloads.length) * 50));
-            
-            const { data: blob } = await destOctokit.rest.git.createBlob({
-              owner: currentConfig.owner,
-              repo: currentConfig.repo,
-              content: btoa(unescape(encodeURIComponent(file.content))),
-              encoding: 'base64'
-            });
-            
-            treeItems.push({
-              path: file.path,
-              mode: '100644' as const,
-              type: 'blob' as const,
-              sha: blob.sha,
-            });
-            
-            processedFiles++;
-            
-            // Pequeno delay a cada 10 arquivos para evitar rate limit
-            if (processedFiles % 10 === 0) {
-              await new Promise(resolve => setTimeout(resolve, 100));
+        for (let i = 0; i < downloads.length; i += UPLOAD_BATCH_SIZE) {
+          const batch = downloads.slice(i, i + UPLOAD_BATCH_SIZE);
+          
+          const batchResults = await Promise.allSettled(
+            batch.map(async (file) => {
+              try {
+                const { data: blob } = await destOctokit.rest.git.createBlob({
+                  owner: currentConfig.owner,
+                  repo: currentConfig.repo,
+                  content: btoa(unescape(encodeURIComponent(file.content))),
+                  encoding: 'base64'
+                });
+                
+                return {
+                  path: file.path,
+                  mode: '100644' as const,
+                  type: 'blob' as const,
+                  sha: blob.sha,
+                };
+              } catch (error) {
+                console.error(`Erro ao criar blob para ${file.path}:`, error);
+                return null;
+              }
+            })
+          );
+
+          // Adicionar resultados bem-sucedidos
+          batchResults.forEach(result => {
+            if (result.status === 'fulfilled' && result.value) {
+              treeItems.push(result.value);
             }
-          } catch (error) {
-            console.error(`Erro ao criar blob para ${file.path}:`, error);
-            throw new Error(`Falha ao processar arquivo ${file.path}: ${error.message}`);
-          }
+          });
+
+          const progress = Math.round(((i + batch.length) / downloads.length) * 40) + 50;
+          setUploadProgress(progress);
+          setOverallProgress(progress);
         }
 
-        setUploadProgress(60);
+        if (treeItems.length === 0) {
+          throw new Error('Nenhum arquivo foi processado com sucesso');
+        }
+
+        setUploadProgress(90);
         toast({
-          title: "Criando árvore Git",
-          description: "Montando estrutura de arquivos...",
+          title: "Criando commit final",
+          description: "Finalizando transferência...",
         });
 
         // Criar uma única árvore com todos os arquivos
@@ -704,13 +733,7 @@ const CommitPanel: React.FC = () => {
           owner: currentConfig.owner,
           repo: currentConfig.repo,
           tree: treeItems,
-          base_tree: baseSha,
-        });
-
-        setUploadProgress(80);
-        toast({
-          title: "Criando commit",
-          description: "Finalizando transferência...",
+          ...(baseTreeSha && { base_tree: baseTreeSha }),
         });
 
         // Criar mensagem do commit
@@ -721,11 +744,10 @@ const CommitPanel: React.FC = () => {
           const year = date.getFullYear();
           const hours = date.getHours().toString().padStart(2, '0');
           const minutes = date.getMinutes().toString().padStart(2, '0');
-          const seconds = date.getSeconds().toString().padStart(2, '0');
-          return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+          return `${day}/${month}/${year} às ${hours}:${minutes}`;
         };
 
-        const finalCommitMessage = `Transferência completa de ${sourceOwner}/${sourceRepo} - ${formatTime(now)} - ${downloads[downloads.length - 1]?.path || ''} - ${formatTime(now)}`;
+        const finalCommitMessage = `Transferência completa de ${sourceOwner}/${sourceRepo} - ${formatTime(now)}`;
 
         // Criar um único commit com toda a árvore
         const { data: newCommit } = await destOctokit.rest.git.createCommit({
@@ -733,10 +755,8 @@ const CommitPanel: React.FC = () => {
           repo: currentConfig.repo,
           message: finalCommitMessage,
           tree: newTree.sha,
-          parents: [baseSha],
+          ...(baseSha && { parents: [baseSha] }),
         });
-
-        setUploadProgress(95);
 
         // Atualizar a referência da branch
         await destOctokit.rest.git.updateRef({
@@ -744,6 +764,7 @@ const CommitPanel: React.FC = () => {
           repo: currentConfig.repo,
           ref: 'heads/main',
           sha: newCommit.sha,
+          force: false,
         });
 
         setUploadProgress(100);
@@ -752,33 +773,31 @@ const CommitPanel: React.FC = () => {
 
         toast({
           title: "Transferência concluída!",
-          description: `${downloads.length} arquivos transferidos em um único commit`,
+          description: `${treeItems.length} arquivos transferidos com sucesso`,
         });
 
-        setUploadProgress(100);
-        setOverallProgress(100);
+        // Recarregar histórico de commits
+        await loadCommitHistory();
+
       } catch (uploadError: any) {
         console.error('Erro no upload:', uploadError);
         
-        // Tratamento específico para o erro de árvore grande
+        let errorMessage = 'Erro durante o upload';
+        
         if (uploadError.message?.includes('too large') || uploadError.status === 422) {
-          throw new Error(
-            `Árvore Git muito grande. Tente dividir em repositórios menores ou ` +
-            `reduzir a quantidade de arquivos. Limite do GitHub: ~1MB por tree.`
-          );
+          errorMessage = 'Repositório muito grande. Use transferência inteligente ou divida em partes menores.';
+        } else if (uploadError.status === 409) {
+          errorMessage = 'Conflito detectado. Atualize o repositório e tente novamente.';
+        } else if (uploadError.message) {
+          errorMessage = uploadError.message;
         }
-        throw uploadError;
+        
+        throw new Error(errorMessage);
       }
 
       setIsUploading(false);
-      setTotalTransferredFiles(downloads.length);
       setProcessComplete(true);
       setEstimatedTimeRemaining('');
-
-      toast({
-        title: 'Sucesso',
-        description: `${downloads.length} arquivos enviados para ${currentConfig.owner}/${currentConfig.repo} com sucesso!`,
-      });
     } catch (error: any) {
       console.error('Erro no processo de transferência:', error);
       let description = 'Erro durante a transferência';
@@ -844,7 +863,6 @@ const CommitPanel: React.FC = () => {
     setOverallProgress(0);
     setProcessComplete(false);
     setDownloadedFiles([]);
-    setTotalTransferredFiles(0);
     setStartTime(Date.now());
 
     try {
@@ -864,12 +882,7 @@ const CommitPanel: React.FC = () => {
       const config = githubService.getConfig();
       const octokit = new Octokit({ auth: config?.token });
 
-      // FASE 1: Download do repositório origem (0-40% do progresso total)
-      toast({
-        title: "📥 Fase 1/4: Iniciando download",
-        description: `Baixando arquivos de ${sourceOwner}/${sourceRepo}...`,
-      });
-
+      // 1) Download do repositório origem
       const { data: repoData } = await octokit.rest.repos.get({
         owner: sourceOwner,
         repo: sourceRepo,
@@ -899,157 +912,81 @@ const CommitPanel: React.FC = () => {
 
       const files = (treeData.tree || []).filter((item: any) => item.type === 'blob' && item.path);
       const totalFiles = files.length;
+      const totalSteps = totalFiles * 2;
 
-      // Download dos arquivos (inclui TODOS os tipos, inclusive imagens)
-      const downloads: { path: string; content: string; size: number; encoding?: string }[] = [];
+      // Download dos arquivos
+      const downloads: { path: string; content: string; size: number }[] = [];
       let downloadedCount = 0;
 
       for (const file of files) {
         if (!file.path || !file.sha) continue;
-        
+        const { data: blob } = await octokit.rest.git.getBlob({
+          owner: sourceOwner,
+          repo: sourceRepo,
+          file_sha: file.sha,
+        });
+
+        const base64 = (blob.content || '').replace(/\n/g, '');
+        let decoded = '';
         try {
-          // Adicionar delay entre requisições
-          if (downloadedCount > 0 && downloadedCount % 10 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-          
-          const { data: blob } = await octokit.rest.git.getBlob({
-            owner: sourceOwner,
-            repo: sourceRepo,
-            file_sha: file.sha,
-          });
-
-          // Manter o conteúdo em base64 para arquivos binários (imagens, etc)
-          const base64Content = (blob.content || '').replace(/\n/g, '');
-          const isImage = /\.(png|jpg|jpeg|gif|webp|svg|ico|bmp)$/i.test(file.path);
-          const isBinary = /\.(pdf|zip|tar|gz|mp4|mp3|woff|woff2|ttf|eot)$/i.test(file.path);
-          
-          let content = base64Content;
-          let encoding: string | undefined = 'base64';
-          
-          // Para arquivos de texto, tentar decodificar
-          if (!isImage && !isBinary) {
-            try {
-              content = decodeURIComponent(escape(atob(base64Content)));
-              encoding = undefined;
-            } catch {
-              // Se falhar, manter como base64
-              content = base64Content;
-              encoding = 'base64';
-            }
-          }
-
-          downloads.push({ 
-            path: file.path, 
-            content,
-            size: base64Content.length,
-            encoding 
-          });
-          downloadedCount++;
-          
-          const downloadPercent = Math.round((downloadedCount / totalFiles) * 100);
-          setDownloadProgress(downloadPercent);
-          
-          // Progresso geral: download é 40% do total
-          const overallPercent = Math.round((downloadedCount / totalFiles) * 40);
-          setOverallProgress(overallPercent);
-          
-        } catch (error) {
-          console.error(`Erro ao baixar arquivo ${file.path}:`, error);
-          // Continuar com próximo arquivo
+          decoded = decodeURIComponent(escape(atob(base64)));
+        } catch {
+          decoded = atob(base64);
         }
+
+        downloads.push({ 
+          path: file.path, 
+          content: decoded,
+          size: decoded.length 
+        });
+        downloadedCount++;
+        
+        const downloadPercent = Math.round((downloadedCount / totalFiles) * 100);
+        setDownloadProgress(downloadPercent);
+        
+        const overallPercent = Math.round((downloadedCount / totalSteps) * 100);
+        setOverallProgress(overallPercent);
       }
 
       setDownloadedFiles(files.map((f: any) => ({ name: f.path.split('/').pop() || f.path, path: f.path })));
-      setTotalTransferredFiles(downloads.length);
       setIsDownloading(false);
-      setDownloadProgress(100);
-      setOverallProgress(40);
 
-      toast({
-        title: "✅ Fase 1 concluída",
-        description: `${downloads.length} arquivos baixados com sucesso`,
-      });
-
-      // FASE 2: Excluir todos os arquivos do repositório destino (40-50% do progresso total)
-      toast({
-        title: "🗑️ Fase 2/4: Limpando destino",
-        description: `Excluindo arquivos de ${destOwner}/${destRepo}...`,
-      });
-
-      let baseSha = '';
-      try {
-        const { data: destRefData } = await octokit.rest.git.getRef({
-          owner: destOwner,
-          repo: destRepo,
-          ref: `heads/${destBranch}`,
-        });
-        baseSha = destRefData.object.sha;
-
-        // Criar uma árvore vazia (sem arquivos)
-        const { data: emptyTree } = await octokit.rest.git.createTree({
-          owner: destOwner,
-          repo: destRepo,
-          tree: [],
-        });
-
-        // Criar commit para limpar o repositório
-        const { data: cleanCommit } = await octokit.rest.git.createCommit({
-          owner: destOwner,
-          repo: destRepo,
-          message: 'Limpeza do repositório antes da transferência',
-          tree: emptyTree.sha,
-          parents: [baseSha],
-        });
-
-        // Atualizar referência da branch para o commit de limpeza
-        await octokit.rest.git.updateRef({
-          owner: destOwner,
-          repo: destRepo,
-          ref: `heads/${destBranch}`,
-          sha: cleanCommit.sha,
-        });
-
-        baseSha = cleanCommit.sha;
-        setOverallProgress(50);
-
-        toast({
-          title: "✅ Fase 2 concluída",
-          description: "Repositório destino limpo com sucesso",
-        });
-      } catch (error: any) {
-        if (error.status === 404) {
-          // Se a branch não existe, criar commit inicial
-          const { data: newCommit } = await octokit.rest.repos.createOrUpdateFileContents({
-            owner: destOwner,
-            repo: destRepo,
-            path: '.gitkeep',
-            message: 'Initial commit',
-            content: btoa(''),
-          });
-          baseSha = newCommit.commit.sha;
-        } else {
-          throw error;
-        }
-      }
-
-      // FASE 3: Upload para repositório destino - COM LOTE OTIMIZADO (50-95% do progresso total)
-      toast({
-        title: "📤 Fase 3/4: Enviando arquivos",
-        description: `Enviando ${downloads.length} arquivos para ${destOwner}/${destRepo}...`,
-      });
-      
+      // 2) Upload para repositório destino - COM LOTE OTIMIZADO
       setIsUploading(true);
       setUploadProgress(0);
       
       try {
+        // Obter referência da branch de destino
+        let baseSha = '';
+        try {
+          const { data: refData } = await octokit.rest.git.getRef({
+            owner: destOwner,
+            repo: destRepo,
+            ref: `heads/${destBranch}`,
+          });
+          baseSha = refData.object.sha;
+        } catch (error: any) {
+          if (error.status === 404) {
+            const { data: newCommit } = await octokit.rest.repos.createOrUpdateFileContents({
+              owner: destOwner,
+              repo: destRepo,
+              path: '.gitkeep',
+              message: 'Initial commit',
+              content: btoa(''),
+            });
+            baseSha = newCommit.commit.sha;
+          } else {
+            throw error;
+          }
+        }
+
         // 🔥 **SOLUÇÃO PRINCIPAL: Lotes menores e controle de tamanho**
-        const MAX_BATCH_SIZE = 15; // Tamanho otimizado
-        const MAX_BATCH_SIZE_BYTES = 800000; // ~800KB por lote
+        const MAX_BATCH_SIZE = 10; // Reduzido drasticamente
+        const MAX_BATCH_SIZE_BYTES = 500000; // ~500KB por lote
         
         // Primeiro, calcular quantos batches serão necessários
-        const batches: Array<Array<{ path: string; content: string; size: number; encoding?: string }>> = [];
-        let currentBatchFiles: Array<{ path: string; content: string; size: number; encoding?: string }> = [];
+        const batches: Array<Array<{ path: string; content: string; size: number }>> = [];
+        let currentBatchFiles: Array<{ path: string; content: string; size: number }> = [];
         let currentBatchTotalSize = 0;
 
         for (const file of downloads) {
@@ -1079,47 +1016,16 @@ const CommitPanel: React.FC = () => {
           const batch = batches[i];
           const batchNumber = i + 1;
           
-          // Progresso de upload: 0-100% (mapeia para 50-95% do progresso geral)
-          const uploadPercent = Math.round((i / batches.length) * 100);
-          setUploadProgress(uploadPercent);
+          setUploadProgress(Math.round((i / batches.length) * 100));
           
-          // Progresso geral: upload é de 50% a 95%
-          const overallPercent = 50 + Math.round((i / batches.length) * 45);
-          setOverallProgress(overallPercent);
-          
-          toast({
-            title: `📦 Enviando lote ${batchNumber}/${totalBatches}`,
-            description: `Processando ${batch.length} arquivos...`,
-          });
-          
-          // Criar blobs (suporta todos os tipos de arquivo)
+          // Criar blobs primeiro para evitar problemas de tamanho
           const blobPromises = batch.map(async (file) => {
-            let blobContent: string;
-            let encoding: 'base64' | 'utf-8' = 'base64';
-            
-            // Se o arquivo já tem encoding definido, usar ele
-            if (file.encoding === 'base64') {
-              blobContent = file.content;
-              encoding = 'base64';
-            } else {
-              // Para arquivos de texto, converter para base64
-              try {
-                blobContent = btoa(unescape(encodeURIComponent(file.content)));
-                encoding = 'base64';
-              } catch {
-                // Se falhar, já deve estar em base64
-                blobContent = file.content;
-                encoding = 'base64';
-              }
-            }
-            
             const { data: blob } = await octokit.rest.git.createBlob({
               owner: destOwner,
               repo: destRepo,
-              content: blobContent,
-              encoding: encoding
+              content: btoa(unescape(encodeURIComponent(file.content))),
+              encoding: 'base64'
             });
-            
             return {
               path: file.path,
               mode: '100644' as const,
@@ -1165,10 +1071,14 @@ const CommitPanel: React.FC = () => {
             ref: `heads/${destBranch}`,
             sha: newCommit.sha,
           });
+
+          // Atualizar progresso geral
+          const overallPercent = Math.round(((totalFiles + (i + 1) * batch.length) / totalSteps) * 100);
+          setOverallProgress(overallPercent);
         }
 
         setUploadProgress(100);
-        setOverallProgress(95);
+        setOverallProgress(100);
       } catch (uploadError: any) {
         console.error('Erro no upload:', uploadError);
         
@@ -1183,21 +1093,12 @@ const CommitPanel: React.FC = () => {
       }
 
       setIsUploading(false);
-      setTotalTransferredFiles(downloads.length);
-      
-      // FASE 4: Finalização (95-100% do progresso total)
-      toast({
-        title: "🎉 Fase 4/4: Finalizando",
-        description: "Concluindo transferência...",
-      });
-      
-      setOverallProgress(100);
       setProcessComplete(true);
       setEstimatedTimeRemaining('');
 
       toast({
-        title: '✅ Transferência Concluída!',
-        description: `${downloads.length} arquivos (incluindo imagens) transferidos com sucesso de ${sourceOwner}/${sourceRepo} para ${destOwner}/${destRepo}`,
+        title: 'Commit Trocado Concluído!',
+        description: `${downloads.length} arquivos transferidos com sucesso!`,
       });
       
       // Limpar configuração
@@ -2024,7 +1925,7 @@ const CommitPanel: React.FC = () => {
                     return config ? `${config.owner}/${config.repo}` : 'Não configurado';
                   })()}</p>
                   <p>Tipo: {forceFullTransfer ? 'Completa' : 'Apenas modificados'}</p>
-                  <p>Total de arquivos: {totalTransferredFiles || downloadedFiles.length}</p>
+                  <p>Total de arquivos: {downloadedFiles.length}</p>
                 </div>
               </div>
             )}
@@ -2040,7 +1941,6 @@ const CommitPanel: React.FC = () => {
                 setOverallProgress(0);
                 setProcessComplete(false);
                 setDownloadedFiles([]);
-                setTotalTransferredFiles(0);
                 setEstimatedTimeRemaining('');
               }}>
                 Fechar

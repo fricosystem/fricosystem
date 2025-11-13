@@ -239,13 +239,9 @@ const CentroCusto = () => {
     const ativos = centrosCusto.filter(c => c.status === "Ativo").length;
     const valorTotalGeral = centrosCusto.reduce((acc, c) => acc + c.valorTotal, 0);
     const valorUtilizadoGeral = centrosCusto.reduce((acc, c) => acc + c.valorUtilizado, 0);
-    const centrosEmAlerta = centrosCusto.filter(c => {
-      if (c.status !== "Ativo") return false;
-      const saldo = c.valorTotal - c.valorUtilizado;
-      const percentualUtilizado = c.valorTotal > 0 ? (c.valorUtilizado / c.valorTotal) * 100 : 0;
-      
-      return saldo === 0 || c.valorUtilizado > c.valorTotal || percentualUtilizado >= 80;
-    }).length;
+    const centrosEmAlerta = centrosCusto.filter(c => 
+      c.status === "Ativo" && (c.valorTotal - c.valorUtilizado) <= c.valorMinimoAlerta
+    ).length;
 
     return {
       total,
@@ -262,89 +258,14 @@ const CentroCusto = () => {
     return uniqueUnidades.sort();
   }, [centrosCusto]);
 
-  const verificarDuplicatas = async (nome: string, codigo: string, unidade: string): Promise<boolean> => {
-    try {
-      const centrosRef = collection(db, "centro_de_custo");
-      
-      // Verificar nome duplicado na mesma unidade
-      const qNome = query(centrosRef, where("nome", "==", nome), where("unidade", "==", unidade));
-      const snapshotNome = await getDocs(qNome);
-      
-      // Verificar código duplicado na mesma unidade
-      const qCodigo = query(centrosRef, where("codigo", "==", codigo), where("unidade", "==", unidade));
-      const snapshotCodigo = await getDocs(qCodigo);
-      
-      // Se estiver editando, ignorar o próprio registro
-      if (editingCentro) {
-        const nomeDuplicado = snapshotNome.docs.some(doc => doc.id !== editingCentro.id);
-        const codigoDuplicado = snapshotCodigo.docs.some(doc => doc.id !== editingCentro.id);
-        
-        if (nomeDuplicado) {
-          toast({
-            title: "Erro",
-            description: `Já existe um centro de custo com o nome "${nome}" na unidade ${unidade}.`,
-            variant: "destructive",
-          });
-          return false;
-        }
-        
-        if (codigoDuplicado) {
-          toast({
-            title: "Erro",
-            description: `Já existe um centro de custo com o código "${codigo}" na unidade ${unidade}.`,
-            variant: "destructive",
-          });
-          return false;
-        }
-      } else {
-        // Se estiver criando, verificar se existe qualquer registro na mesma unidade
-        if (!snapshotNome.empty) {
-          toast({
-            title: "Erro",
-            description: `Já existe um centro de custo com o nome "${nome}" na unidade ${unidade}.`,
-            variant: "destructive",
-          });
-          return false;
-        }
-        
-        if (!snapshotCodigo.empty) {
-          toast({
-            title: "Erro",
-            description: `Já existe um centro de custo com o código "${codigo}" na unidade ${unidade}.`,
-            variant: "destructive",
-          });
-          return false;
-        }
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Erro ao verificar duplicatas:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível verificar duplicatas.",
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      // Verificar duplicatas antes de salvar (considerando a unidade)
-      const isValid = await verificarDuplicatas(formData.nome.trim(), formData.codigo.trim(), formData.unidade.trim());
-      if (!isValid) {
-        return;
-      }
-      
       if (editingCentro) {
         const centroRef = doc(db, "centro_de_custo", editingCentro.id);
         await updateDoc(centroRef, {
           ...formData,
-          nome: formData.nome.trim(),
-          codigo: formData.codigo.trim(),
           dataAtualizacao: serverTimestamp(),
         });
         toast({
@@ -354,8 +275,6 @@ const CentroCusto = () => {
       } else {
         await addDoc(collection(db, "centro_de_custo"), {
           ...formData,
-          nome: formData.nome.trim(),
-          codigo: formData.codigo.trim(),
           dataCriacao: serverTimestamp(),
           dataAtualizacao: serverTimestamp(),
         });
@@ -437,25 +356,7 @@ const CentroCusto = () => {
   const renderCentroCard = (centro: CentroCusto) => {
     const saldoDisponivel = centro.valorTotal - centro.valorUtilizado;
     const percentualUtilizado = centro.valorTotal > 0 ? (centro.valorUtilizado / centro.valorTotal) * 100 : 0;
-    
-    // Definir tipo de alerta
-    let tipoAlerta: 'sem_valor' | 'excedido' | 'critico' | null = null;
-    let mensagemAlerta = '';
-    
-    if (centro.status === "Ativo") {
-      if (saldoDisponivel === 0 && centro.valorUtilizado === 0) {
-        tipoAlerta = 'sem_valor';
-        mensagemAlerta = 'Valor total não foi inserido. Por favor, defina um orçamento para este centro de custo.';
-      } else if (centro.valorUtilizado > centro.valorTotal) {
-        tipoAlerta = 'excedido';
-        mensagemAlerta = `Orçamento excedido! Valor utilizado (R$ ${centro.valorUtilizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) está acima do valor total (R$ ${centro.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`;
-      } else if (percentualUtilizado >= 80) {
-        tipoAlerta = 'critico';
-        mensagemAlerta = `Atenção! ${percentualUtilizado.toFixed(1)}% do orçamento já foi utilizado. Saldo disponível: R$ ${saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`;
-      }
-    }
-    
-    const isEmAlerta = tipoAlerta !== null;
+    const isEmAlerta = centro.status === "Ativo" && saldoDisponivel <= centro.valorMinimoAlerta;
     
     const chartData = [
       { name: 'Utilizado', value: centro.valorUtilizado },
@@ -521,19 +422,14 @@ const CentroCusto = () => {
             
             {/* Alerta visual quando em alerta */}
             {isEmAlerta && (
-              <div className={`border rounded-md p-2 text-xs ${
-                tipoAlerta === 'sem_valor' 
-                  ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700 dark:text-yellow-400'
-                  : 'bg-destructive/10 border-destructive/20 text-destructive'
-              }`}>
+              <div className="bg-destructive/10 border border-destructive/20 rounded-md p-2 text-xs text-destructive">
                 <div className="flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" />
-                  <span className="font-medium">
-                    {tipoAlerta === 'sem_valor' ? 'Valor não inserido' : 'Atenção!'}
-                  </span>
+                  <span className="font-medium">Atenção!</span>
                 </div>
                 <p className="mt-1">
-                  {mensagemAlerta}
+                  Saldo disponível (R$ {saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) 
+                  está igual ou abaixo do limite mínimo.
                 </p>
               </div>
             )}

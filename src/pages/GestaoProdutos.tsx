@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/firebase/firebase";
-import { collection, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, query, orderBy } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { uploadImageToCloudinary, getOptimizedImageUrl } from "@/Cloudinary/cloudinaryUploadProdutos";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   Plus,
   Loader2,
@@ -16,11 +15,10 @@ import AppLayout from "@/layouts/AppLayout";
 import { SearchBar } from "@/components/GestaoProdutos/SearchBar";
 import { ProductTable } from "@/components/GestaoProdutos/ProductTable";
 import { DeleteConfirmModal } from "@/components/GestaoProdutos/DeleteConfirmModal";
-import { ProductVersionModal } from "@/components/GestaoProdutos/ProductVersionModal";
+import { EditProductModal } from "@/components/GestaoProdutos/EditProductModal";
 import AddProdutoModal from "@/components/AddProdutoModal";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ProductVersionService } from "@/services/productVersionService";
 
 interface Produto {
   id: string;
@@ -41,8 +39,6 @@ interface Produto {
   fornecedor_id: string | null;
   fornecedor_nome: string | null;
   fornecedor_cnpj: string | null;
-  versao_atual?: number;
-  total_versoes?: number;
 }
 
 interface ImageUploaderProps {
@@ -158,7 +154,7 @@ const GestaoProdutos = () => {
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
   const [page, setPage] = useState(1);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [produtoToDelete, setProdutoToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -167,7 +163,6 @@ const GestaoProdutos = () => {
   const rowsPerPage = isMobile ? 10 : 20;
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   useEffect(() => {
     fetchProdutos();
@@ -198,47 +193,26 @@ const GestaoProdutos = () => {
       const produtosQuery = query(produtosCollection, orderBy("nome"));
       const produtosSnapshot = await getDocs(produtosQuery);
       
-      // Carregar produtos com contagem de versões
-      const produtosData = await Promise.all(
-        produtosSnapshot.docs.map(async (docSnap) => {
-          const data = docSnap.data();
-          const totalVersions = await ProductVersionService.getTotalVersions(docSnap.id);
-          
-          // Parse versão atual corretamente
-          let versaoAtual = 1;
-          if (data.versao_atual !== undefined && data.versao_atual !== null) {
-            if (typeof data.versao_atual === "number") {
-              versaoAtual = Math.floor(data.versao_atual);
-            } else if (typeof data.versao_atual === "string") {
-              const parsed = parseFloat(data.versao_atual.replace(",", "."));
-              versaoAtual = isNaN(parsed) ? 1 : Math.floor(parsed);
-            }
-          }
-          
-          return {
-            id: docSnap.id,
-            codigo_estoque: data.codigo_estoque || "",
-            codigo_material: data.codigo_material || "",
-            nome: data.nome || "",
-            quantidade: data.quantidade || 0,
-            quantidade_minima: data.quantidade_minima || 0,
-            valor_unitario: data.valor_unitario || 0,
-            unidade_de_medida: data.unidade_de_medida || "",
-            deposito: data.deposito || "",
-            prateleira: data.prateleira || "",
-            unidade: data.unidade || "",
-            detalhes: data.detalhes || "",
-            imagem: data.imagem || "",
-            data_criacao: data.data_criacao || "",
-            data_vencimento: data.data_vencimento || "",
-            fornecedor_id: data.fornecedor_id || null,
-            fornecedor_nome: data.fornecedor_nome || null,
-            fornecedor_cnpj: data.fornecedor_cnpj || null,
-            versao_atual: versaoAtual,
-            total_versoes: totalVersions
-          } as Produto;
-        })
-      );
+      const produtosData = produtosSnapshot.docs.map(doc => ({
+        id: doc.id,
+        codigo_estoque: doc.data().codigo_estoque || "",
+        codigo_material: doc.data().codigo_material || "",
+        nome: doc.data().nome || "",
+        quantidade: doc.data().quantidade || 0,
+        quantidade_minima: doc.data().quantidade_minima || 0,
+        valor_unitario: doc.data().valor_unitario || 0,
+        unidade_de_medida: doc.data().unidade_de_medida || "",
+        deposito: doc.data().deposito || "",
+        prateleira: doc.data().prateleira || "",
+        unidade: doc.data().unidade || "",
+        detalhes: doc.data().detalhes || "",
+        imagem: doc.data().imagem || "",
+        data_criacao: doc.data().data_criacao || "",
+        data_vencimento: doc.data().data_vencimento || "",
+        fornecedor_id: doc.data().fornecedor_id || null,
+        fornecedor_nome: doc.data().fornecedor_nome || null,
+        fornecedor_cnpj: doc.data().fornecedor_cnpj || null
+      })) as Produto[];
       
       setProdutos(produtosData);
       setFilteredProdutos(produtosData);
@@ -258,16 +232,39 @@ const GestaoProdutos = () => {
 
   const handleEdit = (produto: Produto) => {
     setEditingProduto(produto);
-    setIsVersionModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
-  const handleVersionSaved = () => {
-    fetchProdutos();
+  const handleSave = async (editedProduto: Partial<Produto>) => {
+    if (!editingProduto) return;
+    
+    try {
+      const produtoRef = doc(db, "produtos", editingProduto.id);
+      await updateDoc(produtoRef, editedProduto);
+      
+      setProdutos(produtos.map(produto => 
+        produto.id === editingProduto.id ? { ...produto, ...editedProduto } : produto
+      ));
+      
+      setEditingProduto(null);
+      setIsEditModalOpen(false);
+      toast({
+        description: "Produto atualizado com sucesso!",
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar produto:", error);
+      toast({
+        description: "Erro ao atualizar produto. Tente novamente.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
 
   const handleCancel = () => {
     setEditingProduto(null);
-    setIsVersionModalOpen(false);
+    setIsEditModalOpen(false);
   };
 
   const handleDeleteClick = (id: string) => {
@@ -383,15 +380,12 @@ const GestaoProdutos = () => {
           onConfirm={handleDelete}
         />
         
-        <ProductVersionModal
-          isOpen={isVersionModalOpen}
+        <EditProductModal
+          isOpen={isEditModalOpen}
           produto={editingProduto}
           onClose={handleCancel}
-          onSave={handleVersionSaved}
+          onSave={handleSave}
           ImageUploader={ImageUploader}
-          userId={user?.uid || ""}
-          userName={user?.displayName || user?.email || "Usuário"}
-          userEmail={user?.email || ""}
         />
 
         <AddProdutoModal

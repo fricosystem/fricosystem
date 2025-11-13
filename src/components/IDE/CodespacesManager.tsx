@@ -32,10 +32,9 @@ const CodespacesManager: React.FC = () => {
   const [selectedCodespace, setSelectedCodespace] = useState<Codespace | null>(null);
   const [creating, setCreating] = useState(false);
   const [newCodespaceConfig, setNewCodespaceConfig] = useState<CodespaceConfig>({
-    idle_timeout_minutes: 30,
-    display_name: ''
+    machine: 'basicLinux32gb',
+    idle_timeout_minutes: 30
   });
-  const [availableMachines, setAvailableMachines] = useState<any[]>([]);
   const { toast } = useToast();
 
   const loadCodespaces = async () => {
@@ -57,17 +56,6 @@ const CodespacesManager: React.FC = () => {
     }
   };
 
-  const loadAvailableMachines = async () => {
-    if (!githubService.isConfigured()) return;
-
-    try {
-      const machines = await githubService.listAvailableMachines();
-      setAvailableMachines(machines);
-    } catch (error) {
-      console.error('Erro ao carregar máquinas disponíveis:', error);
-    }
-  };
-
   const handleCreateCodespace = async () => {
     setCreating(true);
     try {
@@ -78,12 +66,11 @@ const CodespacesManager: React.FC = () => {
       });
       setShowCreateModal(false);
       await loadCodespaces();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao criar Codespace:', error);
-      const errorMessage = error?.message || 'Falha ao criar Codespace. Verifique suas permissões e cota.';
       toast({
         title: "❌ Erro",
-        description: errorMessage,
+        description: "Falha ao criar Codespace. Verifique suas permissões e cota.",
         variant: "destructive",
       });
     } finally {
@@ -221,7 +208,6 @@ const CodespacesManager: React.FC = () => {
   useEffect(() => {
     if (githubService.isConfigured()) {
       loadCodespaces();
-      loadAvailableMachines();
     }
   }, []);
 
@@ -417,42 +403,21 @@ const CodespacesManager: React.FC = () => {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Nome do Codespace */}
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Nome do Codespace (opcional)</Label>
-              <Input
-                id="displayName"
-                value={newCodespaceConfig.display_name || ''}
-                onChange={(e) => setNewCodespaceConfig(prev => ({ ...prev, display_name: e.target.value }))}
-                placeholder="Ex.: Meu Codespace"
-              />
-            </div>
-
-            {/* Tipo de máquina */}
             <div className="space-y-2">
               <Label htmlFor="machine">Tipo de Máquina</Label>
-              {availableMachines.length > 0 ? (
-                <Select 
-                  value={newCodespaceConfig.machine}
-                  onValueChange={(value: any) => setNewCodespaceConfig(prev => ({ ...prev, machine: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma máquina (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMachines.map((machine) => (
-                      <SelectItem key={machine.name} value={machine.name}>
-                        {machine.display_name} ({machine.cpus} cores, {Math.round(machine.memory_in_bytes / (1024 * 1024 * 1024))}GB RAM)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="text-sm text-muted-foreground p-3 border border-border/40 rounded-md bg-muted/20">
-                  Carregando máquinas disponíveis...
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">Se não selecionar, usaremos a máquina padrão permitida.</p>
+              <Select 
+                value={newCodespaceConfig.machine} 
+                onValueChange={(value: any) => setNewCodespaceConfig(prev => ({ ...prev, machine: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="basicLinux32gb">Básica (2 cores, 8GB RAM, 32GB storage)</SelectItem>
+                  <SelectItem value="standardLinux32gb">Padrão (4 cores, 16GB RAM, 32GB storage)</SelectItem>
+                  <SelectItem value="premiumLinux64gb">Premium (8 cores, 32GB RAM, 64GB storage)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

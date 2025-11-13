@@ -36,14 +36,6 @@ interface Unidade {
   nome: string;
 }
 
-// Definindo a interface CentroCusto
-interface CentroCusto {
-  id: string;
-  nome: string;
-  codigo: string;
-  status: "Ativo" | "Inativo";
-}
-
 // Define Usuario interface internally
 export interface Usuario {
   id?: string;
@@ -147,33 +139,18 @@ const unidadeService = {
   },
 };
 
-const centroCustoService = {
-  async buscarTodos(): Promise<CentroCusto[]> {
-    const querySnapshot = await getDocs(collection(db, "centro_de_custo"));
-    const centros = querySnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as CentroCusto))
-      .filter(centro => centro.status === "Ativo");
-    return centros.sort((a, b) => a.nome.localeCompare(b.nome));
-  },
-};
-
 const UsuarioForm = ({
   usuario,
   onSubmit,
   onCancel,
   isLoading,
   unidades,
-  centrosCusto,
 }: {
   usuario?: Usuario;
   onSubmit: (usuario: Omit<Usuario, 'id'>) => Promise<void>;
   onCancel: () => void;
   isLoading: boolean;
   unidades: Unidade[];
-  centrosCusto: CentroCusto[];
 }) => {
   const [formData, setFormData] = useState<Omit<Usuario, 'id'>>({
     ativo: usuario?.ativo || 'sim',
@@ -336,11 +313,14 @@ const UsuarioForm = ({
               <SelectValue placeholder="Selecione o centro de custo" />
             </SelectTrigger>
             <SelectContent>
-              {centrosCusto.map(centro => (
-                <SelectItem key={centro.id} value={centro.nome}>
-                  {centro.nome} ({centro.codigo})
-                </SelectItem>
-              ))}
+              <SelectItem value="administrativo">Administrativo</SelectItem>
+              <SelectItem value="operacional">Operacional</SelectItem>
+              <SelectItem value="financeiro">Financeiro</SelectItem>
+              <SelectItem value="comercial">Comercial</SelectItem>
+              <SelectItem value="producao">Produção</SelectItem>
+              <SelectItem value="manutencao">Manutenção</SelectItem>
+              <SelectItem value="logistica">Logística</SelectItem>
+              <SelectItem value="rh">Recursos Humanos</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -396,61 +376,33 @@ const GestaoUsuarios = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
-  const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
-  const [filtroStatus, setFiltroStatus] = useState<string>("todos");
-  const [filtroPerfil, setFiltroPerfil] = useState<string>("todos");
-  const [filtroUnidade, setFiltroUnidade] = useState<string>("todas");
-  const [filtroCentroCusto, setFiltroCentroCusto] = useState<string>("todos");
 
   const { toast } = useToast();
 
   useEffect(() => {
     carregarUsuarios();
     carregarUnidades();
-    carregarCentrosCusto();
   }, []);
 
   useEffect(() => {
-    let filtered = usuarios;
-
-    // Filtro de busca por texto
-    if (searchTerm) {
+    const filtered = usuarios.filter(usuario => {
+      const nome = usuario.nome || '';
+      const email = usuario.email || '';
+      const unidade = usuario.unidade || '';
+      const centroCusto = usuario.centro_de_custo || '';
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(usuario => {
-        const nome = usuario.nome || '';
-        const email = usuario.email || '';
-        const unidade = usuario.unidade || '';
-        const centroCusto = usuario.centro_de_custo || '';
-        
-        return nome.toLowerCase().includes(searchLower) ||
-               email.toLowerCase().includes(searchLower) ||
-               unidade.toLowerCase().includes(searchLower) ||
-               centroCusto.toLowerCase().includes(searchLower);
-      });
-    }
+      
+      const matchesSearch = nome.toLowerCase().includes(searchLower) ||
+             email.toLowerCase().includes(searchLower) ||
+             unidade.toLowerCase().includes(searchLower) ||
+             centroCusto.toLowerCase().includes(searchLower);
 
-    // Filtro por Status
-    if (statusFilter !== 'todos') {
-      filtered = filtered.filter(usuario => usuario.ativo === statusFilter);
-    }
-
-    // Filtro por Perfil
-    if (filtroPerfil !== 'todos') {
-      filtered = filtered.filter(usuario => usuario.perfil === filtroPerfil);
-    }
-
-    // Filtro por Unidade
-    if (filtroUnidade !== 'todas') {
-      filtered = filtered.filter(usuario => usuario.unidade === filtroUnidade);
-    }
-
-    // Filtro por Centro de Custo
-    if (filtroCentroCusto !== 'todos') {
-      filtered = filtered.filter(usuario => usuario.centro_de_custo === filtroCentroCusto);
-    }
-
+      const matchesStatus = statusFilter === 'todos' || usuario.ativo === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
     setFilteredUsuarios(filtered);
-  }, [usuarios, searchTerm, statusFilter, filtroPerfil, filtroUnidade, filtroCentroCusto]);
+  }, [usuarios, searchTerm, statusFilter]);
 
   const carregarUsuarios = async () => {
     try {
@@ -476,19 +428,6 @@ const GestaoUsuarios = () => {
       toast({
         title: "Erro",
         description: "Erro ao carregar unidades",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const carregarCentrosCusto = async () => {
-    try {
-      const data = await centroCustoService.buscarTodos();
-      setCentrosCusto(data);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar centros de custo",
         variant: "destructive"
       });
     }
@@ -572,98 +511,32 @@ const GestaoUsuarios = () => {
             </CardDescription>
             
             {/* Controles */}
-            <div className="space-y-4 pt-4">
-              {/* Barra de busca e botão */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pt-4">
+                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                 <div className="relative w-full sm:w-80">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
                     placeholder="Buscar usuários..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 w-full"
-                  />
+                    />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filtrar por status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="sim">Ativo</SelectItem>
+                    <SelectItem value="nao">Inativo</SelectItem>
+                    </SelectContent>
+                </Select>
                 </div>
                 <Button onClick={() => setIsFormOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo Usuário
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Usuário
                 </Button>
-              </div>
-
-              {/* Filtros com labels */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                  <Label htmlFor="filtro-status" className="text-xs text-muted-foreground mb-1.5 block">
-                    Status
-                  </Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger id="filtro-status" className="w-full">
-                      <SelectValue placeholder="Todos os Status" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      <SelectItem value="todos">Todos os Status</SelectItem>
-                      <SelectItem value="sim">Ativo</SelectItem>
-                      <SelectItem value="nao">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="filtro-perfil" className="text-xs text-muted-foreground mb-1.5 block">
-                    Perfil
-                  </Label>
-                  <Select value={filtroPerfil} onValueChange={setFiltroPerfil}>
-                    <SelectTrigger id="filtro-perfil" className="w-full">
-                      <SelectValue placeholder="Todos os Perfis" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      <SelectItem value="todos">Todos os Perfis</SelectItem>
-                      <SelectItem value="administrador">Administrador</SelectItem>
-                      <SelectItem value="operador">Operador</SelectItem>
-                      <SelectItem value="visitante">Visitante</SelectItem>
-                      <SelectItem value="gerente">Gerente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="filtro-unidade" className="text-xs text-muted-foreground mb-1.5 block">
-                    Unidade
-                  </Label>
-                  <Select value={filtroUnidade} onValueChange={setFiltroUnidade}>
-                    <SelectTrigger id="filtro-unidade" className="w-full">
-                      <SelectValue placeholder="Todas as Unidades" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      <SelectItem value="todas">Todas as Unidades</SelectItem>
-                      {unidades.map((unidade) => (
-                        <SelectItem key={unidade.id} value={unidade.nome}>
-                          {unidade.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="filtro-centro-custo" className="text-xs text-muted-foreground mb-1.5 block">
-                    Centro de Custo
-                  </Label>
-                  <Select value={filtroCentroCusto} onValueChange={setFiltroCentroCusto}>
-                    <SelectTrigger id="filtro-centro-custo" className="w-full">
-                      <SelectValue placeholder="Todos os Centros" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      <SelectItem value="todos">Todos os Centros</SelectItem>
-                      {centrosCusto.map((centro) => (
-                        <SelectItem key={centro.id} value={centro.nome}>
-                          {centro.nome} ({centro.codigo})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
             </div>
             </CardHeader>
 
@@ -750,12 +623,11 @@ const GestaoUsuarios = () => {
             </DialogDescription>
             </DialogHeader>
             <UsuarioForm
-          usuario={editingUsuario}
-          onSubmit={handleSubmitForm}
-          onCancel={handleCancel}
-          isLoading={isSubmitting}
-          unidades={unidades}
-          centrosCusto={centrosCusto}
+            usuario={editingUsuario}
+            onSubmit={handleSubmitForm}
+            onCancel={handleCancel}
+            isLoading={isSubmitting}
+            unidades={unidades}
             />
         </DialogContent>
         </Dialog>

@@ -426,29 +426,29 @@ const SupplierPage = () => {
   
   return (
     <AppLayout title="Gerenciamento de Fornecedores">
-      <div className="flex flex-col lg:flex-row gap-4 md:gap-6 p-2 sm:p-4">
-        <div className="w-full lg:w-5/12 xl:w-4/12">
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="w-full lg:w-4/12">
           <Card className="shadow-md">
-            <CardHeader className="pb-3 px-4 sm:px-6">
-              <CardTitle className="text-lg sm:text-xl">Cadastro de Fornecedor</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Preencha os dados do fornecedor</CardDescription>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xl text-white">Cadastro de Fornecedor</CardTitle>
+              <CardDescription>Preencha os dados do fornecedor</CardDescription>
             </CardHeader>
             
-            <CardContent className="px-4 sm:px-6">
+            <CardContent>
               {success ? (
-                <div className="flex flex-col items-center justify-center py-6 sm:py-8">
-                  <div className="bg-green-100 rounded-full p-2 sm:p-3">
-                    <Check size={24} className="sm:w-[30px] sm:h-[30px] text-green-600" />
+                <div className="flex flex-col items-center justify-center py-6">
+                  <div className="bg-green-100 rounded-full p-2">
+                    <Check size={30} className="text-green-600" />
                   </div>
-                  <h3 className="text-base sm:text-lg font-semibold mt-3 text-green-700">Cadastro realizado!</h3>
-                  <p className="text-muted-foreground mt-1 text-xs sm:text-sm text-center">O fornecedor foi adicionado ao sistema.</p>
+                  <h3 className="text-lg font-semibold mt-3 text-green-700">Cadastro realizado!</h3>
+                  <p className="text-gray-600 mt-1 text-sm text-center">O fornecedor foi adicionado ao sistema.</p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-                  <div className="space-y-2 sm:space-y-3">
-                    <h3 className="text-xs sm:text-sm font-medium">Dados Principais</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-gray-700">Dados Principais</h3>
                     
-                    <div className="space-y-1.5 sm:space-y-2">
+                    <div className="space-y-2">
                       <Label htmlFor="razaoSocial" className="text-xs">Razão Social</Label>
                       <Input
                         id="razaoSocial"
@@ -456,13 +456,13 @@ const SupplierPage = () => {
                         value={formData.razaoSocial}
                         onChange={handleChange}
                         placeholder="Nome da empresa"
-                        className="text-xs sm:text-sm h-9"
+                        className="text-sm"
                       />
                     </div>
                     
-                    <div className="space-y-1.5 sm:space-y-2">
+                    <div className="space-y-2">
                       <Label htmlFor="cnpj" className="text-xs">CNPJ</Label>
-                      <div className="flex items-center gap-1.5 sm:gap-2">
+                      <div className="flex items-center gap-2">
                         <Input
                           id="cnpj"
                           name="cnpj"
@@ -470,7 +470,7 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="00.000.000/0000-00"
                           maxLength={18}
-                          className="text-xs sm:text-sm h-9 flex-1"
+                          className="text-sm flex-1"
                         />
                         <Button
                           type="button"
@@ -484,24 +484,23 @@ const SupplierPage = () => {
                             }
                           }}
                           disabled={isFetchingCNPJ}
-                          className="h-9 px-2 sm:px-3"
                         >
                           {isFetchingCNPJ ? (
-                            <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-t-2 border-b-2 border-white"></div>
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
                           ) : (
-                            <Search className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <Search className="h-4 w-4" />
                           )}
                         </Button>
                       </div>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      <p className="text-xs text-gray-500">
                         Digite o CNPJ completo para buscar os dados automaticamente
                       </p>
                     </div>
                     
-                    <h3 className="text-xs sm:text-sm font-medium pt-1">Endereço</h3>
+                    <h3 className="text-sm font-medium text-gray-700 pt-1">Endereço</h3>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="space-y-1.5 sm:space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
                         <Label htmlFor="rua" className="text-xs">Rua</Label>
                         <Input
                           id="rua"
@@ -509,11 +508,11 @@ const SupplierPage = () => {
                           value={formData.endereco.rua}
                           onChange={handleChange}
                           placeholder="Nome da rua"
-                          className="text-xs sm:text-sm h-9"
+                          className="text-sm"
                         />
                       </div>
                       
-                      <div className="space-y-1.5 sm:space-y-2">
+                      <div className="space-y-2">
                         <Label htmlFor="numero" className="text-xs">Número</Label>
                         <Input
                           id="numero"
@@ -521,13 +520,13 @@ const SupplierPage = () => {
                           value={formData.endereco.numero}
                           onChange={handleChange}
                           placeholder="123"
-                          className="text-xs sm:text-sm h-9"
+                          className="text-sm"
                         />
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="space-y-1.5 sm:space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
                         <Label htmlFor="bairro" className="text-xs">Bairro</Label>
                         <Input
                           id="bairro"
@@ -535,11 +534,11 @@ const SupplierPage = () => {
                           value={formData.endereco.bairro}
                           onChange={handleChange}
                           placeholder="Nome do bairro"
-                          className="text-xs sm:text-sm h-9"
+                          className="text-sm"
                         />
                       </div>
                       
-                      <div className="space-y-1.5 sm:space-y-2">
+                      <div className="space-y-2">
                         <Label htmlFor="cep" className="text-xs">CEP</Label>
                         <Input
                           id="cep"
@@ -547,13 +546,13 @@ const SupplierPage = () => {
                           value={formData.endereco.cep}
                           onChange={handleChange}
                           placeholder="00000-000"
-                          className="text-xs sm:text-sm h-9"
+                          className="text-sm"
                         />
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="space-y-1.5 sm:space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
                         <Label htmlFor="cidade" className="text-xs">Cidade</Label>
                         <Input
                           id="cidade"
@@ -561,17 +560,17 @@ const SupplierPage = () => {
                           value={formData.endereco.cidade}
                           onChange={handleChange}
                           placeholder="Nome da cidade"
-                          className="text-xs sm:text-sm h-9"
+                          className="text-sm"
                         />
                       </div>
                       
-                      <div className="space-y-1.5 sm:space-y-2">
+                      <div className="space-y-2">
                         <Label htmlFor="estado" className="text-xs">Estado</Label>
                         <Select 
                           onValueChange={(value) => handleSelectChange(value, "estado")}
                           value={formData.endereco.estado}
                         >
-                          <SelectTrigger className="text-xs sm:text-sm h-9">
+                          <SelectTrigger className="text-sm">
                             <SelectValue placeholder="Estado" />
                           </SelectTrigger>
                           <SelectContent>
@@ -607,7 +606,7 @@ const SupplierPage = () => {
                       </div>
                     </div>
                     
-                    <div className="space-y-1.5 sm:space-y-2">
+                    <div className="space-y-2">
                       <Label htmlFor="complemento" className="text-xs">Complemento</Label>
                       <Input
                         id="complemento"
@@ -615,14 +614,14 @@ const SupplierPage = () => {
                         value={formData.endereco.complemento}
                         onChange={handleChange}
                         placeholder="Sala, Andar, etc."
-                        className="text-xs sm:text-sm h-9"
+                        className="text-sm"
                       />
                     </div>
                     
-                    <h3 className="text-xs sm:text-sm font-medium pt-1">Contato</h3>
+                    <h3 className="text-sm font-medium text-gray-700 pt-1">Contato</h3>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="space-y-1.5 sm:space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
                         <Label htmlFor="telefone" className="text-xs">Telefone</Label>
                         <Input
                           id="telefone"
@@ -631,11 +630,11 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="(00) 00000-0000"
                           maxLength={15}
-                          className="text-xs sm:text-sm h-9"
+                          className="text-sm"
                         />
                       </div>
                       
-                      <div className="space-y-1.5 sm:space-y-2">
+                      <div className="space-y-2">
                         <Label htmlFor="email" className="text-xs">Email</Label>
                         <Input
                           id="email"
@@ -644,12 +643,12 @@ const SupplierPage = () => {
                           value={formData.email}
                           onChange={handleChange}
                           placeholder="exemplo@empresa.com"
-                          className="text-xs sm:text-sm h-9"
+                          className="text-sm"
                         />
                       </div>
                     </div>
                     
-                    <div className="space-y-1.5 sm:space-y-2">
+                    <div className="space-y-2">
                       <Label htmlFor="pessoaContato" className="text-xs">Pessoa de Contato</Label>
                       <Input
                         id="pessoaContato"
@@ -657,20 +656,20 @@ const SupplierPage = () => {
                         value={formData.pessoaContato}
                         onChange={handleChange}
                         placeholder="Nome completo"
-                        className="text-xs sm:text-sm h-9"
+                        className="text-sm"
                       />
                     </div>
                     
-                    <h3 className="text-xs sm:text-sm font-medium pt-1">Informações Comerciais</h3>
+                    <h3 className="text-sm font-medium text-gray-700 pt-1">Informações Comerciais</h3>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="space-y-1.5 sm:space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
                         <Label htmlFor="condicoesPagamento" className="text-xs">Condições de Pagamento</Label>
                         <Select 
                           onValueChange={handlePaymentChange}
                           value={formData.condicoesPagamento}
                         >
-                          <SelectTrigger className="text-xs sm:text-sm h-9">
+                          <SelectTrigger className="text-sm">
                             <SelectValue placeholder="Condição" />
                           </SelectTrigger>
                           <SelectContent>
@@ -686,7 +685,7 @@ const SupplierPage = () => {
                         </Select>
                       </div>
                       
-                      <div className="space-y-1.5 sm:space-y-2">
+                      <div className="space-y-2">
                         <Label htmlFor="prazoEntrega" className="text-xs">Prazo de Entrega (dias)</Label>
                         <Input
                           id="prazoEntrega"
@@ -696,25 +695,25 @@ const SupplierPage = () => {
                           value={formData.prazoEntrega}
                           onChange={handleChange}
                           placeholder="Dias"
-                          className="text-xs sm:text-sm h-9"
+                          className="text-sm"
                         />
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
+                  <div className="flex justify-end gap-2 pt-2">
                     <Button 
                       type="button" 
                       variant="outline" 
                       onClick={resetForm}
-                      className="text-xs sm:text-sm h-9 w-full sm:w-auto"
+                      className="text-xs h-8"
                     >
                       Limpar
                     </Button>
                     <Button 
                       type="submit" 
                       disabled={isLoading || isFetchingCNPJ} 
-                      className="text-xs sm:text-sm h-9 w-full sm:w-auto"
+                      className="bg-blue-700 hover:bg-blue-800 text-xs h-8"
                     >
                       {isLoading ? "Cadastrando..." : "Cadastrar"}
                     </Button>
@@ -725,69 +724,59 @@ const SupplierPage = () => {
           </Card>
         </div>
         
-        <div className="w-full lg:w-7/12 xl:w-8/12">
+        <div className="w-full lg:w-8/12">
           <Card className="shadow-md">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle className="text-lg sm:text-xl">Lista de Fornecedores</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Fornecedores cadastrados no sistema</CardDescription>
+            <CardHeader>
+              <CardTitle className="text-xl text-white">Lista de Fornecedores</CardTitle>
+              <CardDescription>Fornecedores cadastrados no sistema</CardDescription>
             </CardHeader>
-            <CardContent className="px-2 sm:px-4 md:px-6">
-              <div className="overflow-x-auto -mx-2 sm:mx-0">
-                <div className="inline-block min-w-full align-middle">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs whitespace-nowrap">Razão Social</TableHead>
-                        <TableHead className="text-xs whitespace-nowrap hidden md:table-cell">CNPJ</TableHead>
-                        <TableHead className="text-xs whitespace-nowrap hidden lg:table-cell">Cidade/Estado</TableHead>
-                        <TableHead className="text-xs whitespace-nowrap hidden xl:table-cell">Telefone</TableHead>
-                        <TableHead className="text-xs whitespace-nowrap hidden xl:table-cell">Email</TableHead>
-                        <TableHead className="text-xs whitespace-nowrap hidden 2xl:table-cell">Cond. Pag.</TableHead>
-                        <TableHead className="text-xs whitespace-nowrap hidden 2xl:table-cell">Prazo</TableHead>
-                        <TableHead className="text-xs text-right whitespace-nowrap">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {suppliers.length > 0 ? (
-                        suppliers.map((supplier, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">
-                              <div className="max-w-[150px] sm:max-w-[200px] truncate">{supplier.razaoSocial}</div>
-                              <div className="text-[10px] text-muted-foreground md:hidden">
-                                {supplier.cnpj}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-xs sm:text-sm hidden md:table-cell whitespace-nowrap">{supplier.cnpj}</TableCell>
-                            <TableCell className="text-xs sm:text-sm hidden lg:table-cell whitespace-nowrap">{`${supplier.endereco.cidade}/${supplier.endereco.estado}`}</TableCell>
-                            <TableCell className="text-xs sm:text-sm hidden xl:table-cell whitespace-nowrap">{supplier.telefone}</TableCell>
-                            <TableCell className="text-xs sm:text-sm hidden xl:table-cell">
-                              <div className="max-w-[150px] truncate">{supplier.email}</div>
-                            </TableCell>
-                            <TableCell className="text-xs sm:text-sm hidden 2xl:table-cell whitespace-nowrap">{supplier.condicoesPagamento}</TableCell>
-                            <TableCell className="text-xs sm:text-sm hidden 2xl:table-cell whitespace-nowrap">{supplier.prazoEntrega} dias</TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => abrirModal(supplier)}
-                                className="h-8 w-8 p-0"
-                                title="Ver detalhes"
-                              >
-                                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-xs sm:text-sm text-muted-foreground">
-                            Nenhum fornecedor cadastrado
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Razão Social</TableHead>
+                      <TableHead>CNPJ</TableHead>
+                      <TableHead>Cidade/Estado</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Cond. Pagamento</TableHead>
+                      <TableHead>Prazo Entrega</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {suppliers.length > 0 ? (
+                      suppliers.map((supplier, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{supplier.razaoSocial}</TableCell>
+                          <TableCell>{supplier.cnpj}</TableCell>
+                          <TableCell>{`${supplier.endereco.cidade}/${supplier.endereco.estado}`}</TableCell>
+                          <TableCell>{supplier.telefone}</TableCell>
+                          <TableCell>{supplier.email}</TableCell>
+                          <TableCell>{supplier.condicoesPagamento}</TableCell>
+                          <TableCell>{supplier.prazoEntrega} dias</TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => abrirModal(supplier)}
+                              className="text-gray-500 hover:text-blue-600"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-4 text-gray-500">
+                          Nenhum fornecedor cadastrado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

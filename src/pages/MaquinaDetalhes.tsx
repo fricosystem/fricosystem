@@ -21,8 +21,6 @@ import { AddSistemaModal } from "@/components/Maquinas/AddSistemaModal";
 import { AddManutencaoModal } from "@/components/Maquinas/AddManutencaoModal";
 import { AddMetricaModal } from "@/components/Maquinas/AddMetricaModal";
 import { PecaCard } from "@/components/Maquinas/PecaCard";
-import { PecaDetailsModal } from "@/components/Maquinas/PecaDetailsModal";
-import { SubPecaDetailsModal } from "@/components/Maquinas/SubPecaDetailsModal";
 
 interface SubPeca {
   id: string;
@@ -47,7 +45,7 @@ interface Peca {
   descricao: string;
   codigo: string;
   status: "Normal" | "Atenção" | "Crítico";
-  categoria: "Mecânica" | "Elétrica" | "Hidráulica" | "Pneumática" | "Eletrônica" | "Estrutural" | "Rolamentos" | "Vedação" | "Lubrificação" | "Transmissão" | "Instrumentação" | "Refrigeração" | "Controle";
+  categoria: "Mecânica" | "Elétrica" | "Hidráulica";
   vidaUtil: number;
   vidaUtilRestante: number;
   ultimaManutencao: string;
@@ -120,7 +118,6 @@ const MaquinaDetalhes = () => {
   const [selectedMaquina, setSelectedMaquina] = useState<string | null>(null);
   const [expandedPecaId, setExpandedPecaId] = useState<string | null>(null);
   const [camadasVisiveis, setCamadasVisiveis] = useState<string[]>(["Mecânica", "Elétrica", "Hidráulica"]);
-  const [tiposVisiveis, setTiposVisiveis] = useState<string[]>(["Mecânico", "Elétrico", "Mecânico-Elétrico", "Hidráulico", "Pneumático", "Eletrônico", "Automação"]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Estados para gerenciamento de modais
@@ -129,8 +126,6 @@ const MaquinaDetalhes = () => {
   const [isSistemaModalOpen, setIsSistemaModalOpen] = useState(false);
   const [isManutencaoModalOpen, setIsManutencaoModalOpen] = useState(false);
   const [isMetricaModalOpen, setIsMetricaModalOpen] = useState(false);
-  const [isPecaDetailsModalOpen, setIsPecaDetailsModalOpen] = useState(false);
-  const [isSubPecaDetailsModalOpen, setIsSubPecaDetailsModalOpen] = useState(false);
   const [editingPeca, setEditingPeca] = useState<Peca | null>(null);
   const [editingSubPeca, setEditingSubPeca] = useState<SubPeca | null>(null);
   const [editingSistema, setEditingSistema] = useState<Sistema | null>(null);
@@ -561,24 +556,11 @@ const MaquinaDetalhes = () => {
     );
   };
 
-  const toggleTipo = (tipo: string) => {
-    setTiposVisiveis(prev => 
-      prev.includes(tipo) ? prev.filter(t => t !== tipo) : [...prev, tipo]
-    );
-  };
-
   const getCategoriaIcon = (categoria: string) => {
     switch (categoria) {
       case "Mecânica": return "⚙️";
-      case "Mecânico": return "⚙️";
       case "Elétrica": return "⚡";
-      case "Elétrico": return "⚡";
-      case "Mecânico-Elétrico": return "⚙️⚡";
       case "Hidráulica": return "💧";
-      case "Hidráulico": return "💧";
-      case "Pneumático": return "💨";
-      case "Eletrônico": return "🔌";
-      case "Automação": return "🤖";
       default: return "🔧";
     }
   };
@@ -589,7 +571,6 @@ const MaquinaDetalhes = () => {
 
   const handleSistemaInfo = (sistema: Sistema, e: React.MouseEvent) => {
     e.stopPropagation();
-    setSelectedMaquina(sistema.id); // Seleciona o sistema para mostrar as peças
     setSelectedSistema(sistema);
     setSelectedPeca(null);
     setSelectedSubPeca(null);
@@ -611,7 +592,6 @@ const MaquinaDetalhes = () => {
   const handlePecaInfo = (peca: Peca, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedPeca(peca);
-    setIsPecaDetailsModalOpen(true);
     setSelectedSubPeca(null);
     setSelectedSistema(null);
   };
@@ -620,7 +600,6 @@ const MaquinaDetalhes = () => {
     e.stopPropagation();
     setSelectedSubPeca(subPeca);
     setSelectedPeca(peca);
-    setIsSubPecaDetailsModalOpen(true);
     setSelectedSistema(null);
   };
 
@@ -672,17 +651,17 @@ const MaquinaDetalhes = () => {
                   
                   <Separator orientation="vertical" className="h-6" />
                   
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
                     <Layers className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Tipos:</span>
-                    {["Mecânico", "Elétrico", "Mecânico-Elétrico", "Hidráulico", "Pneumático", "Eletrônico", "Automação"].map(tipo => (
+                    <span className="text-sm text-muted-foreground">Camadas:</span>
+                    {["Mecânica", "Elétrica", "Hidráulica"].map(camada => (
                       <Button
-                        key={tipo}
-                        variant={tiposVisiveis.includes(tipo) ? "default" : "outline"}
+                        key={camada}
+                        variant={camadasVisiveis.includes(camada) ? "default" : "outline"}
                         size="sm"
-                        onClick={() => toggleTipo(tipo)}
+                        onClick={() => toggleCamada(camada)}
                       >
-                        {getCategoriaIcon(tipo)} {tipo}
+                        {getCategoriaIcon(camada)} {camada}
                       </Button>
                     ))}
                   </div>
@@ -691,10 +670,6 @@ const MaquinaDetalhes = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button onClick={handleAddSistema} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Sistema
-              </Button>
               <Button
                 variant="outline"
                 size="icon"
@@ -705,8 +680,11 @@ const MaquinaDetalhes = () => {
             </div>
           </CardHeader>
 
-          <CardContent>
-            <div className="border rounded-lg overflow-hidden bg-card relative">
+          <CardContent className="p-0">
+            <div className="diagram-container diagram-background rounded-lg relative" style={{ 
+              width: "100%", 
+              height: isFullscreen ? "calc(100vh - 80px)" : "600px" 
+            }}>
               <TransformWrapper
                 initialScale={1}
                 minScale={0.5}
@@ -715,7 +693,7 @@ const MaquinaDetalhes = () => {
               >
                 {({ zoomIn, zoomOut, resetTransform }) => (
                   <>
-                    <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+                    <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-card/80 backdrop-blur-sm p-2 rounded-lg border shadow-lg">
                       <Button variant="outline" size="icon" onClick={() => zoomIn()}>
                         <ZoomIn className="h-4 w-4" />
                       </Button>
@@ -726,6 +704,13 @@ const MaquinaDetalhes = () => {
                         <Maximize2 className="h-4 w-4" />
                       </Button>
                     </div>
+
+                    <div className="absolute top-4 left-4 z-10 flex gap-2 bg-card/80 backdrop-blur-sm p-2 rounded-lg border shadow-lg">
+                      <Button onClick={handleAddSistema} size="sm" variant="default">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar Sistema
+                      </Button>
+                    </div>
                     
                     <TransformComponent
                       wrapperStyle={{
@@ -733,24 +718,30 @@ const MaquinaDetalhes = () => {
                         height: isFullscreen ? "calc(100vh - 80px)" : "600px"
                       }}
                     >
-                      <svg width="900" height="600">
-                        <rect width="900" height="600" fill="hsl(var(--card))" />
+                      <svg width="900" height="600" className="diagram-background">
                         <defs>
                           <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
                             <feOffset dx="0" dy="2" result="offsetblur" />
                             <feComponentTransfer>
-                              <feFuncA type="linear" slope="0.15" />
+                              <feFuncA type="linear" slope="0.2" />
                             </feComponentTransfer>
                             <feMerge> 
                               <feMergeNode />
                               <feMergeNode in="SourceGraphic" /> 
                             </feMerge>
                           </filter>
+                          <filter id="glow">
+                            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                            <feMerge>
+                              <feMergeNode in="coloredBlur"/>
+                              <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                          </filter>
                         </defs>
 
                         {/* Renderizar Sistemas no lado esquerdo */}
-                        {sistemas.filter(sistema => tiposVisiveis.includes(sistema.tipo)).map(sistema => {
+                        {sistemas.map(sistema => {
                           const statusColor = sistema.status === "Crítico" ? "#ef4444" : 
                                             sistema.status === "Atenção" ? "#f59e0b" : "#10b981";
                           const isSelected = selectedMaquina === sistema.id;
@@ -762,136 +753,91 @@ const MaquinaDetalhes = () => {
                               className="transition-all hover:opacity-90"
                               filter="url(#cardShadow)"
                             >
-                              {/* Card do Sistema */}
                               <rect
-                                x={sistema.x - 100}
-                                y={sistema.y - 45}
-                                width="200"
-                                height="90"
-                                rx="8"
-                                ry="8"
+                                x={sistema.x - 85}
+                                y={sistema.y - 50}
+                                width="170"
+                                height="100"
+                                rx="12"
+                                ry="12"
                                 fill="hsl(var(--card))"
                                 stroke={isSelected ? "hsl(var(--primary))" : "hsl(var(--border))"}
                                 strokeWidth={isSelected ? "2.5" : "1.5"}
-                                className="transition-all duration-200"
+                                className="transition-all"
                                 onClick={() => handleMaquinaClick(sistema.id)}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  handleSistemaInfo(sistema, e as any);
+                                }}
                               />
                               
-                              {/* Barra de status superior - agradiente */}
-                              <defs>
-                                <linearGradient id={`statusGrad-${sistema.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                  <stop offset="0%" style={{ stopColor: statusColor, stopOpacity: 0.8 }} />
-                                  <stop offset="100%" style={{ stopColor: statusColor, stopOpacity: 1 }} />
-                                </linearGradient>
-                              </defs>
                               <rect
-                                x={sistema.x - 100}
-                                y={sistema.y - 45}
-                                width="200"
-                                height="28"
-                                rx="8"
-                                ry="8"
-                                fill={`url(#statusGrad-${sistema.id})`}
-                                opacity="0.15"
-                              />
-                              <rect
-                                x={sistema.x - 100}
-                                y={sistema.y - 45}
-                                width="200"
-                                height="3"
-                                rx="8"
-                                ry="8"
+                                x={sistema.x - 85}
+                                y={sistema.y - 50}
+                                width="170"
+                                height="5"
+                                rx="12"
+                                ry="12"
                                 fill={statusColor}
                               />
 
-                              {/* Ícone do sistema */}
                               <text
-                                x={sistema.x - 85}
-                                y={sistema.y - 22}
-                                fontSize="24"
-                                style={{ pointerEvents: "none" }}
-                              >
-                                {getCategoriaIcon(sistema.tipo)}
-                              </text>
-
-                              {/* Nome do sistema */}
-                              <text
-                                x={sistema.x - 55}
-                                y={sistema.y - 28}
-                                textAnchor="start"
+                                x={sistema.x}
+                                y={sistema.y - 15}
+                                textAnchor="middle"
                                 className="text-sm font-bold fill-foreground"
                                 style={{ pointerEvents: "none" }}
                               >
-                                {sistema.nome.length > 12 ? sistema.nome.substring(0, 11) + "..." : sistema.nome}
+                                {sistema.nome}
                               </text>
 
-                              {/* Tipo do sistema */}
                               <text
-                                x={sistema.x - 55}
-                                y={sistema.y - 14}
-                                textAnchor="start"
-                                className="text-[10px] fill-muted-foreground"
+                                x={sistema.x}
+                                y={sistema.y + 5}
+                                textAnchor="middle"
+                                className="text-xs fill-muted-foreground"
                                 style={{ pointerEvents: "none" }}
                               >
                                 {sistema.tipo}
                               </text>
 
-                              {/* Contador de peças */}
-                              <g transform={`translate(${sistema.x - 85}, ${sistema.y + 10})`}>
-                                <rect
-                                  x="0"
-                                  y="0"
-                                  width="170"
-                                  height="22"
-                                  rx="4"
-                                  fill="hsl(var(--muted))"
-                                  opacity="0.5"
-                                />
-                                <text
-                                  x="10"
-                                  y="14"
-                                  textAnchor="start"
-                                  className="text-xs font-medium fill-foreground"
-                                  style={{ pointerEvents: "none" }}
-                                >
-                                  📦 {sistema.totalPecas} peças cadastradas
-                                </text>
-                              </g>
-
-                              {/* Indicador de status - reposicionado */}
-                              <g transform={`translate(${sistema.x + 80}, ${sistema.y - 30})`}>
-                                <circle r="10" fill={statusColor} opacity="0.2" />
-                                <circle r="7" fill={statusColor} />
-                                <text
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                  fontSize="9"
-                                  fill="white"
-                                  fontWeight="bold"
-                                  style={{ pointerEvents: "none" }}
-                                >
-                                  {sistema.status === "Crítico" ? "!" : 
-                                   sistema.status === "Atenção" ? "⚠" : "✓"}
-                                </text>
-                              </g>
-
-                              {/* Botão de detalhes - reposicionado */}
-                              <g 
-                                transform={`translate(${sistema.x + 80}, ${sistema.y - 12})`}
-                                style={{ cursor: "pointer" }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedSistema(sistema);
-                                  setSelectedPeca(null);
-                                  setSelectedSubPeca(null);
-                                }}
+                              <text
+                                x={sistema.x}
+                                y={sistema.y + 25}
+                                textAnchor="middle"
+                                className="text-xs fill-muted-foreground"
+                                style={{ pointerEvents: "none" }}
                               >
-                                <circle r="9" fill="hsl(var(--primary))" opacity="0.15" />
-                                <circle r="7" fill="hsl(var(--primary))" />
+                                {sistema.totalPecas} peças
+                              </text>
+
+                              <g transform={`translate(${sistema.x + 70}, ${sistema.y - 35})`}>
+                                <circle r="10" fill={statusColor} />
                                 <text
                                   textAnchor="middle"
                                   dominantBaseline="middle"
                                   fontSize="10"
+                                  fill="white"
+                                  style={{ pointerEvents: "none" }}
+                                >
+                                  {sistema.status === "Crítico" ? "!" : 
+                                   sistema.status === "Atenção" ? "!" : "✓"}
+                                </text>
+                              </g>
+
+                              <g 
+                                transform={`translate(${sistema.x + 70}, ${sistema.y + 30})`}
+                                style={{ cursor: "pointer" }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSistemaInfo(sistema, e as any);
+                                }}
+                              >
+                                <circle r="10" fill="hsl(var(--primary))" opacity="0.9" />
+                                <text
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                  fontSize="12"
                                   fill="white"
                                   fontWeight="bold"
                                 >
@@ -905,7 +851,7 @@ const MaquinaDetalhes = () => {
                         {/* Renderizar peças no lado direito quando um sistema for selecionado */}
                         {selectedMaquina && (
                           <>
-                            {/* Linhas de conexão entre sistema e peças */}
+                            {/* Linhas de conexão */}
                             {pecasPorCamada.map((peca, index) => {
                               const sistema = sistemas.find(s => s.id === selectedMaquina);
                               const centerX = sistema?.x || 120;
@@ -916,9 +862,9 @@ const MaquinaDetalhes = () => {
                               const pecaX = startX;
                               const pecaY = startY + index * spacing;
 
-                              const startPointX = centerX + 100;
+                              const startPointX = centerX + 85;
                               const startPointY = centerY;
-                              const endPointX = pecaX - 85;
+                              const endPointX = pecaX - 70;
                               const endPointY = pecaY;
 
                               const controlX1 = startPointX + 80;
@@ -929,13 +875,16 @@ const MaquinaDetalhes = () => {
                                   <path
                                     d={`M ${startPointX} ${startPointY} C ${controlX1} ${startPointY}, ${controlX2} ${endPointY}, ${endPointX} ${endPointY}`}
                                     stroke="hsl(var(--primary))"
-                                    strokeWidth="2"
+                                    strokeWidth="2.5"
                                     fill="none"
                                     opacity={0.6}
                                     strokeLinecap="round"
+                                    filter="url(#glow)"
                                   />
-                                  <polygon
-                                    points={`${endPointX},${endPointY} ${endPointX - 8},${endPointY - 5} ${endPointX - 8},${endPointY + 5}`}
+                                  <circle
+                                    cx={endPointX}
+                                    cy={endPointY}
+                                    r="4"
                                     fill="hsl(var(--primary))"
                                     opacity={0.8}
                                   />
@@ -954,11 +903,11 @@ const MaquinaDetalhes = () => {
                               const subStartX = 650;
                               const subSpacing = 70;
                               const subPecaX = subStartX;
-                              const subPecaY = pecaY - 25 + subIndex * subSpacing;
+                              const subPecaY = pecaY - 30 + subIndex * subSpacing;
 
-                              const startPointX = pecaX + 85;
+                              const startPointX = pecaX + 70;
                               const startPointY = pecaY;
-                              const endPointX = subPecaX - 70;
+                              const endPointX = subPecaX - 60;
                               const endPointY = subPecaY;
                               
                               return (
@@ -970,13 +919,13 @@ const MaquinaDetalhes = () => {
                                     y2={endPointY}
                                     stroke="hsl(var(--primary))"
                                     strokeWidth="1.5"
-                                    opacity={0.5}
+                                    opacity={0.4}
                                     strokeDasharray="4,4"
                                   />
                                   <polygon
-                                    points={`${endPointX},${endPointY} ${endPointX - 6},${endPointY - 4} ${endPointX - 6},${endPointY + 4}`}
+                                    points={`${endPointX},${endPointY} ${endPointX - 5},${endPointY - 3} ${endPointX - 5},${endPointY + 3}`}
                                     fill="hsl(var(--primary))"
-                                    opacity={0.7}
+                                    opacity={0.6}
                                   />
                                 </g>
                               );
@@ -1000,88 +949,66 @@ const MaquinaDetalhes = () => {
                                     className="transition-all hover:opacity-90"
                                     filter="url(#cardShadow)"
                                   >
-                                    {/* Card da Peça */}
                                     <rect
-                                      x={pecaX - 85}
-                                      y={pecaY - 42}
-                                      width="170"
-                                      height="84"
-                                      rx="6"
-                                      ry="6"
+                                      x={pecaX - 70}
+                                      y={pecaY - 35}
+                                      width="140"
+                                      height="70"
+                                      rx="10"
+                                      ry="10"
                                       fill="hsl(var(--card))"
                                       stroke={isExpanded ? "hsl(var(--primary))" : "hsl(var(--border))"}
-                                      strokeWidth={isExpanded ? "2" : "1.5"}
-                                      className="transition-all duration-200"
-                                      onClick={(e) => handlePecaInfo(peca, e as any)}
+                                      strokeWidth={isExpanded ? "2.5" : "1.5"}
+                                      className="transition-all"
+                                      onClick={() => handlePecaClick(peca)}
+                                      onContextMenu={(e) => handlePecaInfo(peca, e as any)}
                                     />
                                     
-                                    {/* Barra de status superior - estilo diferente */}
-                                    <defs>
-                                      <linearGradient id={`pecaGrad-${peca.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" style={{ stopColor: statusColor, stopOpacity: 0.6 }} />
-                                        <stop offset="100%" style={{ stopColor: statusColor, stopOpacity: 1 }} />
-                                      </linearGradient>
-                                    </defs>
                                     <rect
-                                      x={pecaX - 85}
-                                      y={pecaY - 42}
-                                      width="170"
-                                      height="24"
-                                      rx="6"
-                                      ry="6"
-                                      fill={`url(#pecaGrad-${peca.id})`}
-                                      opacity="0.12"
-                                    />
-                                    <rect
-                                      x={pecaX - 85}
-                                      y={pecaY - 42}
-                                      width="170"
-                                      height="2"
-                                      rx="6"
-                                      ry="6"
+                                      x={pecaX - 70}
+                                      y={pecaY - 35}
+                                      width="140"
+                                      height="5"
+                                      rx="10"
+                                      ry="10"
                                       fill={statusColor}
                                     />
 
-                                    {/* Ícone da categoria */}
                                     <text
-                                      x={pecaX - 75}
-                                      y={pecaY - 22}
-                                      fontSize="20"
+                                      x={pecaX - 55}
+                                      y={pecaY - 8}
+                                      fontSize="18"
                                       style={{ pointerEvents: "none" }}
                                     >
                                       {getCategoriaIcon(peca.categoria)}
                                     </text>
 
-                                    {/* Código da peça */}
                                     <text
-                                      x={pecaX - 50}
-                                      y={pecaY - 28}
+                                      x={pecaX - 30}
+                                      y={pecaY - 12}
                                       textAnchor="start"
-                                      className="text-xs font-bold fill-foreground"
+                                      className="text-xs font-semibold fill-foreground"
                                       style={{ pointerEvents: "none" }}
                                     >
-                                      {peca.codigo.length > 10 ? peca.codigo.substring(0, 9) + "..." : peca.codigo}
+                                      {peca.codigo}
                                     </text>
 
-                                    {/* Nome da peça */}
                                     <text
-                                      x={pecaX - 50}
-                                      y={pecaY - 14}
-                                      textAnchor="start"
-                                      className="text-[9px] fill-muted-foreground"
+                                      x={pecaX}
+                                      y={pecaY + 6}
+                                      textAnchor="middle"
+                                      className="text-[10px] fill-muted-foreground"
                                       style={{ pointerEvents: "none" }}
                                     >
-                                      {peca.nome.length > 16 ? peca.nome.substring(0, 14) + "..." : peca.nome}
+                                      {peca.nome.length > 20 ? peca.nome.substring(0, 18) + "..." : peca.nome}
                                     </text>
 
-                                    {/* Indicador de status - reposicionado */}
-                                    <g transform={`translate(${pecaX + 70}, ${pecaY - 32})`}>
-                                      <circle r="8" fill={statusColor} opacity="0.2" />
-                                      <circle r="6" fill={statusColor} />
+                                    <g transform={`translate(${pecaX + 55}, ${pecaY - 25})`}>
+                                      <circle r="8" fill={statusColor} />
                                       <text
                                         textAnchor="middle"
                                         dominantBaseline="middle"
-                                        fontSize="8"
+                                        fontSize="9"
                                         fill="white"
                                         fontWeight="bold"
                                         style={{ pointerEvents: "none" }}
@@ -1090,69 +1017,45 @@ const MaquinaDetalhes = () => {
                                       </text>
                                     </g>
 
-                                    {/* Indicador de estoque */}
-                                    <g transform={`translate(${pecaX - 75}, ${pecaY + 8})`}>
-                                      <rect
-                                        x="0"
-                                        y="0"
-                                        width="145"
-                                        height="18"
-                                        rx="3"
-                                        fill={peca.emEstoque <= peca.estoqueMinimo ? "#f59e0b" : "hsl(var(--muted))"}
-                                        opacity="0.15"
-                                      />
-                                      <text
-                                        x="8"
-                                        y="12"
-                                        textAnchor="start"
-                                        className="text-[9px] font-medium fill-foreground"
-                                        style={{ pointerEvents: "none" }}
-                                      >
-                                        {peca.emEstoque <= peca.estoqueMinimo ? "⚠️" : "📦"} Estoque: {peca.emEstoque}/{peca.estoqueMinimo}
-                                      </text>
-                                    </g>
+                                    {peca.emEstoque <= peca.estoqueMinimo && (
+                                      <g transform={`translate(${pecaX + 55}, ${pecaY - 10})`}>
+                                        <circle r="7" fill="#f59e0b" />
+                                        <text
+                                          textAnchor="middle"
+                                          dominantBaseline="middle"
+                                          fontSize="10"
+                                          fill="white"
+                                          fontWeight="bold"
+                                          style={{ pointerEvents: "none" }}
+                                        >
+                                          !
+                                        </text>
+                                      </g>
+                                    )}
 
-                                    {/* Barra de vida útil */}
-                                    <g transform={`translate(${pecaX - 75}, ${pecaY + 32})`}>
-                                      <rect width="145" height="3" rx="2" fill="hsl(var(--muted))" opacity="0.3" />
+                                    <g transform={`translate(${pecaX - 60}, ${pecaY + 18})`}>
+                                      <rect width="120" height="3" rx="1.5" fill="hsl(var(--muted))" />
                                       <rect
-                                        width={145 * (peca.vidaUtilRestante / peca.vidaUtil)}
+                                        width={120 * (peca.vidaUtilRestante / peca.vidaUtil)}
                                         height="3"
-                                        rx="2"
+                                        rx="1.5"
                                         fill={
                                           peca.vidaUtilRestante / peca.vidaUtil > 0.5 ? "#10b981" :
                                           peca.vidaUtilRestante / peca.vidaUtil > 0.3 ? "#f59e0b" : "#ef4444"
                                         }
                                       />
-                                      <text
-                                        x="73"
-                                        y="-3"
-                                        textAnchor="middle"
-                                        className="text-[8px] fill-muted-foreground"
-                                        style={{ pointerEvents: "none" }}
-                                      >
-                                        Vida útil: {Math.round((peca.vidaUtilRestante / peca.vidaUtil) * 100)}%
-                                      </text>
                                     </g>
                                     
-                                    {/* Indicador de sub-peças - reposicionado */}
                                     {peca.subPecas && peca.subPecas.length > 0 && (
-                                      <g 
-                                        transform={`translate(${pecaX - 75}, ${pecaY - 32})`}
-                                        style={{ cursor: "pointer" }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handlePecaClick(peca);
-                                        }}
-                                      >
-                                        <circle r="7" fill="hsl(var(--primary))" opacity="0.2" />
-                                        <circle r="5" fill="hsl(var(--primary))" />
+                                      <g transform={`translate(${pecaX - 58}, ${pecaY - 25})`}>
+                                        <circle r="7" fill="hsl(var(--primary))" />
                                         <text
                                           textAnchor="middle"
                                           dominantBaseline="middle"
-                                          fontSize="8"
+                                          fontSize="10"
                                           fill="white"
                                           fontWeight="bold"
+                                          style={{ pointerEvents: "none" }}
                                         >
                                           {isExpanded ? "−" : "+"}
                                         </text>
@@ -1176,105 +1079,60 @@ const MaquinaDetalhes = () => {
                                         className="transition-all hover:opacity-90"
                                         filter="url(#cardShadow)"
                                       >
-                                        {/* Card da Sub-peça - estilo compacto */}
                                         <rect
-                                          x={subPecaX - 70}
-                                          y={subPecaY - 28}
-                                          width="140"
-                                          height="56"
-                                          rx="5"
-                                          ry="5"
+                                          x={subPecaX - 60}
+                                          y={subPecaY - 25}
+                                          width="120"
+                                          height="50"
+                                          rx="8"
+                                          ry="8"
                                           fill="hsl(var(--card))"
                                           stroke="hsl(var(--border))"
                                           strokeWidth="1.5"
                                           onClick={(e) => handleSubPecaInfo(subPeca, peca, e as any)}
                                         />
                                         
-                                        {/* Barra de status superior - mais sutil */}
-                                        <defs>
-                                          <linearGradient id={`subPecaGrad-${subPeca.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" style={{ stopColor: subStatusColor, stopOpacity: 0.3 }} />
-                                            <stop offset="100%" style={{ stopColor: subStatusColor, stopOpacity: 0.6 }} />
-                                          </linearGradient>
-                                        </defs>
                                         <rect
-                                          x={subPecaX - 70}
-                                          y={subPecaY - 28}
-                                          width="140"
-                                          height="18"
-                                          rx="5"
-                                          ry="5"
-                                          fill={`url(#subPecaGrad-${subPeca.id})`}
-                                          opacity="0.1"
-                                        />
-                                        <rect
-                                          x={subPecaX - 70}
-                                          y={subPecaY - 28}
-                                          width="140"
-                                          height="2"
-                                          rx="5"
-                                          ry="5"
+                                          x={subPecaX - 60}
+                                          y={subPecaY - 25}
+                                          width="120"
+                                          height="4"
+                                          rx="8"
+                                          ry="8"
                                           fill={subStatusColor}
-                                          opacity="0.8"
                                         />
                                         
-                                        {/* Código da sub-peça */}
                                         <text
-                                          x={subPecaX - 60}
-                                          y={subPecaY - 16}
-                                          textAnchor="start"
+                                          x={subPecaX}
+                                          y={subPecaY - 8}
+                                          textAnchor="middle"
                                           className="text-[9px] font-bold fill-foreground"
                                           style={{ pointerEvents: "none" }}
                                         >
-                                          {subPeca.codigo.length > 12 ? subPeca.codigo.substring(0, 11) + "..." : subPeca.codigo}
+                                          {subPeca.codigo}
                                         </text>
                                         
-                                        {/* Nome da sub-peça */}
                                         <text
-                                          x={subPecaX - 60}
-                                          y={subPecaY - 4}
-                                          textAnchor="start"
+                                          x={subPecaX}
+                                          y={subPecaY + 5}
+                                          textAnchor="middle"
                                           className="text-[8px] fill-muted-foreground"
                                           style={{ pointerEvents: "none" }}
                                         >
-                                          {subPeca.nome.length > 16 ? subPeca.nome.substring(0, 14) + "..." : subPeca.nome}
+                                          {subPeca.nome.length > 18 ? subPeca.nome.substring(0, 16) + "..." : subPeca.nome}
                                         </text>
                                         
-                                        {/* Info de estoque - badge */}
-                                        <g transform={`translate(${subPecaX - 60}, ${subPecaY + 10})`}>
-                                          <rect
-                                            x="0"
-                                            y="0"
-                                            width="120"
-                                            height="14"
-                                            rx="3"
-                                            fill={subPeca.emEstoque === 0 ? "#ef4444" : subPeca.emEstoque <= subPeca.estoqueMinimo ? "#f59e0b" : "hsl(var(--muted))"}
-                                            opacity="0.15"
-                                          />
-                                          <text
-                                            x="6"
-                                            y="10"
-                                            textAnchor="start"
-                                            className="text-[8px] font-medium fill-foreground"
-                                            style={{ pointerEvents: "none" }}
-                                          >
-                                            {subPeca.emEstoque === 0 ? "❌" : subPeca.emEstoque <= subPeca.estoqueMinimo ? "⚠️" : "✓"} Qtd: {subPeca.emEstoque}
-                                          </text>
-                                        </g>
-                                        
-                                        {/* Indicador de status - reposicionado */}
-                                        <g transform={`translate(${subPecaX + 60}, ${subPecaY - 20})`}>
-                                          <circle r="7" fill={subStatusColor} opacity="0.2" />
-                                          <circle r="5" fill={subStatusColor} />
+                                        <g transform={`translate(${subPecaX + 48}, ${subPecaY - 18})`}>
+                                          <circle r="6" fill={subStatusColor} />
                                           <text
                                             textAnchor="middle"
                                             dominantBaseline="middle"
-                                            fontSize="7"
+                                            fontSize="8"
                                             fill="white"
                                             fontWeight="bold"
                                             style={{ pointerEvents: "none" }}
                                           >
-                                            {subPeca.emEstoque === 0 ? "!" : "✓"}
+                                            {subPeca.emEstoque === 0 ? "!" : subPeca.emEstoque}
                                           </text>
                                         </g>
                                       </g>
@@ -1401,31 +1259,18 @@ const MaquinaDetalhes = () => {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold">Peças do Sistema</h3>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          handleEditSistema(selectedSistema);
-                          setSelectedSistema(null);
-                        }}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar Sistema
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => {
-                          setSelectedMaquina(selectedSistema.id);
-                          setSelectedSistema(null);
-                          setEditingPeca(null);
-                          setIsPecaModalOpen(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar Peça
-                      </Button>
-                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedMaquina(selectedSistema.id);
+                        setSelectedSistema(null);
+                        setEditingPeca(null);
+                        setIsPecaModalOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Peça
+                    </Button>
                   </div>
                   
                   {selectedSistema.pecas && selectedSistema.pecas.length > 0 ? (
@@ -1546,37 +1391,6 @@ const MaquinaDetalhes = () => {
           onOpenChange={setIsMetricaModalOpen}
           equipamentoId={id || ""}
           onSuccess={handleMetricaSuccess}
-        />
-        
-        {/* Novos Modais de Detalhes */}
-        <PecaDetailsModal
-          open={isPecaDetailsModalOpen}
-          onOpenChange={setIsPecaDetailsModalOpen}
-          peca={selectedPeca}
-          equipamentoId={id || ""}
-          sistemaId={selectedPeca?.maquinaId || ""}
-          sistemas={sistemas}
-          onSuccess={handlePecaSuccess}
-          onEditPeca={(peca) => {
-            setIsPecaDetailsModalOpen(false);
-            setEditingPeca(peca);
-            setSelectedMaquina(peca.maquinaId || null);
-            setIsPecaModalOpen(true);
-          }}
-          onSelectSubPeca={(subPeca) => {
-            setIsPecaDetailsModalOpen(false);
-            setSelectedSubPeca(subPeca);
-            setIsSubPecaDetailsModalOpen(true);
-          }}
-        />
-        <SubPecaDetailsModal
-          open={isSubPecaDetailsModalOpen}
-          onOpenChange={setIsSubPecaDetailsModalOpen}
-          subPeca={selectedSubPeca}
-          onEdit={(subPeca) => {
-            setIsSubPecaDetailsModalOpen(false);
-            handleEditSubPeca(subPeca);
-          }}
         />
 
         {/* Tabs Principais */}

@@ -18,7 +18,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, Download, Calendar, Eye, Printer } from 'lucide-react';
+import { Search, Filter, Download, Calendar } from 'lucide-react';
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   collection, 
@@ -30,13 +30,6 @@ import {
 import { db } from "@/firebase/firebase";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 
 interface Relatorio {
   id: string;
@@ -65,15 +58,6 @@ interface Relatorio {
   unidade: string;
   data_saida: Timestamp;
   data_registro: Timestamp;
-  nfe?: string;
-  fornecedor?: string;
-  responsavel?: string;
-  // Campos específicos para Cubagem/Lenha
-  medidas?: string[];
-  comprimento?: number;
-  largura?: number;
-  altura_media?: number;
-  metros_cubicos?: number;
 }
 
 interface Filtros {
@@ -100,8 +84,6 @@ const Relatorios = () => {
   const [relatoriosFiltrados, setRelatoriosFiltrados] = useState<Relatorio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [relatorioSelecionado, setRelatorioSelecionado] = useState<Relatorio | null>(null);
-  const [modalDetalhesAberto, setModalDetalhesAberto] = useState(false);
   
   // Estados para filtros
   const [filtros, setFiltros] = useState<Filtros>({
@@ -276,9 +258,7 @@ const Relatorios = () => {
         (relatorio.tipo && relatorio.tipo.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (relatorio.deposito && relatorio.deposito.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (relatorio.centro_de_custo && relatorio.centro_de_custo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (relatorio.unidade && relatorio.unidade.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (relatorio.fornecedor && relatorio.fornecedor.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (relatorio.nfe && relatorio.nfe.toLowerCase().includes(searchTerm.toLowerCase()))
+        (relatorio.unidade && relatorio.unidade.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
   
@@ -402,15 +382,6 @@ const Relatorios = () => {
   };
 
   const handleExportar = () => {
-  };
-
-  const handleVerDetalhes = (relatorio: Relatorio) => {
-    setRelatorioSelecionado(relatorio);
-    setModalDetalhesAberto(true);
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   return (
@@ -731,7 +702,6 @@ const Relatorios = () => {
                       <TableHead>Unidade</TableHead>
                       <TableHead>Usuário</TableHead>
                       <TableHead>Requisição</TableHead>
-                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -768,18 +738,6 @@ const Relatorios = () => {
                         <TableCell>{relatorio.unidade || 'N/A'}</TableCell>
                         <TableCell>{relatorio.usuario.nome}</TableCell>
                         <TableCell className="font-mono">{relatorio.requisicao_id}</TableCell>
-                        <TableCell>
-                          {relatorio.tipo === 'Cubagem/Lenha' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleVerDetalhes(relatorio)}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Detalhes
-                            </Button>
-                          )}
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -808,167 +766,6 @@ const Relatorios = () => {
           </div>
         </div>
       </div>
-
-      {/* Modal de Detalhes de Cubagem */}
-      {relatorioSelecionado && (
-        <Dialog open={modalDetalhesAberto} onOpenChange={(open) => {
-          if (!open) {
-            setModalDetalhesAberto(false);
-            setRelatorioSelecionado(null);
-          }
-        }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto print:max-w-full">
-            <DialogHeader>
-              <div className="flex justify-between items-center">
-                <DialogTitle className="text-2xl">Detalhes da Cubagem de Lenha</DialogTitle>
-                <Button variant="outline" size="sm" onClick={handlePrint} className="print:hidden">
-                  <Printer className="h-4 w-4 mr-2" />
-                  Imprimir
-                </Button>
-              </div>
-            </DialogHeader>
-
-            <div className="space-y-6 py-4">
-              {/* Informações Gerais */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">Informações da Entrega</h3>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Fornecedor:</span>
-                      <span className="font-medium">{relatorioSelecionado.fornecedor || 'N/A'}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Data e Hora:</span>
-                      <span className="font-medium">{formatDate(relatorioSelecionado.data_registro)}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">NFe:</span>
-                      <span className="font-medium">{relatorioSelecionado.nfe || 'Não informada'}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Responsável:</span>
-                      <span className="font-medium">{relatorioSelecionado.responsavel || 'N/A'}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Status:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        relatorioSelecionado.status === 'entrada' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {relatorioSelecionado.status === 'entrada' ? 'Entrada' : 'Saída'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">Valores</h3>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Valor Unitário:</span>
-                      <span className="font-medium">{formatCurrency(relatorioSelecionado.valor_unitario)}/m³</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Metros Cúbicos:</span>
-                      <span className="font-medium">{relatorioSelecionado.metros_cubicos?.toFixed(2) || '0.00'} m³</span>
-                    </div>
-                    
-                    <Separator className="my-2" />
-                    
-                    <div className="flex justify-between text-lg">
-                      <span className="font-semibold">Valor Total:</span>
-                      <span className="font-bold text-primary">{formatCurrency(relatorioSelecionado.valor_total)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Medidas Detalhadas */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg border-b pb-2">Medições da Carga</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-base">Dimensões da Carga</h4>
-                    
-                    <div className="bg-secondary/50 p-4 rounded-lg space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Comprimento:</span>
-                        <span className="font-medium">{relatorioSelecionado.comprimento?.toFixed(2) || '0.00'} m</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Largura:</span>
-                        <span className="font-medium">{relatorioSelecionado.largura?.toFixed(2) || '0.00'} m</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Altura Média:</span>
-                        <span className="font-medium">{relatorioSelecionado.altura_media?.toFixed(2) || '0.00'} m</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-base">Medidas de Altura (6 pontos)</h4>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      {relatorioSelecionado.medidas && relatorioSelecionado.medidas.length > 0 ? (
-                        relatorioSelecionado.medidas.map((medida, index) => (
-                          <div key={index} className="bg-secondary/50 p-3 rounded-lg">
-                            <div className="text-sm text-muted-foreground">Medida {index + 1}</div>
-                            <div className="font-medium text-lg">{parseFloat(medida).toFixed(2)} m</div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="col-span-2 text-muted-foreground text-sm">
-                          Medidas não registradas
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Fórmula de Cálculo */}
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                <h4 className="font-semibold">Fórmula de Cálculo</h4>
-                <p className="text-sm">
-                  <span className="font-medium">Cubagem = Altura Média × Comprimento × Largura</span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Cubagem = {relatorioSelecionado.altura_media?.toFixed(2) || '0.00'} m × {relatorioSelecionado.comprimento?.toFixed(2) || '0.00'} m × {relatorioSelecionado.largura?.toFixed(2) || '0.00'} m = {relatorioSelecionado.metros_cubicos?.toFixed(2) || '0.00'} m³
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  * A altura média é calculada a partir de 6 medidas tomadas em diferentes pontos da carga
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 print:hidden">
-              <Button variant="outline" onClick={() => {
-                setModalDetalhesAberto(false);
-                setRelatorioSelecionado(null);
-              }}>
-                Fechar
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </AppLayout>
   );
 };

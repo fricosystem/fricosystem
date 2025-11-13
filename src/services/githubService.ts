@@ -19,10 +19,9 @@ interface GitHubConfig {
 }
 
 interface CodespaceConfig {
-  machine?: string; // Nome da máquina, será validado pelo GitHub
+  machine: 'basicLinux32gb' | 'standardLinux32gb' | 'premiumLinux64gb';
   devcontainer_path?: string;
   idle_timeout_minutes?: number;
-  display_name?: string; // Nome exibido do Codespace
 }
 
 interface Codespace {
@@ -959,94 +958,25 @@ class GitHubService {
     }
   }
 
-  public async createCodespace(config: CodespaceConfig = {}): Promise<Codespace> {
+  public async createCodespace(config: CodespaceConfig = { machine: 'basicLinux32gb' }): Promise<Codespace> {
     if (!this.octokit || !this.config) {
       throw new Error('GitHub não configurado');
     }
 
     try {
-      // Opcionalmente, valida a máquina escolhida contra as disponíveis
-      let machineToUse: string | undefined = undefined;
-      if (config.machine) {
-        try {
-          const machinesResponse = await this.octokit.request('GET /repos/{owner}/{repo}/codespaces/machines', {
-            owner: this.config.owner,
-            repo: this.config.repo,
-          });
-          const availableMachines = machinesResponse.data.machines || [];
-          const isValid = availableMachines.some((m: any) => m.name === config.machine);
-          if (isValid) {
-            machineToUse = config.machine;
-          } else {
-            console.warn(`Máquina informada não é válida para este repositório: ${config.machine}. Prosseguindo com a padrão do GitHub.`);
-          }
-        } catch (e) {
-          console.warn('Falha ao validar máquinas disponíveis. Prosseguindo sem especificar máquina.');
-        }
-      }
-
-      // Monta o payload de criação (deixe o GitHub decidir a máquina padrão quando não especificada)
-      const createPayload: any = {
+      // Cria codespace usando a API rest genérica
+      const response = await this.octokit.request('POST /repos/{owner}/{repo}/codespaces', {
         owner: this.config.owner,
         repo: this.config.repo,
+        machine: config.machine,
+        devcontainer_path: config.devcontainer_path,
         idle_timeout_minutes: config.idle_timeout_minutes || 30,
-      };
-
-      if (machineToUse) {
-        createPayload.machine = machineToUse;
-      }
-      if (config.devcontainer_path) {
-        createPayload.devcontainer_path = config.devcontainer_path;
-      }
-      if (config.display_name) {
-        createPayload.display_name = config.display_name;
-      }
-
-      // Usa método oficial do Octokit que aplica defaults corretamente
-      const response = await this.octokit.rest.codespaces.createWithRepoForAuthenticatedUser(createPayload);
-
-      return response.data;
-    } catch (error: any) {
-      console.error('Erro ao criar Codespace:', error);
-      
-      // Extrai mensagem de erro mais clara
-      let errorMessage = 'Falha ao criar Codespace';
-      
-      if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-      
-      // Adiciona informações sobre permissões se relevante
-      if (error?.status === 403) {
-        errorMessage = 'Sem permissão para criar Codespaces. Verifique se o token tem scope "codespace" e se Codespaces está habilitado no repositório.';
-      } else if (error?.status === 404) {
-        errorMessage = 'Repositório não encontrado ou Codespaces não habilitado.';
-      }
-      
-      throw new Error(errorMessage);
-    }
-  }
-
-  /**
-   * Lista as máquinas disponíveis para Codespaces neste repositório
-   */
-  public async listAvailableMachines(): Promise<any[]> {
-    if (!this.octokit || !this.config) {
-      throw new Error('GitHub não configurado');
-    }
-
-    try {
-      const response = await this.octokit.request('GET /repos/{owner}/{repo}/codespaces/machines', {
-        owner: this.config.owner,
-        repo: this.config.repo,
       });
 
-      return response.data.machines || [];
+      return response.data;
     } catch (error) {
-      console.error('Erro ao listar máquinas:', error);
-      return [];
+      console.error('Erro ao criar Codespace:', error);
+      throw error;
     }
   }
 

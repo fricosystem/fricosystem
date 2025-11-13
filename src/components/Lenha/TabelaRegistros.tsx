@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, onSnapshot, DocumentData, QueryDocumentSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, DocumentData, QueryDocumentSnapshot, doc, deleteDoc, updateDoc, getDocs, where } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge"; 
 import { db } from "@/firebase/firebase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { File, Receipt, Check } from "lucide-react";
+import { Printer, File, Edit, Trash2, AlertCircle, Receipt, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import ModalRecibo from "./ModalRecibo";
+import ModalEditarRegistro from "@/components/Lenha/ModalEditarRegistro";
 import ModalFornecedor from "@/components/Lenha/ModalFornecedor";
 import ModalComprovanteTotal from "./ModalComprovanteTotal";
 import { MedidaLenha } from "@/types/typesLenha";
@@ -19,6 +20,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PlusCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -32,7 +43,10 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [medidaSelecionada, setMedidaSelecionada] = useState<MedidaLenha | null>(null);
   const [modalReciboAberto, setModalReciboAberto] = useState(false);
+  const [modalEditarAberto, setModalEditarAberto] = useState(false);
   const [modalComprovanteAberto, setModalComprovanteAberto] = useState(false);
+  const [registroParaExcluir, setRegistroParaExcluir] = useState<string | null>(null);
+  const [excluindoRegistro, setExcluindoRegistro] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalMetrosCubicos, setTotalMetrosCubicos] = useState(0);
   const [totalValor, setTotalValor] = useState(0);
@@ -97,7 +111,8 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
               valorTotal: data.valorTotal,
               usuario: data.usuario,
               status_envio: data.status_envio || "pendente",
-              chavePixFornecedor: data.chavePixFornecedor || "" // Adicionando a propriedade faltante
+              chavePixFornecedor: data.chavePixFornecedor || "",
+              contatoFornecedor: data.contatoFornecedor || ""
             };
             
             docs.push(registro);
@@ -126,10 +141,62 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
     }
   }, [atualizarDados]);
   
-  const handleVerDetalhes = (registro: MedidaLenha, e: React.MouseEvent) => {
+  const handleVerDetalhes = async (registro: MedidaLenha, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Se não houver chave PIX ou contato, busca do fornecedor
+    if (!registro.chavePixFornecedor || !registro.contatoFornecedor) {
+      try {
+        const fornecedoresRef = collection(db, "fornecedoreslenha");
+        const fornecedoresQuery = query(fornecedoresRef, where("nome", "==", registro.fornecedor));
+        const fornecedoresSnapshot = await getDocs(fornecedoresQuery);
+        
+        if (!fornecedoresSnapshot.empty) {
+          const fornecedorData = fornecedoresSnapshot.docs[0].data();
+          registro.chavePixFornecedor = fornecedorData.chavePix || "";
+          registro.contatoFornecedor = fornecedorData.contato || "";
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados do fornecedor:", error);
+      }
+    }
+    
     setMedidaSelecionada(registro);
     setModalReciboAberto(true);
+  };
+  
+  const handleEditar = (registro: MedidaLenha, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMedidaSelecionada(registro);
+    setModalEditarAberto(true);
+  };
+  
+  const handleExcluirConfirmacao = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRegistroParaExcluir(id);
+  };
+  
+  const handleExcluir = async () => {
+    if (!registroParaExcluir) return;
+    
+    try {
+      setExcluindoRegistro(true);
+      await deleteDoc(doc(db, "medidas_lenha", registroParaExcluir));
+      setRegistroParaExcluir(null);
+      toast({
+        title: "Registro excluído",
+        description: "O registro foi excluído com sucesso",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir registro:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o registro",
+        variant: "destructive",
+      });
+    } finally {
+      setExcluindoRegistro(false);
+    }
   };
 
   const handleSaveSuccess = () => {
@@ -202,6 +269,7 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
                     <TableHead className="min-w-[140px]">Responsável</TableHead>
                     <TableHead className="min-w-[150px] text-right">Valor Total</TableHead>
                     <TableHead className="min-w-[170px]">Status</TableHead>
+                    <TableHead className="min-w-[130px] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -246,6 +314,26 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
                           </Button>
                         )}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={(e) => handleEditar(registro, e)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={(e) => handleExcluirConfirmacao(registro.id, e)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -281,6 +369,18 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
           onClose={() => setModalReciboAberto(false)}
         />
       )}
+      
+      {medidaSelecionada && (
+        <ModalEditarRegistro
+          medida={medidaSelecionada}
+          isOpen={modalEditarAberto}
+          onClose={() => {
+            setModalEditarAberto(false);
+            setMedidaSelecionada(null);
+          }}
+          onSaveSuccess={handleSaveSuccess}
+        />
+      )}
 
       <ModalFornecedor 
         isOpen={modalFornecedorAberto}
@@ -293,8 +393,29 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
         onClose={() => setModalComprovanteAberto(false)}
         totalMetrosCubicos={totalMetrosCubicos}
         totalValor={totalValor}
-        itens={registros}
+        itens={registros} // Adicionando a propriedade faltante
       />
+      
+      <AlertDialog open={!!registroParaExcluir} onOpenChange={(open) => !open && setRegistroParaExcluir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindoRegistro}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleExcluir}
+              disabled={excluindoRegistro}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {excluindoRegistro ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

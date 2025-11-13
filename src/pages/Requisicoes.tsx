@@ -377,48 +377,27 @@ const Requisicoes = () => {
       const erros: string[] = [];
       const produtosRef = collection(db, "produtos");
 
-      console.log('🔍 Verificando estoque para requisição:', selectedRequisicao.requisicao_id);
-      console.log('📦 Total de itens a verificar:', selectedRequisicao.itens.length);
-
       // Para cada item na requisição
       for (const item of selectedRequisicao.itens) {
-        console.log(`\n🔎 Verificando item: ${item.nome}`);
-        console.log(`  - Código material: ${item.codigo_material || 'NÃO INFORMADO'}`);
-        console.log(`  - Quantidade necessária: ${item.quantidade}`);
-
         // Buscar o produto pelo código de material
         if (!item.codigo_material) {
-          console.warn(`⚠️ Item sem código de material: ${item.nome}`);
           erros.push(`O item "${item.nome}" não possui código de material.`);
           continue;
         }
         const q = query(produtosRef, where("codigo_material", "==", item.codigo_material));
         const querySnapshot = await getDocs(q);
         if (querySnapshot.empty) {
-          console.error(`❌ Produto não encontrado no estoque: ${item.nome} (${item.codigo_material})`);
           erros.push(`Produto "${item.nome}" (código: ${item.codigo_material}) não encontrado no estoque.`);
           continue;
         }
         const produtoDoc = querySnapshot.docs[0];
         const produtoData = produtoDoc.data() as Produto;
 
-        console.log(`  - Quantidade disponível: ${produtoData.quantidade}`);
-
         // Verificar quantidade
         if (produtoData.quantidade < item.quantidade) {
-          console.error(`❌ Quantidade insuficiente: ${item.nome}`);
-          console.error(`   Disponível: ${produtoData.quantidade} | Necessário: ${item.quantidade}`);
           erros.push(`Quantidade insuficiente do produto "${item.nome}" (código: ${item.codigo_material}). Disponível: ${produtoData.quantidade}, Necessário: ${item.quantidade}`);
-        } else {
-          console.log(`✅ Estoque OK para: ${item.nome}`);
         }
       }
-
-      console.log(`\n📊 Resultado da verificação: ${erros.length === 0 ? '✅ SEM ERROS' : `❌ ${erros.length} ERRO(S) ENCONTRADO(S)`}`);
-      if (erros.length > 0) {
-        console.log('📋 Lista de erros:', erros);
-      }
-
       setErrosEstoque(erros);
       return erros.length === 0;
     } catch (error) {
@@ -468,17 +447,14 @@ const Requisicoes = () => {
 
     // Verificar estoque antes de abrir o diálogo
     const estoqueOk = await verificarEstoque();
-    
-    // SEMPRE abre o diálogo para mostrar detalhes (com ou sem erros)
-    setIsFinalizarDialogOpen(true);
-    
-    if (!estoqueOk) {
-      // Mostrar toast com resumo dos erros
+    if (estoqueOk) {
+      setIsFinalizarDialogOpen(true);
+    } else {
+      // Mostrar erros encontrados
       toast({
-        title: "⚠️ Problemas de estoque detectados",
-        description: `${errosEstoque.length} problema(s) encontrado(s). Verifique os detalhes no diálogo abaixo.`,
-        variant: "destructive",
-        duration: 6000
+        title: "Problemas de estoque detectados",
+        description: "Não é possível finalizar a requisição devido a problemas de estoque.",
+        variant: "destructive"
       });
     }
   };

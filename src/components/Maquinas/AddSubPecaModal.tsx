@@ -8,19 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { addDoc, collection, serverTimestamp, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
-
-interface SubPeca {
-  id?: string;
-  nome: string;
-  codigo: string;
-  status: "Normal" | "Atenção" | "Crítico";
-  emEstoque: number;
-  estoqueMinimo: number;
-  pecaId: string;
-  valorUnitario: number;
-  fornecedor: string;
-  descricao: string;
-}
+import { Checkbox } from "@/components/ui/checkbox";
+import { SubPeca } from "@/types/typesMaquinas";
 
 interface AddSubPecaModalProps {
   open: boolean;
@@ -56,6 +45,13 @@ export const AddSubPecaModal = ({
       valorUnitario: 0,
       fornecedor: "",
       descricao: "",
+      configuracaoManutencao: {
+        intervaloManutencao: 30,
+        tipoIntervalo: "dias",
+        gerarOrdemAutomatica: false,
+        antecedenciaNotificacao: 7,
+      },
+      historicoManutencoes: [],
     }
   );
 
@@ -232,6 +228,106 @@ export const AddSubPecaModal = ({
                 placeholder="Nome do fornecedor"
               />
             </div>
+          </div>
+
+          {/* Seção de Manutenção Preventiva Automática */}
+          <div className="space-y-4 p-4 bg-primary/5 rounded-lg border-2 border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-base font-semibold">Manutenção Preventiva Automática</Label>
+                <p className="text-sm text-muted-foreground">
+                  Configure para gerar ordens de serviço automaticamente
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="gerarOrdemAutomatica"
+                  checked={formData.configuracaoManutencao?.gerarOrdemAutomatica}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      configuracaoManutencao: {
+                        ...formData.configuracaoManutencao!,
+                        gerarOrdemAutomatica: checked as boolean,
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="gerarOrdemAutomatica" className="cursor-pointer">
+                  Ativar
+                </Label>
+              </div>
+            </div>
+
+            {formData.configuracaoManutencao?.gerarOrdemAutomatica && (
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="intervaloManutencao">Intervalo</Label>
+                  <Input
+                    id="intervaloManutencao"
+                    type="number"
+                    value={formData.configuracaoManutencao.intervaloManutencao}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        configuracaoManutencao: {
+                          ...formData.configuracaoManutencao!,
+                          intervaloManutencao: Number(e.target.value),
+                        },
+                      })
+                    }
+                    placeholder="30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tipoIntervalo">Tipo</Label>
+                  <Select
+                    value={formData.configuracaoManutencao.tipoIntervalo}
+                    onValueChange={(value: "dias" | "horas" | "ciclos") =>
+                      setFormData({
+                        ...formData,
+                        configuracaoManutencao: {
+                          ...formData.configuracaoManutencao!,
+                          tipoIntervalo: value,
+                        },
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dias">Dias</SelectItem>
+                      <SelectItem value="horas">Horas</SelectItem>
+                      <SelectItem value="ciclos">Ciclos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="antecedenciaNotificacao">
+                    Antecedência para Gerar Ordem (dias)
+                  </Label>
+                  <Input
+                    id="antecedenciaNotificacao"
+                    type="number"
+                    value={formData.configuracaoManutencao.antecedenciaNotificacao}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        configuracaoManutencao: {
+                          ...formData.configuracaoManutencao!,
+                          antecedenciaNotificacao: Number(e.target.value),
+                        },
+                      })
+                    }
+                    placeholder="7"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A ordem será gerada X dias antes da data de manutenção
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
