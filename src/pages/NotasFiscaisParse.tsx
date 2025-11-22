@@ -753,34 +753,34 @@ const NotasFiscais = () => {
 
   return (
     <AppLayout title="Notas Fiscais">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Seção principal (2/3 da largura) */}
-        <div className="md:col-span-2">
+        <div className="lg:col-span-2">
           {/* Card de Upload */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Upload de Nota Fiscal Eletrônica</CardTitle>
+            <CardHeader className="px-4 md:px-6">
+              <CardTitle className="text-base md:text-lg">Upload de Nota Fiscal Eletrônica</CardTitle>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <CardContent className="px-4 md:px-6">
+              <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">
+                  <label className="text-xs md:text-sm font-medium">
                     Selecione o arquivo XML da NFe
                   </label>
                   <div 
-                    className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center bg-muted/50 cursor-pointer"
+                    className="border-2 border-dashed rounded-lg p-6 md:p-8 flex flex-col items-center justify-center bg-muted/50 cursor-pointer"
                     onClick={() => document.getElementById("arquivo-xml")?.click()}
                   >
                     {arquivoSelecionado ? (
                       <div className="text-center">
-                        <FileText className="h-12 w-12 text-primary mx-auto mb-4" />
-                        <p className="font-medium">{arquivoSelecionado.name}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <FileText className="h-10 w-10 md:h-12 md:w-12 text-primary mx-auto mb-3 md:mb-4" />
+                        <p className="font-medium text-sm md:text-base">{arquivoSelecionado.name}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
                           {(arquivoSelecionado.size / 1024).toFixed(2)} KB
                         </p>
                         <Button 
                           variant="link" 
-                          className="mt-2 h-auto p-0"
+                          className="mt-2 h-auto p-0 text-xs md:text-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             setArquivoSelecionado(null);
@@ -791,13 +791,13 @@ const NotasFiscais = () => {
                       </div>
                     ) : (
                       <>
-                        <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-sm text-muted-foreground text-center">
+                        <Upload className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
+                        <p className="text-xs md:text-sm text-muted-foreground text-center">
                           Clique para fazer upload ou arraste o arquivo XML aqui
                         </p>
                       </>
                     )}
-                    <Input 
+                    <Input
                       id="arquivo-xml"
                       type="file" 
                       accept=".xml" 
@@ -808,10 +808,14 @@ const NotasFiscais = () => {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit" disabled={!arquivoSelecionado || carregando}>
+                  <Button 
+                    type="submit" 
+                    disabled={!arquivoSelecionado || carregando}
+                    className="h-9 md:h-10 text-sm w-full sm:w-auto"
+                  >
                     {carregando ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />
                         Processando...
                       </>
                     ) : "Processar XML"}
@@ -822,41 +826,49 @@ const NotasFiscais = () => {
           </Card>
 
           {/* Abas de Notas Fiscais */}
-          <div className="mt-6">
+          <div className="mt-4 md:mt-6">
             <Tabs defaultValue="pendentes">
-              <TabsList>
-                <TabsTrigger value="pendentes">Pendentes ({notasPendentes.length})</TabsTrigger>
-                <TabsTrigger value="estoque">Estoque ({notasProcessadasEstoque.length})</TabsTrigger>
-                <TabsTrigger value="consumo">Consumo ({notasProcessadasConsumo.length})</TabsTrigger>
-                <TabsTrigger value="historico">Histórico ({notasHistorico.length})</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
+                <TabsTrigger value="pendentes" className="text-xs md:text-sm">
+                  Pendentes ({notasPendentes.length})
+                </TabsTrigger>
+                <TabsTrigger value="estoque" className="text-xs md:text-sm">
+                  Estoque ({notasProcessadasEstoque.length})
+                </TabsTrigger>
+                <TabsTrigger value="consumo" className="text-xs md:text-sm">
+                  Consumo ({notasProcessadasConsumo.length})
+                </TabsTrigger>
+                <TabsTrigger value="historico" className="text-xs md:text-sm">
+                  Histórico ({notasHistorico.length})
+                </TabsTrigger>
               </TabsList>
               
               {/* Aba Pendentes */}
-              <TabsContent value="pendentes" className="mt-4">
+              <TabsContent value="pendentes" className="mt-3 md:mt-4">
                 {notasPendentes.length > 0 ? (
                   <Card>
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-medium">Notas fiscais pendentes</h3>
-                        <div className="relative w-64">
-                          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <div className="p-3 md:p-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 md:mb-4 gap-3">
+                        <h3 className="text-base md:text-lg font-medium">Notas fiscais pendentes</h3>
+                        <div className="relative w-full sm:w-56 md:w-64">
+                          <Search className="absolute left-2.5 md:left-3 top-2.5 md:top-3 h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
                           <Input
                             placeholder="Buscar nota fiscal..."
-                            className="pl-10"
+                            className="pl-8 md:pl-10 h-9 md:h-10 text-sm"
                           />
                         </div>
                       </div>
 
-                      <div className="border rounded-md">
-                        <table className="w-full">
+                      <div className="border rounded-md overflow-x-auto">
+                        <table className="w-full min-w-[640px]">
                           <thead className="bg-muted/50">
                             <tr>
-                              <th className="text-left p-3 text-sm font-medium">Número</th>
-                              <th className="text-left p-3 text-sm font-medium">Fornecedor</th>
-                              <th className="text-left p-3 text-sm font-medium">Data</th>
-                              <th className="text-left p-3 text-sm font-medium">Valor</th>
-                              <th className="text-left p-3 text-sm font-medium">Status</th>
-                              <th className="text-left p-3 text-sm font-medium">Ações</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Número</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Fornecedor</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Data</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Valor</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Status</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Ações</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -866,21 +878,22 @@ const NotasFiscais = () => {
                               className="hover:bg-muted/50 cursor-pointer border-t"
                               onClick={() => setNotaSelecionada(nota)}
                             >
-                              <td className="p-3">{nota.numero || '-'}</td>
-                              <td className="p-3">{nota.fornecedor || '-'}</td>
-                              <td className="p-3">
+                              <td className="p-2 md:p-3 text-xs md:text-sm">{nota.numero || '-'}</td>
+                              <td className="p-2 md:p-3 text-xs md:text-sm truncate max-w-[120px] md:max-w-none">{nota.fornecedor || '-'}</td>
+                              <td className="p-2 md:p-3 text-xs md:text-sm whitespace-nowrap">
                                 {nota.dataEmissao ? new Date(nota.dataEmissao).toLocaleDateString('pt-BR') : '-'}
                               </td>
-                              <td className="p-3">
+                              <td className="p-2 md:p-3 text-xs md:text-sm whitespace-nowrap">
                                 R$ {(nota.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </td>
-                              <td className="p-3">
-                                <Badge variant="outline">Pendente</Badge>
+                              <td className="p-2 md:p-3">
+                                <Badge variant="outline" className="text-xs">Pendente</Badge>
                               </td>
-                              <td className="p-3 flex space-x-2">
+                              <td className="p-2 md:p-3 flex space-x-1 md:space-x-2">
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
+                                  className="h-7 w-7 md:h-8 md:w-8 p-0"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (nota.xmlContent) {
@@ -888,17 +901,18 @@ const NotasFiscais = () => {
                                     }
                                   }}
                                 >
-                                  <Download className="h-4 w-4" />
+                                  <Download className="h-3 w-3 md:h-4 md:w-4" />
                                 </Button>
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
+                                  className="h-7 w-7 md:h-8 md:w-8 p-0"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     removerNotaFiscal(nota.id);
                                   }}
                                 >
-                                  <X className="h-4 w-4 text-destructive" />
+                                  <X className="h-3 w-3 md:h-4 md:w-4 text-destructive" />
                                 </Button>
                               </td>
                             </tr>
@@ -918,30 +932,30 @@ const NotasFiscais = () => {
               </TabsContent>
 
               {/* Aba Estoque */}
-              <TabsContent value="estoque" className="mt-4">
+              <TabsContent value="estoque" className="mt-3 md:mt-4">
                 {notasProcessadasEstoque.length > 0 ? (
                   <Card>
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-medium">Notas fiscais - Estoque</h3>
-                        <div className="relative w-64">
-                          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <div className="p-3 md:p-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 md:mb-4 gap-3">
+                        <h3 className="text-base md:text-lg font-medium">Notas fiscais - Estoque</h3>
+                        <div className="relative w-full sm:w-56 md:w-64">
+                          <Search className="absolute left-2.5 md:left-3 top-2.5 md:top-3 h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
                           <Input
                             placeholder="Buscar nota fiscal..."
-                            className="pl-10"
+                            className="pl-8 md:pl-10 h-9 md:h-10 text-sm"
                           />
                         </div>
                       </div>
 
-                      <div className="border rounded-md">
-                        <table className="w-full">
+                      <div className="border rounded-md overflow-x-auto">
+                        <table className="w-full min-w-[640px]">
                           <thead className="bg-muted/50">
                             <tr>
-                              <th className="text-left p-3 text-sm font-medium">Número</th>
-                              <th className="text-left p-3 text-sm font-medium">Fornecedor</th>
-                              <th className="text-left p-3 text-sm font-medium">Data</th>
-                              <th className="text-left p-3 text-sm font-medium">Valor</th>
-                              <th className="text-left p-3 text-sm font-medium">Status</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Número</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Fornecedor</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Data</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Valor</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Status</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -951,16 +965,16 @@ const NotasFiscais = () => {
                                 className="hover:bg-muted/50 cursor-pointer border-t"
                                 onClick={() => setNotaSelecionada(nota)}
                               >
-                                <td className="p-3">{nota.numero || '-'}</td>
-                                <td className="p-3">{nota.fornecedor || '-'}</td>
-                                <td className="p-3">
+                                <td className="p-2 md:p-3 text-xs md:text-sm">{nota.numero || '-'}</td>
+                                <td className="p-2 md:p-3 text-xs md:text-sm truncate max-w-[120px] md:max-w-none">{nota.fornecedor || '-'}</td>
+                                <td className="p-2 md:p-3 text-xs md:text-sm whitespace-nowrap">
                                   {nota.dataEmissao ? new Date(nota.dataEmissao).toLocaleDateString('pt-BR') : '-'}
                                 </td>
-                                <td className="p-3">
+                                <td className="p-2 md:p-3 text-xs md:text-sm whitespace-nowrap">
                                   R$ {(nota.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="p-3">
-                                  <Badge variant="secondary">Estoque</Badge>
+                                <td className="p-2 md:p-3">
+                                  <Badge variant="secondary" className="text-xs">Estoque</Badge>
                                 </td>
                               </tr>
                             ))}
@@ -979,30 +993,30 @@ const NotasFiscais = () => {
               </TabsContent>
 
               {/* Aba Consumo */}
-              <TabsContent value="consumo" className="mt-4">
+              <TabsContent value="consumo" className="mt-3 md:mt-4">
                 {notasProcessadasConsumo.length > 0 ? (
                   <Card>
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-medium">Notas fiscais - Consumo Direto</h3>
-                        <div className="relative w-64">
-                          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <div className="p-3 md:p-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 md:mb-4 gap-3">
+                        <h3 className="text-base md:text-lg font-medium">Notas fiscais - Consumo Direto</h3>
+                        <div className="relative w-full sm:w-56 md:w-64">
+                          <Search className="absolute left-2.5 md:left-3 top-2.5 md:top-3 h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
                           <Input
                             placeholder="Buscar nota fiscal..."
-                            className="pl-10"
+                            className="pl-8 md:pl-10 h-9 md:h-10 text-sm"
                           />
                         </div>
                       </div>
 
-                      <div className="border rounded-md">
-                        <table className="w-full">
+                      <div className="border rounded-md overflow-x-auto">
+                        <table className="w-full min-w-[640px]">
                           <thead className="bg-muted/50">
                             <tr>
-                              <th className="text-left p-3 text-sm font-medium">Número</th>
-                              <th className="text-left p-3 text-sm font-medium">Fornecedor</th>
-                              <th className="text-left p-3 text-sm font-medium">Data</th>
-                              <th className="text-left p-3 text-sm font-medium">Valor</th>
-                              <th className="text-left p-3 text-sm font-medium">Status</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Número</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Fornecedor</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Data</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Valor</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Status</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1012,16 +1026,16 @@ const NotasFiscais = () => {
                                 className="hover:bg-muted/50 cursor-pointer border-t"
                                 onClick={() => setNotaSelecionada(nota)}
                               >
-                                <td className="p-3">{nota.numero || '-'}</td>
-                                <td className="p-3">{nota.fornecedor || '-'}</td>
-                                <td className="p-3">
+                                <td className="p-2 md:p-3 text-xs md:text-sm">{nota.numero || '-'}</td>
+                                <td className="p-2 md:p-3 text-xs md:text-sm truncate max-w-[120px] md:max-w-none">{nota.fornecedor || '-'}</td>
+                                <td className="p-2 md:p-3 text-xs md:text-sm whitespace-nowrap">
                                   {nota.dataEmissao ? new Date(nota.dataEmissao).toLocaleDateString('pt-BR') : '-'}
                                 </td>
-                                <td className="p-3">
+                                <td className="p-2 md:p-3 text-xs md:text-sm whitespace-nowrap">
                                   R$ {(nota.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="p-3">
-                                  <Badge variant="secondary">Consumo</Badge>
+                                <td className="p-2 md:p-3">
+                                  <Badge variant="secondary" className="text-xs">Consumo</Badge>
                                 </td>
                               </tr>
                             ))}
@@ -1040,32 +1054,32 @@ const NotasFiscais = () => {
               </TabsContent>
 
               {/* Aba Histórico */}
-              <TabsContent value="historico" className="mt-4">
+              <TabsContent value="historico" className="mt-3 md:mt-4">
                 {notasHistorico.length > 0 ? (
                   <Card>
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-medium">Histórico de Notas Fiscais</h3>
-                        <div className="relative w-64">
-                          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <div className="p-3 md:p-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 md:mb-4 gap-3">
+                        <h3 className="text-base md:text-lg font-medium">Histórico de Notas Fiscais</h3>
+                        <div className="relative w-full sm:w-56 md:w-64">
+                          <Search className="absolute left-2.5 md:left-3 top-2.5 md:top-3 h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
                           <Input
                             placeholder="Buscar nota fiscal..."
-                            className="pl-10"
+                            className="pl-8 md:pl-10 h-9 md:h-10 text-sm"
                           />
                         </div>
                       </div>
 
-                      <div className="border rounded-md">
-                        <table className="w-full">
+                      <div className="border rounded-md overflow-x-auto">
+                        <table className="w-full min-w-[800px]">
                           <thead className="bg-muted/50">
                             <tr>
-                              <th className="text-left p-3 text-sm font-medium">Número</th>
-                              <th className="text-left p-3 text-sm font-medium">Fornecedor</th>
-                              <th className="text-left p-3 text-sm font-medium">Data</th>
-                              <th className="text-left p-3 text-sm font-medium">Valor</th>
-                              <th className="text-left p-3 text-sm font-medium">Tipo</th>
-                              <th className="text-left p-3 text-sm font-medium">Processamento</th>
-                              <th className="text-left p-3 text-sm font-medium">Ações</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Número</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Fornecedor</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Data</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Valor</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Tipo</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Processamento</th>
+                              <th className="text-left p-2 md:p-3 text-xs md:text-sm font-medium">Ações</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1075,28 +1089,29 @@ const NotasFiscais = () => {
                                 className="hover:bg-muted/50 cursor-pointer border-t"
                                 onClick={() => setNotaSelecionada(nota)}
                               >
-                                <td className="p-3">{nota.numero || '-'}</td>
-                                <td className="p-3">{nota.fornecedor || '-'}</td>
-                                <td className="p-3">
+                                <td className="p-2 md:p-3 text-xs md:text-sm">{nota.numero || '-'}</td>
+                                <td className="p-2 md:p-3 text-xs md:text-sm truncate max-w-[120px] md:max-w-none">{nota.fornecedor || '-'}</td>
+                                <td className="p-2 md:p-3 text-xs md:text-sm whitespace-nowrap">
                                   {nota.dataEmissao ? new Date(nota.dataEmissao).toLocaleDateString('pt-BR') : '-'}
                                 </td>
-                                <td className="p-3">
+                                <td className="p-2 md:p-3 text-xs md:text-sm whitespace-nowrap">
                                   R$ {(nota.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="p-3">
+                                <td className="p-2 md:p-3">
                                   {nota.tipoProcessamento === 'estoque' ? (
-                                    <Badge variant="secondary">Estoque</Badge>
+                                    <Badge variant="secondary" className="text-xs">Estoque</Badge>
                                   ) : (
-                                    <Badge variant="secondary">Consumo Direto</Badge>
+                                    <Badge variant="secondary" className="text-xs">Consumo Direto</Badge>
                                   )}
                                 </td>
-                                <td className="p-3">
+                                <td className="p-2 md:p-3 text-xs md:text-sm whitespace-nowrap">
                                   {nota.dataProcessamento ? new Date(nota.dataProcessamento).toLocaleString('pt-BR') : '-'}
                                 </td>
-                                <td className="p-3">
+                                <td className="p-2 md:p-3">
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
+                                    className="h-7 w-7 md:h-8 md:w-8 p-0"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (nota.xmlContent) {

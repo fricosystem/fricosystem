@@ -386,45 +386,59 @@ const Relatorios = () => {
 
   return (
     <AppLayout title="Relatórios Gerais">
-      <div className="flex flex-col h-full w-full px-4 py-4 overflow-hidden">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-          <h1 className="text-2xl font-bold">Relatórios de Movimentação</h1>
+      <div className="flex flex-col h-full w-full max-w-full px-3 py-4 md:px-6 overflow-x-hidden">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3 md:gap-4 min-w-0">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold">Relatórios de Movimentação</h1>
+            <p className="text-sm text-muted-foreground hidden md:block mt-1">Visualize e filtre todos os movimentos de entrada e saída</p>
+          </div>
           
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={resetFiltros}>
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <Button 
+              variant="outline" 
+              onClick={resetFiltros}
+              size="sm"
+              className="flex-1 md:flex-none text-xs md:text-sm h-8 md:h-9"
+            >
               Limpar Filtros
             </Button>
-            <Button variant="outline" onClick={handleExportar}>
-              <Download className="h-4 w-4 mr-2" />
+            <Button 
+              variant="outline" 
+              onClick={handleExportar}
+              size="sm"
+              className="flex-1 md:flex-none text-xs md:text-sm h-8 md:h-9"
+            >
+              <Download className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
               Exportar
             </Button>
           </div>
         </div>
 
         {/* Filtros organizados em colunas */}
-        <div className="bg-card rounded-lg shadow p-4 mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="flex flex-col gap-2 col-span-1 md:col-span-2">
-              <Label className="text-sm font-medium">Buscar</Label>
+        <div className="bg-card rounded-lg shadow p-3 md:p-4 mb-3 md:mb-4 min-w-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-3 md:mb-4 min-w-0">
+            <div className="flex flex-col gap-1.5 md:gap-2 sm:col-span-2">
+              <Label className="text-xs md:text-sm font-medium">Buscar</Label>
               <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
+                <Search className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                 <Input
-                  placeholder="Buscar por produto, código, solicitante, tipo, depósito..."
+                  placeholder="Buscar por produto, código..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  className="text-xs md:text-sm h-8 md:h-9"
                 />
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Movimento</Label>
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Movimento</Label>
               <Select 
                 value={filtros.status} 
                 onValueChange={(value: 'todos' | 'entrada' | 'saida') => handleFiltroChange('status', value)}
               >
-                <SelectTrigger>
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-9">
+                  <div className="flex items-center gap-1.5 md:gap-2">
+                    <Filter className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                     <SelectValue placeholder="Status" />
                   </div>
                 </SelectTrigger>
@@ -436,16 +450,16 @@ const Relatorios = () => {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Tipo</Label>
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Tipo</Label>
               <Select 
                 value={filtros.tipo} 
                 onValueChange={(value) => handleFiltroChange('tipo', value)}
                 disabled={opcoesFiltro.tipos.length === 0}
               >
-                <SelectTrigger>
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-9">
+                  <div className="flex items-center gap-1.5 md:gap-2">
+                    <Filter className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                     <SelectValue placeholder="Tipo" />
                   </div>
                 </SelectTrigger>
@@ -461,16 +475,16 @@ const Relatorios = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Período</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-3 md:mb-4">
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Período</Label>
               <Select 
                 value={filtros.periodo} 
                 onValueChange={handlePeriodoChange}
               >
-                <SelectTrigger>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-9">
+                  <div className="flex items-center gap-1.5 md:gap-2">
+                    <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                     <SelectValue placeholder="Período" />
                   </div>
                 </SelectTrigger>
@@ -486,19 +500,20 @@ const Relatorios = () => {
 
             {filtros.periodo === 'personalizado' && (
               <>
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium">Data Inicial</Label>
+                <div className="flex flex-col gap-1.5 md:gap-2">
+                  <Label className="text-xs md:text-sm font-medium">Data Inicial</Label>
                   <Input
                     type="text"
                     placeholder="DD/MM/YYYY"
                     value={dataInicioInput}
                     onChange={(e) => handleDataInicioChange(e.target.value)}
                     maxLength={10}
+                    className="text-xs md:text-sm h-8 md:h-9"
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium">Data Final</Label>
-                  <div className="flex gap-2">
+                <div className="flex flex-col gap-1.5 md:gap-2 sm:col-span-2">
+                  <Label className="text-xs md:text-sm font-medium">Data Final</Label>
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Input
                       type="text"
                       placeholder="DD/MM/YYYY"
@@ -506,14 +521,16 @@ const Relatorios = () => {
                       onChange={(e) => handleDataFimChange(e.target.value)}
                       maxLength={10}
                       disabled={!dataInicioInput || dataInicioInput.length < 10}
+                      className="text-xs md:text-sm h-8 md:h-9 flex-1"
                     />
                     <Button 
                       onClick={aplicarFiltroPersonalizado}
                       disabled={!dataInicioInput || dataInicioInput.length < 10 || !dataFimInput || dataFimInput.length < 10}
                       variant="default"
                       size="sm"
+                      className="text-xs md:text-sm h-8 md:h-9 whitespace-nowrap"
                     >
-                      Aplicar Filtro Personalizado
+                      Aplicar Filtro
                     </Button>
                   </div>
                 </div>
@@ -521,15 +538,15 @@ const Relatorios = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Solicitante</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Solicitante</Label>
               <Select 
                 value={filtros.solicitante || ''} 
                 onValueChange={(value) => handleFiltroChange('solicitante', value)}
                 disabled={opcoesFiltro.solicitantes.length === 0}
               >
-                <SelectTrigger>
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-9">
                   <SelectValue placeholder="Solicitante" />
                 </SelectTrigger>
                 <SelectContent>
@@ -543,14 +560,14 @@ const Relatorios = () => {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Cargo</Label>
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Cargo</Label>
               <Select 
                 value={filtros.cargo || ''} 
                 onValueChange={(value) => handleFiltroChange('cargo', value)}
                 disabled={opcoesFiltro.cargos.length === 0}
               >
-                <SelectTrigger>
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-9">
                   <SelectValue placeholder="Cargo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -564,14 +581,14 @@ const Relatorios = () => {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Depósito</Label>
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Depósito</Label>
               <Select 
                 value={filtros.deposito || ''} 
                 onValueChange={(value) => handleFiltroChange('deposito', value)}
                 disabled={opcoesFiltro.depositos.length === 0}
               >
-                <SelectTrigger>
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-9">
                   <SelectValue placeholder="Depósito" />
                 </SelectTrigger>
                 <SelectContent>
@@ -585,14 +602,14 @@ const Relatorios = () => {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Usuário</Label>
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Usuário</Label>
               <Select 
                 value={filtros.usuario || ''} 
                 onValueChange={(value) => handleFiltroChange('usuario', value)}
                 disabled={opcoesFiltro.usuarios.length === 0}
               >
-                <SelectTrigger>
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-9">
                   <SelectValue placeholder="Usuário" />
                 </SelectTrigger>
                 <SelectContent>
@@ -607,15 +624,15 @@ const Relatorios = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Centro de Custo</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-3 md:mt-4">
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Centro de Custo</Label>
               <Select 
                 value={filtros.centroCusto || ''} 
                 onValueChange={(value) => handleFiltroChange('centroCusto', value)}
                 disabled={opcoesFiltro.centrosCusto.length === 0}
               >
-                <SelectTrigger>
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-9">
                   <SelectValue placeholder="Centro de Custo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -629,14 +646,14 @@ const Relatorios = () => {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Unidade</Label>
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Unidade</Label>
               <Select 
                 value={filtros.unidade || ''} 
                 onValueChange={(value) => handleFiltroChange('unidade', value)}
                 disabled={opcoesFiltro.unidades.length === 0}
               >
-                <SelectTrigger>
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-9">
                   <SelectValue placeholder="Unidade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -650,94 +667,101 @@ const Relatorios = () => {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Valor Mínimo</Label>
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Valor Mínimo</Label>
               <Input
                 type="number"
                 placeholder="Valor mínimo"
                 value={filtros.valorMin || ''}
                 onChange={(e) => handleFiltroChange('valorMin', e.target.value ? Number(e.target.value) : undefined)}
+                className="text-xs md:text-sm h-8 md:h-9"
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Valor Máximo</Label>
+            <div className="flex flex-col gap-1.5 md:gap-2">
+              <Label className="text-xs md:text-sm font-medium">Valor Máximo</Label>
               <Input
                 type="number"
                 placeholder="Valor máximo"
                 value={filtros.valorMax || ''}
                 onChange={(e) => handleFiltroChange('valorMax', e.target.value ? Number(e.target.value) : undefined)}
+                className="text-xs md:text-sm h-8 md:h-9"
               />
             </div>
           </div>
         </div>
 
         {/* Card para a lista de resultados */}
-        <div className="bg-card rounded-lg shadow overflow-hidden mb-4 flex-1 flex flex-col">
-          <div className="flex-1 overflow-auto">
+        <div className="bg-card rounded-lg shadow overflow-hidden mb-3 md:mb-4 flex-1 flex flex-col min-w-0">
+          <div className="flex-1 overflow-auto min-w-0">
             {isLoading ? (
               <div className="flex items-center justify-center h-full rounded-lg border">
-                <p className="text-lg text-muted-foreground">Carregando relatórios...</p>
+                <p className="text-sm md:text-base text-muted-foreground">Carregando relatórios...</p>
               </div>
             ) : relatoriosFiltrados.length === 0 ? (
               <div className="flex items-center justify-center h-full rounded-lg border">
-                <p className="text-lg text-muted-foreground">Nenhum relatório encontrado</p>
+                <p className="text-sm md:text-base text-muted-foreground">Nenhum relatório encontrado</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table className="min-w-full">
+              <div className="overflow-x-auto w-full">
+                <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Código</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                      <TableHead className="text-right">Valor Unit.</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Solicitante</TableHead>
-                      <TableHead>Depósito</TableHead>
-                      <TableHead>Centro de Custo</TableHead>
-                      <TableHead>Unidade</TableHead>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>Requisição</TableHead>
+                      <TableHead className="text-xs md:text-sm w-[90px] md:w-[100px]">Data</TableHead>
+                      <TableHead className="text-xs md:text-sm w-[140px] md:w-[150px]">Produto</TableHead>
+                      <TableHead className="hidden md:table-cell text-xs md:text-sm w-[100px]">Código</TableHead>
+                      <TableHead className="text-right text-xs md:text-sm w-[60px] md:w-[80px]">Qtd</TableHead>
+                      <TableHead className="hidden lg:table-cell text-right text-xs md:text-sm w-[90px] md:w-[100px]">Valor Unit.</TableHead>
+                      <TableHead className="text-right text-xs md:text-sm w-[90px] md:w-[100px]">Total</TableHead>
+                      <TableHead className="text-xs md:text-sm w-[70px] md:w-[80px]">Status</TableHead>
+                      <TableHead className="hidden xl:table-cell text-xs md:text-sm w-[100px]">Tipo</TableHead>
+                      <TableHead className="hidden sm:table-cell text-xs md:text-sm w-[110px] md:w-[120px]">Solicitante</TableHead>
+                      <TableHead className="hidden lg:table-cell text-xs md:text-sm w-[110px] md:w-[120px]">Depósito</TableHead>
+                      <TableHead className="hidden xl:table-cell text-xs md:text-sm w-[110px] md:w-[120px]">Centro de Custo</TableHead>
+                      <TableHead className="hidden xl:table-cell text-xs md:text-sm w-[80px]">Unidade</TableHead>
+                      <TableHead className="hidden xl:table-cell text-xs md:text-sm w-[100px]">Usuário</TableHead>
+                      <TableHead className="hidden xl:table-cell text-xs md:text-sm w-[120px]">Requisição</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {relatoriosFiltrados.map((relatorio) => (
                       <TableRow key={relatorio.id}>
-                        <TableCell>{formatDate(relatorio.data_registro)}</TableCell>
-                        <TableCell className="font-medium">{relatorio.nome_produto}</TableCell>
-                        <TableCell>{relatorio.codigo_material}</TableCell>
-                        <TableCell className="text-right">{relatorio.quantidade}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(relatorio.valor_unitario)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(relatorio.valor_total)}</TableCell>
+                        <TableCell className="text-xs md:text-sm">{formatDate(relatorio.data_registro)}</TableCell>
+                        <TableCell className="font-medium text-xs md:text-sm">
+                          <div className="truncate max-w-[120px] md:max-w-[140px]">{relatorio.nome_produto}</div>
+                          <div className="text-[10px] md:text-xs text-muted-foreground md:hidden truncate max-w-[120px]">
+                            {relatorio.codigo_material}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-xs md:text-sm">{relatorio.codigo_material}</TableCell>
+                        <TableCell className="text-right text-xs md:text-sm">{relatorio.quantidade}</TableCell>
+                        <TableCell className="hidden lg:table-cell text-right text-xs md:text-sm">{formatCurrency(relatorio.valor_unitario)}</TableCell>
+                        <TableCell className="text-right font-medium text-xs md:text-sm">{formatCurrency(relatorio.valor_total)}</TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
+                          <span className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs whitespace-nowrap ${
                             relatorio.status === 'entrada' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
                           }`}>
                             {relatorio.status === 'entrada' ? 'Entrada' : 'Saída'}
                           </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden xl:table-cell">
                           <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
                             {relatorio.tipo || 'N/A'}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{relatorio.solicitante.nome}</p>
-                            <p className="text-xs text-muted-foreground">{relatorio.solicitante.cargo}</p>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="min-w-0">
+                            <p className="font-medium text-xs md:text-sm truncate max-w-[100px]">{relatorio.solicitante.nome}</p>
+                            <p className="text-[10px] md:text-xs text-muted-foreground truncate max-w-[100px]">{relatorio.solicitante.cargo}</p>
                           </div>
                         </TableCell>
-                        <TableCell>{relatorio.deposito || 'N/A'}</TableCell>
-                        <TableCell>{relatorio.centro_de_custo || 'N/A'}</TableCell>
-                        <TableCell>{relatorio.unidade || 'N/A'}</TableCell>
-                        <TableCell>{relatorio.usuario.nome}</TableCell>
-                        <TableCell className="font-mono">{relatorio.requisicao_id}</TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs md:text-sm">{relatorio.deposito || 'N/A'}</TableCell>
+                        <TableCell className="hidden xl:table-cell text-xs md:text-sm">{relatorio.centro_de_custo || 'N/A'}</TableCell>
+                        <TableCell className="hidden xl:table-cell text-xs md:text-sm">{relatorio.unidade || 'N/A'}</TableCell>
+                        <TableCell className="hidden xl:table-cell text-xs md:text-sm">{relatorio.usuario.nome}</TableCell>
+                        <TableCell className="hidden xl:table-cell font-mono text-xs md:text-sm">{relatorio.requisicao_id}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -747,19 +771,19 @@ const Relatorios = () => {
           </div>
 
           {/* Barra de totais dentro do card */}
-          <div className="border-t p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-sm font-medium">
-                Total de registros: {relatoriosFiltrados.length}
+          <div className="border-t p-3 md:p-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+              <div className="text-xs md:text-sm font-medium">
+                Total de registros: <span className="font-bold">{relatoriosFiltrados.length}</span>
               </div>
-              <div className="flex gap-6">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-muted-foreground">Quantidade Total</div>
-                  <div className="text-lg font-bold text-blue-100">{totais.quantidadeTotal}</div>
+              <div className="flex gap-4 md:gap-6 w-full sm:w-auto">
+                <div className="text-right flex-1 sm:flex-none">
+                  <div className="text-xs md:text-sm font-medium text-muted-foreground">Quantidade Total</div>
+                  <div className="text-base md:text-lg font-bold text-blue-600 dark:text-blue-400">{totais.quantidadeTotal}</div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-muted-foreground">Valor Total</div>
-                  <div className="text-lg font-bold text-primary">{formatCurrency(totais.valorTotal)}</div>
+                <div className="text-right flex-1 sm:flex-none">
+                  <div className="text-xs md:text-sm font-medium text-muted-foreground">Valor Total</div>
+                  <div className="text-base md:text-lg font-bold text-primary">{formatCurrency(totais.valorTotal)}</div>
                 </div>
               </div>
             </div>

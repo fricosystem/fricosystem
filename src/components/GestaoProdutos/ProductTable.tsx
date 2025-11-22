@@ -1,4 +1,5 @@
-import { Edit, Trash2, Package } from "lucide-react";
+import { Edit, Package } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Pagination,
   PaginationContent,
@@ -30,12 +31,12 @@ interface Produto {
   fornecedor_id: string | null;
   fornecedor_nome: string | null;
   fornecedor_cnpj: string | null;
+  ativo?: string;
 }
 
 interface ProductTableProps {
   produtos: Produto[];
   onEdit: (produto: Produto) => void;
-  onDelete: (id: string) => void;
   page: number;
   rowsPerPage: number;
   onPageChange: (page: number) => void;
@@ -45,7 +46,6 @@ interface ProductTableProps {
 export const ProductTable = ({ 
   produtos, 
   onEdit, 
-  onDelete, 
   page, 
   rowsPerPage, 
   onPageChange, 
@@ -83,9 +83,19 @@ export const ProductTable = ({
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="font-medium text-sm truncate">{produto.nome}</h3>
-                        <p className="text-xs text-muted-foreground">#{produto.codigo_estoque}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium text-sm truncate">{produto.nome}</h3>
+                          {produto.ativo === "não" && (
+                            <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
+                              Inativo
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Cód. Fornecedor: {produto.codigo_estoque}</p>
+                        {produto.codigo_material && (
+                          <p className="text-xs text-muted-foreground">Cód.: {produto.codigo_material}</p>
+                        )}
                       </div>
                     </div>
                     
@@ -116,15 +126,6 @@ export const ProductTable = ({
                       >
                         <Edit size={14} className="mr-1" />
                         Editar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => onDelete(produto.id)}
-                        className="flex-1 h-8 text-xs"
-                      >
-                        <Trash2 size={14} className="mr-1" />
-                        Excluir
                       </Button>
                     </div>
                   </div>
@@ -196,6 +197,7 @@ export const ProductTable = ({
           <thead className="bg-muted">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">IMAGEM</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">CÓDIGO FORNECEDOR</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">CÓDIGO</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">NOME</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">QUANTIDADE</th>
@@ -223,8 +225,18 @@ export const ProductTable = ({
                 <td className="px-6 py-4 whitespace-nowrap text-foreground">
                   {produto.codigo_estoque}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-foreground">
+                  {produto.codigo_material || "-"}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-foreground">{produto.nome}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">{produto.nome}</span>
+                    {produto.ativo === "não" && (
+                      <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
+                        Inativo
+                      </Badge>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-foreground">
                   <div>
@@ -254,14 +266,6 @@ export const ProductTable = ({
                     >
                       <Edit size={16} className="mr-1" />
                       Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => onDelete(produto.id)}
-                    >
-                      <Trash2 size={16} className="mr-1" />
-                      Excluir
                     </Button>
                   </div>
                 </td>

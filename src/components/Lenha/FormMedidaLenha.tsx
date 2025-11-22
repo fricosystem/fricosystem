@@ -225,17 +225,17 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
   
   return (
     <Card className="w-full max-w-5xl mx-auto">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-2xl font-bold">Nova Medição de Lenha</CardTitle>
+      <CardHeader className="pb-3 px-4 md:pb-4 md:px-6">
+        <CardTitle className="text-xl md:text-2xl font-bold">Nova Medição de Lenha</CardTitle>
       </CardHeader>
       
-      <CardContent className="pb-6">
-        <form onSubmit={handleSalvar} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <CardContent className="pb-4 px-4 md:pb-6 md:px-6">
+        <form onSubmit={handleSalvar} className="space-y-6 md:space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             {/* Coluna 1 - Informações da Entrega */}
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="fornecedor" className="text-base">Fornecedor*</Label>
+                <Label htmlFor="fornecedor" className="text-sm md:text-base">Fornecedor*</Label>
                 <FornecedorSelect 
                   value={fornecedor} 
                   onChange={handleFornecedorChange}
@@ -243,28 +243,28 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="nfe" className="text-base">Nota Fiscal</Label>
+                <Label htmlFor="nfe" className="text-sm md:text-base">Nota Fiscal</Label>
                 <Input 
                   id="nfe"
                   value={nfe}
                   onChange={(e) => setNfe(e.target.value)}
                   placeholder="Número da NF-e"
-                  className="h-12 text-base"
+                  className="h-10 md:h-12 text-sm md:text-base"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="responsavel" className="text-base">Responsável</Label>
+                <Label htmlFor="responsavel" className="text-sm md:text-base">Responsável</Label>
                 <Input 
                   id="responsavel"
                   value={userData?.nome || ""}
                   disabled
-                  className="h-12 text-base bg-muted cursor-not-allowed"
+                  className="h-10 md:h-12 text-sm md:text-base bg-muted cursor-not-allowed"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="valorUnitario" className="text-base">Valor Unitário (R$/m³)*</Label>
+                <Label htmlFor="valorUnitario" className="text-sm md:text-base">Valor Unitário (R$/m³)*</Label>
                 <Input 
                   id="valorUnitario"
                   type="number" 
@@ -274,7 +274,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
                   onChange={(e) => {/* Removida capacidade de edição */}}
                   placeholder="0,00"
                   readOnly={true}
-                  className="h-12 text-base bg-muted cursor-not-allowed"
+                  className="h-10 md:h-12 text-sm md:text-base bg-muted cursor-not-allowed"
                   required
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -282,9 +282,9 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
                 </p>
               </div>
               
-              <div className="bg-secondary p-6 rounded-lg mt-6">
-                <h3 className="font-medium text-lg mb-4">Resumo do Cálculo</h3>
-                <div className="grid grid-cols-2 gap-4 text-base">
+              <div className="bg-secondary p-4 md:p-6 rounded-lg mt-4 md:mt-6">
+                <h3 className="font-medium text-base md:text-lg mb-3 md:mb-4">Resumo do Cálculo</h3>
+                <div className="grid grid-cols-2 gap-3 md:gap-4 text-sm md:text-base">
                   <div>Altura Média:</div>
                   <div className="font-medium">{alturaMedia} m</div>
                   
@@ -292,18 +292,18 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
                   <div className="font-medium">{metrosCubicos} m³</div>
                   
                   <div>Valor Total:</div>
-                  <div className="font-medium text-lg">R$ {valorTotal.toFixed(2)}</div>
+                  <div className="font-medium text-base md:text-lg">R$ {valorTotal.toFixed(2)}</div>
                 </div>
               </div>
             </div>
             
             {/* Coluna 2 - Medidas */}
-            <div className="space-y-6">
-              <h3 className="font-medium text-lg mb-2">Dimensões da Carga*</h3>
+            <div className="space-y-4 md:space-y-6">
+              <h3 className="font-medium text-base md:text-lg mb-2">Dimensões da Carga*</h3>
               
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4 md:gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="comprimento" className="text-base">Comprimento (metros)*</Label>
+                  <Label htmlFor="comprimento" className="text-sm md:text-base">Comprimento (m)*</Label>
                   <Input
                     id="comprimento"
                     type="number"
@@ -313,12 +313,12 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
                     onChange={(e) => setComprimento(Number(e.target.value))}
                     placeholder="0,00"
                     required
-                    className="h-12 text-base"
+                    className="h-10 md:h-12 text-sm md:text-base"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="largura" className="text-base">Largura (metros)*</Label>
+                  <Label htmlFor="largura" className="text-sm md:text-base">Largura (m)*</Label>
                   <Input
                     id="largura"
                     type="number"
@@ -328,16 +328,16 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
                     onChange={(e) => setLargura(Number(e.target.value))}
                     placeholder="0,00"
                     required
-                    className="h-12 text-base"
+                    className="h-10 md:h-12 text-sm md:text-base"
                   />
                 </div>
               </div>
               
-              <h3 className="font-medium text-lg mb-2 mt-6">Medidas de Altura (metros)*</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              <h3 className="font-medium text-base md:text-lg mb-2 mt-4 md:mt-6">Medidas de Altura (m)*</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 {medidas.map((medida, index) => (
                   <div key={index} className="space-y-2">
-                    <Label htmlFor={`medida-${index}`} className="text-base">Altura {index + 1}</Label>
+                    <Label htmlFor={`medida-${index}`} className="text-sm md:text-base">Altura {index + 1}</Label>
                     <Input
                       id={`medida-${index}`}
                       type="number"
@@ -347,36 +347,36 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
                       onChange={(e) => handleMedidaChange(index, e.target.value)}
                       placeholder="0,00"
                       required
-                      className="h-12 text-base"
+                      className="h-10 md:h-12 text-sm md:text-base"
                     />
                   </div>
                 ))}
               </div>
               
-              <div className="mt-6 p-4 bg-muted rounded-lg">
-                <p className="text-sm mb-2">
+              <div className="mt-4 md:mt-6 p-3 md:p-4 bg-muted rounded-lg">
+                <p className="text-xs md:text-sm mb-2">
                   * Campos obrigatórios
                 </p>
-                <p className="text-sm font-medium">
+                <p className="text-xs md:text-sm font-medium">
                   Fórmula de cálculo:
                 </p>
-                <p className="text-sm">
+                <p className="text-xs md:text-sm">
                   Cubagem = Altura Média × Comprimento × Largura
                 </p>
-                <p className="text-sm mt-2">
+                <p className="text-xs md:text-sm mt-2">
                   As medidas de altura devem ser tomadas em 6 pontos diferentes da carga.
                 </p>
               </div>
             </div>
           </div>
           
-          <CardFooter className="flex justify-end p-0 pt-6 gap-4">
+          <CardFooter className="flex flex-col sm:flex-row justify-end p-0 pt-4 md:pt-6 gap-2 md:gap-4">
             {onCancel && (
               <Button 
                 type="button" 
                 variant="outline"
                 onClick={onCancel}
-                className="h-12 px-6 text-base"
+                className="h-10 md:h-12 px-4 md:px-6 text-sm md:text-base w-full sm:w-auto"
               >
                 Cancelar
               </Button>
@@ -384,7 +384,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
             <Button 
               type="submit" 
               disabled={loading || !medidas.every(m => m > 0) || comprimento <= 0 || largura <= 0}
-              className="h-12 px-6 text-base"
+              className="h-10 md:h-12 px-4 md:px-6 text-sm md:text-base w-full sm:w-auto"
             >
               {loading ? "Salvando..." : "Registrar Medição"}
             </Button>

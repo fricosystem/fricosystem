@@ -283,15 +283,15 @@ const ListaOrdensServico = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Lista de Ordens de Serviço</CardTitle>
+        <CardTitle className="text-xl md:text-2xl font-bold text-center">Lista de Ordens de Serviço</CardTitle>
         <div className="mt-4 flex justify-end">
-          <div className="relative">
+          <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por setor, equipamento, responsável..."
+              placeholder="Buscar por setor, equipamento..."
               value={searchTerm}
               onChange={handleSearch}
-              className="pl-9 w-80"
+              className="pl-9 w-full text-sm"
             />
           </div>
         </div>
@@ -311,49 +311,57 @@ const ListaOrdensServico = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Setor</TableHead>
-                  <TableHead>Equipamento</TableHead>
-                  <TableHead>Peça</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Data/Hora</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead className="min-w-[100px]">Setor</TableHead>
+                  <TableHead className="min-w-[150px]">Equipamento</TableHead>
+                  <TableHead className="hidden md:table-cell min-w-[120px]">Peça</TableHead>
+                  <TableHead className="hidden lg:table-cell min-w-[100px]">Tipo</TableHead>
+                  <TableHead className="hidden sm:table-cell min-w-[130px]">Data/Hora</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  <TableHead className="min-w-[120px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredOrdens.map((ordem) => (
                   <TableRow key={ordem.id}>
-                    <TableCell>{ordem.setor}</TableCell>
                     <TableCell>
-                      {ordem.equipamento}
+                      <div>{ordem.setor}</div>
+                      <div className="text-xs text-muted-foreground sm:hidden mt-1">
+                        {ordem.criadoEm && format(ordem.criadoEm.toDate(), "dd/MM/yy HH:mm")}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>{ordem.equipamento}</div>
                       {ordem.geradaAutomaticamente && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
+                        <Badge variant="secondary" className="text-xs mt-1">
                           Auto
                         </Badge>
                       )}
+                      <div className="text-xs text-muted-foreground md:hidden mt-1">
+                        {ordem.pecaNome || "-"}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {ordem.pecaNome || "-"}
                     </TableCell>
-                    <TableCell>{ordem.tipoManutencao}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">{ordem.tipoManutencao}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {ordem.criadoEm && format(ordem.criadoEm.toDate(), "dd/MM/yyyy HH:mm")}
                     </TableCell>
                     <TableCell>{getStatusBadge(ordem.status)}</TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button 
                               variant="outline" 
                               size="sm"
-                              className="dark:bg-gray-700 dark:hover:bg-gray-600"
+                              className="dark:bg-gray-700 dark:hover:bg-gray-600 w-full sm:w-auto text-xs"
                               onClick={() => setSelectedOrdem(ordem)}
                             >
                               Detalhes
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                          <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                             <DialogHeader>
                               <DialogTitle>Detalhes da Ordem de Serviço</DialogTitle>
                             </DialogHeader>
@@ -479,11 +487,11 @@ const ListaOrdensServico = () => {
                         </Dialog>
                         
                         {ordem.status !== "concluido" && (
-                          <div className="flex space-x-1">
+                          <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
                             <Button 
                               variant="outline" 
                               size="sm"
-                              className={`${ordem.status === "pendente" ? "dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
+                              className={`${ordem.status === "pendente" ? "dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"} text-xs`}
                               onClick={() => handleStatusChange(ordem.id, "pendente")}
                             >
                               Pendente
@@ -491,7 +499,7 @@ const ListaOrdensServico = () => {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              className={`${ordem.status === "em_andamento" ? "dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
+                              className={`${ordem.status === "em_andamento" ? "dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"} text-xs`}
                               onClick={() => handleStatusChange(ordem.id, "em_andamento")}
                             >
                               Em Andamento
@@ -499,7 +507,7 @@ const ListaOrdensServico = () => {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              className={`${ordem.status === "concluido" ? "dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"}`}
+                              className={`${ordem.status === "concluido" ? "dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"} text-xs`}
                               onClick={() => handleStatusChange(ordem.id, "concluido")}
                             >
                               Concluído

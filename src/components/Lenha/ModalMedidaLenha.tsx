@@ -17,10 +17,10 @@ const ModalMedidaLenha = ({ isOpen, onClose, onSaveSuccess }: ModalMedidaLenhaPr
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side="right" 
-        className="w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl overflow-y-auto p-6"
+        className="w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl overflow-y-auto p-4 md:p-6"
       >
-        <SheetHeader className="mb-6">
-          <SheetTitle className="text-2xl font-bold">Nova Medição de Lenha</SheetTitle>
+        <SheetHeader className="mb-4 md:mb-6">
+          <SheetTitle className="text-xl md:text-2xl font-bold">Nova Medição de Lenha</SheetTitle>
         </SheetHeader>
         <div>
           <FormMedidaLenha 

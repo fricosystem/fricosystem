@@ -219,11 +219,11 @@ const Administrativo = () => {
         </TabsList>
 
         <TabsContent value="usuarios" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center">
             <h2 className="text-xl font-bold">Gestão de Usuários</h2>
             <Dialog>
               <DialogTrigger asChild>
-                <Button>Adicionar Usuário</Button>
+                <Button className="w-full sm:w-auto">Adicionar Usuário</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -300,43 +300,50 @@ const Administrativo = () => {
 
           <Card>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Cargo</TableHead>
-                    <TableHead>Perfil</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Último Acesso</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.nome}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.cargo}</TableCell>
-                      <TableCell>{user.perfil}</TableCell>
-                      <TableCell>
-                        <Badge variant={user.status === "Ativo" ? "default" : "secondary"}>
-                          {user.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{user.ultimoAcesso}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="sm">
-                          Editar
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          Desativar
-                        </Button>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[120px]">Nome</TableHead>
+                      <TableHead className="min-w-[180px] hidden sm:table-cell">Email</TableHead>
+                      <TableHead className="min-w-[100px] hidden md:table-cell">Cargo</TableHead>
+                      <TableHead className="min-w-[80px] hidden lg:table-cell">Perfil</TableHead>
+                      <TableHead className="min-w-[80px]">Status</TableHead>
+                      <TableHead className="min-w-[140px] hidden xl:table-cell">Último Acesso</TableHead>
+                      <TableHead className="text-right min-w-[140px]">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">
+                          <div>{user.nome}</div>
+                          <div className="text-xs text-muted-foreground sm:hidden">{user.email}</div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
+                        <TableCell className="hidden md:table-cell">{user.cargo}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{user.perfil}</TableCell>
+                        <TableCell>
+                          <Badge variant={user.status === "Ativo" ? "default" : "secondary"}>
+                            {user.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden xl:table-cell">{user.ultimoAcesso}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                              Editar
+                            </Button>
+                            <Button variant="ghost" size="sm" className="w-full sm:w-auto">
+                              Desativar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -350,28 +357,30 @@ const Administrativo = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>Ação</TableHead>
-                    <TableHead>Data/Hora</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logEntries.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>{log.usuario}</TableCell>
-                      <TableCell>{log.acao}</TableCell>
-                      <TableCell>{log.data}</TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[120px]">Usuário</TableHead>
+                      <TableHead className="min-w-[200px]">Ação</TableHead>
+                      <TableHead className="min-w-[140px]">Data/Hora</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {logEntries.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="font-medium">{log.usuario}</TableCell>
+                        <TableCell>{log.acao}</TableCell>
+                        <TableCell className="text-sm">{log.data}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline">Exportar Logs</Button>
-              <Button variant="ghost" size="sm">
+            <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
+              <Button variant="outline" className="w-full sm:w-auto">Exportar Logs</Button>
+              <Button variant="ghost" size="sm" className="w-full sm:w-auto">
                 Limpar Filtros
               </Button>
             </CardFooter>

@@ -735,27 +735,35 @@ const SupplierPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Razão Social</TableHead>
-                      <TableHead>CNPJ</TableHead>
-                      <TableHead>Cidade/Estado</TableHead>
-                      <TableHead>Telefone</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Cond. Pagamento</TableHead>
-                      <TableHead>Prazo Entrega</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead className="min-w-[180px]">Razão Social</TableHead>
+                      <TableHead className="hidden md:table-cell min-w-[150px]">CNPJ</TableHead>
+                      <TableHead className="hidden lg:table-cell min-w-[150px]">Cidade/Estado</TableHead>
+                      <TableHead className="hidden sm:table-cell min-w-[120px]">Telefone</TableHead>
+                      <TableHead className="hidden xl:table-cell min-w-[180px]">Email</TableHead>
+                      <TableHead className="hidden lg:table-cell min-w-[120px]">Cond. Pagamento</TableHead>
+                      <TableHead className="hidden md:table-cell min-w-[100px]">Prazo Entrega</TableHead>
+                      <TableHead className="text-right min-w-[80px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {suppliers.length > 0 ? (
                       suppliers.map((supplier, index) => (
                         <TableRow key={index}>
-                          <TableCell className="font-medium">{supplier.razaoSocial}</TableCell>
-                          <TableCell>{supplier.cnpj}</TableCell>
-                          <TableCell>{`${supplier.endereco.cidade}/${supplier.endereco.estado}`}</TableCell>
-                          <TableCell>{supplier.telefone}</TableCell>
-                          <TableCell>{supplier.email}</TableCell>
-                          <TableCell>{supplier.condicoesPagamento}</TableCell>
-                          <TableCell>{supplier.prazoEntrega} dias</TableCell>
+                          <TableCell className="font-medium">
+                            <div>{supplier.razaoSocial}</div>
+                            <div className="text-xs text-muted-foreground md:hidden mt-1">
+                              {supplier.cnpj}
+                            </div>
+                            <div className="text-xs text-muted-foreground sm:hidden mt-1">
+                              {supplier.telefone}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">{supplier.cnpj}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{`${supplier.endereco.cidade}/${supplier.endereco.estado}`}</TableCell>
+                          <TableCell className="hidden sm:table-cell">{supplier.telefone}</TableCell>
+                          <TableCell className="hidden xl:table-cell">{supplier.email}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{supplier.condicoesPagamento}</TableCell>
+                          <TableCell className="hidden md:table-cell">{supplier.prazoEntrega} dias</TableCell>
                           <TableCell className="text-right">
                             <Button 
                               variant="ghost" 

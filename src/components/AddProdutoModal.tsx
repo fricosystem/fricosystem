@@ -41,7 +41,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { addDoc, collection, getDocs, query, orderBy, limit, Timestamp } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, orderBy, limit, Timestamp, where } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -81,7 +81,6 @@ interface FormData {
   codigoEstoque: string;
   nome: string;
   unidade: string;
-  deposito: string;
   quantidade: string;
   calcularMinimo: boolean;
   percentualMinimo: string;
@@ -125,7 +124,6 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       codigoEstoque: "",
       nome: "",
       unidade: "",
-      deposito: "",
       quantidade: "",
       calcularMinimo: false,
       percentualMinimo: "25",
@@ -242,10 +240,9 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
       try {
         setLoadingCodigoEstoque(true);
         
-        // Buscar todos os produtos ordenados pelo código de estoque
+        // Buscar todos os produtos
         const produtosRef = collection(db, "produtos");
-        const q = query(produtosRef, orderBy("codigo_estoque", "asc"));
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(produtosRef);
         
         // Se não houver produtos, use 1
         if (querySnapshot.empty) {
@@ -260,23 +257,14 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
           return typeof codigo === 'string' ? parseInt(codigo, 10) : codigo;
         }).filter(codigo => !isNaN(codigo)); // Filtra códigos inválidos
         
-        // Encontrar o primeiro número disponível
-        let proximoCodigo = 1;
-        for (let i = 0; i < codigosExistentes.length; i++) {
-          if (codigosExistentes[i] === proximoCodigo) {
-            proximoCodigo++;
-          } else if (codigosExistentes[i] > proximoCodigo) {
-            // Se encontrarmos um código maior que o próximo esperado, há um gap
-            break;
-          }
-        }
-        
-        // Definir o último código encontrado (para referência)
+        // Encontrar o maior código existente
         const ultimoCodigo = codigosExistentes.length > 0 ? 
           Math.max(...codigosExistentes) : 0;
-        setUltimoCodigoEstoque(ultimoCodigo);
         
-        // Definir o próximo código disponível
+        // O próximo código é simplesmente o último + 1
+        const proximoCodigo = ultimoCodigo + 1;
+        
+        setUltimoCodigoEstoque(ultimoCodigo);
         form.setValue("codigoEstoque", String(proximoCodigo));
         
       } catch (error) {
@@ -384,6 +372,43 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
     try {
+      // Validar se já existe produto com o mesmo código de estoque
+      const produtosRef = collection(db, "produtos");
+      const codigoEstoqueQuery = query(
+        produtosRef, 
+        where("codigo_estoque", "==", formData.codigoEstoque)
+      );
+      const codigoEstoqueSnapshot = await getDocs(codigoEstoqueQuery);
+      
+      if (!codigoEstoqueSnapshot.empty) {
+        toast({
+          title: "Código duplicado",
+          description: `Já existe um produto cadastrado com o código de estoque ${formData.codigoEstoque}.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Validar se já existe produto com o mesmo código material (se fornecido)
+      if (formData.codigo && formData.codigo.trim() !== "") {
+        const codigoMaterialQuery = query(
+          produtosRef,
+          where("codigo_material", "==", formData.codigo)
+        );
+        const codigoMaterialSnapshot = await getDocs(codigoMaterialQuery);
+        
+        if (!codigoMaterialSnapshot.empty) {
+          toast({
+            title: "Código duplicado",
+            description: `Já existe um produto cadastrado com o código material ${formData.codigo}.`,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       // Get fornecedor details if ID is provided
       let fornecedorNome = formData.fornecedorNome;
       let fornecedorCNPJ = formData.fornecedorCNPJ;
@@ -435,7 +460,6 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         unidade: unidadeNome || formData.unidade,
         unidade_id: formData.unidade || null,
         unidade_cnpj: unidadeCNPJ || null,
-        deposito: formData.deposito,
         quantidade: parseFloat(formData.quantidade),
         quantidade_minima: parseFloat(formData.quantidadeMinima),
         detalhes: formData.detalhes,
@@ -453,6 +477,7 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
         centro_de_custo: centroCustoNome || null,
         centro_de_custo_unidade: centroCustoUnidade || null,
         centro_de_custo_id: formData.centroCusto || null,
+        ativo: "sim"
       };
 
       // Add the product to Firestore
@@ -479,7 +504,6 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
           nome: userData?.nome || 'Sistema',
           email: userData?.email || 'sistema@empresa.com'
         },
-        deposito: formData.deposito,
         prateleira: formData.prateleira || "Não endereçado",
         centro_de_custo: centroCustoNome || formData.unidade,
         unidade: unidadeNome || formData.unidade,
@@ -1030,44 +1054,20 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
               </div>
             </div>
 
-            {/* Deposito e Prateleira */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="deposito"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Depósito/Localização*</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o depósito" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Manutenção">MANUTENÇÃO</SelectItem>
-                        <SelectItem value="Cozinha">COZINHA</SelectItem>
-                        <SelectItem value="Produção">PRODUÇÃO</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="prateleira"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prateleira (Opcional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: A3" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Prateleira */}
+            <FormField
+              control={form.control}
+              name="prateleira"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Prateleira (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: A3" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

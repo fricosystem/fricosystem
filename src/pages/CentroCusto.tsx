@@ -375,30 +375,30 @@ const CentroCusto = () => {
         )}
         
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
             <div className="flex-1">
-              <CardTitle className="text-lg">{centro.nome}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <CardTitle className="text-base sm:text-lg">{centro.nome}</CardTitle>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 {centro.codigo} • {centro.unidade}
               </p>
             </div>
-            <Badge variant={centro.status === "Ativo" ? "default" : "secondary"}>
+            <Badge variant={centro.status === "Ativo" ? "default" : "secondary"} className="shrink-0">
               {centro.status}
             </Badge>
           </div>
         </CardHeader>
         
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 text-sm">
             <div>
-              <p className="text-muted-foreground">Valor Total</p>
-              <p className="font-semibold text-lg">
+              <p className="text-xs sm:text-sm text-muted-foreground">Valor Total</p>
+              <p className="font-semibold text-sm sm:text-lg break-words">
                 R$ {centro.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Valor Utilizado</p>
-              <p className="font-semibold text-lg">
+              <p className="text-xs sm:text-sm text-muted-foreground">Valor Utilizado</p>
+              <p className="font-semibold text-sm sm:text-lg break-words">
                 R$ {centro.valorUtilizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
@@ -496,12 +496,12 @@ const CentroCusto = () => {
             </p>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => handleEdit(centro)}
-              className="flex-1"
+              className="w-full sm:flex-1"
             >
               Editar
             </Button>
@@ -509,7 +509,7 @@ const CentroCusto = () => {
               variant={centro.status === "Ativo" ? "secondary" : "default"}
               size="sm" 
               onClick={() => handleStatusChange(centro, centro.status === "Ativo" ? "Inativo" : "Ativo")}
-              className="flex-1"
+              className="w-full sm:flex-1"
             >
               {centro.status === "Ativo" ? "Desativar" : "Ativar"}
             </Button>
@@ -557,20 +557,20 @@ const CentroCusto = () => {
         </div>
 
         {/* Filters and Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
-            <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1">
+            <div className="relative flex-1 w-full sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Buscar por nome, código ou responsável..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
               />
             </div>
             
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-52">
+              <SelectTrigger className="w-full sm:w-52">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filtrar por Status" />
               </SelectTrigger>
@@ -582,7 +582,7 @@ const CentroCusto = () => {
             </Select>
             
             <Select value={unidadeFilter} onValueChange={setUnidadeFilter}>
-              <SelectTrigger className="w-52">
+              <SelectTrigger className="w-full sm:w-52">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filtrar por Unidade" />
               </SelectTrigger>
@@ -599,33 +599,38 @@ const CentroCusto = () => {
             </Select>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button 
               variant="outline" 
               onClick={atualizarCalculosAutomaticos}
               disabled={atualizandoCalculos}
+              className="w-full sm:w-auto"
             >
               {atualizandoCalculos ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
-              Atualizar Cálculos
+              <span className="hidden sm:inline">Atualizar Cálculos</span>
+              <span className="sm:hidden">Atualizar</span>
             </Button>
             
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => {
-                  setEditingCentro(null);
-                  resetForm();
-                  fetchUsuarios();
-                }}>
+                <Button 
+                  onClick={() => {
+                    setEditingCentro(null);
+                    resetForm();
+                    fetchUsuarios();
+                  }}
+                  className="w-full sm:w-auto"
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Centro de Custo
                 </Button>
               </DialogTrigger>
               
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {editingCentro ? "Editar Centro de Custo" : "Novo Centro de Custo"}

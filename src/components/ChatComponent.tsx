@@ -108,7 +108,7 @@ const ChatComponent = () => {
 
   return (
     <AppLayout title="Chat">
-      <div className="h-full -m-6 bg-background"> {/* Remove padding e usa toda altura */}
+      <div className="h-full -m-6 bg-background overflow-hidden"> {/* Remove padding e usa toda altura */}
         {renderContent()}
       </div>
     </AppLayout>

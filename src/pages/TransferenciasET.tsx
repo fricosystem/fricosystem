@@ -482,8 +482,8 @@ const TransferenciasETContent = () => {
             {/* Coluna 1: Dados da Transferência */}
             <Card className="col-span-1 dark:bg-gray-950 dark:border-gray-700">
               <CardHeader>
-                <CardTitle className="dark:text-gray-100">Dados da Transferência</CardTitle>
-                <CardDescription className="dark:text-gray-300">
+                <CardTitle className="dark:text-gray-100 text-lg">Dados da Transferência</CardTitle>
+                <CardDescription className="dark:text-gray-300 text-sm">
                   Defina os depósitos de origem e destino
                 </CardDescription>
               </CardHeader>
@@ -664,8 +664,8 @@ const TransferenciasETContent = () => {
             {/* Coluna 2: Seleção de Produtos */}
             <Card className="col-span-1 dark:bg-gray-950 dark:border-gray-700">
               <CardHeader>
-                <CardTitle className="dark:text-gray-100">Selecionar Produtos</CardTitle>
-                <CardDescription className="dark:text-gray-300">
+                <CardTitle className="dark:text-gray-100 text-lg">Selecionar Produtos</CardTitle>
+                <CardDescription className="dark:text-gray-300 text-sm">
                   Busque produtos para transferir
                 </CardDescription>
               </CardHeader>
@@ -675,28 +675,28 @@ const TransferenciasETContent = () => {
                     placeholder="Busque por nome ou código"
                     value={pesquisaProduto}
                     onChange={(e) => setPesquisaProduto(e.target.value)}
-                    className="dark:bg-gray-950 dark:border-gray-600 dark:text-gray-100"
+                    className="dark:bg-gray-950 dark:border-gray-600 dark:text-gray-100 text-sm"
                   />
                   <Button 
                     type="button" 
                     size="icon" 
                     onClick={handleBuscarProduto}
                     variant="outline"
-                    className="dark:bg-gray-950 dark:border-gray-600 dark:text-gray-100"
+                    className="dark:bg-gray-950 dark:border-gray-600 dark:text-gray-100 shrink-0"
                   >
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
                 
-                <div className="max-h-[400px] overflow-y-auto border rounded-md dark:border-gray-950">
+                <div className="max-h-[400px] overflow-x-auto overflow-y-auto border rounded-md dark:border-gray-950">
                   {produtosLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin dark:text-gray-400" />
                     </div>
                   ) : produtosFiltrados.length === 0 ? (
-                    <div className="py-8 text-center text-muted-foreground dark:text-gray-400">
+                    <div className="py-8 text-center text-muted-foreground dark:text-gray-400 text-sm px-4">
                       {pesquisaProduto.trim() === "" ? (
-                        "Pesquise por nome, código do estoque ou código do fornecedor para buscar produtos específicos"
+                        "Pesquise por nome, código do estoque ou código do fornecedor"
                       ) : (
                         "Nenhum produto encontrado"
                       )}
@@ -706,10 +706,10 @@ const TransferenciasETContent = () => {
                       <TableHeader className="dark:bg-gray-950">
                         <TableRow className="dark:border-gray-600">
                           <TableHead className="w-12 dark:bg-gray-950"></TableHead>
-                          <TableHead className="dark:bg-gray-950 dark:text-gray-100">Código</TableHead>
-                          <TableHead className="dark:bg-gray-950 dark:text-gray-100">Nome</TableHead>
-                          <TableHead className="dark:bg-gray-950 dark:text-gray-100">Estoque</TableHead>
-                          <TableHead className="dark:bg-gray-950"></TableHead>
+                          <TableHead className="dark:bg-gray-950 dark:text-gray-100 min-w-[80px]">Código</TableHead>
+                          <TableHead className="dark:bg-gray-950 dark:text-gray-100 min-w-[120px]">Nome</TableHead>
+                          <TableHead className="hidden sm:table-cell dark:bg-gray-950 dark:text-gray-100 min-w-[90px]">Estoque</TableHead>
+                          <TableHead className="dark:bg-gray-950 min-w-[80px]"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody className="dark:bg-gray-950">
@@ -723,9 +723,14 @@ const TransferenciasETContent = () => {
                                 className="dark:border-gray-600"
                               />
                             </TableCell>
-                            <TableCell className="dark:text-gray-100">{produto.codigo_estoque}</TableCell>
-                            <TableCell className="dark:text-gray-100">{produto.nome}</TableCell>
-                            <TableCell className="dark:text-gray-100">{produto.quantidade} {produto.unidade_de_medida}</TableCell>
+                            <TableCell className="dark:text-gray-100 text-sm">{produto.codigo_estoque}</TableCell>
+                            <TableCell className="dark:text-gray-100 text-sm">
+                              <div>{produto.nome}</div>
+                              <div className="text-xs text-muted-foreground sm:hidden">
+                                {produto.quantidade} {produto.unidade_de_medida}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell dark:text-gray-100 text-sm">{produto.quantidade} {produto.unidade_de_medida}</TableCell>
                             <TableCell className="dark:bg-gray-950">
                               <Button
                                 type="button"
@@ -854,24 +859,24 @@ const TransferenciasETContent = () => {
             {/* Coluna 3: Lista de Produtos para Transferência */}
             <Card className="col-span-1 dark:bg-gray-950 dark:border-gray-700">
               <CardHeader>
-                <CardTitle className="dark:text-gray-100">Produtos a Transferir</CardTitle>
-                <CardDescription className="dark:text-gray-300">
+                <CardTitle className="dark:text-gray-100 text-lg">Produtos a Transferir</CardTitle>
+                <CardDescription className="dark:text-gray-300 text-sm">
                   {produtosTransferencia.length} produto(s) selecionado(s)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="max-h-[400px] overflow-y-auto border rounded-md dark:border-gray-700">
+                <div className="max-h-[400px] overflow-x-auto overflow-y-auto border rounded-md dark:border-gray-700">
                   {produtosTransferencia.length === 0 ? (
-                    <div className="py-8 text-center text-muted-foreground dark:text-gray-400">
+                    <div className="py-8 text-center text-muted-foreground dark:text-gray-400 text-sm px-4">
                       Nenhum produto adicionado à transferência
                     </div>
                   ) : (
                     <Table>
                       <TableHeader className="dark:bg-gray-950">
                         <TableRow className="dark:border-gray-600">
-                          <TableHead className="dark:bg-gray-950 dark:text-gray-100">Produto</TableHead>
-                          <TableHead className="text-center dark:bg-gray-950 dark:text-gray-100">Qtd</TableHead>
-                          <TableHead className="dark:bg-gray-950"></TableHead>
+                          <TableHead className="dark:bg-gray-950 dark:text-gray-100 min-w-[150px]">Produto</TableHead>
+                          <TableHead className="text-center dark:bg-gray-950 dark:text-gray-100 min-w-[70px]">Qtd</TableHead>
+                          <TableHead className="dark:bg-gray-950 min-w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody className="dark:bg-gray-950">
@@ -879,16 +884,16 @@ const TransferenciasETContent = () => {
                           <TableRow key={produto.id} className="dark:border-gray-700">
                             <TableCell className="dark:bg-gray-950">
                               <div>
-                                <p className="dark:text-gray-100">{produto.nome}</p>
+                                <p className="dark:text-gray-100 text-sm">{produto.nome}</p>
                                 <p className="text-xs text-muted-foreground dark:text-gray-400">
-                                  Código estoque: {produto.codigo_estoque}  |  Limite: {produto.quantidadeAtual}
+                                  Código: {produto.codigo_estoque} | Limite: {produto.quantidadeAtual}
                                 </p>
                               </div>
                             </TableCell>
                             <TableCell className="text-center dark:bg-gray-950">
                             <Input 
                               type="number"
-                              className="w-16 text-center mx-auto dark:bg-gray-950 dark:border-gray-600 dark:text-gray-100"
+                              className="w-16 text-center mx-auto dark:bg-gray-950 dark:border-gray-600 dark:text-gray-100 text-sm"
                               value={produto.quantidade}
                               min={1}
                               max={produto.quantidadeAtual}

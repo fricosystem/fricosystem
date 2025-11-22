@@ -469,14 +469,14 @@ const Compras = () => {
   return (
     <AppLayout title="Compras - Estoque Mínimo">
       <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
             <Select 
               value={filtroStatus}
               onValueChange={(value) => setFiltroStatus(value)}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full sm:w-32">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -503,15 +503,15 @@ const Compras = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Estoque Atual</TableHead>
-                        <TableHead>Estoque Mínimo</TableHead>
-                        <TableHead>Valor Unitário</TableHead>
-                        <TableHead>Fornecedor</TableHead>
-                        <TableHead>Status Estoque</TableHead>
-                        <TableHead>Status Entrega</TableHead>
-                        <TableHead className="text-right">Ação</TableHead>
+                        <TableHead className="min-w-[150px]">Produto</TableHead>
+                        <TableHead className="hidden md:table-cell min-w-[100px]">Código</TableHead>
+                        <TableHead className="min-w-[100px]">Est. Atual</TableHead>
+                        <TableHead className="hidden lg:table-cell min-w-[100px]">Est. Mínimo</TableHead>
+                        <TableHead className="hidden xl:table-cell min-w-[100px]">Valor Unit.</TableHead>
+                        <TableHead className="hidden sm:table-cell min-w-[150px]">Fornecedor</TableHead>
+                        <TableHead className="min-w-[100px]">Status</TableHead>
+                        <TableHead className="hidden lg:table-cell min-w-[100px]">Entrega</TableHead>
+                        <TableHead className="text-right min-w-[120px]">Ação</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -520,18 +520,22 @@ const Compras = () => {
                           <TableCell>
                             <div className="font-medium">{produto.nome}</div>
                             <div className="text-xs text-muted-foreground">{produto.deposito}</div>
+                            <div className="text-xs text-muted-foreground md:hidden mt-1">Cód: {produto.codigo}</div>
                           </TableCell>
-                          <TableCell>{produto.codigo}</TableCell>
+                          <TableCell className="hidden md:table-cell">{produto.codigo}</TableCell>
                           <TableCell>
-                            {produto.quantidadeAtual} {produto.unidade_de_medida}
+                            <div className="font-medium">{produto.quantidadeAtual} {produto.unidade_de_medida}</div>
+                            <div className="text-xs text-muted-foreground lg:hidden">
+                              Mín: {produto.quantidadeMinima} {produto.unidade_de_medida}
+                            </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             {produto.quantidadeMinima} {produto.unidade_de_medida}
                           </TableCell>
-                          <TableCell>{formatarValor(produto.valor_unitario)}</TableCell>
-                          <TableCell>
+                          <TableCell className="hidden xl:table-cell">{formatarValor(produto.valor_unitario)}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <div className="text-sm">
-                              <div>{produto.fornecedor_nome}</div>
+                              <div className="font-medium">{produto.fornecedor_nome}</div>
                               <div className="text-xs text-muted-foreground">{formatarCNPJ(produto.fornecedor_cnpj)}</div>
                             </div>
                           </TableCell>
@@ -542,8 +546,11 @@ const Compras = () => {
                             >
                               {getStatusTexto(produto.quantidadeAtual, produto.quantidadeMinima)}
                             </span>
+                            <div className="lg:hidden mt-1">
+                              {getStatusBadge(produto.status || "Pendente")}
+                            </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             {getStatusBadge(produto.status || "Pendente")}
                           </TableCell>
                           <TableCell className="text-right">
@@ -552,8 +559,10 @@ const Compras = () => {
                               size="sm"
                               onClick={() => abrirModalCompra(produto)}
                               title="Solicitar pedido"
+                              className="w-full sm:w-auto"
                             >
-                              <ShoppingCart className="mr-1 h-4 w-4" /> Solicitar
+                              <ShoppingCart className="h-4 w-4 sm:mr-1" />
+                              <span className="hidden sm:inline">Solicitar</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -577,8 +586,8 @@ const Compras = () => {
 
       {/* Modal de confirmação de compra */}
       {modalAberto && produtoSelecionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-lg">
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4 text-white">Solicitar pedido</h3>
             <div className="space-y-4">
               <div>
@@ -626,17 +635,17 @@ const Compras = () => {
               </div>
             </div>
             
-            <div className="flex justify-end gap-2 mt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 mt-6">
               <Button 
                 variant="outline" 
                 onClick={() => setModalAberto(false)}
-                className="text-white border-gray-600 hover:bg-gray-800"
+                className="text-white border-gray-600 hover:bg-gray-800 w-full sm:w-auto"
               >
                 Cancelar
               </Button>
               <Button 
                 onClick={solicitarCompra}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
               >
                 Solicitar
               </Button>
@@ -648,11 +657,11 @@ const Compras = () => {
       {/* Modal de confirmação de envio */}
       {modalConfirmacaoAberto && produtoSelecionado && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
           onClick={() => setModalConfirmacaoAberto(false)}
         >
           <div 
-            className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-2xl"
+            className="bg-gray-900 border border-gray-700 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold mb-4 text-white">Confirmar pedido</h3>

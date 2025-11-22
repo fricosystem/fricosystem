@@ -704,9 +704,9 @@ const Requisicoes = () => {
     }
   };
   return <AppLayout title="Requisições">
-      <div className="w-full h-full flex flex-col md:flex-row gap-6 p-4 md:p-6 flex-1">
+      <div className="w-full h-full flex flex-col lg:flex-row gap-4 p-4 md:p-6 flex-1 overflow-hidden">
         {/* Sidebar lateral da página (lista de requisições) */}
-        <div className="w-full md:w-[30%] lg:w-[25%] xl:w-96 space-y-4 flex flex-col h-full">
+        <div className="w-full lg:w-[30%] xl:w-96 space-y-4 flex flex-col h-full max-h-[400px] lg:max-h-full">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Requisições</h2>
             <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isLoading}>
@@ -716,21 +716,21 @@ const Requisicoes = () => {
 
           <div className="relative">
             <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar requisições..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            <Input placeholder="Buscar requisições..." className="pl-10 text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
           
           {/* Filtros de status */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            <Button variant={statusFilter === "todos" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("todos")} className="rounded-full">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+            <Button variant={statusFilter === "todos" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("todos")} className="rounded-full text-xs whitespace-nowrap">
               Todos
             </Button>
-            <Button variant={statusFilter === "pendente" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("pendente")} className="rounded-full">
+            <Button variant={statusFilter === "pendente" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("pendente")} className="rounded-full text-xs whitespace-nowrap">
               Pendente
             </Button>
-            <Button variant={statusFilter === "concluida" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("concluida")} className="rounded-full">
+            <Button variant={statusFilter === "concluida" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("concluida")} className="rounded-full text-xs whitespace-nowrap">
               Concluída
             </Button>
-            <Button variant={statusFilter === "cancelada" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("cancelada")} className="rounded-full">
+            <Button variant={statusFilter === "cancelada" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("cancelada")} className="rounded-full text-xs whitespace-nowrap">
               Cancelada
             </Button>
           </div>
@@ -740,38 +740,38 @@ const Requisicoes = () => {
             
           </div>
 
-          <ScrollArea className="h-full border rounded-md p-2 flex-1">
+          <ScrollArea className="h-full border rounded-md p-2 flex-1 min-h-[200px]">
             {isLoading ? <div className="space-y-2">
-                {[1, 2, 3].map(i => <div key={i} className="p-3 border rounded-md">
+                {[1, 2, 3].map(i => <div key={i} className="p-2 md:p-3 border rounded-md">
                     <Skeleton className="h-4 w-24 mb-2" />
                     <Skeleton className="h-4 w-32" />
                   </div>)}
-              </div> : filteredRequisicoes.length === 0 ? <div className="text-center text-muted-foreground py-4">
+              </div> : filteredRequisicoes.length === 0 ? <div className="text-center text-muted-foreground py-4 text-sm">
                 Nenhuma requisição encontrada
               </div> : <div className="space-y-2">
-                {filteredRequisicoes.map(requisicao => <div key={requisicao.id} className={`p-3 border rounded-md cursor-pointer transition-all hover:bg-muted/50 ${selectedRequisicao?.id === requisicao.id ? "border-primary bg-primary/10 dark:bg-primary/20" : "border-border"}`} onClick={() => {
+                {filteredRequisicoes.map(requisicao => <div key={requisicao.id} className={`p-2 md:p-3 border rounded-md cursor-pointer transition-all hover:bg-muted/50 ${selectedRequisicao?.id === requisicao.id ? "border-primary bg-primary/10 dark:bg-primary/20" : "border-border"}`} onClick={() => {
               setSelectedRequisicao(requisicao);
               if (requisicao.solicitante) {
                 setSolicitanteSelecionado(requisicao.solicitante);
               }
             }}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{requisicao.requisicao_id}</p>
-                        <p className="text-sm text-muted-foreground">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{requisicao.requisicao_id}</p>
+                        <p className="text-xs text-muted-foreground truncate">
                           {requisicao.solicitante?.nome || requisicao.usuario.nome}
                         </p>
                       </div>
-                      <Badge className={getStatusColor(requisicao.status)}>
+                      <Badge className={`${getStatusColor(requisicao.status)} text-xs shrink-0`}>
                         {requisicao.status}
                       </Badge>
                     </div>
-                    <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                      <div className="flex items-center">
-                        <CalendarIcon className="h-3 w-3 mr-1" />
-                        {requisicao.data_criacao}
+                    <div className="flex justify-between mt-2 text-xs text-muted-foreground gap-2">
+                      <div className="flex items-center min-w-0">
+                        <CalendarIcon className="h-3 w-3 mr-1 shrink-0" />
+                        <span className="truncate">{requisicao.data_criacao}</span>
                       </div>
-                      <div>{formatCurrency(requisicao.valor_total)}</div>
+                      <div className="shrink-0 font-medium">{formatCurrency(requisicao.valor_total)}</div>
                     </div>
                   </div>)}
               </div>}

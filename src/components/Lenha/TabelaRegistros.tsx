@@ -216,37 +216,39 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
   
   return (
     <>
-      <Card className="w-full mt-6">
-        <div className="p-4 flex flex-col md:flex-row justify-between items-center border-b">
-          <div className="flex gap-2 mt-2 md:mt-0">
+      <Card className="w-full mt-4 md:mt-6">
+        <div className="p-3 md:p-4 flex flex-col gap-2 md:gap-3 border-b">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               variant="outline"
               onClick={() => setModalComprovanteAberto(true)}
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto text-xs md:text-sm h-9 md:h-10"
             >
-              <Receipt className="h-4 w-4" />
-              Imprimir relatório geral
+              <Receipt className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Imprimir relatório geral</span>
+              <span className="sm:hidden">Relatório</span>
             </Button>
             <Button 
               onClick={onClickNovo}
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto text-xs md:text-sm h-9 md:h-10"
             >
-              <File className="h-4 w-4" />
+              <File className="h-3.5 w-3.5 md:h-4 md:w-4" />
               Nova Medição
             </Button>
           </div>
-          <div className="flex gap-2">
+          <div className="flex">
             <Button 
               variant="outline"
               onClick={() => setModalFornecedorAberto(true)}
+              className="w-full sm:w-auto text-xs md:text-sm h-9 md:h-10"
             >
-              <PlusCircle className="mr-2 h-4 w-4" />
+              <PlusCircle className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
               Novo Fornecedor
             </Button>
           </div>
         </div>
         
-        <div className="overflow-x-auto p-4">
+        <div className="overflow-x-auto p-3 md:p-4">
           {isLoading ? (
             <div className="text-center py-4">Carregando registros...</div>
           ) : error ? (
@@ -262,14 +264,14 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[120px]">Data</TableHead>
-                    <TableHead className="min-w-[100px]">NFe</TableHead>
-                    <TableHead className="min-w-[100px]">Metros³</TableHead>
-                    <TableHead className="min-w-[150px]">Fornecedor</TableHead>
-                    <TableHead className="min-w-[140px]">Responsável</TableHead>
-                    <TableHead className="min-w-[150px] text-right">Valor Total</TableHead>
-                    <TableHead className="min-w-[170px]">Status</TableHead>
-                    <TableHead className="min-w-[130px] text-right">Ações</TableHead>
+                    <TableHead className="min-w-[100px]">Data</TableHead>
+                    <TableHead className="hidden md:table-cell min-w-[100px]">NFe</TableHead>
+                    <TableHead className="min-w-[80px]">Metros³</TableHead>
+                    <TableHead className="min-w-[120px]">Fornecedor</TableHead>
+                    <TableHead className="hidden lg:table-cell min-w-[120px]">Responsável</TableHead>
+                    <TableHead className="min-w-[100px] text-right">Valor</TableHead>
+                    <TableHead className="hidden xl:table-cell min-w-[150px]">Status</TableHead>
+                    <TableHead className="min-w-[100px] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -279,58 +281,64 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
                       onClick={(e) => handleVerDetalhes(registro, e)}
                       className="cursor-pointer hover:bg-muted/50"
                     >
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-sm">
                         {formatarData(registro.data)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">
                         {registro.nfe || "-"}
                       </TableCell>
-                      <TableCell>
-                        {registro.metrosCubicos} m³
+                      <TableCell className="text-sm">
+                        <div>{registro.metrosCubicos} m³</div>
+                        <div className="text-xs text-muted-foreground md:hidden">
+                          NFe: {registro.nfe || "-"}
+                        </div>
                       </TableCell>
-                      <TableCell className="truncate max-w-[180px]">
-                        {registro.fornecedor}
+                      <TableCell className="truncate max-w-[150px] text-sm">
+                        <div>{registro.fornecedor}</div>
+                        <div className="text-xs text-muted-foreground lg:hidden">
+                          {registro.responsavel}
+                        </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm">
                         {registro.responsavel}
                       </TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-medium text-sm">
                         {formatarValor(registro.valorTotal)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         {registro.status_envio === "enviado" ? (
-                          <Badge className="gap-1 bg-green-600 text-green-100 hover:bg-gray-900">
-                            <Check className="h-4 w-4" />
-                            Enviado para o fornecedor
+                          <Badge className="gap-1 bg-green-600 text-green-100 hover:bg-gray-900 text-xs">
+                            <Check className="h-3 w-3" />
+                            Enviado
                           </Badge>
                         ) : (
                           <Button 
                             variant="outline"
                             size="sm"
-                            className="h-8"
+                            className="h-7 text-xs"
                             onClick={(e) => handleEnviar(registro.id, e)}
                           >
-                           Marcar como enviado ao fornecedor
+                           Marcar enviado
                           </Button>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
                           <Button 
                             variant="outline" 
                             size="icon" 
-                            className="h-8 w-8"
+                            className="h-7 w-7"
                             onClick={(e) => handleEditar(registro, e)}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3 w-3" />
                           </Button>
                           <Button 
                             variant="outline" 
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={(e) => handleExcluirConfirmacao(registro.id, e)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </TableCell>
@@ -339,20 +347,20 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
                 </TableBody>
               </Table>
               
-              <div className="mt-6 pt-4 border-t flex flex-col md:flex-row justify-between items-start md:items-center">
-                <div className="mb-4 md:mb-0">
-                  <p className="text-sm text-muted-foreground">
+              <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="mb-0">
+                  <p className="text-xs md:text-sm text-muted-foreground">
                     Total de registros: <span className="font-medium">{registros.length}</span>
                   </p>
                 </div>
-                <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+                <div className="flex flex-col sm:flex-row md:items-center gap-3 md:gap-8 w-full md:w-auto">
                   <div className="flex flex-col">
-                    <span className="text-sm text-muted-foreground">Total em metros cúbicos</span>
-                    <span className="text-xl font-bold">{totalMetrosCubicos.toFixed(2)} m³</span>
+                    <span className="text-xs md:text-sm text-muted-foreground">Total em metros cúbicos</span>
+                    <span className="text-lg md:text-xl font-bold">{totalMetrosCubicos.toFixed(2)} m³</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm text-muted-foreground">Valor total</span>
-                    <span className="text-xl font-bold text-primary">{formatarValor(totalValor)}</span>
+                    <span className="text-xs md:text-sm text-muted-foreground">Valor total</span>
+                    <span className="text-lg md:text-xl font-bold text-primary">{formatarValor(totalValor)}</span>
                   </div>
                 </div>
               </div>

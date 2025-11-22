@@ -368,9 +368,9 @@ const Inventario = () => {
 
   return (
     <AppLayout title="Inventário">
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
           <StatsCard
             title="Total de Itens"
             value={stats.totalItens}
@@ -405,22 +405,22 @@ const Inventario = () => {
 
         {/* Filters and Search */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
+          <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
+            <div className="flex flex-col md:flex-row gap-3 md:gap-4">
               <div className="relative flex-1">
                 <Input
                   type="text"
-                  placeholder="Buscar por código, nome, depósito ou prateleira..."
+                  placeholder="Buscar por código, nome, depósito..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-9 md:pl-10 h-9 md:h-10 text-sm"
                 />
-                <SearchIcon className="h-5 w-5 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <SearchIcon className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground absolute left-2.5 md:left-3 top-1/2 transform -translate-y-1/2" />
               </div>
               
-              <div className="flex flex-col md:flex-row gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-40">
+                  <SelectTrigger className="w-full sm:w-36 md:w-40 h-9 md:h-10 text-sm">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -433,7 +433,7 @@ const Inventario = () => {
                 </Select>
 
                 <Select value={depositoFilter} onValueChange={setDepositoFilter}>
-                  <SelectTrigger className="w-full md:w-40">
+                  <SelectTrigger className="w-full sm:w-36 md:w-40 h-9 md:h-10 text-sm">
                     <SelectValue placeholder="Depósito" />
                   </SelectTrigger>
                   <SelectContent>
@@ -447,9 +447,9 @@ const Inventario = () => {
                 </Select>
 
                 <Select value={sortOption} onValueChange={setSortOption}>
-                  <SelectTrigger className="w-full md:w-48">
+                  <SelectTrigger className="w-full sm:flex-1 md:w-48 h-9 md:h-10 text-sm">
                     <div className="flex items-center gap-2">
-                      <ArrowUpDown className="h-4 w-4" />
+                      <ArrowUpDown className="h-3.5 w-3.5 md:h-4 md:w-4" />
                       <SelectValue placeholder="Ordenar por" />
                     </div>
                   </SelectTrigger>
@@ -469,15 +469,16 @@ const Inventario = () => {
         </Card>
 
         {/* Action Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-2 w-full md:w-auto">
             <Button
               variant="outline"
               size="icon"
               onClick={() => window.location.reload()}
               title="Atualizar dados"
+              className="h-9 w-9 md:h-10 md:w-10"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4" />
             </Button>
 
             <DropdownMenu>
@@ -499,20 +500,23 @@ const Inventario = () => {
             </DropdownMenu>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button onClick={zerarContagem} variant="outline" className="flex items-center gap-2">
-              <RotateCcw className="h-4 w-4" />
-              Zerar contagem
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+            <Button onClick={zerarContagem} variant="outline" className="flex items-center justify-center gap-2 h-9 md:h-10 text-xs md:text-sm">
+              <RotateCcw className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Zerar contagem</span>
+              <span className="sm:hidden">Zerar</span>
             </Button>
             
-            <Button onClick={handleSalvarContagem} variant="outline" className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
-              Salvar contagem
+            <Button onClick={handleSalvarContagem} variant="outline" className="flex items-center justify-center gap-2 h-9 md:h-10 text-xs md:text-sm">
+              <Save className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Salvar contagem</span>
+              <span className="sm:hidden">Salvar</span>
             </Button>
 
-            <Button onClick={exportarInventario} className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Exportar Inventário
+            <Button onClick={exportarInventario} className="flex items-center justify-center gap-2 h-9 md:h-10 text-xs md:text-sm">
+              <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Exportar Inventário</span>
+              <span className="sm:hidden">Exportar</span>
             </Button>
           </div>
         </div>
@@ -543,20 +547,20 @@ const Inventario = () => {
           <>
             {viewMode === "table" ? (
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
                   <div className="rounded-md border overflow-x-auto">
-                    <ShadcnTable>
+                    <ShadcnTable className="text-xs md:text-sm">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Código</TableHead>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Depósito</TableHead>
-                          <TableHead>Prateleira</TableHead>
-                          <TableHead>Qtd. Sistema</TableHead>
-                          <TableHead>Qtd. Contada</TableHead>
-                          <TableHead>Divergência</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Ações</TableHead>
+                          <TableHead className="p-2 md:p-4 text-xs md:text-sm whitespace-nowrap">Código</TableHead>
+                          <TableHead className="p-2 md:p-4 text-xs md:text-sm">Nome</TableHead>
+                          <TableHead className="hidden md:table-cell p-2 md:p-4 text-xs md:text-sm">Depósito</TableHead>
+                          <TableHead className="hidden lg:table-cell p-2 md:p-4 text-xs md:text-sm">Prateleira</TableHead>
+                          <TableHead className="p-2 md:p-4 text-xs md:text-sm text-right whitespace-nowrap">Qtd. Sistema</TableHead>
+                          <TableHead className="p-2 md:p-4 text-xs md:text-sm text-right whitespace-nowrap">Qtd. Contada</TableHead>
+                          <TableHead className="hidden sm:table-cell p-2 md:p-4 text-xs md:text-sm">Divergência</TableHead>
+                          <TableHead className="hidden sm:table-cell p-2 md:p-4 text-xs md:text-sm">Status</TableHead>
+                          <TableHead className="p-2 md:p-4 text-xs md:text-sm text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -567,30 +571,34 @@ const Inventario = () => {
                           
                           return (
                             <TableRow key={item.id}>
-                              <TableCell className="font-medium">{item.codigo_estoque}</TableCell>
-                              <TableCell>{item.nome}</TableCell>
-                              <TableCell>{item.deposito}</TableCell>
-                              <TableCell>{item.prateleira}</TableCell>
-                              <TableCell>{item.quantidade_sistema} {item.unidade_de_medida}</TableCell>
-                              <TableCell>
+                              <TableCell className="font-medium p-2 md:p-4 text-xs md:text-sm whitespace-nowrap">{item.codigo_estoque}</TableCell>
+                              <TableCell className="p-2 md:p-4 text-xs md:text-sm truncate max-w-[150px] md:max-w-none">
+                                <div>{item.nome}</div>
+                                <div className="text-[10px] md:hidden text-muted-foreground">{item.deposito}</div>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell p-2 md:p-4 text-xs md:text-sm">{item.deposito}</TableCell>
+                              <TableCell className="hidden lg:table-cell p-2 md:p-4 text-xs md:text-sm">{item.prateleira}</TableCell>
+                              <TableCell className="p-2 md:p-4 text-xs md:text-sm text-right whitespace-nowrap">{item.quantidade_sistema} {item.unidade_de_medida}</TableCell>
+                              <TableCell className="p-2 md:p-4 text-xs md:text-sm text-right whitespace-nowrap">
                                 {item.quantidade_contada !== undefined 
                                   ? `${item.quantidade_contada} ${item.unidade_de_medida}` 
                                   : "-"}
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="hidden sm:table-cell p-2 md:p-4 text-xs md:text-sm">
                                 {divergencia !== null ? (
                                   <span className={divergencia === 0 ? "text-green-600" : "text-red-600"}>
                                     {divergencia > 0 ? "+" : ""}{divergencia}
                                   </span>
                                 ) : "-"}
                               </TableCell>
-                              <TableCell>{getStatusBadge(item.status_inventario)}</TableCell>
-                              <TableCell>
+                              <TableCell className="hidden sm:table-cell p-2 md:p-4 text-xs md:text-sm">{getStatusBadge(item.status_inventario)}</TableCell>
+                              <TableCell className="p-2 md:p-4 text-xs md:text-sm text-right">
                                 {item.status_inventario === "pendente" && (
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => abrirModalContar(item)}
+                                    className="h-7 md:h-8 text-xs md:text-sm px-2 md:px-3"
                                   >
                                     Contar
                                   </Button>
@@ -605,14 +613,14 @@ const Inventario = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {filteredItems.map((item) => (
                   <Card key={item.id} className="overflow-hidden">
-                    <CardHeader className="pb-3">
+                    <CardHeader className="pb-2 md:pb-3 px-3 md:px-6">
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg">{item.codigo_estoque}</CardTitle>
-                          <p className="text-sm text-muted-foreground">{item.nome}</p>
+                          <CardTitle className="text-base md:text-lg">{item.codigo_estoque}</CardTitle>
+                          <p className="text-xs md:text-sm text-muted-foreground">{item.nome}</p>
                         </div>
                         {getStatusBadge(item.status_inventario)}
                       </div>

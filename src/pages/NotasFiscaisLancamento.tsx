@@ -443,13 +443,14 @@ const NotasFiscaisLancamento = () => {
 
   return (
     <AppLayout title="Registro de Notas Fiscais para Lançamento">
-      <div className="w-full h-full px-4 py-6">
-        <div className="bg-card rounded-lg shadow p-6 h-full">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Lista de Notas Fiscais</h2>
-            <Button onClick={() => setIsModalOpen(true)}>
+      <div className="w-full h-full px-2 sm:px-4 py-4 sm:py-6">
+        <div className="bg-card rounded-lg shadow p-3 sm:p-6 h-full">
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold">Lista de Notas Fiscais</h2>
+            <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
-              Cadastrar NF
+              <span className="hidden sm:inline">Cadastrar NF</span>
+              <span className="sm:hidden">Nova NF</span>
             </Button>
           </div>
           
@@ -466,18 +467,18 @@ const NotasFiscaisLancamento = () => {
               </Button>
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Número</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Emissor</TableHead>
-                    <TableHead>Data Emissão</TableHead>
-                    <TableHead>Valor Total</TableHead>
-                    <TableHead>Condição</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="min-w-[100px]">Número</TableHead>
+                    <TableHead className="hidden md:table-cell min-w-[120px]">Tipo</TableHead>
+                    <TableHead className="min-w-[150px]">Emissor</TableHead>
+                    <TableHead className="hidden sm:table-cell min-w-[100px]">Data Emissão</TableHead>
+                    <TableHead className="min-w-[100px]">Valor Total</TableHead>
+                    <TableHead className="hidden lg:table-cell min-w-[80px]">Condição</TableHead>
+                    <TableHead className="hidden xl:table-cell min-w-[100px]">Vencimento</TableHead>
+                    <TableHead className="min-w-[120px]">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -492,22 +493,27 @@ const NotasFiscaisLancamento = () => {
                           setIsDetailsModalOpen(true);
                         }}
                       >
-                        <TableCell>{nota.numero}</TableCell>
-                        <TableCell>
+                        <TableCell className="font-medium">{nota.numero}</TableCell>
+                        <TableCell className="hidden md:table-cell text-sm">
                           {tiposNota.find(t => t.value === nota.tipo)?.label || nota.tipo}
                         </TableCell>
-                        <TableCell>{nota.emissor}</TableCell>
-                        <TableCell>{formatDate(nota.dataEmissao)}</TableCell>
                         <TableCell>
+                          <div className="font-medium">{nota.emissor}</div>
+                          <div className="text-xs text-muted-foreground sm:hidden">
+                            {formatDate(nota.dataEmissao)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">{formatDate(nota.dataEmissao)}</TableCell>
+                        <TableCell className="font-medium">
                           {new Intl.NumberFormat("pt-BR", {
                             style: "currency",
                             currency: "BRL",
                           }).format(nota.valorTotal)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell text-sm">
                           {nota.condicaoPagamento ? `${nota.condicaoPagamento} dias` : '30 dias'}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden xl:table-cell text-sm">
                           {nota.dataVencimento ? formatDate(nota.dataVencimento) : '-'}
                         </TableCell>
                         <TableCell>
@@ -534,7 +540,7 @@ const NotasFiscaisLancamento = () => {
       
       {/* Modal de Cadastro */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col">
+        <DialogContent className="max-w-[95vw] sm:max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <div className="flex justify-between items-center">
               <DialogTitle>Cadastrar Nova Nota Fiscal</DialogTitle>
@@ -748,11 +754,11 @@ const NotasFiscaisLancamento = () => {
             </form>
           </div>
           
-          <DialogFooter className="sm:justify-start gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-start">
             <Button 
               variant="outline" 
               onClick={() => setIsModalOpen(false)}
-              className="w-full"
+              className="w-full sm:w-auto"
             >
               Fechar
             </Button>
@@ -760,7 +766,7 @@ const NotasFiscaisLancamento = () => {
               type="submit" 
               onClick={handleSubmit} 
               disabled={isSubmitting}
-              className="w-full"
+              className="w-full sm:w-auto"
             >
               {isSubmitting ? (
                 <>
@@ -780,7 +786,7 @@ const NotasFiscaisLancamento = () => {
 
       {/* Modal de Edição */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col">
+        <DialogContent className="max-w-[95vw] sm:max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <div className="flex justify-between items-center">
               <DialogTitle>Editar Nota Fiscal</DialogTitle>

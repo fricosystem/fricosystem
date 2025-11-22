@@ -14,9 +14,9 @@ import {
 import AppLayout from "@/layouts/AppLayout";
 import { SearchBar } from "@/components/GestaoProdutos/SearchBar";
 import { ProductTable } from "@/components/GestaoProdutos/ProductTable";
-import { DeleteConfirmModal } from "@/components/GestaoProdutos/DeleteConfirmModal";
 import { EditProductModal } from "@/components/GestaoProdutos/EditProductModal";
 import AddProdutoModal from "@/components/AddProdutoModal";
+import { FilterBar, FilterState } from "@/components/GestaoProdutos/FilterBar";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -39,6 +39,7 @@ interface Produto {
   fornecedor_id: string | null;
   fornecedor_nome: string | null;
   fornecedor_cnpj: string | null;
+  ativo?: string;
 }
 
 interface ImageUploaderProps {
@@ -151,12 +152,16 @@ const GestaoProdutos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [filteredProdutos, setFilteredProdutos] = useState<Produto[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<FilterState>({
+    fornecedor: "todos",
+    deposito: "todos",
+    status: "ativos",
+    estoque: "todos",
+  });
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
   const [page, setPage] = useState(1);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [produtoToDelete, setProdutoToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
@@ -172,19 +177,51 @@ const GestaoProdutos = () => {
     if (!produtos) return;
     
     const filtered = produtos.filter(produto => {
+      // Filtrar por status (ativo/inativo)
+      const ativo = produto?.ativo || "sim";
+      if (filters.status === "ativos" && ativo === "não") return false;
+      if (filters.status === "inativos" && ativo === "sim") return false;
+
+      // Filtrar por fornecedor
+      if (filters.fornecedor !== "todos" && produto.fornecedor_nome !== filters.fornecedor) {
+        return false;
+      }
+
+      // Filtrar por depósito
+      if (filters.deposito !== "todos" && produto.deposito !== filters.deposito) {
+        return false;
+      }
+
+      // Filtrar por estoque
+      if (filters.estoque === "baixo" && produto.quantidade >= produto.quantidade_minima) {
+        return false;
+      }
+      if (filters.estoque === "zerado" && produto.quantidade > 0) {
+        return false;
+      }
+
+      // Filtrar por termo de busca
       const nome = produto?.nome || "";
       const codigoEstoque = produto?.codigo_estoque || "";
       const codigoMaterial = produto?.codigo_material || "";
+      const fornecedorNome = produto?.fornecedor_nome || "";
+      const fornecedorCNPJ = produto?.fornecedor_cnpj || "";
+      const detalhes = produto?.detalhes || "";
+
+      const searchLower = searchTerm.toLowerCase();
 
       return (
-        nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        codigoEstoque.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        codigoMaterial.toLowerCase().includes(searchTerm.toLowerCase())
+        nome.toLowerCase().includes(searchLower) ||
+        codigoEstoque.toLowerCase().includes(searchLower) ||
+        codigoMaterial.toLowerCase().includes(searchLower) ||
+        fornecedorNome.toLowerCase().includes(searchLower) ||
+        fornecedorCNPJ.toLowerCase().includes(searchLower) ||
+        detalhes.toLowerCase().includes(searchLower)
       );
     });
     setFilteredProdutos(filtered);
     setPage(1);
-  }, [searchTerm, produtos]);
+  }, [searchTerm, produtos, filters]);
 
   const fetchProdutos = async () => {
     try {
@@ -211,7 +248,8 @@ const GestaoProdutos = () => {
         data_vencimento: doc.data().data_vencimento || "",
         fornecedor_id: doc.data().fornecedor_id || null,
         fornecedor_nome: doc.data().fornecedor_nome || null,
-        fornecedor_cnpj: doc.data().fornecedor_cnpj || null
+        fornecedor_cnpj: doc.data().fornecedor_cnpj || null,
+        ativo: doc.data().ativo || "sim"
       })) as Produto[];
       
       setProdutos(produtosData);
@@ -265,35 +303,6 @@ const GestaoProdutos = () => {
   const handleCancel = () => {
     setEditingProduto(null);
     setIsEditModalOpen(false);
-  };
-
-  const handleDeleteClick = (id: string) => {
-    setProdutoToDelete(id);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!produtoToDelete) return;
-    
-    try {
-      setProdutos(produtos.filter(produto => produto.id !== produtoToDelete));
-      setFilteredProdutos(filteredProdutos.filter(produto => produto.id !== produtoToDelete));
-      
-      toast({
-        description: "Produto excluído com sucesso!",
-        duration: 2000,
-      });
-    } catch (error) {
-      console.error("Erro ao excluir produto:", error);
-      toast({
-        description: "Erro ao excluir produto. Tente novamente.",
-        variant: "destructive",
-        duration: 3000,
-      });
-    } finally {
-      setProdutoToDelete(null);
-      setIsDeleteModalOpen(false);
-    }
   };
 
   const renderContent = () => {
@@ -354,12 +363,13 @@ const GestaoProdutos = () => {
               {isMobile ? "Adicionar" : "Adicionar Produto"}
             </Button>
           </div>
+          
+          <FilterBar onFiltersChange={setFilters} />
         </div>
         
         <ProductTable
           produtos={filteredProdutos}
           onEdit={handleEdit}
-          onDelete={handleDeleteClick}
           page={page}
           rowsPerPage={rowsPerPage}
           onPageChange={setPage}
@@ -373,12 +383,6 @@ const GestaoProdutos = () => {
     <AppLayout title="Gestão de Produtos">
       <div className="h-full flex flex-col">
         {renderContent()}
-        
-        <DeleteConfirmModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          onConfirm={handleDelete}
-        />
         
         <EditProductModal
           isOpen={isEditModalOpen}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/firebase/firebase";
-import { collection, getDocs, doc, updateDoc, addDoc, query, orderBy, serverTimestamp, where } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, addDoc, query, orderBy, serverTimestamp, where, Timestamp } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -342,39 +342,78 @@ const DevolucaoMateriais = () => {
         dataRegistro: serverTimestamp()
       });
 
-      // Registrar na coleção "relatorios" com status "devolução"
-      await addDoc(collection(db, "relatorios"), {
-        tipo: "devolucao",
-        status: "devolução",
-        requisicao_id: devolucao.requisicao_id,
-        itens: itensSelecionados,
-        usuarioId: user.uid,
-        usuarioNome: userData.nome,
-        usuarioCargo: userData.cargo,
-        data: devolucao.data,
-        motivo: devolucao.motivo,
-        observacoes: devolucao.observacoes,
-        valor_total: itensSelecionados.reduce((total, item) => 
-          total + (item.valor_unitario * item.quantidade_devolvida), 0
-        ),
-        dataRegistro: serverTimestamp()
-      });
-
-      // Incrementar quantidade nos produtos
-      const updatePromises = itensSelecionados.map(async (item) => {
-        // Buscar o produto pelo codigo_material
+      // Buscar produtos completos para obter todos os dados necessários
+      const produtosPromises = itensSelecionados.map(async (item) => {
         const produtosCollection = collection(db, "produtos");
         const produtoQuery = query(produtosCollection, where("codigo_material", "==", item.codigo_material));
         const produtoSnapshot = await getDocs(produtoQuery);
         
         if (!produtoSnapshot.empty) {
           const produtoDoc = produtoSnapshot.docs[0];
-          const produtoAtual = produtoDoc.data();
-          
-          await updateDoc(doc(db, "produtos", produtoDoc.id), {
-            quantidade: (produtoAtual.quantidade || 0) + item.quantidade_devolvida
-          });
+          const produtoData = produtoDoc.data();
+          return {
+            item,
+            produtoId: produtoDoc.id,
+            produtoData,
+            produtoDoc
+          };
         }
+        return null;
+      });
+
+      const produtosCompletos = (await Promise.all(produtosPromises)).filter(p => p !== null);
+
+      // Registrar cada item individualmente na coleção "relatorios" com status "entrada"
+      const dataDevolucao = new Date(devolucao.data);
+      const dataRegistro = new Date();
+
+      const relatoriosPromises = produtosCompletos.map(async (produtoCompleto) => {
+        if (!produtoCompleto) return;
+        
+        const { item, produtoId, produtoData } = produtoCompleto;
+        
+        await addDoc(collection(db, "relatorios"), {
+          tipo: "devolucao",
+          status: "entrada",
+          requisicao_id: devolucao.requisicao_id,
+          produto_id: produtoId,
+          codigo_material: item.codigo_material,
+          nome_produto: item.nome,
+          quantidade: item.quantidade_devolvida,
+          valor_unitario: item.valor_unitario,
+          valor_total: item.valor_unitario * item.quantidade_devolvida,
+          solicitante: {
+            id: requisicaoSelecionada.solicitante.id || "",
+            nome: requisicaoSelecionada.solicitante.nome || "",
+            cargo: requisicaoSelecionada.solicitante.cargo || ""
+          },
+          usuario: {
+            id: user.uid,
+            nome: userData.nome || "",
+            email: userData.email || user.email || ""
+          },
+          deposito: produtoData.deposito || "",
+          prateleira: produtoData.prateleira || "",
+          centro_de_custo: produtoData.centro_de_custo || requisicaoSelecionada.itens[0]?.centro_de_custo || "",
+          unidade: produtoData.unidade || item.unidade || "",
+          data_saida: Timestamp.fromDate(dataDevolucao),
+          data_registro: Timestamp.fromDate(dataRegistro),
+          motivo_devolucao: devolucao.motivo,
+          observacoes_devolucao: devolucao.observacoes
+        });
+      });
+
+      await Promise.all(relatoriosPromises);
+
+      // Incrementar quantidade nos produtos
+      const updatePromises = produtosCompletos.map(async (produtoCompleto) => {
+        if (!produtoCompleto) return;
+        
+        const { item, produtoData, produtoDoc } = produtoCompleto;
+        
+        await updateDoc(produtoDoc.ref, {
+          quantidade: (produtoData.quantidade || 0) + item.quantidade_devolvida
+        });
       });
 
       await Promise.all(updatePromises);

@@ -460,20 +460,22 @@ const NovaOrdemServico = () => {
                     variant="outline"
                     role="combobox"
                     className={cn(
-                      "w-full justify-between",
+                      "w-full justify-between text-left",
                       !formData.equipamento && "text-muted-foreground"
                     )}
                     disabled={loadingEquipamentos}
                   >
-                    {loadingEquipamentos
-                      ? "Carregando equipamentos..."
-                      : formData.equipamento
-                        ? equipamentos.find(e => e.equipamento === formData.equipamento)?.patrimonio + " - " + formData.equipamento
-                        : "Selecione o equipamento"}
+                    <span className="truncate">
+                      {loadingEquipamentos
+                        ? "Carregando equipamentos..."
+                        : formData.equipamento
+                          ? equipamentos.find(e => e.equipamento === formData.equipamento)?.patrimonio + " - " + formData.equipamento
+                          : "Selecione o equipamento"}
+                    </span>
                     <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
+                <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Buscar equipamento..." className="h-9" />
                     <CommandList className="max-h-[300px] overflow-y-auto">

@@ -57,6 +57,7 @@ interface Produto {
   fornecedor_id: string | null;
   fornecedor_nome: string | null;
   fornecedor_cnpj: string | null;
+  ativo?: string;
 }
 
 interface Fornecedor {
@@ -137,7 +138,8 @@ export const EditProductModal = ({
         data_vencimento: produto.data_vencimento || "",
         fornecedor_id: produto.fornecedor_id || null,
         fornecedor_nome: produto.fornecedor_nome || null,
-        fornecedor_cnpj: produto.fornecedor_cnpj || null
+        fornecedor_cnpj: produto.fornecedor_cnpj || null,
+        ativo: produto.ativo || "sim"
       });
     }
   }, [produto, isOpen]);
@@ -521,6 +523,28 @@ export const EditProductModal = ({
               currentImageUrl={editedProduto.imagem || ""}
               onImageUploaded={(url) => setEditedProduto({...editedProduto, imagem: url})}
             />
+          </div>
+
+          {/* Status Ativo/Inativo */}
+          <div className="md:col-span-2 border rounded-md p-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="status-ativo">Status do Produto</Label>
+                <p className="text-sm text-muted-foreground">
+                  Produtos inativos não aparecem nas listagens
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="status-ativo" className="text-sm text-muted-foreground">
+                  {editedProduto.ativo === "sim" ? "Ativo" : "Inativo"}
+                </Label>
+                <Switch
+                  id="status-ativo"
+                  checked={editedProduto.ativo === "sim"}
+                  onCheckedChange={(checked) => setEditedProduto({...editedProduto, ativo: checked ? "sim" : "não"})}
+                />
+              </div>
+            </div>
           </div>
         </div>
         
