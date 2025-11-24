@@ -439,9 +439,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
                 lineNumbers: 'on',
                 renderWhitespace: 'selection',
                 bracketPairColorization: { enabled: true },
-                suggest: {
-                  enabled: true,
-                },
                 quickSuggestions: {
                   other: true,
                   comments: true,
