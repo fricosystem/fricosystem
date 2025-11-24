@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CentroCustoSelect } from "./CentroCustoSelect";
 
 // Função para formatar telefone
 const formatPhone = (value: string) => {
@@ -52,6 +53,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
   const [cnpj, setCnpj] = useState("");
   const [contato, setContato] = useState("");
   const [chavePix, setChavePix] = useState("");
+  const [centroCusto, setCentroCusto] = useState("");
   const [loading, setLoading] = useState(false);
   
   // Estados para edição
@@ -61,6 +63,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
   const [editCnpj, setEditCnpj] = useState("");
   const [editContato, setEditContato] = useState("");
   const [editChavePix, setEditChavePix] = useState("");
+  const [editCentroCusto, setEditCentroCusto] = useState("");
   
   // Estado para confirmação de exclusão
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -129,6 +132,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
         cnpj,
         contato,
         chavePix,
+        centroCusto,
         dataCadastro: new Date(),
         usuarioCadastro: userData?.nome || "Usuário não identificado",
       };
@@ -146,6 +150,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
       setCnpj("");
       setContato("");
       setChavePix("");
+      setCentroCusto("");
       
       refetch();
       onSaveSuccess();
@@ -169,6 +174,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
     setEditCnpj(fornecedor.cnpj || "");
     setEditContato(fornecedor.contato || "");
     setEditChavePix(fornecedor.chavePix || "");
+    setEditCentroCusto(fornecedor.centroCusto || "");
   };
   
   // Cancelar edição
@@ -179,6 +185,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
     setEditCnpj("");
     setEditContato("");
     setEditChavePix("");
+    setEditCentroCusto("");
   };
   
   // Salvar edição de fornecedor
@@ -212,7 +219,8 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
         valorUnitario: editValorUnitario,
         cnpj: editCnpj,
         contato: editContato,
-        chavePix: editChavePix
+        chavePix: editChavePix,
+        centroCusto: editCentroCusto
       });
       
       toast({
@@ -342,7 +350,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
               </div>
 
               {/* Nova linha para a Chave Pix */}
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="chavePix" className="text-base">Chave Pix para Pagamento</Label>
                   <Input 
@@ -351,6 +359,14 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
                     onChange={(e) => setChavePix(e.target.value)}
                     placeholder="Chave Pix (CPF/CNPJ, telefone, e-mail ou chave aleatória)"
                     className="h-12 text-base"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="centroCusto" className="text-base">Centro de Custo ( Armazenamento )</Label>
+                  <CentroCustoSelect 
+                    value={centroCusto}
+                    onChange={setCentroCusto}
                   />
                 </div>
               </div>
@@ -440,7 +456,7 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label className="text-sm">Chave Pix</Label>
                                 <Input 
@@ -448,6 +464,13 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
                                   onChange={(e) => setEditChavePix(e.target.value)}
                                   className="h-10 text-sm"
                                   placeholder="Chave Pix para pagamento"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-sm">Centro de Custo ( Armazenamento )</Label>
+                                <CentroCustoSelect 
+                                  value={editCentroCusto}
+                                  onChange={setEditCentroCusto}
                                 />
                               </div>
                             </div>
@@ -488,6 +511,9 @@ const FormFornecedor = ({ onSaveSuccess, onCancel }: FormFornecedorProps) => {
                                 </div>
                                 <div className="text-sm text-muted-foreground">
                                   Chave Pix: {fornecedor.chavePix || "Não informada"}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Centro de Custo: {fornecedor.centroCusto || "Não informado"}
                                 </div>
                               </div>
                               <div className="flex gap-1">
