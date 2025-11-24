@@ -15,6 +15,7 @@ import CodeEditor from '@/components/IDE/CodeEditor';
 import GitHubConfigComponent from '@/components/IDE/GitHubConfig';
 import CommitPanel from '@/components/IDE/CommitPanel';
 import CodespacesManager from '@/components/IDE/CodespacesManager';
+import RepositoryManager from '@/components/IDE/RepositoryManager';
 import PasswordModal from '@/components/IDE/PasswordModal';
 import VisualEditModal from '@/components/IDE/VisualEditModal';
 import PreviewOverlay from '@/components/IDE/PreviewOverlay';
@@ -214,12 +215,18 @@ const IDE: React.FC = () => {
                 <div className="h-full flex flex-col bg-muted/30 min-h-0 overflow-hidden">
                   <Tabs defaultValue="explorer" className="h-full flex flex-col min-h-0">
                     <div className="px-3 py-2 bg-background/50 backdrop-blur-sm border-b border-border/40 flex-shrink-0">
-                      <TabsList className="grid w-full grid-cols-3 h-9 bg-muted/50 p-1">
+                      <TabsList className="grid w-full grid-cols-4 h-9 bg-muted/50 p-1">
                         <TabsTrigger 
                           value="explorer" 
                           className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
                         >
                           Explorer
+                        </TabsTrigger>
+                        <TabsTrigger 
+                          value="repos" 
+                          className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all duration-200"
+                        >
+                          Repositórios
                         </TabsTrigger>
                         <TabsTrigger 
                           value="commits" 
@@ -242,6 +249,10 @@ const IDE: React.FC = () => {
                         selectedFile={selectedFile}
                         onRefresh={handleRefresh}
                       />
+                    </TabsContent>
+                    
+                    <TabsContent value="repos" className="flex-1 m-0 min-h-0 overflow-hidden">
+                      <RepositoryManager />
                     </TabsContent>
                     
                     <TabsContent value="commits" className="flex-1 m-0 min-h-0 overflow-hidden">
