@@ -11,7 +11,7 @@ import { Fornecedor } from "@/types/typesLenha";
 
 interface FornecedorSelectProps {
   value: string;
-  onChange: (fornecedor: string, valorUnitario: number) => void;
+  onChange: (fornecedorId: string, fornecedorNome: string, valorUnitario: number) => void;
 }
 
 export function FornecedorSelect({ value, onChange }: FornecedorSelectProps) {
@@ -36,13 +36,13 @@ export function FornecedorSelect({ value, onChange }: FornecedorSelectProps) {
 
   const selectedFornecedor = fornecedores.find(f => f.nome === value);
   
-  // Ao selecionar um fornecedor, propaga o valor unitário também
+  // Ao selecionar um fornecedor, propaga o ID, nome e valor unitário
   const handleSelect = (fornecedorNome: string) => {
     const fornecedor = fornecedores.find(f => f.nome === fornecedorNome);
     if (fornecedor) {
-      onChange(fornecedorNome, fornecedor.valorUnitario || 0);
+      onChange(fornecedor.id || "", fornecedorNome, fornecedor.valorUnitario || 0);
     } else {
-      onChange(fornecedorNome, 0);
+      onChange("", fornecedorNome, 0);
     }
     setOpen(false);
   };
