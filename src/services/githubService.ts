@@ -186,6 +186,10 @@ class GitHubService {
     return this.config;
   }
 
+  public getOctokit(): Octokit | null {
+    return this.octokit;
+  }
+
   public async testConnection(): Promise<boolean> {
     if (!this.octokit || !this.config) return false;
 
