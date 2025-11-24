@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MedidaLenha } from "@/types/typesLenha";
 import { FornecedorSelect } from "@/components/Lenha/FornecedorSelect";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface FormMedidaLenhaProps {
   onSaveSuccess: () => void;
@@ -26,6 +28,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
   const [chavePixFornecedor, setChavePixFornecedor] = useState("");
   const [contatoFornecedor, setContatoFornecedor] = useState("");
   const [cnpjFornecedor, setCnpjFornecedor] = useState("");
+  const [centroCusto, setCentroCusto] = useState("");
   
   // Valores calculados
   const [alturaMedia, setAlturaMedia] = useState<number>(0);
@@ -71,14 +74,14 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
   };
   
   // Handler para quando o fornecedor é selecionado
-  const handleFornecedorChange = async (novoFornecedor: string, novoValorUnitario: number) => {
+  const handleFornecedorChange = async (fornecedorId: string, novoFornecedor: string, novoValorUnitario: number) => {
     setFornecedor(novoFornecedor);
     setValorUnitario(novoValorUnitario);
     
-    // Busca a chave Pix e contato do fornecedor no Firestore
-    if (novoFornecedor) {
+    // Busca a chave Pix, contato e centro de custo do fornecedor no Firestore
+    if (fornecedorId) {
       try {
-        const fornecedorRef = doc(db, "fornecedoreslenha", novoFornecedor);
+        const fornecedorRef = doc(db, "fornecedoreslenha", fornecedorId);
         const fornecedorDoc = await getDoc(fornecedorRef);
         
         if (fornecedorDoc.exists()) {
@@ -86,20 +89,25 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
           setChavePixFornecedor(fornecedorData.chavePix || "");
           setContatoFornecedor(fornecedorData.contato || "");
           setCnpjFornecedor(fornecedorData.cnpj || "");
+          setCentroCusto(fornecedorData.centroCusto || "");
         } else {
           setChavePixFornecedor("");
           setContatoFornecedor("");
           setCnpjFornecedor("");
+          setCentroCusto("");
         }
       } catch (error) {
         console.error("Erro ao buscar dados do fornecedor:", error);
         setChavePixFornecedor("");
         setContatoFornecedor("");
+        setCnpjFornecedor("");
+        setCentroCusto("");
       }
     } else {
       setChavePixFornecedor("");
       setContatoFornecedor("");
       setCnpjFornecedor("");
+      setCentroCusto("");
     }
   };
   
@@ -137,6 +145,15 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       return;
     }
     
+    if (!centroCusto) {
+      toast({
+        variant: "destructive",
+        title: "Centro de custo não encontrado",
+        description: "O fornecedor selecionado não possui centro de custo cadastrado.",
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -155,16 +172,14 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
         chavePixFornecedor,
         contatoFornecedor,
         cnpjFornecedor,
+        centroCusto,
       };
       
-      // Salva no Firestore
-      const medidaRef = await addDoc(collection(db, "medidas_lenha"), novaMedida);
-      
       // Salvar relatório da cubagem/lenha
-      const relatorioData = {
-        requisicao_id: medidaRef.id,
-        produto_id: medidaRef.id,
-        codigo_material: medidaRef.id, // Usando o ID como código para lenha
+      const relatorioRef = await addDoc(collection(db, "relatorios"), {
+        requisicao_id: null,
+        produto_id: null,
+        codigo_material: null,
         nome_produto: `Lenha - ${fornecedor}`,
         quantidade: metrosCubicos,
         valor_unitario: valorUnitario,
@@ -183,21 +198,321 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
         },
         deposito: fornecedor,
         prateleira: "Cubagem de Lenha",
-        centro_de_custo: fornecedor,
+        centro_de_custo: centroCusto,
+        unidade_centro_custo: centroCusto,
         unidade: 'm³',
         data_saida: Timestamp.fromDate(new Date()),
         data_registro: Timestamp.fromDate(new Date()),
         nfe: nfe || null,
         fornecedor: fornecedor,
-        responsavel: userData?.nome || "Usuário não identificado"
-      };
-
-      await addDoc(collection(db, "relatorios"), relatorioData);
+        responsavel: userData?.nome || "Usuário não identificado",
+        medidas: medidas.map(m => m.toString()),
+        comprimento,
+        largura,
+        alturaMedia,
+        metrosCubicos,
+        chavePixFornecedor,
+        contatoFornecedor,
+        cnpjFornecedor
+      });
       
       toast({
         title: "Registro salvo com sucesso!",
         description: `${metrosCubicos} m³ de lenha registrados.`,
       });
+      
+      // Preparar dados para impressão
+      const medidaParaImpressao: MedidaLenha = {
+        id: relatorioRef.id,
+        ...novaMedida
+  };
+  
+  // Função para imprimir o recibo automaticamente
+  const imprimirRecibo = (medida: MedidaLenha) => {
+    const dataFormatada = format(medida.data, "dd/MM/yyyy", { locale: ptBR });
+    
+    const formatarValor = (valor: number) => {
+      return valor.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      });
+    };
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Comprovante de Entrega de Lenha</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 15mm;
+          }
+          body {
+            font-family: Arial, sans-serif;
+            color: #000;
+            padding: 0;
+            margin: 15mm;
+            font-size: 13px;
+          }
+          .page-container {
+            padding: 10px 20px;
+          }
+          .recibo-container {
+            padding: 10px 0;
+          }
+          .recibo-header {
+            text-align: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #000;
+          }
+          .recibo-header h1 {
+            font-size: 16px;
+            margin: 3px 0;
+          }
+          .recibo-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 15px;
+            margin-bottom: 12px;
+          }
+          .recibo-label {
+            font-weight: bold;
+          }
+          .recibo-value {
+            text-align: right;
+          }
+          .recibo-fornecedor {
+            font-weight: bold;
+            font-size: 16px;
+            grid-column: span 2;
+            text-align: center;
+            margin-bottom: 8px;
+          }
+          .recibo-total {
+            grid-column: span 2;
+            text-align: right;
+            font-weight: bold;
+            margin-top: 4px;
+            font-size: 14px;
+          }
+          .recibo-recebido {
+            margin-top: 8px;
+          }
+          .recibo-assinatura {
+            margin-top: 30px;
+            text-align: center;
+            padding-top: 8px;
+          }
+          .recibo-assinatura-line {
+            width: 200px;
+            margin: 0 auto;
+            border-top: 1px dashed #000;
+          }
+          .recibo-assinatura-text {
+            font-size: 12px;
+            margin-top: 5px;
+          }
+          .logo-container {
+            text-align: center;
+            margin-bottom: 8px;
+          }
+          .logo-container img {
+            height: 60px;
+            width: auto;
+          }
+          .recibo-divider {
+            border-top: 2px dashed #000;
+            margin: 40px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="page-container">
+          <div class="recibo-container">
+            <div>
+              <div class="logo-container">
+                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+              </div>
+              
+              <div class="recibo-header">
+                <h1>Comprovante de Entrega de Lenha</h1>
+              </div>
+              
+              <div class="recibo-fornecedor">${medida.fornecedor}</div>
+              
+              <div class="recibo-content">
+                ${medida.cnpjFornecedor ? `
+                  <div class="recibo-label">CNPJ Fornecedor:</div>
+                  <div class="recibo-value">${medida.cnpjFornecedor}</div>
+                ` : ''}
+                
+                <div class="recibo-label">Data:</div>
+                <div class="recibo-value">${dataFormatada}</div>
+                
+                <div class="recibo-label">Quantidade:</div>
+                <div class="recibo-value">${medida.metrosCubicos.toFixed(2)} m³</div>
+                
+                <div class="recibo-label">Unidade:</div>
+                <div class="recibo-value">Mt</div>
+                
+                ${medida.centroCusto ? `
+                  <div class="recibo-label">Centro de Custo:</div>
+                  <div class="recibo-value">${medida.centroCusto}</div>
+                ` : ''}
+                
+                <div class="recibo-label">Nota Fiscal:</div>
+                <div class="recibo-value">${medida.nfe || "-"}</div>
+                
+                <div class="recibo-label">Valor Unitário:</div>
+                <div class="recibo-value">${formatarValor(medida.valorUnitario)}</div>
+                
+                <div class="recibo-total">${formatarValor(medida.valorTotal)}</div>
+              </div>
+              
+              <div class="recibo-recebido">
+                <div class="recibo-label">Recebido por:</div>
+                <div>${medida.usuario}</div>
+              </div>
+              
+              <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #333;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                  <div class="recibo-label">Comprimento:</div>
+                  <div class="recibo-value">${medida.comprimento.toFixed(2)} m</div>
+                  
+                  <div class="recibo-label">Largura:</div>
+                  <div class="recibo-value">${medida.largura.toFixed(2)} m</div>
+                </div>
+                
+                ${medida.medidas && medida.medidas.length > 0 ? `
+                  <div style="margin-top: 8px;">
+                    <div class="recibo-label" style="margin-bottom: 4px;">Medidas:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                      ${medida.medidas.map((m, index) => `
+                        <div style="font-size: 12px;">
+                          <span class="recibo-label">Medida ${index + 1}:</span> ${m} m³
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <div class="recibo-assinatura">
+              <div class="recibo-assinatura-line"></div>
+              <div class="recibo-assinatura-text">Assinatura do Funcionário</div>
+            </div>
+          </div>
+          
+          <div class="recibo-divider"></div>
+          
+          <div class="recibo-container">
+            <div>
+              <div class="logo-container">
+                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+              </div>
+              
+              <div class="recibo-header">
+                <h1>Comprovante de Entrega de Lenha</h1>
+              </div>
+              
+              <div class="recibo-fornecedor">${medida.fornecedor}</div>
+              
+              <div class="recibo-content">
+                ${medida.cnpjFornecedor ? `
+                  <div class="recibo-label">CNPJ Fornecedor:</div>
+                  <div class="recibo-value">${medida.cnpjFornecedor}</div>
+                ` : ''}
+                
+                <div class="recibo-label">Data:</div>
+                <div class="recibo-value">${dataFormatada}</div>
+                
+                <div class="recibo-label">Quantidade:</div>
+                <div class="recibo-value">${medida.metrosCubicos.toFixed(2)} m³</div>
+                
+                <div class="recibo-label">Unidade:</div>
+                <div class="recibo-value">Mt</div>
+                
+                ${medida.centroCusto ? `
+                  <div class="recibo-label">Centro de Custo:</div>
+                  <div class="recibo-value">${medida.centroCusto}</div>
+                ` : ''}
+                
+                <div class="recibo-label">Nota Fiscal:</div>
+                <div class="recibo-value">${medida.nfe || "-"}</div>
+                
+                <div class="recibo-label">Valor Unitário:</div>
+                <div class="recibo-value">${formatarValor(medida.valorUnitario)}</div>
+                
+                <div class="recibo-total">${formatarValor(medida.valorTotal)}</div>
+              </div>
+              
+              <div class="recibo-recebido">
+                <div class="recibo-label">Recebido por:</div>
+                <div>${medida.usuario}</div>
+                ${medida.chavePixFornecedor ? `
+                  <div style="margin-top: 10px;">
+                    <div class="recibo-label">Chave PIX Fornecedor:</div>
+                    <div>${medida.chavePixFornecedor}</div>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <div class="recibo-assinatura">
+              <div class="recibo-assinatura-line"></div>
+              <div class="recibo-assinatura-text">Assinatura do Fornecedor</div>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      
+      if (iframeDoc) {
+        iframeDoc.open();
+        iframeDoc.write(printContent);
+        iframeDoc.close();
+
+        setTimeout(() => {
+          if (iframe.contentWindow) {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+          }
+          
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 100);
+        }, 250);
+      }
+    } catch (error) {
+      console.error('Erro ao imprimir:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro na impressão",
+        description: "Não foi possível enviar para impressão automaticamente."
+      });
+    }
+  };
+      
+      // Impressão automática
+      imprimirRecibo(medidaParaImpressao);
       
       // Limpa o formulário
       setMedidas([0, 0, 0, 0, 0, 0]);
@@ -208,6 +523,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       setValorUnitario(0);
       setChavePixFornecedor("");
       setContatoFornecedor("");
+      setCentroCusto("");
       
       // Notifica componente pai sobre sucesso
       onSaveSuccess();
@@ -285,6 +601,16 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
               <div className="bg-secondary p-4 md:p-6 rounded-lg mt-4 md:mt-6">
                 <h3 className="font-medium text-base md:text-lg mb-3 md:mb-4">Resumo do Cálculo</h3>
                 <div className="grid grid-cols-2 gap-3 md:gap-4 text-sm md:text-base">
+                  <div>Fornecedor:</div>
+                  <div className="font-medium">{fornecedor || "-"}</div>
+                  
+                  {centroCusto && (
+                    <>
+                      <div>Centro de Custo:</div>
+                      <div className="font-medium">{centroCusto}</div>
+                    </>
+                  )}
+                  
                   <div>Altura Média:</div>
                   <div className="font-medium">{alturaMedia} m</div>
                   
@@ -383,7 +709,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
             )}
             <Button 
               type="submit" 
-              disabled={loading || !medidas.every(m => m > 0) || comprimento <= 0 || largura <= 0}
+              disabled={loading || !medidas.every(m => m > 0) || comprimento <= 0 || largura <= 0 || !fornecedor}
               className="h-10 md:h-12 px-4 md:px-6 text-sm md:text-base w-full sm:w-auto"
             >
               {loading ? "Salvando..." : "Registrar Medição"}
