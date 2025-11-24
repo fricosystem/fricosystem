@@ -165,6 +165,11 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
                 <div class="recibo-label">Unidade:</div>
                 <div class="recibo-value">Mt</div>
                 
+                ${medida.centroCusto ? `
+                  <div class="recibo-label">Centro de Custo:</div>
+                  <div class="recibo-value">${medida.centroCusto}</div>
+                ` : ''}
+                
                 <div class="recibo-label">Nota Fiscal:</div>
                 <div class="recibo-value">${medida.nfe || "-"}</div>
                 
@@ -239,6 +244,11 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
                 
                 <div class="recibo-label">Unidade:</div>
                 <div class="recibo-value">Mt</div>
+                
+                ${medida.centroCusto ? `
+                  <div class="recibo-label">Centro de Custo:</div>
+                  <div class="recibo-value">${medida.centroCusto}</div>
+                ` : ''}
                 
                 <div class="recibo-label">Nota Fiscal:</div>
                 <div class="recibo-value">${medida.nfe || "-"}</div>
@@ -347,6 +357,13 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
               
               <div className="font-semibold text-gray-300">Unidade:</div>
               <div className="text-right text-white">Mt</div>
+              
+              {medida.centroCusto && (
+                <>
+                  <div className="font-semibold text-gray-300">Centro de Custo:</div>
+                  <div className="text-right text-white">{medida.centroCusto}</div>
+                </>
+              )}
               
               <div className="font-semibold text-gray-300">Nota Fiscal:</div>
               <div className="text-right text-white">{medida.nfe || "-"}</div>
