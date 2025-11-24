@@ -770,17 +770,32 @@ const Dashboard = () => {
     }
     return data;
   };
-  const tempoCadastroFornecedores = () => {
-    const now = new Date();
-    return fornecedores.filter(f => f.createdAt && (f.razao_social || f.nome)).map(fornecedor => {
-      const createdAt = fornecedor.createdAt ? convertFirebaseTimestamp(fornecedor.createdAt) : now;
-      const diffTime = Math.abs(now.getTime() - createdAt.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return {
-        name: fornecedor.razao_social || fornecedor.nome || 'Fornecedor sem nome',
-        dias: diffDays
-      };
-    }).sort((a, b) => b.dias - a.dias).slice(0, 5);
+  // Dados para gráfico de movimentações por status (entrada vs saída)
+  const movimentacoesPorStatus = () => {
+    if (!relatorios || relatorios.length === 0) {
+      return [{
+        name: 'Entradas',
+        value: 0,
+        fill: '#82ca9d'
+      }, {
+        name: 'Saídas',
+        value: 0,
+        fill: '#8dd1e1'
+      }];
+    }
+    
+    const entradas = relatorios.filter(r => r.status === 'entrada').length;
+    const saidas = relatorios.filter(r => r.status === 'saida').length;
+    
+    return [{
+      name: 'Entradas',
+      value: entradas,
+      fill: '#82ca9d'
+    }, {
+      name: 'Saídas',
+      value: saidas,
+      fill: '#8dd1e1'
+    }];
   };
 
   // Contar produtos por fornecedor
@@ -818,22 +833,34 @@ const Dashboard = () => {
     }];
   };
 
-  // Dados para gráfico de dispersão (valor vs quantidade)
-  const dadosValorQuantidade = () => {
-    if (!produtos || produtos.length === 0) {
+  // Dados para gráfico de valor total por centro de custo
+  const valorPorCentroDeCusto = () => {
+    if (!relatorios || relatorios.length === 0) {
       return [{
-        x: 0,
-        y: 0,
-        z: 20,
-        name: 'Sem dados'
+        name: 'Sem dados',
+        value: 0
       }];
     }
-    return produtos.filter(p => p.valor_unitario && p.quantidade).slice(0, 50).map(p => ({
-      x: Number(p.valor_unitario) || 0,
-      y: p.quantidade || 1,
-      z: 20,
-      name: p.nome || 'Produto sem nome'
-    }));
+    
+    const centroCustoMap: Record<string, number> = {};
+    
+    relatorios.forEach(rel => {
+      const centro = rel.centro_de_custo || 'Não definido';
+      const valor = rel.valor_total || 0;
+      
+      if (!centroCustoMap[centro]) {
+        centroCustoMap[centro] = 0;
+      }
+      centroCustoMap[centro] += valor;
+    });
+    
+    return Object.entries(centroCustoMap)
+      .map(([name, value]) => ({
+        name: name,
+        value: value
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
   };
 
   // Dados para gráfico de produtos por unidade (barras)
@@ -899,72 +926,62 @@ const Dashboard = () => {
   const relatoriosPorCentroCusto = () => {
     if (!relatorios || relatorios.length === 0) {
       console.warn('Nenhum relatório disponível para centro de custo');
-      return [];
+      // Retornar dados de exemplo baseados em produtos por centro de custo
+      const centroCustoFromReqs: Record<string, number> = {};
+      requisicoes.forEach(req => {
+        req.itens?.forEach(item => {
+          const centro = item.centro_de_custo || 'Não definido';
+          centroCustoFromReqs[centro] = (centroCustoFromReqs[centro] || 0) + (item.quantidade || 0);
+        });
+      });
+      
+      const result = Object.entries(centroCustoFromReqs).map(([name, value], index) => ({
+        name: name,
+        value: value,
+        fill: COLORS[index % COLORS.length]
+      })).sort((a, b) => b.value - a.value).slice(0, 10);
+      
+      if (result.length > 0) return result;
+      
+      return [{
+        name: 'Sem movimentações',
+        value: 0,
+        fill: COLORS[0]
+      }];
     }
     
-    console.log(`Analisando ${relatorios.length} relatórios para centro de custo no período: ${period}`);
+    console.log(`Analisando ${relatorios.length} relatórios TOTAIS para centro de custo (últimos 90 dias)`);
     
     const now = new Date();
+    const last90Days = new Date(now);
+    last90Days.setDate(now.getDate() - 90);
+    
+    // Filtrar apenas por data válida e últimos 90 dias, ignorando o filtro de período selecionado
     const filteredRelatorios = relatorios.filter(relatorio => {
-      if (!relatorio.data_registro) {
-        console.warn('Relatório sem data_registro no centro de custo:', relatorio.id);
+      if (!relatorio.centro_de_custo) {
         return false;
       }
       
-      if (!relatorio.centro_de_custo) {
-        console.warn('Relatório sem centro_de_custo:', relatorio.id);
-        return false;
+      if (!relatorio.data_registro) {
+        return true; // Incluir relatórios sem data
       }
       
       const dataRegistro = convertFirebaseTimestamp(relatorio.data_registro);
       
-      // Verificar se a data convertida é válida
       if (isNaN(dataRegistro.getTime())) {
-        console.warn('Data inválida no relatório (centro custo):', relatorio.id, relatorio.data_registro);
-        return false;
+        return true; // Incluir se data inválida
       }
       
-      if (period === 'hoje') {
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const endOfToday = new Date(startOfToday);
-        endOfToday.setHours(23, 59, 59, 999);
-        return dataRegistro >= startOfToday && dataRegistro <= endOfToday;
-      } else if (period === 'semana') {
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-        return dataRegistro >= startOfWeek && dataRegistro <= endOfWeek;
-      } else if (period === 'mes') {
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        endOfMonth.setHours(23, 59, 59, 999);
-        return dataRegistro >= startOfMonth && dataRegistro <= endOfMonth;
-      } else if (period === 'ano') {
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const endOfYear = new Date(now.getFullYear(), 11, 31);
-        endOfYear.setHours(23, 59, 59, 999);
-        return dataRegistro >= startOfYear && dataRegistro <= endOfYear;
-      } else if (period === 'personalizado' && customStartDate && customEndDate) {
-        const startDate = new Date(customStartDate);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(customEndDate);
-        endDate.setHours(23, 59, 59, 999);
-        return dataRegistro >= startDate && dataRegistro <= endDate;
-      }
-      return false;
+      return dataRegistro >= last90Days; // Últimos 90 dias
     });
     
-    console.log(`Relatórios filtrados por centro de custo (${period}): ${filteredRelatorios.length}`);
+    console.log(`Relatórios dos últimos 90 dias: ${filteredRelatorios.length}`);
     
     const centroCustoMap: Record<string, number> = {};
     filteredRelatorios.forEach(relatorio => {
       if (relatorio.centro_de_custo) {
-        const quantidade = relatorio.quantidade || 0;
+        const quantidade = relatorio.quantidade || 1;
         centroCustoMap[relatorio.centro_de_custo] = (centroCustoMap[relatorio.centro_de_custo] || 0) + quantidade;
-        console.log(`Adicionando ${quantidade} ao centro ${relatorio.centro_de_custo}`);
       }
     });
     
@@ -972,9 +989,18 @@ const Dashboard = () => {
       name: name || 'Centro não definido',
       value: value || 0,
       fill: COLORS[index % COLORS.length]
-    })).sort((a, b) => b.value - a.value);
+    })).sort((a, b) => b.value - a.value).slice(0, 10);
     
     console.log('Resultado final do centro de custo:', result);
+    
+    if (result.length === 0) {
+      return [{
+        name: 'Sem dados',
+        value: 0,
+        fill: COLORS[0]
+      }];
+    }
+    
     return result;
   };
   return <AppLayout title="Dashboard Geral">
@@ -1125,7 +1151,7 @@ const Dashboard = () => {
                     background: 'hsl(var(--background))',
                     borderColor: 'hsl(var(--border))',
                     borderRadius: 'var(--radius)'
-                  }} formatter={(value, name) => [`${value} itens`, name]} />
+                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={(value, name) => [`${value} itens`, name]} />
                       <Legend />
                       {relatoriosMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => <Area key={centro} type="monotone" dataKey={centro} stackId="1" stroke={COLORS[index % COLORS.length]} fillOpacity={1} fill={`url(#color${centro.replace(/\s+/g, '')})`} />)}
                     </AreaChart>
@@ -1153,7 +1179,7 @@ const Dashboard = () => {
                     background: 'hsl(var(--background))',
                     borderColor: 'hsl(var(--border))',
                     borderRadius: 'var(--radius)'
-                  }} formatter={value => [`${value}%`, 'Índice']} />
+                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value}%`, 'Índice']} />
                       <Radar name="Estoque" dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
                     </RadarChart>
                   </ResponsiveContainer>
@@ -1188,7 +1214,7 @@ const Dashboard = () => {
                     background: 'hsl(var(--background))',
                     borderColor: 'hsl(var(--border))',
                     borderRadius: 'var(--radius)'
-                  }} formatter={value => [`${value} produtos`, 'Quantidade']} />
+                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value} produtos`, 'Quantidade']} />
                       <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1218,7 +1244,7 @@ const Dashboard = () => {
                     background: 'hsl(var(--background))',
                     borderColor: 'hsl(var(--border))',
                     borderRadius: 'var(--radius)'
-                  }} formatter={value => [`${value} fornecedores`, 'Quantidade']} />
+                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value} fornecedores`, 'Quantidade']} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
@@ -1226,38 +1252,37 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Valor vs Quantidade - Gráfico de Dispersão */}
+            {/* Valor Total por Centro de Custo - Gráfico de Barras */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <PieChartIcon className="h-5 w-5" /> Valor vs Quantidade
+                  <DollarSign className="h-5 w-5" /> Valor Total por Centro de Custo
                 </CardTitle>
-                <CardDescription>Relação entre valor unitário e estoque</CardDescription>
+                <CardDescription>Valor total das movimentações por centro de custo</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart margin={{
-                  top: 20,
-                  right: 20,
-                  bottom: 20,
-                  left: 20
-                }}>
+                    <BarChart 
+                      layout="vertical" 
+                      data={valorPorCentroDeCusto()} 
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis type="number" dataKey="x" name="Valor" unit="R$" />
-                      <YAxis type="number" dataKey="y" name="Quantidade" />
-                      <ZAxis type="number" dataKey="z" range={[20, 100]} />
-                      <Tooltip contentStyle={{
-                    background: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
-                  }} formatter={(value, name, props) => {
-                    if (name === 'x') return [formatCurrency(Number(value)), 'Valor'];
-                    if (name === 'y') return [value, 'Quantidade'];
-                    return [value, name];
-                  }} />
-                      <Scatter name="Produtos" data={dadosValorQuantidade()} fill="#8884d8" />
-                    </ScatterChart>
+                      <XAxis type="number" />
+                      <YAxis dataKey="name" type="category" width={150} />
+                      <Tooltip 
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)'
+                        }} 
+                        labelStyle={{ color: '#FFFFFF' }} 
+                        itemStyle={{ color: '#82ca9d' }} 
+                        formatter={value => [formatCurrency(Number(value)), 'Valor Total']} 
+                      />
+                      <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
@@ -1272,7 +1297,7 @@ const Dashboard = () => {
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" /> Movimentações por Centro de Custo
                 </CardTitle>
-                <CardDescription>Distribuição de movimentações {getPeriodText()}</CardDescription>
+                <CardDescription>Distribuição de movimentações (últimos 90 dias)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -1285,7 +1310,7 @@ const Dashboard = () => {
                     background: 'hsl(var(--background))',
                     borderColor: 'hsl(var(--border))',
                     borderRadius: 'var(--radius)'
-                  }} formatter={value => [`${value} itens`, 'Quantidade']} />
+                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value} itens`, 'Quantidade']} />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1312,7 +1337,7 @@ const Dashboard = () => {
                     background: 'hsl(var(--background))',
                     borderColor: 'hsl(var(--border))',
                     borderRadius: 'var(--radius)'
-                  }} formatter={value => [`${value} produtos`, 'Quantidade']} />
+                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value} produtos`, 'Quantidade']} />
                       <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1341,15 +1366,19 @@ const Dashboard = () => {
                       <XAxis dataKey="name" />
                       <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
                       <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                      <Tooltip contentStyle={{
-                    background: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
-                  }} formatter={(value, name) => {
-                    if (name === 'valor') return [formatCurrency(Number(value)), 'Valor'];
-                    if (name === 'quantidade') return [value, 'Produtos'];
-                    return [value, name];
-                  }} />
+                      <Tooltip 
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)'
+                        }} 
+                        labelStyle={{ color: '#FFFFFF' }}
+                        formatter={(value, name) => {
+                          if (name === 'valor') return [<span style={{ color: '#82ca9d' }}>{formatCurrency(Number(value))}</span>, <span style={{ color: '#8dd1e1' }}>Valor</span>];
+                          if (name === 'quantidade') return [<span style={{ color: '#82ca9d' }}>{value}</span>, <span style={{ color: '#8dd1e1' }}>Produtos</span>];
+                          return [<span style={{ color: '#82ca9d' }}>{value}</span>, <span style={{ color: '#8dd1e1' }}>{name}</span>];
+                        }} 
+                      />
                       <Legend />
                       <Bar yAxisId="left" dataKey="valor" name="Valor" fill="#8884d8" radius={[4, 4, 0, 0]} />
                       <Bar yAxisId="right" dataKey="quantidade" name="Produtos" fill="#82ca9d" radius={[4, 4, 0, 0]} />
@@ -1388,30 +1417,47 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Lista de fornecedores mais antigos */}
+            {/* Movimentações por Status - Gráfico de Pizza */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5" /> Fornecedores Mais Antigos
+                  <TrendingUp className="h-5 w-5" /> Movimentações por Status
                 </CardTitle>
-                <CardDescription>Por tempo de relacionamento</CardDescription>
+                <CardDescription>Distribuição de entradas e saídas</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {tempoCadastroFornecedores().length > 0 ? tempoCadastroFornecedores().map((fornecedor, index) => {
-                const estado = fornecedores.find(f => (f.razao_social || f.nome) === fornecedor.name)?.endereco?.estado || 'Não informado';
-                return <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                          <div>
-                            <p className="font-medium">{fornecedor.name}</p>
-                            <p className="text-sm text-muted-foreground">{estado}</p>
-                          </div>
-                          <Badge variant="secondary" className="px-3 py-1">
-                            {fornecedor.dias} dias
-                          </Badge>
-                        </div>;
-              }) : <div className="text-center py-6 text-muted-foreground">
-                      Nenhum fornecedor cadastrado
-                    </div>}
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie 
+                        data={movimentacoesPorStatus()} 
+                        cx="50%" 
+                        cy="50%" 
+                        labelLine={false} 
+                        outerRadius={80} 
+                        innerRadius={40} 
+                        paddingAngle={5} 
+                        dataKey="value" 
+                        nameKey="name" 
+                        label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                      >
+                        {movimentacoesPorStatus().map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{
+                          background: 'hsl(var(--background))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: 'var(--radius)'
+                        }} 
+                        labelStyle={{ color: '#FFFFFF' }} 
+                        itemStyle={{ color: '#82ca9d' }} 
+                        formatter={value => [`${value} movimentações`, 'Quantidade']} 
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
