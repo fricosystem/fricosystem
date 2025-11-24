@@ -23,6 +23,7 @@ export interface MedidaLenha {
   chavePixFornecedor: string;
   contatoFornecedor: string;
   cnpjFornecedor?: string;
+  centroCusto?: string;
 }
 
 export interface Fornecedor {
@@ -34,4 +35,5 @@ export interface Fornecedor {
   cnpj: string;
   contato: string;
   chavePix: string;
+  centroCusto?: string;
 }
