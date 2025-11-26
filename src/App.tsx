@@ -44,6 +44,7 @@ import Unidades from "./pages/Unidades";
 import Maquinas from "./pages/Maquinas";
 import MaquinaDetalhes from "./pages/MaquinaDetalhes";
 import ManutencoesDashboard from "./pages/ManutencoesDashboard";
+import ManutencaoPreventiva from "./pages/ManutencaoPreventiva";
 
 // Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
@@ -129,6 +130,7 @@ const AppContent = () => {
           <Route path="/maquinas" element={<AuthGuard><Maquinas /></AuthGuard>} />
           <Route path="/maquinas/:id" element={<AuthGuard><MaquinaDetalhes /></AuthGuard>} />
           <Route path="/manutencoes-dashboard" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
+          <Route path="/manutencao-preventiva" element={<AuthGuard><ManutencaoPreventiva /></AuthGuard>} />
            <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
            <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
            <Route path="/planejamento-desenvolvimento" element={<AuthGuard><PlanejamentoDesenvolvimento /></AuthGuard>} />
