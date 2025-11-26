@@ -131,11 +131,6 @@ const AppSidebar = () => {
       label: "Endereçamento",
       permission: "enderecamento"
     }, {
-      to: "/maquinas",
-      icon: WashingMachine,
-      label: "Máquinas",
-      permission: "maquinas"
-    }, {
       to: "/medida-de-lenha",
       icon: TreePine,
       label: "Cubagem e medida de Lenha",
@@ -145,6 +140,20 @@ const AppSidebar = () => {
       icon: FileSpreadsheet,
       label: "Relatórios",
       permission: "relatorios"
+    }]
+  }, {
+    label: "Manutenção",
+    icon: Wrench,
+    items: [{
+      to: "/maquinas",
+      icon: WashingMachine,
+      label: "Máquinas",
+      permission: "maquinas"
+    }, {
+      to: "/manutencao-preventiva",
+      icon: Calendar,
+      label: "Manutenção Preventiva",
+      permission: "manutencao_preventiva"
     }]
   }, {
     label: "Requisições",
