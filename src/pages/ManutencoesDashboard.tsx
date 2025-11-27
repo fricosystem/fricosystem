@@ -15,7 +15,7 @@ const ManutencoesDashboard = () => {
       const resultado = await executarManutencaoManual();
       if (resultado.success) {
         toast.success(
-          `Verificação concluída! ${resultado.ordensGeradas} ordem(ns) gerada(s) de ${resultado.pecasVerificadas} peça(s) verificada(s).`
+          `Verificação concluída! ${resultado.osGeradas} ordem(ns) gerada(s) de ${resultado.tarefasVerificadas} tarefa(s) verificada(s).`
         );
       } else {
         toast.error("Erro ao gerar ordens: " + resultado.error);
