@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ManutencaoAlertsProvider } from "@/contexts/ManutencaoAlertsContext";
 
 // Páginas
 import Login from "./pages/Login";
@@ -45,6 +46,8 @@ import Maquinas from "./pages/Maquinas";
 import MaquinaDetalhes from "./pages/MaquinaDetalhes";
 import ManutencoesDashboard from "./pages/ManutencoesDashboard";
 import ManutencaoPreventiva from "./pages/ManutencaoPreventiva";
+import ConfiguracoesManutencao from "./pages/ConfiguracoesManutencao";
+import AutomacaoManutencao from "./pages/AutomacaoManutencao";
 
 // Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
@@ -131,6 +134,8 @@ const AppContent = () => {
           <Route path="/maquinas/:id" element={<AuthGuard><MaquinaDetalhes /></AuthGuard>} />
           <Route path="/manutencoes-dashboard" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
           <Route path="/manutencao-preventiva" element={<AuthGuard><ManutencaoPreventiva /></AuthGuard>} />
+          <Route path="/configuracoes-manutencao" element={<AuthGuard><ConfiguracoesManutencao /></AuthGuard>} />
+          <Route path="/automacao-manutencao" element={<AuthGuard><AutomacaoManutencao /></AuthGuard>} />
            <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
            <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
            <Route path="/planejamento-desenvolvimento" element={<AuthGuard><PlanejamentoDesenvolvimento /></AuthGuard>} />
@@ -161,7 +166,9 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <AppContent />
+          <ManutencaoAlertsProvider>
+            <AppContent />
+          </ManutencaoAlertsProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
