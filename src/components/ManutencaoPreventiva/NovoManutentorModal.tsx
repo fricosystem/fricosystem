@@ -29,16 +29,27 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
   const [funcao, setFuncao] = useState<TipoManutencao>("Mecânica");
   const [ativo, setAtivo] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!nome.trim()) {
+    if (!nome.trim() || !email.trim()) {
       toast({
         title: "Erro",
-        description: "Nome é obrigatório",
+        description: "Nome e email são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "Erro",
+        description: "Email inválido",
         variant: "destructive"
       });
       return;
@@ -48,6 +59,7 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
     try {
       await addManutentor({
         nome: nome.trim(),
+        email: email.trim().toLowerCase(),
         funcao,
         ativo
       });
@@ -58,6 +70,7 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
       });
 
       setNome("");
+      setEmail("");
       setFuncao("Mecânica");
       setAtivo(true);
       onSuccess();
@@ -87,6 +100,18 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Nome do manutentor"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@empresa.com"
               required
             />
           </div>
