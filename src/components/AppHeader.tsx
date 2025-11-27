@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Bell, ShoppingCart, MessageSquare, QrCode, Barcode, Scan, Mail, Calendar } from "lucide-react";
+import { NotificacoesWidget } from "@/components/ManutencaoPreventiva/NotificacoesWidget";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -156,6 +157,9 @@ const AppHeader = ({ title, className }: AppHeaderProps) => {
           <h1 className="text-2xl font-bold">{title}</h1>
         </div>
         <div className="flex items-center space-x-4">
+          {/* Notificações de Manutenção */}
+          <NotificacoesWidget />
+          
           {/* Scanner Options Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
