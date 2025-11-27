@@ -55,6 +55,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
   const [descricaoTarefa, setDescricaoTarefa] = useState("");
   const [manutentorId, setManutentorId] = useState("");
   const [manutentorNome, setManutentorNome] = useState("");
+  const [manutentorEmail, setManutentorEmail] = useState("");
   const [tempoEstimado, setTempoEstimado] = useState("");
 
   useEffect(() => {
@@ -67,6 +68,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
     setManutentoresFiltrados(filtrados);
     setManutentorId("");
     setManutentorNome("");
+    setManutentorEmail("");
   }, [tipo, manutentores]);
 
   const loadMaquinas = async () => {
@@ -119,6 +121,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
         descricaoTarefa: descricaoTarefa.trim(),
         manutentorId,
         manutentorNome,
+        manutentorEmail,
         tempoEstimado: Number(tempoEstimado) || 0,
         proximaExecucao: proximaData.toISOString().split('T')[0],
         status: "pendente"
@@ -154,6 +157,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
     setDescricaoTarefa("");
     setManutentorId("");
     setManutentorNome("");
+    setManutentorEmail("");
     setTempoEstimado("");
   };
 
@@ -270,6 +274,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
                   setManutentorId(v);
                   const man = manutentoresFiltrados.find(m => m.id === v);
                   setManutentorNome(man?.nome || "");
+                  setManutentorEmail(man?.email || "");
                 }}
               >
                 <SelectTrigger>
