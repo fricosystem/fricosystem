@@ -123,6 +123,21 @@ export const registrarExecucaoTarefa = async (
     const proximaData = new Date(hoje);
     proximaData.setDate(proximaData.getDate() + tarefa.periodo);
     
+    // Realizar baixa automática de estoque se houver materiais
+    if (materiaisUtilizados && materiaisUtilizados.length > 0) {
+      const { baixarEstoque } = await import("@/services/estoqueService");
+      const resultado = await baixarEstoque(
+        materiaisUtilizados, 
+        tarefa.ordemId, 
+        tarefaId
+      );
+      
+      // Alertas de estoque serão tratados pela UI
+      if (resultado.alertas.length > 0) {
+        console.warn("Alertas de estoque:", resultado.alertas);
+      }
+    }
+    
     await updateDoc(tarefaRef, {
       ultimaExecucao: serverTimestamp(),
       proximaExecucao: proximaData.toISOString().split('T')[0],
