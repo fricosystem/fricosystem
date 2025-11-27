@@ -48,6 +48,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
   const [tipo, setTipo] = useState<TipoManutencao>("Mecânica");
   const [maquinaId, setMaquinaId] = useState("");
   const [maquinaNome, setMaquinaNome] = useState("");
+  const [setor, setSetor] = useState("");
   const [periodo, setPeriodo] = useState<PeriodoManutencao>("Mensal");
   const [sistema, setSistema] = useState("");
   const [subconjunto, setSubconjunto] = useState("");
@@ -57,6 +58,9 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
   const [manutentorNome, setManutentorNome] = useState("");
   const [manutentorEmail, setManutentorEmail] = useState("");
   const [tempoEstimado, setTempoEstimado] = useState("");
+  const [dataAgendada, setDataAgendada] = useState("");
+  const [horaAgendada, setHoraAgendada] = useState("08:00");
+  const [prioridade, setPrioridade] = useState<"baixa" | "media" | "alta" | "critica">("media");
 
   useEffect(() => {
     loadMaquinas();
@@ -109,10 +113,17 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
       const proximaData = new Date(hoje);
       proximaData.setDate(proximaData.getDate() + PERIODOS_DIAS[periodo]);
 
+      // Construir data/hora agendada se fornecida
+      let dataHoraAgendada: string | undefined;
+      if (dataAgendada && horaAgendada) {
+        dataHoraAgendada = `${dataAgendada}T${horaAgendada}:00`;
+      }
+
       await addTarefaManutencao({
         tipo,
         maquinaId,
         maquinaNome,
+        setor: setor.trim() || undefined,
         periodo: PERIODOS_DIAS[periodo],
         periodoLabel: periodo,
         sistema: sistema.trim(),
@@ -123,7 +134,9 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
         manutentorNome,
         manutentorEmail,
         tempoEstimado: Number(tempoEstimado) || 0,
-        proximaExecucao: proximaData.toISOString().split('T')[0],
+        proximaExecucao: dataAgendada || proximaData.toISOString().split('T')[0],
+        dataHoraAgendada,
+        prioridade,
         status: "pendente"
       });
 
@@ -150,6 +163,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
     setTipo("Mecânica");
     setMaquinaId("");
     setMaquinaNome("");
+    setSetor("");
     setPeriodo("Mensal");
     setSistema("");
     setSubconjunto("");
@@ -159,6 +173,9 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
     setManutentorNome("");
     setManutentorEmail("");
     setTempoEstimado("");
+    setDataAgendada("");
+    setHoraAgendada("08:00");
+    setPrioridade("media");
   };
 
   return (
@@ -198,27 +215,40 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="maquina">Máquina *</Label>
-            <Select 
-              value={maquinaId} 
-              onValueChange={(v) => {
-                setMaquinaId(v);
-                const maq = maquinas.find(m => m.id === v);
-                setMaquinaNome(maq?.equipamento || "");
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a máquina" />
-              </SelectTrigger>
-              <SelectContent>
-                {maquinas.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.equipamento} - {m.setor}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="maquina">Máquina *</Label>
+              <Select 
+                value={maquinaId} 
+                onValueChange={(v) => {
+                  setMaquinaId(v);
+                  const maq = maquinas.find(m => m.id === v);
+                  setMaquinaNome(maq?.equipamento || "");
+                  setSetor(maq?.setor || "");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a máquina" />
+                </SelectTrigger>
+                <SelectContent>
+                  {maquinas.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.equipamento} - {m.setor}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="setor">Setor</Label>
+              <Input
+                id="setor"
+                value={setor}
+                onChange={(e) => setSetor(e.target.value)}
+                placeholder="Ex: Produção"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -301,6 +331,43 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
                 min="0"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="dataAgendada">Data Agendada</Label>
+              <Input
+                id="dataAgendada"
+                type="date"
+                value={dataAgendada}
+                onChange={(e) => setDataAgendada(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="horaAgendada">Hora Agendada</Label>
+              <Input
+                id="horaAgendada"
+                type="time"
+                value={horaAgendada}
+                onChange={(e) => setHoraAgendada(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="prioridade">Prioridade</Label>
+            <Select value={prioridade} onValueChange={(v: any) => setPrioridade(v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="baixa">Baixa</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="critica">Crítica</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end gap-2">
