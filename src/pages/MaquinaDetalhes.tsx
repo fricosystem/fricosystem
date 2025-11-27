@@ -20,7 +20,10 @@ import { AddSubPecaModal } from "@/components/Maquinas/AddSubPecaModal";
 import { AddSistemaModal } from "@/components/Maquinas/AddSistemaModal";
 import { AddManutencaoModal } from "@/components/Maquinas/AddManutencaoModal";
 import { AddMetricaModal } from "@/components/Maquinas/AddMetricaModal";
+import { AddTarefaPreventivaMaquinaModal } from "@/components/Maquinas/AddTarefaPreventivaMaquinaModal";
+import { TarefasListagem } from "@/components/Maquinas/TarefasListagem";
 import { PecaCard } from "@/components/Maquinas/PecaCard";
+import { useTarefasMaquina } from "@/hooks/useTarefasMaquina";
 
 interface SubPeca {
   id: string;
@@ -126,6 +129,7 @@ const MaquinaDetalhes = () => {
   const [isSistemaModalOpen, setIsSistemaModalOpen] = useState(false);
   const [isManutencaoModalOpen, setIsManutencaoModalOpen] = useState(false);
   const [isMetricaModalOpen, setIsMetricaModalOpen] = useState(false);
+  const [isTarefaPreventivaMaquinaModalOpen, setIsTarefaPreventivaMaquinaModalOpen] = useState(false);
   const [editingPeca, setEditingPeca] = useState<Peca | null>(null);
   const [editingSubPeca, setEditingSubPeca] = useState<SubPeca | null>(null);
   const [editingSistema, setEditingSistema] = useState<Sistema | null>(null);
@@ -138,6 +142,18 @@ const MaquinaDetalhes = () => {
   const [metricas, setMetricas] = useState<Metrica[]>([]);
   const [loadingManutencoes, setLoadingManutencoes] = useState(false);
   const [loadingMetricas, setLoadingMetricas] = useState(false);
+
+  // Hook de tarefas de manutenção preventiva
+  const {
+    tarefas: tarefasPreventivas,
+    todasTarefas,
+    loading: loadingTarefas,
+    stats: statsTarefas,
+    filtros: filtrosTarefas,
+    setFiltros: setFiltrosTarefas,
+    tarefasPorSistema,
+    tarefasPorComponente
+  } = useTarefasMaquina(id || "");
 
   // Buscar máquina
   useEffect(() => {
@@ -1399,6 +1415,7 @@ const MaquinaDetalhes = () => {
             <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
             <TabsTrigger value="pecas">Gerenciar Peças</TabsTrigger>
             <TabsTrigger value="historico">Histórico</TabsTrigger>
+            <TabsTrigger value="preventiva">Manutenção Preventiva</TabsTrigger>
             <TabsTrigger value="desempenho">Desempenho</TabsTrigger>
           </TabsList>
 
@@ -1592,6 +1609,18 @@ const MaquinaDetalhes = () => {
             )}
           </TabsContent>
 
+          {/* Aba Manutenção Preventiva */}
+          <TabsContent value="preventiva" className="space-y-6">
+            <TarefasListagem
+              tarefas={tarefasPreventivas}
+              stats={statsTarefas}
+              filtros={filtrosTarefas}
+              setFiltros={setFiltrosTarefas}
+              sistemas={Array.from(new Set(todasTarefas.map(t => t.sistema)))}
+              onAddTarefa={() => setIsTarefaPreventivaMaquinaModalOpen(true)}
+            />
+          </TabsContent>
+
           {/* Aba Desempenho */}
           <TabsContent value="desempenho" className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1659,6 +1688,18 @@ const MaquinaDetalhes = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Modais */}
+        <AddTarefaPreventivaMaquinaModal
+          open={isTarefaPreventivaMaquinaModalOpen}
+          onOpenChange={setIsTarefaPreventivaMaquinaModalOpen}
+          equipamentoId={id || ""}
+          equipamentoNome={maquina.nome}
+          sistemas={sistemas}
+          onSuccess={() => {
+            setIsTarefaPreventivaMaquinaModalOpen(false);
+          }}
+        />
       </div>
     </AppLayout>
   );
