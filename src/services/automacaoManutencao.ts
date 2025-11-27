@@ -98,11 +98,46 @@ async function verificarOrdemPendente(
 }
 
 /**
+ * Gera ID sequencial para ordens de serviço
+ * Formato: OS-YYYYMMDD-XXXX
+ */
+async function gerarOrdemIdSequencial(): Promise<string> {
+  const hoje = new Date();
+  const dataStr = hoje.toISOString().slice(0, 10).replace(/-/g, "");
+  const prefix = `OS-${dataStr}`;
+
+  // Buscar última ordem do dia
+  const ordensRef = collection(db, "ordens_servicos");
+  const q = query(
+    ordensRef,
+    where("ordemId", ">=", prefix),
+    where("ordemId", "<", `OS-${dataStr}Z`)
+  );
+  
+  const snapshot = await getDocs(q);
+  let maxNum = 0;
+
+  snapshot.forEach((doc) => {
+    const ordemId = doc.data().ordemId as string;
+    if (ordemId && ordemId.startsWith(prefix)) {
+      const num = parseInt(ordemId.split("-")[2] || "0");
+      if (num > maxNum) maxNum = num;
+    }
+  });
+
+  const novoNum = (maxNum + 1).toString().padStart(4, "0");
+  return `${prefix}-${novoNum}`;
+}
+
+/**
  * Cria uma ordem de serviço automática para uma tarefa
  */
 async function criarOrdemServico(tarefa: TarefaManutencao): Promise<string> {
+  const ordemId = await gerarOrdemIdSequencial();
+  
   const ordemData = {
-    setor: "Manutenção Preventiva",
+    ordemId, // ID sequencial gerado
+    setor: tarefa.setor || "Manutenção Preventiva",
     equipamento: tarefa.maquinaNome,
     equipamentoId: tarefa.maquinaId,
     tarefaManutencaoId: tarefa.id,
@@ -134,12 +169,19 @@ async function criarOrdemServico(tarefa: TarefaManutencao): Promise<string> {
     status: "pendente",
     geradaAutomaticamente: true,
     tipoOrdem: "Automatica",
-    dataAgendada: tarefa.proximaExecucao,
+    dataAgendada: tarefa.dataHoraAgendada || tarefa.proximaExecucao,
     tempoEstimado: tarefa.tempoEstimado,
-    prioridade: determinarStatusPorManutencao(tarefa.proximaExecucao).toLowerCase(),
+    prioridade: tarefa.prioridade || determinarStatusPorManutencao(tarefa.proximaExecucao).toLowerCase(),
   };
 
   const docRef = await addDoc(collection(db, "ordens_servicos"), ordemData);
+  
+  // Atualizar tarefa com o ordemId gerado
+  await updateDoc(doc(db, "tarefas_manutencao", tarefa.id), {
+    ordemId,
+    atualizadoEm: Timestamp.now()
+  });
+  
   return docRef.id;
 }
 
