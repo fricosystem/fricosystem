@@ -8,6 +8,7 @@ interface TarefaTimeline {
   nome: string;
   maquina: string;
   data: string;
+  dataHora?: string; // ISO string completo com data e hora
   diasRestantes: number;
   urgencia: "critico" | "alto" | "medio" | "baixo";
 }
@@ -47,34 +48,60 @@ export const TimelineManutencao = ({ tarefas }: TimelineManutencaoProps) => {
               Nenhuma manutenção programada para os próximos 30 dias
             </p>
           ) : (
-            tarefasOrdenadas.map((tarefa) => (
-              <div key={tarefa.id} className="flex items-start gap-3">
-                <div className="flex flex-col items-center">
-                  <div className={`w-3 h-3 rounded-full ${getUrgenciaColor(tarefa.urgencia)}`} />
-                  <div className="w-0.5 h-16 bg-border" />
+            <>
+              {tarefasOrdenadas.map((tarefa) => (
+                <div key={tarefa.id} className="flex items-start gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-3 h-3 rounded-full ${getUrgenciaColor(tarefa.urgencia)}`} />
+                    <div className="w-0.5 h-16 bg-border" />
+                  </div>
+                  <div className="flex-1 pb-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium">{tarefa.nome}</p>
+                      <Badge 
+                        variant="outline"
+                        className="text-xs"
+                      >
+                        {tarefa.diasRestantes === 0
+                          ? "Hoje"
+                          : tarefa.diasRestantes < 0
+                          ? `${Math.abs(tarefa.diasRestantes)}d atrasado`
+                          : `${tarefa.diasRestantes}d`}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{tarefa.maquina}</p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                      <Clock className="h-3 w-3" />
+                      {tarefa.dataHora 
+                        ? new Date(tarefa.dataHora).toLocaleString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          })
+                        : new Date(tarefa.data).toLocaleDateString("pt-BR")
+                      }
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 pb-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-medium">{tarefa.nome}</p>
-                    <Badge 
-                      variant="outline"
-                      className="text-xs"
-                    >
-                      {tarefa.diasRestantes === 0
-                        ? "Hoje"
-                        : tarefa.diasRestantes < 0
-                        ? `${Math.abs(tarefa.diasRestantes)}d atrasado`
-                        : `${tarefa.diasRestantes}d`}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{tarefa.maquina}</p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                    <Clock className="h-3 w-3" />
-                    {new Date(tarefa.data).toLocaleDateString("pt-BR")}
-                  </div>
+              ))}
+              
+              {/* Indicador de fim da lista */}
+              <div className="flex items-center gap-3 pt-4">
+                <div className="flex flex-col items-center">
+                  <div className="w-3 h-3 rounded-full bg-muted border-2 border-dashed border-border" />
+                </div>
+                <div className="flex-1 text-center py-4 border-t border-dashed border-border">
+                  <p className="text-muted-foreground text-sm">
+                    📋 Fim das manutenções agendadas
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Próximas verificações serão atualizadas automaticamente
+                  </p>
                 </div>
               </div>
-            ))
+            </>
           )}
         </div>
       </CardContent>
