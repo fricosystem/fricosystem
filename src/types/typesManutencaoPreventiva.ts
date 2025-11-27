@@ -18,6 +18,8 @@ export type StatusTarefa = "pendente" | "em_andamento" | "concluida" | "cancelad
 
 export interface TarefaManutencao {
   id: string;
+  ordemId?: string; // NOVO - formato OS-YYYYMMDD-XXXX
+  setor?: string; // NOVO - setor da máquina/tarefa
   tipo: TipoManutencao;
   maquinaId: string;
   maquinaNome: string;
@@ -34,6 +36,7 @@ export interface TarefaManutencao {
   tempoRealizado?: number; // minutos
   ultimaExecucao?: Timestamp;
   proximaExecucao: string; // YYYY-MM-DD
+  dataHoraAgendada?: string; // NOVO - ISO string completo com data e hora
   status: StatusTarefa;
   dataInicio?: Timestamp;
   dataFim?: Timestamp;
