@@ -25,6 +25,7 @@ interface UserData {
   cpf: string;
   cnpj: string;
   cargo: string;
+  perfil: string; // NOVO - ex: "usuario", "MANUTENTOR", "admin"
   tema: string;
   data_registro: Timestamp;
   ultimo_login: Timestamp;
