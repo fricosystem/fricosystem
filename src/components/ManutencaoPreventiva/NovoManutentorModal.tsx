@@ -157,7 +157,7 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
                   <SelectValue placeholder="Selecione um usuário" />
                 </SelectTrigger>
                 <SelectContent>
-                  {funcionarios?.filter(f => f.ativo === "Ativo").map((funcionario) => (
+                  {funcionarios?.map((funcionario) => (
                     <SelectItem key={funcionario.id} value={funcionario.id}>
                       {funcionario.nome} - {funcionario.email}
                     </SelectItem>

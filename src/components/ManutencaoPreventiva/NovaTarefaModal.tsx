@@ -10,6 +10,7 @@ import { addTarefaManutencao } from "@/firebase/manutencaoPreventiva";
 import { TipoManutencao, PeriodoManutencao, PERIODOS_DIAS } from "@/types/typesManutencaoPreventiva";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
+import { useManutentores } from "@/hooks/useManutentores";
 
 interface NovaTarefaModalProps {
   open: boolean;
@@ -42,8 +43,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [maquinas, setMaquinas] = useState<any[]>([]);
-  const [manutentores, setManutentores] = useState<any[]>([]);
-  const [manutentoresFiltrados, setManutentoresFiltrados] = useState<any[]>([]);
+  const { data: manutentores = [], isLoading: loadingManutentores } = useManutentores();
 
   const [tipo, setTipo] = useState<TipoManutencao>("Mecânica");
   const [maquinaId, setMaquinaId] = useState("");
@@ -64,16 +64,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
 
   useEffect(() => {
     loadMaquinas();
-    loadManutentores();
   }, []);
-
-  useEffect(() => {
-    const filtrados = manutentores.filter(m => m.funcao === tipo && m.ativo);
-    setManutentoresFiltrados(filtrados);
-    setManutentorId("");
-    setManutentorNome("");
-    setManutentorEmail("");
-  }, [tipo, manutentores]);
 
   const loadMaquinas = async () => {
     try {
@@ -82,16 +73,6 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
       setMaquinas(docs);
     } catch (error) {
       console.error("Erro ao carregar máquinas:", error);
-    }
-  };
-
-  const loadManutentores = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "manutentores"));
-      const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setManutentores(docs);
-    } catch (error) {
-      console.error("Erro ao carregar manutentores:", error);
     }
   };
 
@@ -302,20 +283,23 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
                 value={manutentorId} 
                 onValueChange={(v) => {
                   setManutentorId(v);
-                  const man = manutentoresFiltrados.find(m => m.id === v);
+                  const man = manutentores.find(m => m.id === v);
                   setManutentorNome(man?.nome || "");
                   setManutentorEmail(man?.email || "");
                 }}
+                disabled={loadingManutentores}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o manutentor" />
+                  <SelectValue placeholder={loadingManutentores ? "Carregando..." : "Selecione o manutentor"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {manutentoresFiltrados.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.nome} ({m.funcao})
-                    </SelectItem>
-                  ))}
+                  {manutentores
+                    .filter(m => m.ativo)
+                    .map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.nome} ({m.funcao})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
