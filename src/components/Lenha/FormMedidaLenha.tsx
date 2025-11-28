@@ -175,6 +175,26 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
         centroCusto,
       };
       
+      // Salvar na coleção medidas_lenha (para aparecer na tabela)
+      const medidaRef = await addDoc(collection(db, "medidas_lenha"), {
+        data: Timestamp.fromDate(new Date()),
+        medidas: medidas.map(m => m.toString()),
+        comprimento,
+        largura,
+        metrosCubicos,
+        fornecedor,
+        nfe,
+        responsavel: userData?.nome || "Usuário não identificado",
+        valorUnitario,
+        valorTotal,
+        usuario: userData?.nome || "Usuário não identificado",
+        chavePixFornecedor,
+        contatoFornecedor,
+        cnpjFornecedor,
+        centroCusto,
+        status_envio: "pendente"
+      });
+      
       // Salvar relatório da cubagem/lenha
       const relatorioRef = await addDoc(collection(db, "relatorios"), {
         requisicao_id: null,
@@ -221,9 +241,9 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
         description: `${metrosCubicos} m³ de lenha registrados.`,
       });
       
-      // Preparar dados para impressão
+      // Preparar dados para impressão usando o ID da medida
       const medidaParaImpressao: MedidaLenha = {
-        id: relatorioRef.id,
+        id: medidaRef.id,
         ...novaMedida
   };
   
