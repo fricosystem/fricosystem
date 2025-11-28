@@ -15,7 +15,7 @@ import {
   ShoppingBasket, Scan, FileInput, ReceiptText, ArrowRightLeft, 
   MapPin, TreePine, FileOutput, ClipboardCheck, RotateCcw, UserCheck, 
   Building, DollarSign, Calculator, Upload, Shield, Cog, PackageCheck, 
-  Gavel, X, Menu, MessageSquare, Mail, Calendar
+  Gavel, X, Menu, MessageSquare, Mail, Calendar, WashingMachine, Monitor, Code
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -274,6 +274,19 @@ const FuturisticFloatingMenu = () => {
       items: filterItemsByPermission([
         { id: "dashboard", icon: <BarChart3 size={20} />, label: "Dashboard Geral", path: "/dashboard", permission: "dashboard" },
         { id: "fornecedor-produtos", icon: <ShoppingBasket size={20} />, label: "Ordens de Compra", path: "/fornecedor-produtos", permission: "ordens_compra" },
+        { id: "execucao-preventiva", icon: <ClipboardCheck size={20} />, label: "Execução Preventiva", path: "/execucao-preventiva", permission: "execucao_preventiva" },
+      ]),
+    },
+    {
+      id: "manutencao",
+      icon: <Wrench size={24} />,
+      label: "Manutenção",
+      items: filterItemsByPermission([
+        { id: "maquinas", icon: <WashingMachine size={20} />, label: "Máquinas", path: "/maquinas", permission: "maquinas" },
+        { id: "manutencao-preventiva", icon: <Calendar size={20} />, label: "Manutenção Preventiva", path: "/manutencao-preventiva", permission: "manutencao_preventiva" },
+        { id: "manutencoes-dashboard", icon: <BarChart3 size={20} />, label: "Dashboard de Manutenções", path: "/manutencoes-dashboard", permission: "manutencoes_dashboard" },
+        { id: "configuracoes-manutencao", icon: <Settings size={20} />, label: "Configurações", path: "/configuracoes-manutencao", permission: "configuracoes_manutencao" },
+        { id: "automacao-manutencao", icon: <Cog size={20} />, label: "Automação", path: "/automacao-manutencao", permission: "automacao_manutencao" },
       ]),
     },
     {
@@ -343,7 +356,7 @@ const FuturisticFloatingMenu = () => {
       items: filterItemsByPermission([
         { id: "chat", icon: <MessageSquare size={20} />, label: "Chat", path: "/chat", permission: "chat" },
         { id: "email", icon: <Mail size={20} />, label: "Email", path: "/email", permission: "email" },
-        { id: "agendamento", icon: <Calendar size={20} />, label: "Agendamento", path: "/agendamento", permission: "agendamento" },
+        { id: "reunioes", icon: <Calendar size={20} />, label: "Reuniões", path: "/reunioes", permission: "reunioes" },
       ]),
     },
     ...(isAdmin ? [{
@@ -354,6 +367,15 @@ const FuturisticFloatingMenu = () => {
         { id: "gestao-usuarios", icon: <UserCheck size={20} />, label: "Gestão de Usuários", path: "/gestao-usuarios", permission: "gestao_usuarios" },
         { id: "gestao-produtos", icon: <Cog size={20} />, label: "Gestão de Produtos", path: "/gestao-produtos", permission: "gestao_produtos" },
         { id: "unidades", icon: <Building2 size={20} />, label: "Gestão de Unidades", path: "/unidades", permission: "gestao_unidades" },
+      ]),
+    }] : []),
+    ...(isAdmin ? [{
+      id: "desenvolvedor",
+      icon: <Code size={24} />,
+      label: "Desenvolvedor",
+      items: filterItemsByPermission([
+        { id: "planejamento-desenvolvimento", icon: <ClipboardList size={20} />, label: "Planejamento", path: "/planejamento-desenvolvimento", permission: "planejamento_desenvolvimento" },
+        { id: "ide", icon: <Monitor size={20} />, label: "IDE", path: "/ide", permission: "ide" },
       ]),
     }] : []),
     {

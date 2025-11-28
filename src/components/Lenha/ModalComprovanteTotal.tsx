@@ -39,10 +39,10 @@ const ModalComprovanteTotal = ({
   };
 
   const formatarData = (data: Date): string => {
-    return format(data, "dd/MM/yyyy", { locale: ptBR });
+    return format(data, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   };
 
-  const dataFormatada = format(new Date(), "dd/MM/yyyy", { locale: ptBR });
+  const dataFormatada = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 
   const handleImprimir = () => {
     setIsPrinting(true);
@@ -157,7 +157,7 @@ const ModalComprovanteTotal = ({
                 <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" class="logo" onerror="this.style.display='none'" />
                 <div class="header-text">
                   <h1 class="title">RELATÓRIO GERAL DE MEDIÇÃO DE LENHA</h1>
-                  <div class="date">Data do relatório: ${dataFormatada}</div>
+                  <div class="date">Data/Hora do relatório: ${dataFormatada}</div>
                 </div>
               </div>
               
@@ -175,7 +175,7 @@ const ModalComprovanteTotal = ({
               <table>
                 <thead>
                   <tr>
-                    <th>Data</th>
+                    <th>Data/Hora</th>
                     <th>NFe</th>
                     <th>Metros³</th>
                     <th>Fornecedor</th>
@@ -244,7 +244,7 @@ const ModalComprovanteTotal = ({
             </div>
             <div className="flex-1 text-center">
               <h2 className="text-lg font-bold text-white">RELATÓRIO GERAL DE MEDIÇÃO DE LENHA</h2>
-              <p className="text-gray-400 text-sm">Data do relatório: {dataFormatada}</p>
+              <p className="text-gray-400 text-sm">Data/Hora do relatório: {dataFormatada}</p>
             </div>
           </div>
 
@@ -263,7 +263,7 @@ const ModalComprovanteTotal = ({
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-700 text-gray-300">
-                  <th className="p-2 border border-gray-600">Data</th>
+                  <th className="p-2 border border-gray-600">Data/Hora</th>
                   <th className="p-2 border border-gray-600">NFe</th>
                   <th className="p-2 border border-gray-600">Metros³</th>
                   <th className="p-2 border border-gray-600">Fornecedor</th>

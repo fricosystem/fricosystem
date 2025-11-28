@@ -18,7 +18,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
   const { toast } = useToast();
 
   // Formatar data para exibição
-  const dataFormatada = format(medida.data, "dd/MM/yyyy", { locale: ptBR });
+  const dataFormatada = format(medida.data, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 
   // Formatar valor para exibição
   const formatarValor = (valor: number) => {
@@ -75,8 +75,8 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
           .recibo-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 6px 15px;
-            margin-bottom: 12px;
+            gap: 2px 15px;
+            margin-bottom: 4px;
           }
           .recibo-label {
             font-weight: bold;
@@ -99,12 +99,12 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
             font-size: 14px;
           }
           .recibo-recebido {
-            margin-top: 8px;
+            margin-top: 4px;
           }
           .recibo-assinatura {
-            margin-top: 30px;
+            margin-top: 15px;
             text-align: center;
-            padding-top: 8px;
+            padding-top: 4px;
           }
           .recibo-assinatura-line {
             width: 200px;
@@ -125,7 +125,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
           }
           .recibo-divider {
             border-top: 2px dashed #000;
-            margin: 40px 0;
+            margin: 20px 0;
           }
           @media print {
             body {
@@ -156,7 +156,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
                   <div class="recibo-value">${medida.cnpjFornecedor}</div>
                 ` : ''}
                 
-                <div class="recibo-label">Data:</div>
+                <div class="recibo-label">Data/Hora:</div>
                 <div class="recibo-value">${dataFormatada}</div>
                 
                 <div class="recibo-label">Quantidade:</div>
@@ -164,11 +164,6 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
                 
                 <div class="recibo-label">Unidade:</div>
                 <div class="recibo-value">Mt</div>
-                
-                ${medida.centroCusto ? `
-                  <div class="recibo-label">Centro de Custo:</div>
-                  <div class="recibo-value">${medida.centroCusto}</div>
-                ` : ''}
                 
                 <div class="recibo-label">Nota Fiscal:</div>
                 <div class="recibo-value">${medida.nfe || "-"}</div>
@@ -236,7 +231,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
                   <div class="recibo-value">${medida.cnpjFornecedor}</div>
                 ` : ''}
                 
-                <div class="recibo-label">Data:</div>
+                <div class="recibo-label">Data/Hora:</div>
                 <div class="recibo-value">${dataFormatada}</div>
                 
                 <div class="recibo-label">Quantidade:</div>
@@ -349,7 +344,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
               <div className="font-semibold text-gray-300">Fornecedor:</div>
               <div className="text-right font-bold text-white text-lg">{medida.fornecedor}</div>
               
-              <div className="font-semibold text-gray-300">Data:</div>
+              <div className="font-semibold text-gray-300">Data/Hora:</div>
               <div className="text-right text-white">{dataFormatada}</div>
               
               <div className="font-semibold text-gray-300">Quantidade:</div>

@@ -13,6 +13,18 @@ import { Manutentor, TarefaManutencao } from "@/types/typesManutencaoPreventiva"
 // Operações para Manutentores
 export const addManutentor = async (data: Omit<Manutentor, "id" | "criadoEm">) => {
   try {
+    // Verificar se já existe manutentor para este usuário
+    const { query: firestoreQuery, where: firestoreWhere, getDocs } = await import("firebase/firestore");
+    const q = firestoreQuery(
+      collection(db, "manutentores"),
+      firestoreWhere("usuarioId", "==", data.usuarioId)
+    );
+    const existingDocs = await getDocs(q);
+    
+    if (!existingDocs.empty) {
+      throw new Error("Já existe um manutentor cadastrado para este usuário");
+    }
+
     const docRef = await addDoc(collection(db, "manutentores"), {
       ...data,
       criadoEm: serverTimestamp()

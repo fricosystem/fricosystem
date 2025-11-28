@@ -2,6 +2,7 @@ import { Timestamp } from "firebase/firestore";
 
 export interface Manutentor {
   id: string;
+  usuarioId: string; // referência ao usuário da coleção "usuarios"
   nome: string;
   email: string;
   funcao: TipoManutencao;

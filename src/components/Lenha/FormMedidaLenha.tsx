@@ -268,11 +268,20 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
             size: A4;
             margin: 15mm;
           }
+          @page {
+            margin-top: 15mm;
+            margin-bottom: 15mm;
+          }
+          /* Remove cabeçalhos e rodapés padrão do navegador */
+          @media print {
+            @page { margin: 0; }
+            body { margin: 15mm; }
+          }
           body {
             font-family: Arial, sans-serif;
             color: #000;
             padding: 0;
-            margin: 15mm;
+            margin: 0;
             font-size: 13px;
           }
           .page-container {
@@ -294,8 +303,8 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
           .recibo-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 6px 15px;
-            margin-bottom: 12px;
+            gap: 2px 15px;
+            margin-bottom: 4px;
           }
           .recibo-label {
             font-weight: bold;
@@ -318,12 +327,12 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
             font-size: 14px;
           }
           .recibo-recebido {
-            margin-top: 8px;
+            margin-top: 4px;
           }
           .recibo-assinatura {
-            margin-top: 30px;
+            margin-top: 15px;
             text-align: center;
-            padding-top: 8px;
+            padding-top: 4px;
           }
           .recibo-assinatura-line {
             width: 200px;
@@ -344,7 +353,13 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
           }
           .recibo-divider {
             border-top: 2px dashed #000;
-            margin: 40px 0;
+            margin: 20px 0;
+          }
+          @media print {
+            body {
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
           }
         </style>
       </head>

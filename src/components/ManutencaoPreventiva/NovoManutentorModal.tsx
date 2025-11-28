@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { addManutentor } from "@/firebase/manutencaoPreventiva";
 import { TipoManutencao } from "@/types/typesManutencaoPreventiva";
+import { useFuncionarios } from "@/hooks/useFuncionarios";
+import { Card } from "@/components/ui/card";
+import { Trash2, UserPlus } from "lucide-react";
 
 interface NovoManutentorModalProps {
   open: boolean;
@@ -25,31 +27,79 @@ const TIPOS_MANUTENCAO: TipoManutencao[] = [
   "Inspeção"
 ];
 
+interface ManutentorTemp {
+  usuarioId: string;
+  nome: string;
+  email: string;
+  funcao: TipoManutencao;
+  ativo: boolean;
+}
+
 export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManutentorModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [funcao, setFuncao] = useState<TipoManutencao>("Mecânica");
-  const [ativo, setAtivo] = useState(true);
+  const { data: funcionarios, isLoading } = useFuncionarios();
+  const [usuarioSelecionadoId, setUsuarioSelecionadoId] = useState("");
+  const [listaManutentores, setListaManutentores] = useState<ManutentorTemp[]>([]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!nome.trim() || !email.trim()) {
+  const resetForm = () => {
+    setUsuarioSelecionadoId("");
+    setListaManutentores([]);
+  };
+
+  const handleAdicionarUsuario = () => {
+    if (!usuarioSelecionadoId) {
       toast({
         title: "Erro",
-        description: "Nome e email são obrigatórios",
+        description: "Selecione um usuário",
         variant: "destructive"
       });
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    const usuario = funcionarios?.find(f => f.id === usuarioSelecionadoId);
+    if (!usuario) return;
+
+    // Verificar se já foi adicionado
+    if (listaManutentores.find(m => m.usuarioId === usuario.id)) {
+      toast({
+        title: "Atenção",
+        description: "Usuário já está na lista",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setListaManutentores([
+      ...listaManutentores,
+      {
+        usuarioId: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        funcao: "Mecânica",
+        ativo: true
+      }
+    ]);
+    setUsuarioSelecionadoId("");
+  };
+
+  const handleRemoverUsuario = (usuarioId: string) => {
+    setListaManutentores(listaManutentores.filter(m => m.usuarioId !== usuarioId));
+  };
+
+  const handleAtualizarManutentor = (usuarioId: string, campo: keyof ManutentorTemp, valor: any) => {
+    setListaManutentores(listaManutentores.map(m =>
+      m.usuarioId === usuarioId ? { ...m, [campo]: valor } : m
+    ));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (listaManutentores.length === 0) {
       toast({
         title: "Erro",
-        description: "Email inválido",
+        description: "Adicione pelo menos um usuário à lista",
         variant: "destructive"
       });
       return;
@@ -57,28 +107,29 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
 
     setLoading(true);
     try {
-      await addManutentor({
-        nome: nome.trim(),
-        email: email.trim().toLowerCase(),
-        funcao,
-        ativo
-      });
+      // Salvar todos os manutentores da lista
+      for (const manutentor of listaManutentores) {
+        await addManutentor({
+          usuarioId: manutentor.usuarioId,
+          nome: manutentor.nome,
+          email: manutentor.email,
+          funcao: manutentor.funcao,
+          ativo: manutentor.ativo
+        });
+      }
 
       toast({
         title: "Sucesso",
-        description: "Manutentor cadastrado com sucesso"
+        description: `${listaManutentores.length} manutentor(es) cadastrado(s) com sucesso`
       });
 
-      setNome("");
-      setEmail("");
-      setFuncao("Mecânica");
-      setAtivo(true);
+      resetForm();
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao cadastrar manutentor",
+        description: "Erro ao cadastrar manutentores",
         variant: "destructive"
       });
     } finally {
@@ -88,65 +139,107 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Manutentor</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Seleção de Usuário */}
           <div className="space-y-2">
-            <Label htmlFor="nome">Nome *</Label>
-            <Input
-              id="nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Nome do manutentor"
-              required
-            />
+            <Label htmlFor="usuario">Selecionar Usuário</Label>
+            <div className="flex gap-2">
+              <Select 
+                value={usuarioSelecionadoId} 
+                onValueChange={setUsuarioSelecionadoId}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione um usuário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {funcionarios?.filter(f => f.ativo === "Ativo").map((funcionario) => (
+                    <SelectItem key={funcionario.id} value={funcionario.id}>
+                      {funcionario.nome} - {funcionario.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                type="button" 
+                onClick={handleAdicionarUsuario}
+                disabled={!usuarioSelecionadoId}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Adicionar
+              </Button>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@empresa.com"
-              required
-            />
-          </div>
+          {/* Lista de Manutentores */}
+          {listaManutentores.length > 0 && (
+            <div className="space-y-2">
+              <Label>Manutentores Adicionados ({listaManutentores.length})</Label>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {listaManutentores.map((manutentor) => (
+                  <Card key={manutentor.usuarioId} className="p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <p className="font-medium">{manutentor.nome}</p>
+                          <p className="text-sm text-muted-foreground">{manutentor.email}</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Função</Label>
+                            <Select 
+                              value={manutentor.funcao} 
+                              onValueChange={(v) => handleAtualizarManutentor(manutentor.usuarioId, "funcao", v as TipoManutencao)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TIPOS_MANUTENCAO.map((tipo) => (
+                                  <SelectItem key={tipo} value={tipo}>
+                                    {tipo}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="funcao">Função *</Label>
-            <Select value={funcao} onValueChange={(v) => setFuncao(v as TipoManutencao)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIPOS_MANUTENCAO.map((tipo) => (
-                  <SelectItem key={tipo} value={tipo}>
-                    {tipo}
-                  </SelectItem>
+                          <div className="flex items-center gap-2 mt-8">
+                            <Switch
+                              checked={manutentor.ativo}
+                              onCheckedChange={(checked) => handleAtualizarManutentor(manutentor.usuarioId, "ativo", checked)}
+                            />
+                            <Label>Ativo</Label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleRemoverUsuario(manutentor.usuarioId)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </div>
+          )}
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="ativo"
-              checked={ativo}
-              onCheckedChange={setAtivo}
-            />
-            <Label htmlFor="ativo">Ativo</Label>
-          </div>
-
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar"}
+            <Button type="submit" disabled={loading || listaManutentores.length === 0}>
+              {loading ? "Salvando..." : `Salvar ${listaManutentores.length} Manutentor(es)`}
             </Button>
           </div>
         </form>
