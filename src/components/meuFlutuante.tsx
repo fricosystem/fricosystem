@@ -15,7 +15,7 @@ import {
   ShoppingBasket, Scan, FileInput, ReceiptText, ArrowRightLeft, 
   MapPin, TreePine, FileOutput, ClipboardCheck, RotateCcw, UserCheck, 
   Building, DollarSign, Calculator, Upload, Shield, Cog, PackageCheck, 
-  Gavel, X, Menu, MessageSquare, Mail, Calendar, WashingMachine, Monitor, Code
+  Gavel, X, Menu, MessageSquare, Mail, Calendar, WashingMachine, Monitor, Code, UserCog
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -361,7 +361,7 @@ const FuturisticFloatingMenu = () => {
     },
     ...(isAdmin ? [{
       id: "administrativo",
-      icon: <Settings size={24} />,
+      icon: <UserCog size={24} />,
       label: "Administrativo",
       items: filterItemsByPermission([
         { id: "gestao-usuarios", icon: <UserCheck size={20} />, label: "Gestão de Usuários", path: "/gestao-usuarios", permission: "gestao_usuarios" },
@@ -454,9 +454,9 @@ const FuturisticFloatingMenu = () => {
   return (
     <>
       {isVisible && !minimized && (
-        <div id="floating-menu-container" className={`fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 ${theme === "dark" ? "dark" : ""}`}>
+        <div id="floating-menu-container" className={`fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-[95vw] md:w-auto px-2 md:px-0 ${theme === "dark" ? "dark" : ""}`}>
           {activeMenu && (
-            <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 overflow-hidden transition-all duration-300 ease-in-out">
+            <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 mx-auto overflow-hidden transition-all duration-300 ease-in-out">
               <div className="flex justify-between items-center p-3 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="font-bold text-gray-800 dark:text-gray-100">
                   {menuCategories.find(cat => cat.id === activeMenu)?.label}
@@ -521,9 +521,9 @@ const FuturisticFloatingMenu = () => {
             </div>
           )}
 
-          <div className="relative">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-sm opacity-75"></div>
-            <div className="relative bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-full shadow-lg px-2 py-2 flex items-center justify-center space-x-1">
+          <div className="relative w-full">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl md:rounded-full blur-sm opacity-75"></div>
+            <div className="relative bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-3xl md:rounded-full shadow-lg px-2 py-2 flex flex-wrap md:flex-nowrap items-center justify-center gap-1">
               {menuCategories.map((category, idx) => {
                 const isCategoryActive = category.items?.some(item => 
                   item.path && location.pathname === item.path
@@ -533,7 +533,7 @@ const FuturisticFloatingMenu = () => {
                   <button
                     key={idx}
                     onClick={() => toggleSubmenu(category.id)}
-                    className={`p-3 rounded-full transition-all duration-300 relative group ${
+                    className={`p-2 md:p-3 rounded-full transition-all duration-300 relative group ${
                       activeMenu === category.id || isCategoryActive
                         ? "bg-blue-600 text-white" 
                         : "text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
@@ -566,7 +566,7 @@ const FuturisticFloatingMenu = () => {
       <button
         onClick={toggleMinimize}
         className={`fixed z-50 flex items-center justify-center rounded-full p-3 shadow-lg transition-all duration-300 ${
-          minimized ? "bottom-4 right-4" : "bottom-4 left-1/2 transform -translate-x-1/2"
+          minimized ? "bottom-4 right-4 md:right-6" : "bottom-4 left-1/2 transform -translate-x-1/2"
         } ${
           selectedCategory?.id === "requisicoes" && pendingRequestsCount > 0 
             ? "bg-red-500 text-white" 
