@@ -263,6 +263,11 @@ const AppSidebar = () => {
       icon: Building2,
       label: "Gestão de Unidades",
       permission: "gestao_unidades"
+    }, {
+      to: "/gestao-tarefas",
+      icon: ClipboardCheck,
+      label: "Gestão de Tarefas",
+      permission: "gestao_tarefas"
     }]
   }] : []), ...(isDesenvolvedor ? [{
     label: "Desenvolvedor",
