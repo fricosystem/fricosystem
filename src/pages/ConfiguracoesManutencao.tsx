@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Settings, Save } from "lucide-react";
+import { Plus, Trash2, Settings, Save, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import AppLayout from "@/layouts/AppLayout";
 import {
@@ -27,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function ConfiguracoesManutencao() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [config, setConfig] = useState<ConfiguracaoEmpresa | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -192,9 +194,15 @@ export default function ConfiguracoesManutencao() {
     <AppLayout title="Configurações de Manutenção">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <p className="text-muted-foreground">
-            Personalize tipos, períodos e categorias para sua empresa
-          </p>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="sm" onClick={() => navigate("/manutencao-preventiva")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+            <p className="text-muted-foreground">
+              Personalize tipos, períodos e categorias para sua empresa
+            </p>
+          </div>
         </div>
 
         <Tabs defaultValue="tipos" className="space-y-4">
