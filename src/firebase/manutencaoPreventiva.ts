@@ -5,7 +5,8 @@ import {
   deleteDoc,
   doc, 
   serverTimestamp,
-  Timestamp 
+  Timestamp,
+  getDoc
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { Manutentor, TarefaManutencao } from "@/types/typesManutencaoPreventiva";
@@ -13,16 +14,16 @@ import { Manutentor, TarefaManutencao } from "@/types/typesManutencaoPreventiva"
 // Operações para Manutentores
 export const addManutentor = async (data: Omit<Manutentor, "id" | "criadoEm">) => {
   try {
-    // Verificar se já existe manutentor para este usuário
+    // Verificar se já existe manutentor com este email
     const { query: firestoreQuery, where: firestoreWhere, getDocs } = await import("firebase/firestore");
     const q = firestoreQuery(
       collection(db, "manutentores"),
-      firestoreWhere("usuarioId", "==", data.usuarioId)
+      firestoreWhere("email", "==", data.email)
     );
     const existingDocs = await getDocs(q);
     
     if (!existingDocs.empty) {
-      throw new Error("Já existe um manutentor cadastrado para este usuário");
+      throw new Error("Já existe um manutentor cadastrado com este email");
     }
 
     const docRef = await addDoc(collection(db, "manutentores"), {
@@ -61,6 +62,8 @@ export const addTarefaManutencao = async (data: Omit<TarefaManutencao, "id" | "c
   try {
     const docRef = await addDoc(collection(db, "tarefas_manutencao"), {
       ...data,
+      execucoesAnteriores: 0,
+      historicoManutentores: data.manutentorId ? [data.manutentorId] : [],
       criadoEm: serverTimestamp(),
       atualizadoEm: serverTimestamp()
     });
@@ -122,9 +125,6 @@ export const registrarExecucaoTarefa = async (
   try {
     const hoje = new Date();
     const tarefaRef = doc(db, "tarefas_manutencao", tarefaId);
-    
-    // Buscar a tarefa para obter o período
-    const { getDoc } = await import("firebase/firestore");
     const tarefaDoc = await getDoc(tarefaRef);
     
     if (!tarefaDoc.exists()) {
@@ -132,39 +132,120 @@ export const registrarExecucaoTarefa = async (
     }
     
     const tarefa = tarefaDoc.data() as TarefaManutencao;
+    
+    // Calcular próxima data de execução baseada no período
     const proximaData = new Date(hoje);
     proximaData.setDate(proximaData.getDate() + tarefa.periodo);
+    const proximaExecucaoStr = proximaData.toISOString().split('T')[0];
     
-    // Realizar baixa automática de estoque se houver materiais
+    // Calcular dataHoraAgendada mantendo o mesmo horário
+    let novaDataHoraAgendada: string | undefined;
+    if (tarefa.dataHoraAgendada) {
+      const horaOriginal = tarefa.dataHoraAgendada.split('T')[1];
+      novaDataHoraAgendada = `${proximaExecucaoStr}T${horaOriginal}`;
+    }
+    
+    // Registrar no histórico de execuções
+    try {
+      const { registrarHistoricoExecucao } = await import("@/services/historicoExecucoes");
+      await registrarHistoricoExecucao({
+        tarefaId,
+        tarefaDescricao: tarefa.descricaoTarefa,
+        maquinaId: tarefa.maquinaId,
+        maquinaNome: tarefa.maquinaNome,
+        manutentorId: tarefa.manutentorId,
+        manutentorNome: tarefa.manutentorNome,
+        manutentorEmail: tarefa.manutentorEmail,
+        tipo: tarefa.tipo,
+        sistema: tarefa.sistema,
+        componente: tarefa.componente,
+        dataExecucao: Timestamp.now(),
+        tempoEstimado: tarefa.tempoEstimado,
+        tempoRealizado,
+        observacoes,
+        problemasEncontrados,
+        materiaisUtilizados,
+        periodo: tarefa.periodo,
+        periodoLabel: tarefa.periodoLabel
+      });
+    } catch (historicoError) {
+      console.error("Erro ao registrar histórico:", historicoError);
+    }
+    
+    // Baixar estoque se houver materiais utilizados
     if (materiaisUtilizados && materiaisUtilizados.length > 0) {
-      const { baixarEstoque } = await import("@/services/estoqueService");
-      const resultado = await baixarEstoque(
-        materiaisUtilizados, 
-        tarefa.ordemId, 
-        tarefaId
-      );
-      
-      // Alertas de estoque serão tratados pela UI
-      if (resultado.alertas.length > 0) {
-        console.warn("Alertas de estoque:", resultado.alertas);
+      try {
+        const { baixarEstoque } = await import("@/services/estoqueService");
+        const resultado = await baixarEstoque(
+          materiaisUtilizados, 
+          tarefa.ordemId, 
+          tarefaId
+        );
+        
+        if (resultado.alertas.length > 0) {
+          console.warn("Alertas de estoque:", resultado.alertas);
+        }
+      } catch (estoqueError) {
+        console.error("Erro ao baixar estoque:", estoqueError);
       }
     }
     
+    // Determinar próximo manutentor usando rodízio (se configurado)
+    let novoManutentorId = tarefa.manutentorId;
+    let novoManutentorNome = tarefa.manutentorNome;
+    let novoManutentorEmail = tarefa.manutentorEmail;
+    
+    if (tarefa.selecaoAutomatica) {
+      try {
+        const { selecionarProximoManutentor } = await import("@/services/rodizioManutentores");
+        const proximoManutentor = await selecionarProximoManutentor(
+          tarefa.tipo,
+          tarefa.manutentorId
+        );
+        
+        if (proximoManutentor) {
+          novoManutentorId = proximoManutentor.id;
+          novoManutentorNome = proximoManutentor.nome;
+          novoManutentorEmail = proximoManutentor.email;
+        }
+      } catch (rodizioError) {
+        console.error("Erro ao selecionar próximo manutentor:", rodizioError);
+      }
+    }
+    
+    // Atualizar histórico de manutentores
+    const historicoManutentores = tarefa.historicoManutentores || [];
+    if (novoManutentorId && !historicoManutentores.includes(novoManutentorId)) {
+      historicoManutentores.push(novoManutentorId);
+    }
+    
+    // Atualizar tarefa com reagendamento e novo manutentor
     await updateDoc(tarefaRef, {
       ultimaExecucao: serverTimestamp(),
-      proximaExecucao: proximaData.toISOString().split('T')[0],
+      proximaExecucao: proximaExecucaoStr,
+      dataHoraAgendada: novaDataHoraAgendada,
       tempoRealizado,
-      status: "concluida",
+      status: "pendente", // Volta para pendente para próxima execução
       dataFim: serverTimestamp(),
       checklist,
       materiaisUtilizados,
       problemasEncontrados,
       requerAcompanhamento,
       observacoesAcompanhamento,
+      // Atualizar manutentor para próxima execução
+      manutentorId: novoManutentorId,
+      manutentorNome: novoManutentorNome,
+      manutentorEmail: novoManutentorEmail,
+      historicoManutentores,
+      execucoesAnteriores: (tarefa.execucoesAnteriores || 0) + 1,
       atualizadoEm: serverTimestamp()
     });
     
-    return true;
+    return { 
+      success: true, 
+      proximaExecucao: proximaExecucaoStr,
+      proximoManutentor: novoManutentorNome
+    };
   } catch (error) {
     console.error("Erro ao registrar execução:", error);
     throw error;
@@ -181,6 +262,64 @@ export const cancelarTarefa = async (tarefaId: string, motivo?: string) => {
     return true;
   } catch (error) {
     console.error("Erro ao cancelar tarefa:", error);
+    throw error;
+  }
+};
+
+/**
+ * Marca tarefa como apenas concluída (sem reagendamento)
+ */
+export const concluirTarefaSemReagendar = async (
+  tarefaId: string, 
+  tempoRealizado: number, 
+  observacoes?: string
+) => {
+  try {
+    const tarefaRef = doc(db, "tarefas_manutencao", tarefaId);
+    const tarefaDoc = await getDoc(tarefaRef);
+    
+    if (!tarefaDoc.exists()) {
+      throw new Error("Tarefa não encontrada");
+    }
+    
+    const tarefa = tarefaDoc.data() as TarefaManutencao;
+    
+    // Registrar no histórico
+    try {
+      const { registrarHistoricoExecucao } = await import("@/services/historicoExecucoes");
+      await registrarHistoricoExecucao({
+        tarefaId,
+        tarefaDescricao: tarefa.descricaoTarefa,
+        maquinaId: tarefa.maquinaId,
+        maquinaNome: tarefa.maquinaNome,
+        manutentorId: tarefa.manutentorId,
+        manutentorNome: tarefa.manutentorNome,
+        manutentorEmail: tarefa.manutentorEmail,
+        tipo: tarefa.tipo,
+        sistema: tarefa.sistema,
+        componente: tarefa.componente,
+        dataExecucao: Timestamp.now(),
+        tempoEstimado: tarefa.tempoEstimado,
+        tempoRealizado,
+        observacoes,
+        periodo: tarefa.periodo,
+        periodoLabel: tarefa.periodoLabel
+      });
+    } catch (historicoError) {
+      console.error("Erro ao registrar histórico:", historicoError);
+    }
+    
+    await updateDoc(tarefaRef, {
+      ultimaExecucao: serverTimestamp(),
+      tempoRealizado,
+      status: "concluida",
+      dataFim: serverTimestamp(),
+      atualizadoEm: serverTimestamp()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao concluir tarefa:", error);
     throw error;
   }
 };
