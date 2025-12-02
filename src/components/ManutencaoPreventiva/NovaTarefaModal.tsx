@@ -5,12 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { addTarefaManutencao } from "@/firebase/manutencaoPreventiva";
-import { TipoManutencao, PeriodoManutencao, PERIODOS_DIAS } from "@/types/typesManutencaoPreventiva";
-import { collection, getDocs } from "firebase/firestore";
+import { TipoManutencao, PeriodoManutencao, PERIODOS_DIAS, Manutentor } from "@/types/typesManutencaoPreventiva";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
-import { useManutentores } from "@/hooks/useManutentores";
+import { selecionarManutentorPorRodizio } from "@/services/rodizioManutentores";
+import { Badge } from "@/components/ui/badge";
+import { Users, Shuffle } from "lucide-react";
 
 interface NovaTarefaModalProps {
   open: boolean;
@@ -43,7 +46,8 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [maquinas, setMaquinas] = useState<any[]>([]);
-  const { data: manutentores = [], isLoading: loadingManutentores } = useManutentores();
+  const [manutentores, setManutentores] = useState<Manutentor[]>([]);
+  const [manutentoresFiltrados, setManutentoresFiltrados] = useState<Manutentor[]>([]);
 
   const [tipo, setTipo] = useState<TipoManutencao>("Mecânica");
   const [maquinaId, setMaquinaId] = useState("");
@@ -54,17 +58,32 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
   const [subconjunto, setSubconjunto] = useState("");
   const [componente, setComponente] = useState("");
   const [descricaoTarefa, setDescricaoTarefa] = useState("");
-  const [manutentorId, setManutentorId] = useState("");
-  const [manutentorNome, setManutentorNome] = useState("");
-  const [manutentorEmail, setManutentorEmail] = useState("");
   const [tempoEstimado, setTempoEstimado] = useState("");
   const [dataAgendada, setDataAgendada] = useState("");
   const [horaAgendada, setHoraAgendada] = useState("08:00");
   const [prioridade, setPrioridade] = useState<"baixa" | "media" | "alta" | "critica">("media");
+  
+  // Campos de seleção de manutentor
+  const [selecaoAutomatica, setSelecaoAutomatica] = useState(true);
+  const [manutentorId, setManutentorId] = useState("");
+  const [manutentorSelecionado, setManutentorSelecionado] = useState<Manutentor | null>(null);
 
   useEffect(() => {
     loadMaquinas();
+    loadManutentores();
   }, []);
+
+  // Filtrar manutentores por tipo de manutenção selecionado
+  useEffect(() => {
+    const filtrados = manutentores.filter(m => m.funcao === tipo && m.ativo);
+    setManutentoresFiltrados(filtrados);
+    
+    // Resetar seleção manual quando mudar tipo
+    if (!selecaoAutomatica && !filtrados.find(m => m.id === manutentorId)) {
+      setManutentorId("");
+      setManutentorSelecionado(null);
+    }
+  }, [tipo, manutentores]);
 
   const loadMaquinas = async () => {
     try {
@@ -76,10 +95,36 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
     }
   };
 
+  const loadManutentores = async () => {
+    try {
+      const q = query(
+        collection(db, "manutentores"),
+        where("ativo", "==", true),
+        orderBy("ordemPrioridade", "asc")
+      );
+      const querySnapshot = await getDocs(q);
+      const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Manutentor[];
+      setManutentores(docs);
+    } catch (error) {
+      // Fallback sem orderBy se o índice não existir
+      const querySnapshot = await getDocs(
+        query(collection(db, "manutentores"), where("ativo", "==", true))
+      );
+      const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Manutentor[];
+      setManutentores(docs);
+    }
+  };
+
+  const handleManutentorChange = (id: string) => {
+    setManutentorId(id);
+    const manutentor = manutentores.find(m => m.id === id);
+    setManutentorSelecionado(manutentor || null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!maquinaId || !manutentorId || !descricaoTarefa.trim()) {
+    if (!maquinaId || !descricaoTarefa.trim()) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -88,17 +133,45 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
       return;
     }
 
+    if (!dataAgendada) {
+      toast({
+        title: "Erro",
+        description: "Data agendada é obrigatória",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const hoje = new Date();
-      const proximaData = new Date(hoje);
-      proximaData.setDate(proximaData.getDate() + PERIODOS_DIAS[periodo]);
+      let manutentor: Manutentor | null = null;
 
-      // Construir data/hora agendada se fornecida
-      let dataHoraAgendada: string | undefined;
-      if (dataAgendada && horaAgendada) {
-        dataHoraAgendada = `${dataAgendada}T${horaAgendada}:00`;
+      if (selecaoAutomatica) {
+        // Usar rodízio automático
+        manutentor = await selecionarManutentorPorRodizio(tipo);
+        if (!manutentor) {
+          toast({
+            title: "Atenção",
+            description: `Nenhum manutentor ativo encontrado para ${tipo}. Tarefa criada sem manutentor atribuído.`,
+            variant: "destructive"
+          });
+        }
+      } else {
+        // Usar manutentor selecionado manualmente
+        if (!manutentorId) {
+          toast({
+            title: "Erro",
+            description: "Selecione um manutentor ou ative a seleção automática",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+        manutentor = manutentorSelecionado;
       }
+
+      // Construir data/hora agendada
+      const dataHoraAgendada = `${dataAgendada}T${horaAgendada}:00`;
 
       await addTarefaManutencao({
         tipo,
@@ -111,19 +184,22 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
         subconjunto: subconjunto.trim(),
         componente: componente.trim(),
         descricaoTarefa: descricaoTarefa.trim(),
-        manutentorId,
-        manutentorNome,
-        manutentorEmail,
+        manutentorId: manutentor?.id || "",
+        manutentorNome: manutentor?.nome || "",
+        manutentorEmail: manutentor?.email || "",
         tempoEstimado: Number(tempoEstimado) || 0,
-        proximaExecucao: dataAgendada || proximaData.toISOString().split('T')[0],
+        proximaExecucao: dataAgendada,
         dataHoraAgendada,
         prioridade,
+        selecaoAutomatica,
         status: "pendente"
       });
 
       toast({
         title: "Sucesso",
-        description: "Tarefa criada com sucesso"
+        description: manutentor 
+          ? `Tarefa criada e atribuída a ${manutentor.nome}`
+          : "Tarefa criada com sucesso"
       });
 
       resetForm();
@@ -150,13 +226,13 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
     setSubconjunto("");
     setComponente("");
     setDescricaoTarefa("");
-    setManutentorId("");
-    setManutentorNome("");
-    setManutentorEmail("");
     setTempoEstimado("");
     setDataAgendada("");
     setHoraAgendada("08:00");
     setPrioridade("media");
+    setSelecaoAutomatica(true);
+    setManutentorId("");
+    setManutentorSelecionado(null);
   };
 
   return (
@@ -232,6 +308,71 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
             </div>
           </div>
 
+          {/* Seleção de Manutentor */}
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                <Label className="font-medium">Manutentor</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shuffle className="h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="selecaoAutomatica" className="text-sm">Rodízio Automático</Label>
+                <Switch
+                  id="selecaoAutomatica"
+                  checked={selecaoAutomatica}
+                  onCheckedChange={setSelecaoAutomatica}
+                />
+              </div>
+            </div>
+
+            {selecaoAutomatica ? (
+              <div className="text-sm text-muted-foreground bg-primary/5 p-3 rounded">
+                <p className="flex items-center gap-2">
+                  <Shuffle className="h-4 w-4" />
+                  O sistema selecionará automaticamente o manutentor com menor carga de trabalho
+                </p>
+                {manutentoresFiltrados.length > 0 && (
+                  <p className="mt-2">
+                    <span className="font-medium">{manutentoresFiltrados.length}</span> manutentor(es) disponível(is) para {tipo}
+                  </p>
+                )}
+                {manutentoresFiltrados.length === 0 && (
+                  <p className="mt-2 text-destructive">
+                    Nenhum manutentor ativo para {tipo}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Select value={manutentorId} onValueChange={handleManutentorChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o manutentor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {manutentoresFiltrados.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{m.nome}</span>
+                          {m.ordemPrioridade && (
+                            <Badge variant="outline" className="text-xs">
+                              #{m.ordemPrioridade}
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {manutentoresFiltrados.length === 0 && (
+                  <p className="text-sm text-destructive">
+                    Nenhum manutentor com função "{tipo}" cadastrado
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="sistema">Sistema</Label>
@@ -276,65 +417,38 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="manutentor">Manutentor *</Label>
-              <Select 
-                value={manutentorId} 
-                onValueChange={(v) => {
-                  setManutentorId(v);
-                  const man = manutentores.find(m => m.id === v);
-                  setManutentorNome(man?.nome || "");
-                  setManutentorEmail(man?.email || "");
-                }}
-                disabled={loadingManutentores}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingManutentores ? "Carregando..." : "Selecione o manutentor"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {manutentores
-                    .filter(m => m.ativo)
-                    .map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.nome} ({m.funcao})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tempo">Tempo Estimado (min)</Label>
-              <Input
-                id="tempo"
-                type="number"
-                value={tempoEstimado}
-                onChange={(e) => setTempoEstimado(e.target.value)}
-                placeholder="60"
-                min="0"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="tempo">Tempo Estimado (min)</Label>
+            <Input
+              id="tempo"
+              type="number"
+              value={tempoEstimado}
+              onChange={(e) => setTempoEstimado(e.target.value)}
+              placeholder="60"
+              min="0"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="dataAgendada">Data Agendada</Label>
+              <Label htmlFor="dataAgendada">Data Agendada *</Label>
               <Input
                 id="dataAgendada"
                 type="date"
                 value={dataAgendada}
                 onChange={(e) => setDataAgendada(e.target.value)}
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="horaAgendada">Hora Agendada</Label>
+              <Label htmlFor="horaAgendada">Hora Agendada *</Label>
               <Input
                 id="horaAgendada"
                 type="time"
                 value={horaAgendada}
                 onChange={(e) => setHoraAgendada(e.target.value)}
+                required
               />
             </div>
           </div>
