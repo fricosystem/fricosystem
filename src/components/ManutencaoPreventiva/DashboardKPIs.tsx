@@ -10,6 +10,7 @@ import {
 } from "@/utils/kpisManutencao";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
 import { AlertCircle, Clock, DollarSign, TrendingUp, Wrench, CheckCircle2 } from "lucide-react";
+import { ProximosManutentores } from "./ProximosManutentores";
 
 interface DashboardKPIsProps {
   tarefas: TarefaManutencao[];
@@ -87,6 +88,44 @@ export function DashboardKPIs({ tarefas }: DashboardKPIsProps) {
         </Card>
       </div>
 
+      {/* Próximos Manutentores */}
+      <ProximosManutentores tarefas={tarefas} />
+
+      {/* Eficiência dos Manutentores */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Eficiência dos Manutentores</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {eficienciaManutentores.map((m) => (
+              <div key={m.manutentorId} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex-1">
+                  <p className="font-medium">{m.manutentorNome}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {m.tarefasConcluidas} tarefas concluídas
+                  </p>
+                </div>
+                <div className="flex gap-6 text-sm">
+                  <div className="text-center">
+                    <p className="font-semibold">{formatarHoras(m.tempoMedioExecucao)}</p>
+                    <p className="text-muted-foreground">Tempo médio</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold">{m.desvioTempoEstimado}%</p>
+                    <p className="text-muted-foreground">Desvio</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold">{m.taxaSucesso}%</p>
+                    <p className="text-muted-foreground">Taxa sucesso</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Tendência Mensal */}
@@ -135,41 +174,6 @@ export function DashboardKPIs({ tarefas }: DashboardKPIsProps) {
           </CardContent>
         </Card>
       </div>
-
-      {/* Eficiência dos Manutentores */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Eficiência dos Manutentores</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {eficienciaManutentores.map((m) => (
-              <div key={m.manutentorId} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <p className="font-medium">{m.manutentorNome}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {m.tarefasConcluidas} tarefas concluídas
-                  </p>
-                </div>
-                <div className="flex gap-6 text-sm">
-                  <div className="text-center">
-                    <p className="font-semibold">{formatarHoras(m.tempoMedioExecucao)}</p>
-                    <p className="text-muted-foreground">Tempo médio</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-semibold">{m.desvioTempoEstimado}%</p>
-                    <p className="text-muted-foreground">Desvio</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-semibold">{m.taxaSucesso}%</p>
-                    <p className="text-muted-foreground">Taxa sucesso</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Detalhes das Máquinas Críticas */}
       <Card>
