@@ -200,12 +200,14 @@ export default function ManutencaoPreventiva() {
                   id: t.id,
                   nome: t.descricaoTarefa,
                   maquina: t.maquinaNome,
+                  maquinaId: t.maquinaId,
                   data: t.proximaExecucao,
                   diasRestantes: diasParaManutencao(t.proximaExecucao),
                   urgencia: determinarStatusPorManutencao(t.proximaExecucao) === "Crítico" ? "critico" :
                            determinarStatusPorManutencao(t.proximaExecucao) === "Atenção" ? "alto" : "baixo"
                 }))
               }
+              todasTarefas={tarefas}
             />
           </div>
         </TabsContent>
