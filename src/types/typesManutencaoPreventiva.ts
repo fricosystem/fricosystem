@@ -7,6 +7,8 @@ export interface Manutentor {
   email: string;
   funcao: TipoManutencao;
   competencias?: string[]; // tipos de manutenção que pode executar
+  ordemPrioridade?: number; // ordem de prioridade para rodízio (1, 2, 3...)
+  capacidadeDiaria?: number; // máximo de tarefas por dia
   ativo: boolean;
   criadoEm: Timestamp;
 }
@@ -19,8 +21,8 @@ export type StatusTarefa = "pendente" | "em_andamento" | "concluida" | "cancelad
 
 export interface TarefaManutencao {
   id: string;
-  ordemId?: string; // NOVO - formato OS-YYYYMMDD-XXXX
-  setor?: string; // NOVO - setor da máquina/tarefa
+  ordemId?: string; // formato OS-YYYYMMDD-XXXX
+  setor?: string; // setor da máquina/tarefa
   tipo: TipoManutencao;
   maquinaId: string;
   maquinaNome: string;
@@ -37,7 +39,7 @@ export interface TarefaManutencao {
   tempoRealizado?: number; // minutos
   ultimaExecucao?: Timestamp;
   proximaExecucao: string; // YYYY-MM-DD
-  dataHoraAgendada?: string; // NOVO - ISO string completo com data e hora
+  dataHoraAgendada?: string; // ISO string completo com data e hora
   status: StatusTarefa;
   dataInicio?: Timestamp;
   dataFim?: Timestamp;
@@ -49,6 +51,9 @@ export interface TarefaManutencao {
   observacoesAcompanhamento?: string;
   anexos?: AnexoTarefa[];
   prioridade?: "baixa" | "media" | "alta" | "critica";
+  selecaoAutomatica?: boolean; // se usa rodízio automático
+  historicoManutentores?: string[]; // IDs dos manutentores anteriores
+  execucoesAnteriores?: number; // contador de execuções
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
