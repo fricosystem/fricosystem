@@ -367,6 +367,7 @@ const FuturisticFloatingMenu = () => {
         { id: "gestao-usuarios", icon: <UserCheck size={20} />, label: "Gestão de Usuários", path: "/gestao-usuarios", permission: "gestao_usuarios" },
         { id: "gestao-produtos", icon: <Cog size={20} />, label: "Gestão de Produtos", path: "/gestao-produtos", permission: "gestao_produtos" },
         { id: "unidades", icon: <Building2 size={20} />, label: "Gestão de Unidades", path: "/unidades", permission: "gestao_unidades" },
+        { id: "gestao-tarefas", icon: <ClipboardCheck size={20} />, label: "Gestão de Tarefas", path: "/gestao-tarefas", permission: "gestao_tarefas" },
       ]),
     }] : []),
     ...(isAdmin ? [{
