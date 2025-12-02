@@ -41,19 +41,29 @@ export function useMinhasTarefas() {
     return () => unsubscribe();
   }, [userData?.email]);
 
-  // Estatísticas
+  const agora = new Date();
+  const hoje = agora.toISOString().split("T")[0];
+
+  // Tarefas disponíveis: data/hora agendada já passou
+  const tarefasDisponiveis = tarefas.filter((t) => {
+    if (t.status !== "pendente") return false;
+    if (t.dataHoraAgendada) {
+      return new Date(t.dataHoraAgendada) <= agora;
+    }
+    return t.proximaExecucao <= hoje;
+  });
+
+  // Tarefas de hoje (agendadas para hoje)
   const tarefasHoje = tarefas.filter((t) => {
-    const hoje = new Date().toISOString().split("T")[0];
     return t.proximaExecucao === hoje && t.status === "pendente";
   });
 
+  // Tarefas atrasadas
   const tarefasAtrasadas = tarefas.filter((t) => {
-    const hoje = new Date().toISOString().split("T")[0];
     return t.proximaExecucao < hoje && t.status === "pendente";
   });
 
   const tarefasConcluidas = tarefas.filter((t) => t.status === "concluida");
-
   const tarefasEmAndamento = tarefas.filter((t) => t.status === "em_andamento");
 
   return {
@@ -64,11 +74,13 @@ export function useMinhasTarefas() {
       atrasadas: tarefasAtrasadas.length,
       concluidas: tarefasConcluidas.length,
       emAndamento: tarefasEmAndamento.length,
+      disponiveis: tarefasDisponiveis.length,
       total: tarefas.length,
     },
     tarefasHoje,
     tarefasAtrasadas,
     tarefasConcluidas,
     tarefasEmAndamento,
+    tarefasDisponiveis,
   };
 }
