@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -8,8 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import { addManutentor } from "@/firebase/manutencaoPreventiva";
 import { TipoManutencao } from "@/types/typesManutencaoPreventiva";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
+import { useManutentores } from "@/hooks/useManutentores";
 import { Card } from "@/components/ui/card";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus, Users } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface NovoManutentorModalProps {
   open: boolean;
@@ -32,6 +35,8 @@ interface ManutentorTemp {
   nome: string;
   email: string;
   funcao: TipoManutencao;
+  ordemPrioridade: number;
+  capacidadeDiaria: number;
   ativo: boolean;
 }
 
@@ -39,8 +44,30 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const { data: funcionarios, isLoading } = useFuncionarios();
+  const { data: manutentores = [], isLoading: loadingManutentores } = useManutentores();
   const [usuarioSelecionadoId, setUsuarioSelecionadoId] = useState("");
   const [listaManutentores, setListaManutentores] = useState<ManutentorTemp[]>([]);
+
+  // Agrupar manutentores por centro de custo
+  const manutentoresPorCentroDeCusto = () => {
+    const grupos: Record<string, any[]> = {};
+    
+    manutentores.forEach(manutentor => {
+      const funcionario = funcionarios?.find(f => f.id === manutentor.usuarioId);
+      const centroDeCusto = funcionario?.centro_de_custo || "Não definido";
+      
+      if (!grupos[centroDeCusto]) {
+        grupos[centroDeCusto] = [];
+      }
+      
+      grupos[centroDeCusto].push({
+        ...manutentor,
+        centroDeCusto
+      });
+    });
+    
+    return grupos;
+  };
 
   const resetForm = () => {
     setUsuarioSelecionadoId("");
@@ -60,15 +87,21 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
     const usuario = funcionarios?.find(f => f.id === usuarioSelecionadoId);
     if (!usuario) return;
 
-    // Verificar se já foi adicionado
-    if (listaManutentores.find(m => m.usuarioId === usuario.id)) {
+    // Verificar se já foi adicionado na lista
+    if (listaManutentores.find(m => m.email === usuario.email)) {
       toast({
         title: "Atenção",
-        description: "Usuário já está na lista",
+        description: "Este email já está na lista de manutentores",
         variant: "destructive"
       });
       return;
     }
+
+    // Calcular próxima ordem de prioridade para a função padrão
+    const mesmaFuncao = listaManutentores.filter(m => m.funcao === "Mecânica");
+    const maxOrdem = mesmaFuncao.length > 0 
+      ? Math.max(...mesmaFuncao.map(m => m.ordemPrioridade)) 
+      : 0;
 
     setListaManutentores([
       ...listaManutentores,
@@ -77,6 +110,8 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
         nome: usuario.nome,
         email: usuario.email,
         funcao: "Mecânica",
+        ordemPrioridade: maxOrdem + 1,
+        capacidadeDiaria: 5,
         ativo: true
       }
     ]);
@@ -114,6 +149,8 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
           nome: manutentor.nome,
           email: manutentor.email,
           funcao: manutentor.funcao,
+          ordemPrioridade: manutentor.ordemPrioridade,
+          capacidadeDiaria: manutentor.capacidadeDiaria,
           ativo: manutentor.ativo
         });
       }
@@ -126,10 +163,10 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
       resetForm();
       onSuccess();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Erro",
-        description: "Erro ao cadastrar manutentores",
+        description: error?.message || "Erro ao cadastrar manutentores",
         variant: "destructive"
       });
     } finally {
@@ -137,13 +174,15 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
     }
   };
 
+  const grupos = manutentoresPorCentroDeCusto();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Manutentor</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Seleção de Usuário */}
           <div className="space-y-2">
             <Label htmlFor="usuario">Selecionar Usuário</Label>
@@ -157,11 +196,13 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
                   <SelectValue placeholder="Selecione um usuário" />
                 </SelectTrigger>
                 <SelectContent>
-                  {funcionarios?.map((funcionario) => (
-                    <SelectItem key={funcionario.id} value={funcionario.id}>
-                      {funcionario.nome} - {funcionario.email}
-                    </SelectItem>
-                  ))}
+                  {funcionarios
+                    ?.filter((funcionario) => funcionario.centro_de_custo === "MANUTENÇÃO")
+                    .map((funcionario) => (
+                      <SelectItem key={funcionario.id} value={funcionario.id}>
+                        {funcionario.nome} - {funcionario.email}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <Button 
@@ -175,11 +216,11 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
             </div>
           </div>
 
-          {/* Lista de Manutentores */}
+          {/* Lista de Manutentores Adicionados */}
           {listaManutentores.length > 0 && (
             <div className="space-y-2">
-              <Label>Manutentores Adicionados ({listaManutentores.length})</Label>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              <Label>Manutentores a Adicionar ({listaManutentores.length})</Label>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {listaManutentores.map((manutentor) => (
                   <Card key={manutentor.usuarioId} className="p-4">
                     <div className="flex items-start gap-4">
@@ -189,7 +230,7 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
                           <p className="text-sm text-muted-foreground">{manutentor.email}</p>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-4 gap-4">
                           <div className="space-y-2">
                             <Label>Função</Label>
                             <Select 
@@ -207,6 +248,28 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
                                 ))}
                               </SelectContent>
                             </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Prioridade</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={manutentor.ordemPrioridade}
+                              onChange={(e) => handleAtualizarManutentor(manutentor.usuarioId, "ordemPrioridade", Number(e.target.value))}
+                              placeholder="1"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Cap. Diária</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={manutentor.capacidadeDiaria}
+                              onChange={(e) => handleAtualizarManutentor(manutentor.usuarioId, "capacidadeDiaria", Number(e.target.value))}
+                              placeholder="5"
+                            />
                           </div>
 
                           <div className="flex items-center gap-2 mt-8">
@@ -233,6 +296,57 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
               </div>
             </div>
           )}
+
+          <Separator />
+
+          {/* Manutentores Cadastrados por Centro de Custo */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              <Label className="text-lg">Manutentores Cadastrados</Label>
+            </div>
+            
+            {loadingManutentores ? (
+              <p className="text-sm text-muted-foreground">Carregando...</p>
+            ) : Object.keys(grupos).length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum manutentor cadastrado ainda.</p>
+            ) : (
+              <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                {Object.entries(grupos).map(([centroDeCusto, manutentoresDoCentro]) => (
+                  <Card key={centroDeCusto} className="p-4">
+                    <h3 className="font-semibold mb-3 text-primary">
+                      {centroDeCusto} ({manutentoresDoCentro.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {manutentoresDoCentro.map((manutentor) => (
+                        <div 
+                          key={manutentor.id} 
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{manutentor.nome}</p>
+                            <p className="text-xs text-muted-foreground">{manutentor.email}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                              {manutentor.funcao}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              manutentor.ativo 
+                                ? 'bg-green-500/10 text-green-600' 
+                                : 'bg-red-500/10 text-red-600'
+                            }`}>
+                              {manutentor.ativo ? 'Ativo' : 'Inativo'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
