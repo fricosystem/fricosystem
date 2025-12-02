@@ -11,6 +11,7 @@ export interface Funcionario {
   perfil: string;
   senha: string;
   tema: string;
+  centro_de_custo?: string;
   createdAt: { seconds: number, nanoseconds: number };
 }
 
