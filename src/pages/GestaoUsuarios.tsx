@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { Perfil } from './GestaoPerfis';
 import { db } from '@/firebase/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,8 +94,10 @@ const PERMISSOES = [
   { id: 'email', label: 'Email' },
   { id: 'reunioes', label: 'Reuniões' },
   { id: 'gestao_usuarios', label: 'Gestão de Usuários' },
+  { id: 'gestao_perfis', label: 'Gestão de Perfis' },
   { id: 'gestao_produtos', label: 'Gestão de Produtos' },
   { id: 'gestao_unidades', label: 'Gestão de Unidades' },
+  { id: 'gestao_tarefas', label: 'Gestão de Tarefas' },
   { id: 'planejamento_desenvolvimento', label: 'Planejamento de Desenvolvimento' },
   { id: 'ide', label: 'IDE - Ambiente de Desenvolvimento' },
   { id: 'tudo', label: 'Acesso Total (todas as permissões)' },
@@ -169,6 +172,16 @@ const centroCustoService = {
   },
 };
 
+const perfilService = {
+  async buscarTodos(): Promise<Perfil[]> {
+    const querySnapshot = await getDocs(collection(db, "perfis"));
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Perfil));
+  },
+};
+
 const UsuarioForm = ({
   usuario,
   onSubmit,
@@ -176,6 +189,7 @@ const UsuarioForm = ({
   isLoading,
   unidades,
   centrosCusto,
+  perfis,
 }: {
   usuario?: Usuario;
   onSubmit: (usuario: Omit<Usuario, 'id'>) => Promise<void>;
@@ -183,13 +197,14 @@ const UsuarioForm = ({
   isLoading: boolean;
   unidades: Unidade[];
   centrosCusto: CentroCusto[];
+  perfis: Perfil[];
 }) => {
   const [formData, setFormData] = useState<Omit<Usuario, 'id'>>({
     ativo: usuario?.ativo || 'sim',
     email: usuario?.email || '',
     imagem_perfil: usuario?.imagem_perfil || '',
     nome: usuario?.nome || '',
-    perfil: usuario?.perfil || 'usuario',
+    perfil: usuario?.perfil || '',
     senha: usuario?.senha || '',
     unidade: usuario?.unidade || '',
     centro_de_custo: usuario?.centro_de_custo || '',
@@ -222,6 +237,19 @@ const UsuarioForm = ({
 
   const handleSelectChange = (value: string) => {
     setFormData(prev => ({ ...prev, perfil: value }));
+    
+    // Carregar configurações do perfil selecionado
+    const perfilSelecionado = perfis.find(p => p.nome === value);
+    if (perfilSelecionado) {
+      setFormData(prev => ({
+        ...prev,
+        perfil: value,
+        unidade: perfilSelecionado.unidade || prev.unidade,
+        centro_de_custo: perfilSelecionado.centro_de_custo || prev.centro_de_custo,
+        ativo: perfilSelecionado.ativo ? 'sim' : 'nao',
+      }));
+      setSelectedPermissoes(perfilSelecionado.permissoes || []);
+    }
   };
 
   const handleUnidadeChange = (value: string) => {
@@ -299,15 +327,11 @@ const UsuarioForm = ({
               <SelectValue placeholder="Selecione o perfil" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="DESENVOLVEDOR">DESENVOLVEDOR</SelectItem>
-              <SelectItem value="ADMINISTRATIVO">ADMINISTRATIVO</SelectItem>
-              <SelectItem value="ENCARREGADO">ENCARREGADO</SelectItem>
-              <SelectItem value="COLABORADOR">COLABORADOR</SelectItem>
-              <SelectItem value="ESTOQUISTA">ESTOQUISTA</SelectItem>
-              <SelectItem value="LÍDER">LÍDER</SelectItem>
-              <SelectItem value="PRESIDENTE">PRESIDENTE</SelectItem>
-              <SelectItem value="GERENTE">GERENTE</SelectItem>
-              <SelectItem value="FORNECEDOR">FORNECEDOR</SelectItem>
+              {perfis.filter(p => p.ativo).map(perfil => (
+                <SelectItem key={perfil.id} value={perfil.nome}>
+                  {perfil.nome}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -406,6 +430,7 @@ const GestaoUsuarios = () => {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
+  const [perfis, setPerfis] = useState<Perfil[]>([]);
 
   const { toast } = useToast();
 
@@ -413,6 +438,7 @@ const GestaoUsuarios = () => {
     carregarUsuarios();
     carregarUnidades();
     carregarCentrosCusto();
+    carregarPerfis();
   }, []);
 
   useEffect(() => {
@@ -472,6 +498,19 @@ const GestaoUsuarios = () => {
       toast({
         title: "Erro",
         description: "Erro ao carregar centros de custo",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const carregarPerfis = async () => {
+    try {
+      const data = await perfilService.buscarTodos();
+      setPerfis(data);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar perfis",
         variant: "destructive"
       });
     }
@@ -673,6 +712,7 @@ const GestaoUsuarios = () => {
             isLoading={isSubmitting}
             unidades={unidades}
             centrosCusto={centrosCusto}
+            perfis={perfis}
             />
         </DialogContent>
         </Dialog>
