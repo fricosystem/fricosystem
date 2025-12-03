@@ -12,7 +12,7 @@ import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
 import { iniciarTarefa } from "@/firebase/manutencaoPreventiva";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Wrench, Calendar } from "lucide-react";
+import { Wrench, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -88,14 +88,6 @@ export function IniciarTarefaModal({ tarefa, open, onOpenChange }: IniciarTarefa
                 <span>Tipo</span>
               </div>
               <p className="text-sm font-medium">{tarefa.tipo}</p>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <Clock className="h-4 w-4" />
-                <span>Tempo Estimado</span>
-              </div>
-              <p className="text-sm font-medium">{tarefa.tempoEstimado} minutos</p>
             </div>
 
             <div>
