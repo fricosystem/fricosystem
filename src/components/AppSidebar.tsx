@@ -3,7 +3,7 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 import { useAuth } from "@/contexts/AuthContext";
 import { Layers, Home, Boxes, Package, ClipboardList, Truck, Warehouse, ShoppingCart, AlertTriangle, FileText, Users, Wallet, TrendingUp, Settings, FileSpreadsheet, ListChecks, PackagePlus, Ruler, Wrench, ShoppingBag, Factory, Receipt, CalendarCheck, PieChart, Bell, PackageSearch, Download, Database, LogOut, Sun, Moon, ChevronUp, ChevronDown, UserRound, Briefcase, Building2,
 // Novos ícones específicos
-BarChart3, ShoppingBasket, Scan, FileInput, ReceiptText, ArrowRightLeft, MapPin, TreePine, FileOutput, ClipboardCheck, RotateCcw, UserCheck, Building, DollarSign, Calculator, Upload, Shield, Cog, PackageCheck, Gavel, MessageSquare, Mail, Calendar, Code, Monitor, WashingMachine, UserCog } from "lucide-react";
+BarChart3, ShoppingBasket, Scan, FileInput, ReceiptText, ArrowRightLeft, MapPin, TreePine, FileOutput, ClipboardCheck, RotateCcw, UserCheck, Building, DollarSign, Calculator, Upload, Shield, Cog, PackageCheck, Gavel, MessageSquare, Mail, Calendar, Code, Monitor, WashingMachine, UserCog, IdCard } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useEffect, useState, useMemo } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -258,6 +258,11 @@ const AppSidebar = () => {
       icon: UserCheck,
       label: "Gestão de Usuários",
       permission: "gestao_usuarios"
+    }, {
+      to: "/gestao-perfis",
+      icon: IdCard,
+      label: "Gestão de Perfis",
+      permission: "gestao_perfis"
     }, {
       to: "/gestao-produtos",
       icon: Cog,
