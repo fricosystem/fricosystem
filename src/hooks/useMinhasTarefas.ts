@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
 import { useAuth } from "@/contexts/AuthContext";
+import { HistoricoExecucao } from "@/services/historicoExecucoes";
 
 export function useMinhasTarefas() {
   const { userData } = useAuth();
   const [tarefas, setTarefas] = useState<TarefaManutencao[]>([]);
+  const [historicoExecucoes, setHistoricoExecucoes] = useState<HistoricoExecucao[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,14 +17,22 @@ export function useMinhasTarefas() {
       return;
     }
 
-    // Query sem orderBy para evitar necessidade de índice composto
-    const q = query(
+    // Query tarefas do manutentor
+    const qTarefas = query(
       collection(db, "tarefas_manutencao"),
       where("manutentorEmail", "==", userData.email)
     );
 
-    const unsubscribe = onSnapshot(
-      q,
+    // Query histórico de execuções do manutentor
+    const qHistorico = query(
+      collection(db, "historico_execucoes"),
+      where("manutentorEmail", "==", userData.email),
+      orderBy("dataExecucao", "desc"),
+      limit(100)
+    );
+
+    const unsubscribeTarefas = onSnapshot(
+      qTarefas,
       (snapshot) => {
         const tarefasData = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -45,7 +55,24 @@ export function useMinhasTarefas() {
       }
     );
 
-    return () => unsubscribe();
+    const unsubscribeHistorico = onSnapshot(
+      qHistorico,
+      (snapshot) => {
+        const historicoData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as HistoricoExecucao[];
+        setHistoricoExecucoes(historicoData);
+      },
+      (error) => {
+        console.error("Erro ao buscar histórico:", error);
+      }
+    );
+
+    return () => {
+      unsubscribeTarefas();
+      unsubscribeHistorico();
+    };
   }, [userData?.email]);
 
   const agora = new Date();
@@ -70,7 +97,6 @@ export function useMinhasTarefas() {
     return t.proximaExecucao < hoje && t.status === "pendente";
   });
 
-  const tarefasConcluidas = tarefas.filter((t) => t.status === "concluida");
   const tarefasEmAndamento = tarefas.filter((t) => t.status === "em_andamento");
 
   return {
@@ -79,14 +105,14 @@ export function useMinhasTarefas() {
     stats: {
       hoje: tarefasHoje.length,
       atrasadas: tarefasAtrasadas.length,
-      concluidas: tarefasConcluidas.length,
+      concluidas: historicoExecucoes.length,
       emAndamento: tarefasEmAndamento.length,
       disponiveis: tarefasDisponiveis.length,
       total: tarefas.length,
     },
     tarefasHoje,
     tarefasAtrasadas,
-    tarefasConcluidas,
+    historicoExecucoes,
     tarefasEmAndamento,
     tarefasDisponiveis,
   };
