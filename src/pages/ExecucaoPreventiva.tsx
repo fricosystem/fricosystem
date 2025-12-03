@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function ExecucaoPreventiva() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "timeline" | "historico" | "perfil">("dashboard");
-  const { tarefas, loading, stats, tarefasHoje, tarefasAtrasadas, tarefasConcluidas } = useMinhasTarefas();
+  const { tarefas, loading, stats, tarefasHoje, tarefasAtrasadas, historicoExecucoes } = useMinhasTarefas();
 
   if (loading) {
     return (
@@ -58,7 +58,7 @@ export default function ExecucaoPreventiva() {
 
         {activeTab === "timeline" && <TimelineMobile tarefas={tarefas} />}
 
-        {activeTab === "historico" && <HistoricoMobile tarefasConcluidas={tarefasConcluidas} />}
+        {activeTab === "historico" && <HistoricoMobile historicoExecucoes={historicoExecucoes} />}
 
         {activeTab === "perfil" && <PerfilManutentor stats={stats} />}
       </main>
