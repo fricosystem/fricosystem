@@ -58,7 +58,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
   const [subconjunto, setSubconjunto] = useState("");
   const [componente, setComponente] = useState("");
   const [descricaoTarefa, setDescricaoTarefa] = useState("");
-  const [tempoEstimado, setTempoEstimado] = useState("");
+  
   const [dataAgendada, setDataAgendada] = useState("");
   const [horaAgendada, setHoraAgendada] = useState("08:00");
   const [prioridade, setPrioridade] = useState<"baixa" | "media" | "alta" | "critica">("media");
@@ -187,7 +187,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
         manutentorId: manutentor?.id || "",
         manutentorNome: manutentor?.nome || "",
         manutentorEmail: manutentor?.email || "",
-        tempoEstimado: Number(tempoEstimado) || 0,
+        tempoEstimado: 0,
         proximaExecucao: dataAgendada,
         dataHoraAgendada,
         prioridade,
@@ -226,7 +226,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
     setSubconjunto("");
     setComponente("");
     setDescricaoTarefa("");
-    setTempoEstimado("");
+    
     setDataAgendada("");
     setHoraAgendada("08:00");
     setPrioridade("media");
@@ -417,17 +417,6 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tempo">Tempo Estimado (min)</Label>
-            <Input
-              id="tempo"
-              type="number"
-              value={tempoEstimado}
-              onChange={(e) => setTempoEstimado(e.target.value)}
-              placeholder="60"
-              min="0"
-            />
-          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
