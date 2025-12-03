@@ -154,6 +154,11 @@ const AppSidebar = () => {
       icon: Calendar,
       label: "Manutenção Preventiva",
       permission: "manutencao_preventiva"
+    }, {
+      to: "/execucao-preventiva",
+      icon: ClipboardCheck,
+      label: "Execução Preventiva",
+      permission: "execucao_preventiva"
     }]
   }, {
     label: "Requisições",
