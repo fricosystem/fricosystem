@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,6 +15,8 @@ import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
 import { registrarExecucaoTarefa } from "@/firebase/manutencaoPreventiva";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Clock } from "lucide-react";
+import { Timestamp } from "firebase/firestore";
 
 interface ConcluirTarefaModalProps {
   tarefa: TarefaManutencao;
@@ -26,7 +27,7 @@ interface ConcluirTarefaModalProps {
 export function ConcluirTarefaModal({ tarefa, open, onOpenChange }: ConcluirTarefaModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [tempoRealizado, setTempoRealizado] = useState(tarefa.tempoEstimado.toString());
+  const [tempoDecorrido, setTempoDecorrido] = useState(0);
   const [observacoes, setObservacoes] = useState("");
   const [problemasEncontrados, setProblemasEncontrados] = useState("");
   const [requerAcompanhamento, setRequerAcompanhamento] = useState(false);
@@ -35,13 +36,50 @@ export function ConcluirTarefaModal({ tarefa, open, onOpenChange }: ConcluirTare
     tarefa.checklist?.map((item) => ({ ...item, concluido: false })) || []
   );
 
+  // Calcular tempo decorrido desde o início da tarefa
+  useEffect(() => {
+    if (!tarefa.dataInicio) {
+      setTempoDecorrido(0);
+      return;
+    }
+
+    const calcularTempo = () => {
+      const dataInicio = tarefa.dataInicio instanceof Timestamp 
+        ? tarefa.dataInicio.toDate() 
+        : new Date(tarefa.dataInicio as any);
+      
+      const agora = new Date();
+      const diffMs = agora.getTime() - dataInicio.getTime();
+      const diffMinutos = Math.max(1, Math.round(diffMs / (1000 * 60)));
+      setTempoDecorrido(diffMinutos);
+    };
+
+    calcularTempo();
+    
+    // Atualizar a cada minuto enquanto o modal estiver aberto
+    const interval = setInterval(calcularTempo, 60000);
+    
+    return () => clearInterval(interval);
+  }, [tarefa.dataInicio, open]);
+
+  const formatarTempo = (minutos: number) => {
+    if (minutos < 60) {
+      return `${minutos} minuto${minutos !== 1 ? 's' : ''}`;
+    }
+    const horas = Math.floor(minutos / 60);
+    const mins = minutos % 60;
+    if (mins === 0) {
+      return `${horas} hora${horas !== 1 ? 's' : ''}`;
+    }
+    return `${horas}h ${mins}min`;
+  };
+
   const handleConcluir = async () => {
-    const tempo = parseInt(tempoRealizado);
-    if (isNaN(tempo) || tempo <= 0) {
+    if (tempoDecorrido <= 0) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Informe um tempo válido.",
+        description: "A tarefa precisa ser iniciada antes de concluir.",
       });
       return;
     }
@@ -50,7 +88,7 @@ export function ConcluirTarefaModal({ tarefa, open, onOpenChange }: ConcluirTare
     try {
       await registrarExecucaoTarefa(
         tarefa.id,
-        tempo,
+        tempoDecorrido,
         observacoes || undefined,
         checklist.length > 0 ? checklist : undefined,
         undefined, // materiais - pode ser expandido posteriormente
@@ -61,7 +99,7 @@ export function ConcluirTarefaModal({ tarefa, open, onOpenChange }: ConcluirTare
 
       toast({
         title: "Tarefa Concluída",
-        description: "A manutenção foi registrada com sucesso.",
+        description: `Manutenção registrada com ${formatarTempo(tempoDecorrido)}.`,
       });
       onOpenChange(false);
     } catch (error) {
@@ -97,16 +135,18 @@ export function ConcluirTarefaModal({ tarefa, open, onOpenChange }: ConcluirTare
               <p className="text-xs text-muted-foreground">{tarefa.descricaoTarefa}</p>
             </div>
 
-            {/* Tempo Realizado */}
-            <div>
-              <Label htmlFor="tempo">Tempo Realizado (minutos) *</Label>
-              <Input
-                id="tempo"
-                type="number"
-                value={tempoRealizado}
-                onChange={(e) => setTempoRealizado(e.target.value)}
-                placeholder="Ex: 45"
-              />
+            {/* Tempo Decorrido - Calculado automaticamente */}
+            <div className="p-4 bg-primary/10 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-5 w-5 text-primary" />
+                <Label className="text-base font-medium">Tempo Decorrido</Label>
+              </div>
+              <p className="text-2xl font-bold text-primary">
+                {formatarTempo(tempoDecorrido)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Calculado automaticamente desde o início da manutenção
+              </p>
             </div>
 
             {/* Checklist */}
