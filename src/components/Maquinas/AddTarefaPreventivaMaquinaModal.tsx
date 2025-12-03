@@ -74,8 +74,7 @@ export const AddTarefaPreventivaMaquinaModal = ({
     manutentorId: "",
     dataHora: "",
     hora: "08:00",
-    status: "pendente" as StatusTarefa,
-    tempoEstimado: 60
+    status: "pendente" as StatusTarefa
   });
 
   // Buscar manutentores
@@ -173,7 +172,7 @@ export const AddTarefaPreventivaMaquinaModal = ({
         manutentorId: formData.manutentorId,
         manutentorNome: manutentor.nome,
         manutentorEmail: manutentor.email || "",
-        tempoEstimado: formData.tempoEstimado,
+        tempoEstimado: 0,
         proximaExecucao: proximaExecucao.toISOString().split('T')[0],
         status: formData.status,
         ...(formData.subcomponente && { subcomponente: subcomponenteObj?.nome || formData.subcomponente }),
@@ -200,8 +199,7 @@ export const AddTarefaPreventivaMaquinaModal = ({
         manutentorId: "",
         dataHora: "",
         hora: "08:00",
-        status: "pendente",
-        tempoEstimado: 60
+        status: "pendente"
       });
       setDate(new Date());
     } catch (error) {
@@ -387,31 +385,19 @@ export const AddTarefaPreventivaMaquinaModal = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Status *</Label>
-              <Select value={formData.status} onValueChange={(value: StatusTarefa) => setFormData({ ...formData, status: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                  <SelectItem value="concluida">Realizado</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tempo Estimado (minutos)</Label>
-              <Input
-                type="number"
-                value={formData.tempoEstimado}
-                onChange={(e) => setFormData({ ...formData, tempoEstimado: Number(e.target.value) })}
-                min="1"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label>Status *</Label>
+            <Select value={formData.status} onValueChange={(value: StatusTarefa) => setFormData({ ...formData, status: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                <SelectItem value="concluida">Realizado</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter>
