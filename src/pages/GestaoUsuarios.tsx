@@ -36,6 +36,13 @@ interface Unidade {
   nome: string;
 }
 
+// Definindo a interface CentroCusto
+interface CentroCusto {
+  id: string;
+  nome: string;
+  unidade?: string;
+}
+
 // Define Usuario interface internally
 export interface Usuario {
   id?: string;
@@ -151,18 +158,31 @@ const unidadeService = {
   },
 };
 
+const centroCustoService = {
+  async buscarTodos(): Promise<CentroCusto[]> {
+    const querySnapshot = await getDocs(collection(db, "centro_de_custo"));
+    const centros = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as CentroCusto));
+    return centros.sort((a, b) => a.nome.localeCompare(b.nome));
+  },
+};
+
 const UsuarioForm = ({
   usuario,
   onSubmit,
   onCancel,
   isLoading,
   unidades,
+  centrosCusto,
 }: {
   usuario?: Usuario;
   onSubmit: (usuario: Omit<Usuario, 'id'>) => Promise<void>;
   onCancel: () => void;
   isLoading: boolean;
   unidades: Unidade[];
+  centrosCusto: CentroCusto[];
 }) => {
   const [formData, setFormData] = useState<Omit<Usuario, 'id'>>({
     ativo: usuario?.ativo || 'sim',
@@ -325,14 +345,11 @@ const UsuarioForm = ({
               <SelectValue placeholder="Selecione o centro de custo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="administrativo">Administrativo</SelectItem>
-              <SelectItem value="operacional">Operacional</SelectItem>
-              <SelectItem value="financeiro">Financeiro</SelectItem>
-              <SelectItem value="comercial">Comercial</SelectItem>
-              <SelectItem value="producao">Produção</SelectItem>
-              <SelectItem value="manutencao">Manutenção</SelectItem>
-              <SelectItem value="logistica">Logística</SelectItem>
-              <SelectItem value="rh">Recursos Humanos</SelectItem>
+              {centrosCusto.map(centro => (
+                <SelectItem key={centro.id} value={centro.nome}>
+                  {centro.unidade ? `${centro.unidade} - ${centro.nome}` : centro.nome}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -388,12 +405,14 @@ const GestaoUsuarios = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
+  const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
 
   const { toast } = useToast();
 
   useEffect(() => {
     carregarUsuarios();
     carregarUnidades();
+    carregarCentrosCusto();
   }, []);
 
   useEffect(() => {
@@ -440,6 +459,19 @@ const GestaoUsuarios = () => {
       toast({
         title: "Erro",
         description: "Erro ao carregar unidades",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const carregarCentrosCusto = async () => {
+    try {
+      const data = await centroCustoService.buscarTodos();
+      setCentrosCusto(data);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar centros de custo",
         variant: "destructive"
       });
     }
@@ -640,6 +672,7 @@ const GestaoUsuarios = () => {
             onCancel={handleCancel}
             isLoading={isSubmitting}
             unidades={unidades}
+            centrosCusto={centrosCusto}
             />
         </DialogContent>
         </Dialog>
