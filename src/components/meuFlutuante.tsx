@@ -274,7 +274,6 @@ const FuturisticFloatingMenu = () => {
       items: filterItemsByPermission([
         { id: "dashboard", icon: <BarChart3 size={20} />, label: "Dashboard Geral", path: "/dashboard", permission: "dashboard" },
         { id: "fornecedor-produtos", icon: <ShoppingBasket size={20} />, label: "Ordens de Compra", path: "/fornecedor-produtos", permission: "ordens_compra" },
-        { id: "execucao-preventiva", icon: <ClipboardCheck size={20} />, label: "Execução Preventiva", path: "/execucao-preventiva", permission: "execucao_preventiva" },
       ]),
     },
     {
@@ -284,6 +283,7 @@ const FuturisticFloatingMenu = () => {
       items: filterItemsByPermission([
         { id: "maquinas", icon: <WashingMachine size={20} />, label: "Máquinas", path: "/maquinas", permission: "maquinas" },
         { id: "manutencao-preventiva", icon: <Calendar size={20} />, label: "Manutenção Preventiva", path: "/manutencao-preventiva", permission: "manutencao_preventiva" },
+        { id: "execucao-preventiva", icon: <ClipboardCheck size={20} />, label: "Execução Preventiva", path: "/execucao-preventiva", permission: "execucao_preventiva" },
         { id: "manutencoes-dashboard", icon: <BarChart3 size={20} />, label: "Dashboard de Manutenções", path: "/manutencoes-dashboard", permission: "manutencoes_dashboard" },
         { id: "configuracoes-manutencao", icon: <Settings size={20} />, label: "Configurações", path: "/configuracoes-manutencao", permission: "configuracoes_manutencao" },
         { id: "automacao-manutencao", icon: <Cog size={20} />, label: "Automação", path: "/automacao-manutencao", permission: "automacao_manutencao" },
