@@ -83,11 +83,12 @@ export function TarefaCardMobile({ tarefa, onClick }: TarefaCardMobileProps) {
       )}
       onClick={onClick}
     >
-      <CardContent className="p-4 space-y-3">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
+          {/* Left side - Info */}
+          <div className="flex-1 min-w-0 space-y-1">
+            {/* Header badges */}
+            <div className="flex items-center gap-2 flex-wrap">
               {tarefa.ordemId && (
                 <Badge variant="outline" className="text-xs font-mono">
                   {tarefa.ordemId}
@@ -102,70 +103,68 @@ export function TarefaCardMobile({ tarefa, onClick }: TarefaCardMobileProps) {
                 </Badge>
               )}
             </div>
-            <h4 className="font-semibold text-sm leading-tight truncate">
-              {tarefa.maquinaNome}
-            </h4>
-            <p className="text-xs text-muted-foreground truncate">
-              {tarefa.descricaoTarefa}
-            </p>
-          </div>
-          <Badge className={statusColors[tarefa.status]}>
-            {statusLabels[tarefa.status]}
-          </Badge>
-        </div>
+            
+            {/* Title and description */}
+            <div>
+              <h4 className="font-semibold text-sm leading-tight truncate">
+                {tarefa.maquinaNome}
+              </h4>
+              <p className="text-xs text-muted-foreground truncate">
+                {tarefa.descricaoTarefa}
+              </p>
+            </div>
 
-        {/* Cronômetro em tempo real quando em andamento */}
-        {isEmAndamento && (
-          <div className="flex items-center justify-center gap-2 p-3 bg-warning/10 rounded-lg border border-warning/30">
-            <Timer className="h-5 w-5 text-warning animate-pulse" />
-            <span className="text-2xl font-mono font-bold text-warning tracking-wider">
-              {formatarCronometro()}
-            </span>
-          </div>
-        )}
+            {/* Info Row */}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Wrench className="h-3 w-3" />
+                <span>{tarefa.tipo}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span>{tarefa.periodoLabel || "Mensal"}</span>
+              </div>
+              {tarefa.setor && <span className="truncate">{tarefa.setor}</span>}
+            </div>
 
-        {/* Info Row */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Wrench className="h-3 w-3" />
-            <span>{tarefa.tipo}</span>
+            {/* Data */}
+            <div className="flex items-center gap-2">
+              {isAtrasada && <AlertTriangle className="h-4 w-4 text-destructive" />}
+              <span className={cn("text-sm font-medium", isAtrasada && "text-destructive")}>
+                {format(new Date(tarefa.proximaExecucao), "dd/MM/yyyy", { locale: ptBR })}
+              </span>
+              {tarefa.dataHoraAgendada && (
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(tarefa.dataHoraAgendada), "HH:mm", { locale: ptBR })}
+                </span>
+              )}
+              {isHoje && !isAtrasada && !isEmAndamento && (
+                <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary">
+                  Hoje
+                </Badge>
+              )}
+            </div>
+
+            {/* Sistema/Componente */}
+            <div className="text-xs text-muted-foreground">
+              {tarefa.sistema} → {tarefa.componente}
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            <span>{tarefa.periodoLabel || "Mensal"}</span>
-          </div>
-          {tarefa.setor && (
-            <div className="flex items-center gap-1 truncate">
-              <span className="truncate">{tarefa.setor}</span>
+
+          {/* Center - Timer (only when in progress) */}
+          {isEmAndamento && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Timer className="h-4 w-4 text-emerald-500 animate-pulse" />
+              <span className="text-lg font-mono font-bold text-emerald-500 tracking-wide">
+                {formatarCronometro()}
+              </span>
             </div>
           )}
-        </div>
 
-        {/* Data */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isAtrasada && <AlertTriangle className="h-4 w-4 text-destructive" />}
-            <span className={cn("text-sm font-medium", isAtrasada && "text-destructive")}>
-              {format(new Date(tarefa.proximaExecucao), "dd/MM/yyyy", { locale: ptBR })}
-            </span>
-            {tarefa.dataHoraAgendada && (
-              <span className="text-xs text-muted-foreground">
-                {format(new Date(tarefa.dataHoraAgendada), "HH:mm", { locale: ptBR })}
-              </span>
-            )}
-          </div>
-          {isHoje && !isAtrasada && !isEmAndamento && (
-            <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary">
-              Hoje
-            </Badge>
-          )}
-        </div>
-
-        {/* Sistema/Componente */}
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-muted-foreground">
-            {tarefa.sistema} → {tarefa.componente}
-          </span>
+          {/* Right side - Status */}
+          <Badge className={cn(statusColors[tarefa.status], "shrink-0")}>
+            {statusLabels[tarefa.status]}
+          </Badge>
         </div>
       </CardContent>
     </Card>
