@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,10 +15,10 @@ export function useMinhasTarefas() {
       return;
     }
 
+    // Query sem orderBy para evitar necessidade de índice composto
     const q = query(
       collection(db, "tarefas_manutencao"),
-      where("manutentorEmail", "==", userData.email),
-      orderBy("proximaExecucao", "asc")
+      where("manutentorEmail", "==", userData.email)
     );
 
     const unsubscribe = onSnapshot(
@@ -28,6 +28,13 @@ export function useMinhasTarefas() {
           id: doc.id,
           ...doc.data(),
         })) as TarefaManutencao[];
+
+        // Ordenar no cliente por proximaExecucao
+        tarefasData.sort((a, b) => {
+          const dateA = a.proximaExecucao || "";
+          const dateB = b.proximaExecucao || "";
+          return dateA.localeCompare(dateB);
+        });
 
         setTarefas(tarefasData);
         setLoading(false);
