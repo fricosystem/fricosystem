@@ -45,8 +45,16 @@ export interface HistoricoExecucao {
 export async function registrarHistoricoExecucao(
   dados: Omit<HistoricoExecucao, "id" | "criadoEm">
 ): Promise<string> {
+  // Filtrar campos undefined para evitar erros do Firebase
+  const dadosFiltrados: Record<string, any> = {};
+  for (const [key, value] of Object.entries(dados)) {
+    if (value !== undefined) {
+      dadosFiltrados[key] = value;
+    }
+  }
+  
   const docRef = await addDoc(collection(db, "historico_execucoes"), {
-    ...dados,
+    ...dadosFiltrados,
     criadoEm: serverTimestamp()
   });
   return docRef.id;
