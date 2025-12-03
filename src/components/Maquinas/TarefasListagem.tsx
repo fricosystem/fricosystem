@@ -126,7 +126,9 @@ export const TarefasListagem = ({
 
   const handleExecutar = async (tarefa: TarefaManutencaoMaquina) => {
     try {
-      await registrarExecucaoTarefa(tarefa.id, tarefa.tempoEstimado);
+      // Se a tarefa tem tempo realizado do início, usar esse valor, senão usar 1 minuto como padrão
+      const tempoRealizado = tarefa.tempoRealizado || 1;
+      await registrarExecucaoTarefa(tarefa.id, tempoRealizado);
       toast({
         title: "Sucesso",
         description: "Tarefa executada e próxima data agendada!"
