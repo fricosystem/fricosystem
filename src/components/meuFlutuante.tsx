@@ -15,7 +15,7 @@ import {
   ShoppingBasket, Scan, FileInput, ReceiptText, ArrowRightLeft, 
   MapPin, TreePine, FileOutput, ClipboardCheck, RotateCcw, UserCheck, 
   Building, DollarSign, Calculator, Upload, Shield, Cog, PackageCheck, 
-  Gavel, X, Menu, MessageSquare, Mail, Calendar, WashingMachine, Monitor, Code, UserCog
+  Gavel, X, Menu, MessageSquare, Mail, Calendar, WashingMachine, Monitor, Code, UserCog, IdCard
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -365,6 +365,7 @@ const FuturisticFloatingMenu = () => {
       label: "Administrativo",
       items: filterItemsByPermission([
         { id: "gestao-usuarios", icon: <UserCheck size={20} />, label: "Gestão de Usuários", path: "/gestao-usuarios", permission: "gestao_usuarios" },
+        { id: "gestao-perfis", icon: <IdCard size={20} />, label: "Gestão de Perfis", path: "/gestao-perfis", permission: "gestao_perfis" },
         { id: "gestao-produtos", icon: <Cog size={20} />, label: "Gestão de Produtos", path: "/gestao-produtos", permission: "gestao_produtos" },
         { id: "unidades", icon: <Building2 size={20} />, label: "Gestão de Unidades", path: "/unidades", permission: "gestao_unidades" },
         { id: "gestao-tarefas", icon: <ClipboardCheck size={20} />, label: "Gestão de Tarefas", path: "/gestao-tarefas", permission: "gestao_tarefas" },
