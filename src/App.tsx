@@ -40,6 +40,7 @@ import TransferenciasET from "./pages/TransferenciasET";
 import Compras from "./pages/Compras";
 import GestaoProdutos from "./pages/GestaoProdutos";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
+import GestaoPerfis from "./pages/GestaoPerfis";
 import CentroCusto from "./pages/CentroCusto";
 import Unidades from "./pages/Unidades";
 import Maquinas from "./pages/Maquinas";
@@ -129,6 +130,7 @@ const AppContent = () => {
           <Route path="/medida-de-lenha" element={<AuthGuard><MedidaLenha /></AuthGuard>} />
           <Route path="/gestao-produtos" element={<AuthGuard><GestaoProdutos /></AuthGuard>} />
           <Route path="/gestao-usuarios" element={<AuthGuard><GestaoUsuarios /></AuthGuard>} />
+          <Route path="/gestao-perfis" element={<AuthGuard><GestaoPerfis /></AuthGuard>} />
           <Route path="/fornecedor-produtos" element={<AuthGuard><FornecedorProdutos /></AuthGuard>} />
           <Route path="/notas-fiscais-lancamento" element={<AuthGuard><NotasFiscaisLancamento /></AuthGuard>} />
           <Route path="/centro-custo" element={<AuthGuard><CentroCusto /></AuthGuard>} />
