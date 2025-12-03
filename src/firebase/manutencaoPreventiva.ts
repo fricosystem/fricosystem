@@ -220,26 +220,30 @@ export const registrarExecucaoTarefa = async (
     }
     
     // Atualizar tarefa com reagendamento e novo manutentor
-    await updateDoc(tarefaRef, {
+    // Filtrar campos undefined para evitar erros do Firebase
+    const updateData: Record<string, any> = {
       ultimaExecucao: serverTimestamp(),
       proximaExecucao: proximaExecucaoStr,
-      dataHoraAgendada: novaDataHoraAgendada,
       tempoRealizado,
       status: "pendente", // Volta para pendente para próxima execução
       dataFim: serverTimestamp(),
-      checklist,
-      materiaisUtilizados,
-      problemasEncontrados,
-      requerAcompanhamento,
-      observacoesAcompanhamento,
-      // Atualizar manutentor para próxima execução
       manutentorId: novoManutentorId,
       manutentorNome: novoManutentorNome,
       manutentorEmail: novoManutentorEmail,
       historicoManutentores,
       execucoesAnteriores: (tarefa.execucoesAnteriores || 0) + 1,
       atualizadoEm: serverTimestamp()
-    });
+    };
+    
+    // Adicionar campos opcionais apenas se não forem undefined
+    if (novaDataHoraAgendada !== undefined) updateData.dataHoraAgendada = novaDataHoraAgendada;
+    if (checklist !== undefined) updateData.checklist = checklist;
+    if (materiaisUtilizados !== undefined) updateData.materiaisUtilizados = materiaisUtilizados;
+    if (problemasEncontrados !== undefined) updateData.problemasEncontrados = problemasEncontrados;
+    if (requerAcompanhamento !== undefined) updateData.requerAcompanhamento = requerAcompanhamento;
+    if (observacoesAcompanhamento !== undefined) updateData.observacoesAcompanhamento = observacoesAcompanhamento;
+    
+    await updateDoc(tarefaRef, updateData);
     
     return { 
       success: true, 
