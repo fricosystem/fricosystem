@@ -65,6 +65,7 @@ const PERMISSOES = [
   { id: 'relatorios', label: 'Relatórios' },
   { id: 'maquinas', label: 'Máquinas' },
   { id: 'manutencao_preventiva', label: 'Manutenção Preventiva' },
+  { id: 'execucao_preventiva', label: 'Execução Preventiva' },
   { id: 'pcp', label: 'PCP - Planejamento e Controle de Produção' },
   { id: 'requisicoes', label: 'Requisições' },
   { id: 'carrinho', label: 'Carrinho' },
