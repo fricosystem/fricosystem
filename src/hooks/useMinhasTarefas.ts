@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,12 +23,10 @@ export function useMinhasTarefas() {
       where("manutentorEmail", "==", userData.email)
     );
 
-    // Query histórico de execuções do manutentor
+    // Query histórico de execuções do manutentor (sem orderBy para evitar índice composto)
     const qHistorico = query(
       collection(db, "historico_execucoes"),
-      where("manutentorEmail", "==", userData.email),
-      orderBy("dataExecucao", "desc"),
-      limit(100)
+      where("manutentorEmail", "==", userData.email)
     );
 
     const unsubscribeTarefas = onSnapshot(
@@ -62,6 +60,14 @@ export function useMinhasTarefas() {
           id: doc.id,
           ...doc.data(),
         })) as HistoricoExecucao[];
+        
+        // Ordenar no cliente por dataExecucao desc
+        historicoData.sort((a, b) => {
+          const dateA = a.dataExecucao?.toDate?.()?.getTime() || 0;
+          const dateB = b.dataExecucao?.toDate?.()?.getTime() || 0;
+          return dateB - dateA;
+        });
+        
         setHistoricoExecucoes(historicoData);
       },
       (error) => {
@@ -99,6 +105,14 @@ export function useMinhasTarefas() {
 
   const tarefasEmAndamento = tarefas.filter((t) => t.status === "em_andamento");
 
+  // Criar mapa de execuções por tarefa
+  const execucoesPorTarefa = historicoExecucoes.reduce((acc, exec) => {
+    if (exec.tarefaId) {
+      acc[exec.tarefaId] = (acc[exec.tarefaId] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
   return {
     tarefas,
     loading,
@@ -115,5 +129,6 @@ export function useMinhasTarefas() {
     historicoExecucoes,
     tarefasEmAndamento,
     tarefasDisponiveis,
+    execucoesPorTarefa,
   };
 }
