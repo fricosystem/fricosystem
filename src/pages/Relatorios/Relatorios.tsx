@@ -387,12 +387,7 @@ const Relatorios = () => {
   return (
     <AppLayout title="Relatórios Gerais">
       <div className="flex flex-col h-full w-full max-w-full px-3 py-4 md:px-6 overflow-x-hidden">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3 md:gap-4 min-w-0">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold">Relatórios de Movimentação</h1>
-            <p className="text-sm text-muted-foreground hidden md:block mt-1">Visualize e filtre todos os movimentos de entrada e saída</p>
-          </div>
-          
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3 md:gap-4 min-w-0">        
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
             <Button 
               variant="outline" 
