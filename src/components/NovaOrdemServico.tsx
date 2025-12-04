@@ -82,6 +82,7 @@ const NovaOrdemServico = () => {
     setor: "",
     equipamento: "",
     hrInicial: "",
+    hrFinal: "",
     linhaParada: "",
     descricaoMotivo: "",
     observacao: "",
@@ -320,6 +321,7 @@ const NovaOrdemServico = () => {
         setor: formData.setor,
         equipamento: formData.equipamento,
         hrInicial: formData.hrInicial,
+        hrFinal: formData.hrFinal,
         linhaParada: formData.linhaParada,
         descricaoMotivo: formData.descricaoMotivo,
         observacao: formData.observacao,
@@ -396,6 +398,7 @@ const NovaOrdemServico = () => {
         setor: "",
         equipamento: "",
         hrInicial: "",
+        hrFinal: "",
         linhaParada: "",
         descricaoMotivo: "",
         observacao: "",
@@ -423,21 +426,22 @@ const NovaOrdemServico = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Nova Ordem de Serviço</CardTitle>
+    <Card className="border-0 sm:border shadow-none sm:shadow">
+      <CardHeader className="px-2 sm:px-6 py-3 sm:py-6">
+        <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold text-center">Nova Ordem de Serviço</CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <CardContent className="px-2 sm:px-6">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 md:space-y-6">
+          {/* Setor e Equipamento */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Setor */}
-            <div className="space-y-2">
-              <Label htmlFor="setor">Setor*</Label>
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="setor" className="text-xs sm:text-sm">Setor*</Label>
               <Select 
                 value={formData.setor} 
                 onValueChange={(value) => handleSelectChange("setor", value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm">
                   <SelectValue placeholder="Selecione o setor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -452,33 +456,33 @@ const NovaOrdemServico = () => {
             </div>
 
             {/* Equipamento Select com busca */}
-            <div className="space-y-2">
-              <Label htmlFor="equipamento">Equipamento*</Label>
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="equipamento" className="text-xs sm:text-sm">Equipamento*</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     className={cn(
-                      "w-full justify-between text-left",
+                      "w-full justify-between text-left h-9 sm:h-10 text-xs sm:text-sm",
                       !formData.equipamento && "text-muted-foreground"
                     )}
                     disabled={loadingEquipamentos}
                   >
                     <span className="truncate">
                       {loadingEquipamentos
-                        ? "Carregando equipamentos..."
+                        ? "Carregando..."
                         : formData.equipamento
                           ? equipamentos.find(e => e.equipamento === formData.equipamento)?.patrimonio + " - " + formData.equipamento
                           : "Selecione o equipamento"}
                     </span>
-                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <Search className="ml-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Buscar equipamento..." className="h-9" />
-                    <CommandList className="max-h-[300px] overflow-y-auto">
+                    <CommandList className="max-h-[250px] sm:max-h-[300px] overflow-y-auto">
                       <CommandEmpty>Nenhum equipamento encontrado.</CommandEmpty>
                       <CommandGroup>
                         {equipamentos.map((equipamento) => (
@@ -502,7 +506,7 @@ const NovaOrdemServico = () => {
                               )}
                             />
                             <div className="flex flex-col">
-                              <span>{equipamento.patrimonio} - {equipamento.equipamento}</span>
+                              <span className="text-sm">{equipamento.patrimonio} - {equipamento.equipamento}</span>
                               <span className="text-xs text-muted-foreground">
                                 Setor: {equipamento.setor}
                               </span>
@@ -515,28 +519,19 @@ const NovaOrdemServico = () => {
                 </PopoverContent>
               </Popover>
             </div>
-            
-            {/* Linha Parada */}
-            <div className="space-y-2">
-              <Label htmlFor="linhaParada">Linha Parada</Label>
-              <Input
-                id="linhaParada"
-                name="linhaParada"
-                value={formData.linhaParada}
-                onChange={handleChange}
-                placeholder="Informe a linha parada (opcional)"
-              />
-            </div>
-            
+          </div>
+
+          {/* Tipo de Manutenção e Linha Parada */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             {/* Tipo de Manutenção */}
-            <div className="space-y-2">
-              <Label htmlFor="tipoManutencao">Tipo de Manutenção*</Label>
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="tipoManutencao" className="text-xs sm:text-sm">Tipo*</Label>
               <Select 
                 value={formData.tipoManutencao} 
                 onValueChange={(value) => handleSelectChange("tipoManutencao", value)}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
+                <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm">
+                  <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Corretiva">Corretiva</SelectItem>
@@ -546,22 +541,49 @@ const NovaOrdemServico = () => {
               </Select>
             </div>
             
-            {/* Hora Inicial */}
-            <div className="space-y-2">
-              <Label htmlFor="hrInicial">Hora Inicial</Label>
+            {/* Linha Parada */}
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="linhaParada" className="text-xs sm:text-sm">Linha Parada</Label>
+              <Input
+                id="linhaParada"
+                name="linhaParada"
+                value={formData.linhaParada}
+                onChange={handleChange}
+                placeholder="Opcional"
+                className="h-9 sm:h-10 text-xs sm:text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Hora Inicial e Hora Final */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="hrInicial" className="text-xs sm:text-sm">Hora Inicial</Label>
               <Input
                 id="hrInicial"
                 name="hrInicial"
                 type="time"
                 value={formData.hrInicial}
                 onChange={handleChange}
+                className="h-9 sm:h-10 text-xs sm:text-sm"
+              />
+            </div>
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="hrFinal" className="text-xs sm:text-sm">Hora Fim</Label>
+              <Input
+                id="hrFinal"
+                name="hrFinal"
+                type="time"
+                value={formData.hrFinal}
+                onChange={handleChange}
+                className="h-9 sm:h-10 text-xs sm:text-sm"
               />
             </div>
           </div>
           
           {/* Produtos Utilizados */}
-          <div className="space-y-2">
-            <Label>Produtos Utilizados</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label className="text-xs sm:text-sm">Produtos Utilizados</Label>
             <Popover 
               open={produtosPopoverOpen} 
               onOpenChange={setProdutosPopoverOpen}
@@ -569,9 +591,9 @@ const NovaOrdemServico = () => {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-start"
+                  className="w-full justify-start h-9 sm:h-10 text-xs sm:text-sm"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Adicionar Produto
                 </Button>
               </PopoverTrigger>
@@ -583,8 +605,8 @@ const NovaOrdemServico = () => {
                     value={searchTerm}
                     onValueChange={setSearchTerm}
                   />
-                  <CommandList className="max-h-[300px] overflow-y-auto">
-                    <CommandEmpty>Nenhum produto encontrado ou todos já foram selecionados.</CommandEmpty>
+                  <CommandList className="max-h-[250px] sm:max-h-[300px] overflow-y-auto">
+                    <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                     <CommandGroup>
                       {produtosDisponiveis.map((produto) => (
                         <CommandItem
@@ -593,9 +615,9 @@ const NovaOrdemServico = () => {
                           onSelect={() => adicionarProduto(produto)}
                         >
                           <div className="flex flex-col">
-                            <span>{produto.nome}</span>
+                            <span className="text-sm">{produto.nome}</span>
                             <span className="text-xs text-muted-foreground">
-                              Código: {produto.codigo} • Estoque: {produto.quantidade} {produto.unidade}
+                              {produto.codigo} • Est: {produto.quantidade}
                             </span>
                           </div>
                         </CommandItem>
@@ -608,29 +630,29 @@ const NovaOrdemServico = () => {
             
             {/* Lista de produtos selecionados */}
             {produtosSelecionados.length > 0 && (
-              <div className="mt-4 space-y-3">
+              <div className="mt-2 sm:mt-3 space-y-2">
                 {produtosSelecionados.map((produto) => (
-                  <div key={produto.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium">{produto.nome}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {produto.valor_unitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} / {produto.unidade}
+                  <div key={produto.id} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-xs sm:text-sm truncate">{produto.nome}</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground">
+                        {produto.valor_unitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-8 w-8 p-0"
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                         onClick={() => diminuirQuantidade(produto.id)}
                         disabled={produto.quantidadeSelecionada <= 1}
                       >
-                        <Minus className="h-4 w-4" />
+                        <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       
-                      <div className="text-center min-w-[40px]">
+                      <div className="text-center min-w-[24px] sm:min-w-[32px] text-xs sm:text-sm">
                         {produto.quantidadeSelecionada}
                       </div>
                       
@@ -638,21 +660,21 @@ const NovaOrdemServico = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-8 w-8 p-0"
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                         onClick={() => aumentarQuantidade(produto.id)}
                         disabled={produto.quantidadeSelecionada >= produto.quantidade}
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-red-500"
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-500"
                         onClick={() => removerProduto(produto.id)}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </div>
@@ -660,7 +682,7 @@ const NovaOrdemServico = () => {
                 
                 {/* Valor total */}
                 <div className="flex justify-end pt-2 border-t">
-                  <div className="text-lg font-semibold">
+                  <div className="text-sm sm:text-base font-semibold">
                     Total: {new Number(calcularValorTotal()).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </div>
                 </div>
@@ -669,8 +691,8 @@ const NovaOrdemServico = () => {
           </div>
           
           {/* Responsável pela Manutenção com busca */}
-          <div className="space-y-2">
-            <Label htmlFor="responsavelManutencao">Responsável pela Manutenção*</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="responsavelManutencao" className="text-xs sm:text-sm">Responsável*</Label>
             <Popover 
               open={responsavelPopoverOpen} 
               onOpenChange={setResponsavelPopoverOpen}
@@ -680,23 +702,25 @@ const NovaOrdemServico = () => {
                   variant="outline"
                   role="combobox"
                   className={cn(
-                    "w-full justify-between",
+                    "w-full justify-between h-9 sm:h-10 text-xs sm:text-sm",
                     !formData.responsavelManutencao && "text-muted-foreground"
                   )}
                   disabled={loadingUsuarios}
                 >
-                  {loadingUsuarios
-                    ? "Carregando usuários..."
-                    : formData.responsavelManutencao
-                      ? getSelectedUsuarioName()
-                      : "Selecione o responsável"}
-                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <span className="truncate">
+                    {loadingUsuarios
+                      ? "Carregando..."
+                      : formData.responsavelManutencao
+                        ? getSelectedUsuarioName()
+                        : "Selecione o responsável"}
+                  </span>
+                  <Search className="ml-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[95vw] sm:w-[400px] p-0">
                 <Command>
                   <CommandInput placeholder="Buscar usuário..." className="h-9" />
-                  <CommandList className="max-h-[300px] overflow-y-auto">
+                  <CommandList className="max-h-[250px] sm:max-h-[300px] overflow-y-auto">
                     <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
                     <CommandGroup>
                       {usuarios.map((usuario) => (
@@ -720,9 +744,9 @@ const NovaOrdemServico = () => {
                             )}
                           />
                           <div className="flex flex-col">
-                            <span>{usuario.nome}</span>
+                            <span className="text-sm">{usuario.nome}</span>
                             <span className="text-xs text-muted-foreground">
-                              {usuario.cargo} • {usuario.email}
+                              {usuario.cargo}
                             </span>
                           </div>
                         </CommandItem>
@@ -735,109 +759,117 @@ const NovaOrdemServico = () => {
           </div>
           
           {/* Descrição do Motivo */}
-          <div className="space-y-2">
-            <Label htmlFor="descricaoMotivo">Descrição do Motivo*</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="descricaoMotivo" className="text-xs sm:text-sm">Descrição do Motivo*</Label>
             <Textarea
               id="descricaoMotivo"
               name="descricaoMotivo"
               value={formData.descricaoMotivo}
               onChange={handleChange}
-              rows={4}
-              placeholder="Descreva detalhadamente o problema encontrado"
+              rows={3}
+              placeholder="Descreva o problema"
+              className="text-xs sm:text-sm min-h-[70px] sm:min-h-[80px]"
             />
           </div>
           
           {/* Solução Aplicada */}
-          <div className="space-y-2">
-            <Label htmlFor="solucaoAplicada">Solução Aplicada</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="solucaoAplicada" className="text-xs sm:text-sm">Solução Aplicada</Label>
             <Textarea
               id="solucaoAplicada"
               name="solucaoAplicada"
               value={formData.solucaoAplicada}
               onChange={handleChange}
-              rows={4}
-              placeholder="Descreva a solução aplicada"
+              rows={3}
+              placeholder="Descreva a solução"
+              className="text-xs sm:text-sm min-h-[70px] sm:min-h-[80px]"
             />
           </div>
           
           {/* Origem da Parada (checkboxes) */}
-          <div className="space-y-2">
-            <Label>Origem da Parada</Label>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="flex items-center space-x-2">
+          <div className="space-y-1 sm:space-y-2">
+            <Label className="text-xs sm:text-sm">Origem da Parada</Label>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Checkbox 
                   id="automatizacao" 
                   checked={origemParada.automatizacao}
                   onCheckedChange={(checked) => handleOrigemChange("automatizacao", checked as boolean)}
+                  className="h-4 w-4"
                 />
-                <Label htmlFor="automatizacao">Automatização</Label>
+                <Label htmlFor="automatizacao" className="text-[10px] sm:text-xs cursor-pointer">Auto</Label>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Checkbox 
                   id="terceiros" 
                   checked={origemParada.terceiros}
                   onCheckedChange={(checked) => handleOrigemChange("terceiros", checked as boolean)}
+                  className="h-4 w-4"
                 />
-                <Label htmlFor="terceiros">Terceiros</Label>
+                <Label htmlFor="terceiros" className="text-[10px] sm:text-xs cursor-pointer">Terceiros</Label>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Checkbox 
                   id="eletrica" 
                   checked={origemParada.eletrica}
                   onCheckedChange={(checked) => handleOrigemChange("eletrica", checked as boolean)}
+                  className="h-4 w-4"
                 />
-                <Label htmlFor="eletrica">Elétrica</Label>
+                <Label htmlFor="eletrica" className="text-[10px] sm:text-xs cursor-pointer">Elétrica</Label>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Checkbox 
                   id="mecanica" 
                   checked={origemParada.mecanica}
                   onCheckedChange={(checked) => handleOrigemChange("mecanica", checked as boolean)}
+                  className="h-4 w-4"
                 />
-                <Label htmlFor="mecanica">Mecânica</Label>
+                <Label htmlFor="mecanica" className="text-[10px] sm:text-xs cursor-pointer">Mecânica</Label>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Checkbox 
                   id="outro" 
                   checked={origemParada.outro}
                   onCheckedChange={(checked) => handleOrigemChange("outro", checked as boolean)}
+                  className="h-4 w-4"
                 />
-                <Label htmlFor="outro">Outro</Label>
+                <Label htmlFor="outro" className="text-[10px] sm:text-xs cursor-pointer">Outro</Label>
               </div>
             </div>
           </div>
           
           {/* Observações */}
-          <div className="space-y-2">
-            <Label htmlFor="observacao">Observações</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="observacao" className="text-xs sm:text-sm">Observações</Label>
             <Textarea
               id="observacao"
               name="observacao"
               value={formData.observacao}
               onChange={handleChange}
-              rows={3}
+              rows={2}
               placeholder="Observações adicionais"
+              className="text-xs sm:text-sm min-h-[60px] sm:min-h-[70px]"
             />
           </div>
           
           <Button
             type="submit"
-            className="w-full"
+            className="w-full h-10 sm:h-11 text-sm sm:text-base"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1.5 sm:mr-2 h-4 w-4 animate-spin" />
                 Salvando...
               </>
             ) : (
               <>
-                <Save className="mr-2 h-4 w-4" />
-                Salvar Ordem de Serviço
+                <Save className="mr-1.5 sm:mr-2 h-4 w-4" />
+                Salvar Ordem
               </>
             )}
           </Button>
