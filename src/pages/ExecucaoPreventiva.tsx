@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BottomNavigation } from "@/components/ExecucaoPreventiva/BottomNavigation";
 import { DashboardMobile } from "@/components/ExecucaoPreventiva/DashboardMobile";
 import { TimelineMobile } from "@/components/ExecucaoPreventiva/TimelineMobile";
+import { CalendarioMobile } from "@/components/ExecucaoPreventiva/CalendarioMobile";
 import { HistoricoMobile } from "@/components/ExecucaoPreventiva/HistoricoMobile";
 import { PerfilManutentor } from "@/components/ExecucaoPreventiva/PerfilManutentor";
 import { useMinhasTarefas } from "@/hooks/useMinhasTarefas";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export default function ExecucaoPreventiva() {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "timeline" | "historico" | "perfil">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "timeline" | "calendario" | "historico" | "perfil">("dashboard");
   const { tarefas, loading, stats, tarefasHoje, tarefasAtrasadas, historicoExecucoes } = useMinhasTarefas();
 
   if (loading) {
@@ -57,6 +58,8 @@ export default function ExecucaoPreventiva() {
         )}
 
         {activeTab === "timeline" && <TimelineMobile tarefas={tarefas} />}
+
+        {activeTab === "calendario" && <CalendarioMobile tarefas={tarefas} />}
 
         {activeTab === "historico" && <HistoricoMobile historicoExecucoes={historicoExecucoes} />}
 
