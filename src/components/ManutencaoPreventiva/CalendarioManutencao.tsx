@@ -69,7 +69,10 @@ export function CalendarioManutencao({ tarefas, onTarefaClick }: CalendarioManut
 
   // Obter tarefas de um dia específico
   const getTarefasDoDia = (data: Date) => {
-    const dataStr = data.toISOString().split('T')[0];
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
+    const dataStr = `${ano}-${mes}-${dia}`;
     return tarefasFiltradas.filter(t => t.proximaExecucao === dataStr);
   };
 
