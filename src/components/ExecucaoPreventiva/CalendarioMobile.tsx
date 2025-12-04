@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface CalendarioMobileProps {
   tarefas: TarefaManutencao[];
   onTarefaClick?: (tarefa: TarefaManutencao) => void;
+  execucoesPorTarefa?: Record<string, number>;
 }
 
-export function CalendarioMobile({ tarefas, onTarefaClick }: CalendarioMobileProps) {
+export function CalendarioMobile({ tarefas, onTarefaClick, execucoesPorTarefa = {} }: CalendarioMobileProps) {
   const [dataAtual, setDataAtual] = useState(new Date());
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
 
@@ -254,6 +255,11 @@ export function CalendarioMobile({ tarefas, onTarefaClick }: CalendarioMobilePro
                       {tarefa.sistema && (
                         <Badge variant="secondary" className="text-xs">
                           {tarefa.sistema}
+                        </Badge>
+                      )}
+                      {execucoesPorTarefa[tarefa.id] > 0 && (
+                        <Badge variant="outline" className="text-xs bg-success/10 text-success border-success">
+                          {execucoesPorTarefa[tarefa.id]}x
                         </Badge>
                       )}
                     </div>

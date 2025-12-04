@@ -13,9 +13,10 @@ interface DashboardMobileProps {
   };
   tarefasHoje: TarefaManutencao[];
   tarefasAtrasadas: TarefaManutencao[];
+  execucoesPorTarefa?: Record<string, number>;
 }
 
-export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas }: DashboardMobileProps) {
+export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoesPorTarefa = {} }: DashboardMobileProps) {
   const urgentes = [...tarefasAtrasadas, ...tarefasHoje].slice(0, 3);
 
   return (
@@ -86,7 +87,11 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas }: Dashbo
           </CardHeader>
           <CardContent className="space-y-3">
             {urgentes.map((tarefa) => (
-              <TarefaCardMobile key={tarefa.id} tarefa={tarefa} />
+              <TarefaCardMobile 
+                key={tarefa.id} 
+                tarefa={tarefa}
+                execucoesAnteriores={execucoesPorTarefa[tarefa.id] || 0}
+              />
             ))}
           </CardContent>
         </Card>

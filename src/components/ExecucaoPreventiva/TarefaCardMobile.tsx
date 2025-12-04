@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
-import { Clock, Wrench, AlertTriangle, Timer } from "lucide-react";
+import { Clock, Wrench, AlertTriangle, Timer, History } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -11,9 +11,10 @@ import { Timestamp } from "firebase/firestore";
 interface TarefaCardMobileProps {
   tarefa: TarefaManutencao;
   onClick?: () => void;
+  execucoesAnteriores?: number;
 }
 
-export function TarefaCardMobile({ tarefa, onClick }: TarefaCardMobileProps) {
+export function TarefaCardMobile({ tarefa, onClick, execucoesAnteriores = 0 }: TarefaCardMobileProps) {
   const [tempoDecorrido, setTempoDecorrido] = useState({ horas: 0, minutos: 0, segundos: 0 });
   
   const hoje = new Date().toISOString().split("T")[0];
@@ -100,6 +101,15 @@ export function TarefaCardMobile({ tarefa, onClick }: TarefaCardMobileProps) {
                   className={cn("text-xs", prioridadeColors[tarefa.prioridade])}
                 >
                   {tarefa.prioridade.toUpperCase()}
+                </Badge>
+              )}
+              {execucoesAnteriores > 0 && (
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-success/10 text-success border-success"
+                >
+                  <History className="h-3 w-3 mr-1" />
+                  {execucoesAnteriores}x
                 </Badge>
               )}
             </div>

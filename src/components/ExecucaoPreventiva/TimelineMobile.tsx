@@ -7,9 +7,10 @@ import { ConcluirTarefaModal } from "./ConcluirTarefaModal";
 
 interface TimelineMobileProps {
   tarefas: TarefaManutencao[];
+  execucoesPorTarefa?: Record<string, number>;
 }
 
-export function TimelineMobile({ tarefas }: TimelineMobileProps) {
+export function TimelineMobile({ tarefas, execucoesPorTarefa = {} }: TimelineMobileProps) {
   const [selectedTarefa, setSelectedTarefa] = useState<TarefaManutencao | null>(null);
   const [modalType, setModalType] = useState<"iniciar" | "concluir" | null>(null);
 
@@ -66,6 +67,7 @@ export function TimelineMobile({ tarefas }: TimelineMobileProps) {
                 key={tarefa.id}
                 tarefa={tarefa}
                 onClick={() => handleCardClick(tarefa)}
+                execucoesAnteriores={execucoesPorTarefa[tarefa.id] || 0}
               />
             ))
           ) : (
@@ -82,6 +84,7 @@ export function TimelineMobile({ tarefas }: TimelineMobileProps) {
                 key={tarefa.id}
                 tarefa={tarefa}
                 onClick={() => handleCardClick(tarefa)}
+                execucoesAnteriores={execucoesPorTarefa[tarefa.id] || 0}
               />
             ))
           ) : (
@@ -98,6 +101,7 @@ export function TimelineMobile({ tarefas }: TimelineMobileProps) {
                 key={tarefa.id}
                 tarefa={tarefa}
                 onClick={() => handleCardClick(tarefa)}
+                execucoesAnteriores={execucoesPorTarefa[tarefa.id] || 0}
               />
             ))
           ) : (
