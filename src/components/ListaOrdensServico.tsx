@@ -281,165 +281,295 @@ const ListaOrdensServico = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl md:text-2xl font-bold text-center">Lista de Ordens de Serviço</CardTitle>
-        <div className="mt-4 flex justify-end">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+    <Card className="border-0 sm:border shadow-none sm:shadow">
+      <CardHeader className="px-2 sm:px-6 py-3 sm:py-6">
+        <CardTitle className="text-base sm:text-lg md:text-xl font-bold text-center">Ordens de Serviço</CardTitle>
+        <div className="mt-2 sm:mt-4">
+          <div className="relative w-full">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por setor, equipamento..."
+              placeholder="Buscar..."
               value={searchTerm}
               onChange={handleSearch}
-              className="pl-9 w-full text-sm"
+              className="pl-8 sm:pl-9 w-full text-xs sm:text-sm h-9 sm:h-10"
             />
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-2 sm:px-6 pb-4">
         {loading ? (
-          <div className="flex justify-center items-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <span className="ml-2">Carregando ordens...</span>
+          <div className="flex justify-center items-center py-8 sm:py-10">
+            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-sm sm:text-base">Carregando...</span>
           </div>
         ) : filteredOrdens.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">Nenhuma ordem de serviço encontrada</p>
+          <div className="text-center py-8 sm:py-10">
+            <p className="text-muted-foreground text-sm">Nenhuma ordem encontrada</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[100px]">Setor</TableHead>
-                  <TableHead className="min-w-[150px]">Equipamento</TableHead>
-                  <TableHead className="hidden md:table-cell min-w-[120px]">Peça</TableHead>
-                  <TableHead className="hidden lg:table-cell min-w-[100px]">Tipo</TableHead>
-                  <TableHead className="hidden sm:table-cell min-w-[130px]">Data/Hora</TableHead>
-                  <TableHead className="min-w-[100px]">Status</TableHead>
-                  <TableHead className="min-w-[120px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrdens.map((ordem) => (
-                  <TableRow key={ordem.id}>
-                    <TableCell>
-                      <div>{ordem.setor}</div>
-                      <div className="text-xs text-muted-foreground sm:hidden mt-1">
-                        {ordem.criadoEm && format(ordem.criadoEm.toDate(), "dd/MM/yy HH:mm")}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>{ordem.equipamento}</div>
-                      {ordem.geradaAutomaticamente && (
-                        <Badge variant="secondary" className="text-xs mt-1">
-                          Auto
-                        </Badge>
-                      )}
-                      <div className="text-xs text-muted-foreground md:hidden mt-1">
+          <>
+            {/* Mobile Card View */}
+            <div className="sm:hidden space-y-2">
+              {filteredOrdens.map((ordem) => (
+                <div key={ordem.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{ordem.equipamento}</div>
+                      <div className="text-xs text-muted-foreground">{ordem.setor}</div>
+                    </div>
+                    {getStatusBadge(ordem.status)}
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-muted-foreground">
+                    <span>{ordem.tipoManutencao || "-"}</span>
+                    <span>{ordem.criadoEm && format(ordem.criadoEm.toDate(), "dd/MM/yy HH:mm")}</span>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex-1 h-8 text-xs"
+                          onClick={() => setSelectedOrdem(ordem)}
+                        >
+                          Detalhes
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto p-3 sm:p-6">
+                        <DialogHeader>
+                          <DialogTitle className="text-base sm:text-lg">Detalhes da Ordem</DialogTitle>
+                        </DialogHeader>
+                        {selectedOrdem && (
+                          <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
+                            <div>
+                              <h4 className="font-semibold text-xs text-muted-foreground">Setor</h4>
+                              <p className="text-sm">{selectedOrdem.setor}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-xs text-muted-foreground">Equipamento</h4>
+                              <p className="text-sm">{selectedOrdem.equipamento}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-xs text-muted-foreground">Tipo</h4>
+                              <p className="text-sm">{selectedOrdem.tipoManutencao || "-"}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-xs text-muted-foreground">Linha Parada</h4>
+                              <p className="text-sm">{selectedOrdem.linhaParada || "-"}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-xs text-muted-foreground">Hora Inicial</h4>
+                              <p className="text-sm">{selectedOrdem.hrInicial || "-"}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-xs text-muted-foreground">Hora Fim</h4>
+                              <p className="text-sm">{selectedOrdem.hrFinal || "-"}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-xs text-muted-foreground">Criado Em</h4>
+                              <p className="text-sm">{selectedOrdem.criadoEm && format(selectedOrdem.criadoEm.toDate(), "dd/MM/yy HH:mm")}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-xs text-muted-foreground">Responsável</h4>
+                              <p className="text-sm truncate">{getResponsavelNome(selectedOrdem.responsavelManutencao)}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <h4 className="font-semibold text-xs text-muted-foreground">Descrição</h4>
+                              <p className="text-sm">{selectedOrdem.descricaoMotivo}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <h4 className="font-semibold text-xs text-muted-foreground">Solução</h4>
+                              <p className="text-sm">{selectedOrdem.solucaoAplicada || "-"}</p>
+                            </div>
+                            {selectedOrdem.origemParada && getOrigensParada(selectedOrdem.origemParada).length > 0 && (
+                              <div className="col-span-2">
+                                <h4 className="font-semibold text-xs text-muted-foreground">Origem</h4>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {getOrigensParada(selectedOrdem.origemParada).map((origem, index) => (
+                                    <Badge key={index} variant="secondary" className="text-[10px]">{origem}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {selectedOrdem.produtosUtilizados && selectedOrdem.produtosUtilizados.length > 0 && (
+                              <div className="col-span-2 border-t pt-2">
+                                <h4 className="font-semibold text-xs text-muted-foreground mb-2">Produtos</h4>
+                                <div className="space-y-1">
+                                  {selectedOrdem.produtosUtilizados.map((produto: ProdutoUtilizado, index: number) => (
+                                    <div key={index} className="flex justify-between text-xs">
+                                      <span>{produto.nome} x{produto.quantidade}</span>
+                                      <span>{formatCurrency(produto.valorTotal)}</span>
+                                    </div>
+                                  ))}
+                                  <div className="flex justify-between font-semibold text-xs pt-1 border-t">
+                                    <span>Total</span>
+                                    <span>{formatCurrency(selectedOrdem.valorTotalProdutos || 0)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            <div className="col-span-2 pt-2 border-t">
+                              <h4 className="font-semibold text-xs text-muted-foreground mb-2">Alterar Status</h4>
+                              <div className="flex gap-2 flex-wrap">
+                                <Button
+                                  size="sm"
+                                  variant={selectedOrdem.status === "pendente" ? "default" : "outline"}
+                                  onClick={() => handleStatusChange(selectedOrdem.id, "pendente")}
+                                  className="text-xs h-7 px-2"
+                                >
+                                  Pendente
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={selectedOrdem.status === "em_andamento" ? "default" : "outline"}
+                                  onClick={() => handleStatusChange(selectedOrdem.id, "em_andamento")}
+                                  className="text-xs h-7 px-2"
+                                >
+                                  Em Andamento
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={selectedOrdem.status === "concluido" ? "default" : "outline"}
+                                  onClick={() => handleStatusChange(selectedOrdem.id, "concluido")}
+                                  className="text-xs h-7 px-2"
+                                >
+                                  Concluído
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden sm:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs min-w-[80px]">Setor</TableHead>
+                    <TableHead className="text-xs min-w-[120px]">Equipamento</TableHead>
+                    <TableHead className="hidden md:table-cell text-xs min-w-[100px]">Peça</TableHead>
+                    <TableHead className="hidden lg:table-cell text-xs min-w-[80px]">Tipo</TableHead>
+                    <TableHead className="text-xs min-w-[110px]">Data/Hora</TableHead>
+                    <TableHead className="text-xs min-w-[90px]">Status</TableHead>
+                    <TableHead className="text-xs min-w-[80px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrdens.map((ordem) => (
+                    <TableRow key={ordem.id}>
+                      <TableCell className="text-xs sm:text-sm py-2">{ordem.setor}</TableCell>
+                      <TableCell className="text-xs sm:text-sm py-2">
+                        <div>{ordem.equipamento}</div>
+                        {ordem.geradaAutomaticamente && (
+                          <Badge variant="secondary" className="text-[10px] mt-0.5">Auto</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground py-2">
                         {ordem.pecaNome || "-"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {ordem.pecaNome || "-"}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">{ordem.tipoManutencao}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {ordem.criadoEm && format(ordem.criadoEm.toDate(), "dd/MM/yyyy HH:mm")}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(ordem.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col sm:flex-row gap-2">
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs py-2">{ordem.tipoManutencao}</TableCell>
+                      <TableCell className="text-xs py-2">
+                        {ordem.criadoEm && format(ordem.criadoEm.toDate(), "dd/MM/yy HH:mm")}
+                      </TableCell>
+                      <TableCell className="py-2">{getStatusBadge(ordem.status)}</TableCell>
+                      <TableCell className="py-2">
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button 
                               variant="outline" 
                               size="sm"
-                              className="dark:bg-gray-700 dark:hover:bg-gray-600 w-full sm:w-auto text-xs"
+                              className="text-xs h-7"
                               onClick={() => setSelectedOrdem(ordem)}
                             >
-                              Detalhes
+                              Ver
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+                          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                             <DialogHeader>
                               <DialogTitle>Detalhes da Ordem de Serviço</DialogTitle>
                             </DialogHeader>
                             {selectedOrdem && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-500">Setor</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Setor</h4>
                                   <p>{selectedOrdem.setor}</p>
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-500">Equipamento</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Equipamento</h4>
                                   <p>{selectedOrdem.equipamento}</p>
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-500">Tipo de Manutenção</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Tipo de Manutenção</h4>
                                   <p>{selectedOrdem.tipoManutencao || "Não informado"}</p>
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-500">Linha Parada</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Linha Parada</h4>
                                   <p>{selectedOrdem.linhaParada || "Não informado"}</p>
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-500">Hora Inicial</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Hora Inicial</h4>
                                   <p>{selectedOrdem.hrInicial || "Não informado"}</p>
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-500">Hora Final</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Hora Fim</h4>
                                   <p>{selectedOrdem.hrFinal || "Não informado"}</p>
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-500">Tempo de Parada</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Tempo de Parada</h4>
                                   <p>{selectedOrdem.tempoParada || "Não informado"}</p>
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-500">Criado Em</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Criado Em</h4>
                                   <p>{selectedOrdem.criadoEm && format(selectedOrdem.criadoEm.toDate(), "dd/MM/yyyy HH:mm")}</p>
                                 </div>
                                 <div className="md:col-span-2">
-                                  <h4 className="font-semibold text-sm text-gray-500">Responsável pela Manutenção</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Responsável</h4>
                                   <p>{getResponsavelNome(selectedOrdem.responsavelManutencao)}</p>
                                 </div>
                                 <div className="md:col-span-2">
-                                  <h4 className="font-semibold text-sm text-gray-500">Descrição do Motivo</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Descrição do Motivo</h4>
                                   <p>{selectedOrdem.descricaoMotivo}</p>
                                 </div>
                                 <div className="md:col-span-2">
-                                  <h4 className="font-semibold text-sm text-gray-500">Solução Aplicada</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Solução Aplicada</h4>
                                   <p>{selectedOrdem.solucaoAplicada || "Não informado"}</p>
                                 </div>
                                 <div className="md:col-span-2">
-                                  <h4 className="font-semibold text-sm text-gray-500">Origem da Parada</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Origem da Parada</h4>
                                   <div className="flex flex-wrap gap-2 mt-1">
                                     {selectedOrdem.origemParada && getOrigensParada(selectedOrdem.origemParada).map((origem, index) => (
                                       <Badge key={index}>{origem}</Badge>
                                     ))}
                                     {(!selectedOrdem.origemParada || getOrigensParada(selectedOrdem.origemParada).length === 0) && 
-                                      <span className="text-gray-500">Não informado</span>
+                                      <span className="text-muted-foreground">Não informado</span>
                                     }
                                   </div>
                                 </div>
                                 <div className="md:col-span-2">
-                                  <h4 className="font-semibold text-sm text-gray-500">Observação</h4>
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Observação</h4>
                                   <p>{selectedOrdem.observacao || "Não informado"}</p>
                                 </div>
 
                                 {/* Seção de Produtos Utilizados */}
                                 {selectedOrdem.produtosUtilizados && selectedOrdem.produtosUtilizados.length > 0 && (
                                   <div className="md:col-span-2">
-                                    <h4 className="font-semibold text-sm text-gray-500">Produtos Utilizados</h4>
+                                    <h4 className="font-semibold text-sm text-muted-foreground">Produtos Utilizados</h4>
                                     <div className="mt-2 border rounded-lg divide-y">
-                                      {selectedOrdem.produtosUtilizados.map((produto, index) => (
-                                        <div key={index} className="p-3 flex justify-between items-center">
+                                      {selectedOrdem.produtosUtilizados.map((produto: ProdutoUtilizado, index: number) => (
+                                        <div key={index} className="p-2 sm:p-3 flex justify-between items-center text-sm">
                                           <div>
                                             <p className="font-medium">{produto.nome}</p>
-                                            <p className="text-sm text-gray-500">
-                                              {produto.quantidade} x {formatCurrency(produto.valorUnitario)} = {formatCurrency(produto.valorTotal)}
+                                            <p className="text-xs text-muted-foreground">
+                                              {produto.quantidade} x {formatCurrency(produto.valorUnitario)}
                                             </p>
                                           </div>
+                                          <span>{formatCurrency(produto.valorTotal)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -450,12 +580,12 @@ const ListaOrdensServico = () => {
                                 )}
 
                                 <div className="md:col-span-2 mt-4">
-                                  <h4 className="font-semibold text-sm text-gray-500">Alterar Status</h4>
-                                   <div className="flex space-x-2 mt-2">
+                                  <h4 className="font-semibold text-sm text-muted-foreground">Alterar Status</h4>
+                                  <div className="flex flex-wrap gap-2 mt-2">
                                     <Button 
                                       variant={selectedOrdem.status === "pendente" ? "default" : "outline"} 
                                       size="sm"
-                                      className="dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800"
+                                      className="text-xs"
                                       onClick={() => handleStatusChange(selectedOrdem.id, "pendente")}
                                       disabled={selectedOrdem.status === "pendente"}
                                     >
@@ -464,7 +594,7 @@ const ListaOrdensServico = () => {
                                     <Button 
                                       variant={selectedOrdem.status === "em_andamento" ? "default" : "outline"} 
                                       size="sm"
-                                      className="dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800"
+                                      className="text-xs"
                                       onClick={() => handleStatusChange(selectedOrdem.id, "em_andamento")}
                                       disabled={selectedOrdem.status === "em_andamento"}
                                     >
@@ -473,7 +603,7 @@ const ListaOrdensServico = () => {
                                     <Button 
                                       variant={selectedOrdem.status === "concluido" ? "default" : "outline"} 
                                       size="sm"
-                                      className="dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800"
+                                      className="text-xs"
                                       onClick={() => handleStatusChange(selectedOrdem.id, "concluido")}
                                       disabled={selectedOrdem.status === "concluido"}
                                     >
@@ -485,42 +615,13 @@ const ListaOrdensServico = () => {
                             )}
                           </DialogContent>
                         </Dialog>
-                        
-                        {ordem.status !== "concluido" && (
-                          <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className={`${ordem.status === "pendente" ? "dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"} text-xs`}
-                              onClick={() => handleStatusChange(ordem.id, "pendente")}
-                            >
-                              Pendente
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className={`${ordem.status === "em_andamento" ? "dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"} text-xs`}
-                              onClick={() => handleStatusChange(ordem.id, "em_andamento")}
-                            >
-                              Em Andamento
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className={`${ordem.status === "concluido" ? "dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800" : "dark:bg-gray-700 dark:hover:bg-gray-600"} text-xs`}
-                              onClick={() => handleStatusChange(ordem.id, "concluido")}
-                            >
-                              Concluído
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
