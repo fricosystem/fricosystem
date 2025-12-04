@@ -1,15 +1,16 @@
-import { LayoutDashboard, Calendar, History, User } from "lucide-react";
+import { LayoutDashboard, Calendar, CalendarDays, History, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BottomNavigationProps {
-  activeTab: "dashboard" | "timeline" | "historico" | "perfil";
-  onTabChange: (tab: "dashboard" | "timeline" | "historico" | "perfil") => void;
+  activeTab: "dashboard" | "timeline" | "calendario" | "historico" | "perfil";
+  onTabChange: (tab: "dashboard" | "timeline" | "calendario" | "historico" | "perfil") => void;
 }
 
 export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationProps) {
   const tabs = [
     { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
     { id: "timeline" as const, label: "Timeline", icon: Calendar },
+    { id: "calendario" as const, label: "Calendário", icon: CalendarDays },
     { id: "historico" as const, label: "Histórico", icon: History },
     { id: "perfil" as const, label: "Perfil", icon: User },
   ];
