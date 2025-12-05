@@ -1,0 +1,811 @@
+import React, { useState, useEffect } from "react";
+import { collection, addDoc, Timestamp, getDocs, query, limit, doc, writeBatch } from "firebase/firestore";
+import { db } from "@/firebase/firebase";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Search, Plus, Minus, X, Check } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+interface Usuario {
+  id: string;
+  nome: string;
+  cargo: string;
+  email: string;
+  ativo: string;
+}
+
+interface Produto {
+  id: string;
+  codigo: string;
+  codigo_estoque: string;
+  codigo_material: string;
+  data_vencimento: string;
+  deposito: string;
+  detalhes: string;
+  imagem: string;
+  nome: string;
+  quantidade: number;
+  quantidade_minima: number;
+  unidade: string;
+  unidade_de_medida: string;
+  valor_unitario: number;
+}
+
+interface Equipamento {
+  id: string;
+  patrimonio: string;
+  equipamento: string;
+  setor: string;
+  tag: string;
+}
+
+interface ProdutoSelecionado extends Produto {
+  quantidadeSelecionada: number;
+}
+
+const NovaParadaMaquina = () => {
+  const { user, userData } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+  const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
+  const [responsavelPopoverOpen, setResponsavelPopoverOpen] = useState(false);
+  const [collectionChecked, setCollectionChecked] = useState(false);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtosSelecionados, setProdutosSelecionados] = useState<ProdutoSelecionado[]>([]);
+  const [produtosPopoverOpen, setProdutosPopoverOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const [formData, setFormData] = useState({
+    setor: "",
+    equipamento: "",
+    hrInicial: "",
+    hrFinal: "",
+    linhaParada: "",
+    descricaoMotivo: "",
+    observacao: "",
+    responsavelManutencao: "",
+    tipoManutencao: "",
+    solucaoAplicada: "",
+  });
+
+  const [origemParada, setOrigemParada] = useState({
+    automatizacao: false,
+    terceiros: false,
+    eletrica: false,
+    mecanica: false,
+    outro: false
+  });
+
+  useEffect(() => {
+    const checkCollection = async () => {
+      try {
+        const q = query(collection(db, "paradas_maquina"), limit(1));
+        await getDocs(q);
+        setCollectionChecked(true);
+      } catch (error) {
+        toast.error("Erro ao verificar estrutura do banco de dados");
+      }
+    };
+
+    if (!collectionChecked) {
+      checkCollection();
+    }
+  }, [collectionChecked]);
+
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      try {
+        setLoadingUsuarios(true);
+        const usuariosRef = collection(db, "usuarios");
+        const querySnapshot = await getDocs(usuariosRef);
+        
+        const usuariosData: Usuario[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          usuariosData.push({
+            id: doc.id,
+            nome: data.nome || "",
+            cargo: data.cargo || "",
+            email: data.email || "",
+            ativo: data.ativo || "",
+          });
+        });
+        
+        const usuariosAtivos = usuariosData.filter(u => u.ativo === "sim");
+        setUsuarios(usuariosAtivos);
+      } catch (error) {
+        console.error("Erro ao buscar usuários:", error);
+        toast.error("Não foi possível carregar a lista de usuários.");
+      } finally {
+        setLoadingUsuarios(false);
+      }
+    };
+
+    fetchUsuarios();
+  }, []);
+
+  useEffect(() => {
+    const fetchEquipamentos = async () => {
+      try {
+        setLoadingEquipamentos(true);
+        const equipamentosRef = collection(db, "equipamentos");
+        const querySnapshot = await getDocs(equipamentosRef);
+        
+        const equipamentosData: Equipamento[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          equipamentosData.push({
+            id: doc.id,
+            patrimonio: data.patrimonio || "",
+            equipamento: data.equipamento || "",
+            setor: data.setor || "",
+            tag: data.tag || "",
+          });
+        });
+        
+        setEquipamentos(equipamentosData);
+      } catch (error) {
+        console.error("Erro ao buscar equipamentos:", error);
+        toast.error("Não foi possível carregar a lista de equipamentos.");
+      } finally {
+        setLoadingEquipamentos(false);
+      }
+    };
+
+    fetchEquipamentos();
+  }, []);
+
+  useEffect(() => {
+    const fetchProdutos = async () => {
+      try {
+        const produtosRef = collection(db, "produtos");
+        const querySnapshot = await getDocs(produtosRef);
+        
+        const produtosData: Produto[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          produtosData.push({
+            id: doc.id,
+            codigo: data.codigo || "",
+            codigo_estoque: data.codigo_estoque || "",
+            codigo_material: data.codigo_material || "",
+            data_vencimento: data.data_vencimento || "",
+            deposito: data.deposito || "",
+            detalhes: data.detalhes || "",
+            imagem: data.imagem || "",
+            nome: data.nome || "",
+            quantidade: data.quantidade || 0,
+            quantidade_minima: data.quantidade_minima || 0,
+            unidade: data.unidade || "",
+            unidade_de_medida: data.unidade_de_medida || "",
+            valor_unitario: data.valor_unitario || 0,
+          });
+        });
+        
+        setProdutos(produtosData);
+      } catch (error) {
+        console.error("Erro ao buscar produtos:", error);
+        toast.error("Não foi possível carregar a lista de produtos.");
+      }
+    };
+
+    fetchProdutos();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleOrigemChange = (origem: string, checked: boolean) => {
+    setOrigemParada(prev => ({
+      ...prev,
+      [origem]: checked
+    }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const getSelectedUsuarioName = () => {
+    const selectedId = formData.responsavelManutencao;
+    if (!selectedId) return null;
+    
+    const selectedUsuario = usuarios.find(u => u.id === selectedId);
+    return selectedUsuario ? `${selectedUsuario.nome} (${selectedUsuario.cargo})` : null;
+  };
+
+  const adicionarProduto = (produto: Produto) => {
+    setProdutosSelecionados(prev => {
+      const existe = prev.find(p => p.id === produto.id);
+      if (existe) {
+        return prev.map(p => 
+          p.id === produto.id 
+            ? { ...p, quantidadeSelecionada: Math.min(p.quantidadeSelecionada + 1, p.quantidade) }
+            : p
+        );
+      }
+      return [...prev, { ...produto, quantidadeSelecionada: 1 }];
+    });
+    setProdutosPopoverOpen(false);
+    setSearchTerm("");
+  };
+
+  const removerProduto = (produtoId: string) => {
+    setProdutosSelecionados(prev => prev.filter(p => p.id !== produtoId));
+  };
+
+  const aumentarQuantidade = (produtoId: string) => {
+    setProdutosSelecionados(prev =>
+      prev.map(p =>
+        p.id === produtoId
+          ? { ...p, quantidadeSelecionada: Math.min(p.quantidadeSelecionada + 1, p.quantidade) }
+          : p
+      )
+    );
+  };
+
+  const diminuirQuantidade = (produtoId: string) => {
+    setProdutosSelecionados(prev =>
+      prev.map(p =>
+        p.id === produtoId
+          ? { ...p, quantidadeSelecionada: Math.max(1, p.quantidadeSelecionada - 1) }
+          : p
+      )
+    );
+  };
+
+  const calcularValorTotal = () => {
+    return produtosSelecionados.reduce(
+      (total, produto) => total + (produto.valor_unitario * produto.quantidadeSelecionada),
+      0
+    ).toFixed(2);
+  };
+
+  const produtosDisponiveis = produtos.filter(
+    produto =>
+      produto.quantidade > 0 &&
+      !produtosSelecionados.some(p => p.id === produto.id) &&
+      produto.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      if (!formData.equipamento || !formData.descricaoMotivo) {
+        toast.error("Por favor, preencha os campos obrigatórios");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const batch = writeBatch(db);
+      
+      const paradaData = {
+        setor: formData.setor,
+        equipamento: formData.equipamento,
+        hrInicial: formData.hrInicial,
+        hrFinal: formData.hrFinal,
+        linhaParada: formData.linhaParada,
+        descricaoMotivo: formData.descricaoMotivo,
+        observacao: formData.observacao,
+        origemParada: origemParada,
+        responsavelManutencao: formData.responsavelManutencao,
+        tipoManutencao: formData.tipoManutencao,
+        solucaoAplicada: formData.solucaoAplicada,
+        produtosUtilizados: produtosSelecionados.map(p => ({
+          produtoId: p.id,
+          nome: p.nome,
+          quantidade: p.quantidadeSelecionada,
+          valorUnitario: p.valor_unitario,
+          valorTotal: p.valor_unitario * p.quantidadeSelecionada
+        })),
+        valorTotalProdutos: parseFloat(calcularValorTotal()),
+        criadoPor: user?.uid || "",
+        criadoEm: Timestamp.now(),
+        status: "pendente"
+      };
+      
+      const paradaRef = doc(collection(db, "paradas_maquina"));
+      batch.set(paradaRef, paradaData);
+      
+      produtosSelecionados.forEach(produto => {
+        const produtoRef = doc(db, "produtos", produto.id);
+        batch.update(produtoRef, {
+          quantidade: produto.quantidade - produto.quantidadeSelecionada
+        });
+      });
+
+      produtosSelecionados.forEach(produto => {
+        const relatorioData = {
+          requisicao_id: paradaRef.id,
+          produto_id: produto.id,
+          codigo_material: produto.codigo_material || produto.codigo,
+          nome_produto: produto.nome,
+          quantidade: produto.quantidadeSelecionada,
+          valor_unitario: produto.valor_unitario,
+          valor_total: produto.valor_unitario * produto.quantidadeSelecionada,
+          status: 'saida',
+          tipo: 'Parada de Máquina',
+          solicitante: {
+            id: userData?.id || user?.uid || 'system',
+            nome: userData?.nome || 'Sistema',
+            cargo: userData?.cargo || 'Administrador'
+          },
+          usuario: {
+            id: userData?.id || user?.uid || 'system',
+            nome: userData?.nome || 'Sistema',
+            email: userData?.email || user?.email || 'sistema@empresa.com'
+          },
+          deposito: produto.deposito || formData.setor,
+          prateleira: "Parada de Máquina",
+          centro_de_custo: formData.setor,
+          unidade: produto.unidade || produto.unidade_de_medida || 'UN',
+          data_saida: Timestamp.fromDate(new Date()),
+          data_registro: Timestamp.fromDate(new Date()),
+          equipamento: formData.equipamento,
+          setor: formData.setor,
+          descricao_motivo: formData.descricaoMotivo,
+          responsavel_manutencao: formData.responsavelManutencao
+        };
+
+        const relatorioRef = doc(collection(db, "relatorios"));
+        batch.set(relatorioRef, relatorioData);
+      });
+      
+      await batch.commit();
+      
+      toast.success("Parada de máquina registrada com sucesso!");
+      
+      setFormData({
+        setor: "",
+        equipamento: "",
+        hrInicial: "",
+        hrFinal: "",
+        linhaParada: "",
+        descricaoMotivo: "",
+        observacao: "",
+        responsavelManutencao: "",
+        tipoManutencao: "",
+        solucaoAplicada: "",
+      });
+      
+      setOrigemParada({
+        automatizacao: false,
+        terceiros: false,
+        eletrica: false,
+        mecanica: false,
+        outro: false
+      });
+      
+      setProdutosSelecionados([]);
+      
+    } catch (error) {
+      console.error("Erro ao registrar parada de máquina:", error);
+      toast.error("Erro ao registrar parada de máquina");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="border-0 shadow-none">
+      <CardHeader className="px-0 py-2 sm:py-4">
+        <CardTitle className="text-base sm:text-lg md:text-xl font-bold text-center">Nova Parada de Máquina</CardTitle>
+      </CardHeader>
+      <CardContent className="px-0">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          {/* Setor e Equipamento */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="setor" className="text-xs sm:text-sm">Setor*</Label>
+              <Select 
+                value={formData.setor} 
+                onValueChange={(value) => handleSelectChange("setor", value)}
+              >
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Selecione o setor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Produção">Produção</SelectItem>
+                  <SelectItem value="Manutenção">Manutenção</SelectItem>
+                  <SelectItem value="Administração">Administração</SelectItem>
+                  <SelectItem value="Expedição">Expedição</SelectItem>
+                  <SelectItem value="Qualidade">Qualidade</SelectItem>
+                  <SelectItem value="Almoxarifado">Almoxarifado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="equipamento" className="text-xs sm:text-sm">Equipamento*</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className={cn(
+                      "w-full justify-between text-left h-9 text-xs sm:text-sm",
+                      !formData.equipamento && "text-muted-foreground"
+                    )}
+                    disabled={loadingEquipamentos}
+                  >
+                    <span className="truncate">
+                      {loadingEquipamentos
+                        ? "Carregando..."
+                        : formData.equipamento
+                          ? equipamentos.find(e => e.equipamento === formData.equipamento)?.patrimonio + " - " + formData.equipamento
+                          : "Selecione o equipamento"}
+                    </span>
+                    <Search className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar equipamento..." className="h-9" />
+                    <CommandList className="max-h-[200px] overflow-y-auto">
+                      <CommandEmpty>Nenhum equipamento encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {equipamentos.map((equipamento) => (
+                          <CommandItem
+                            key={equipamento.id}
+                            value={`${equipamento.patrimonio} ${equipamento.equipamento} ${equipamento.setor}`}
+                            onSelect={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                equipamento: equipamento.equipamento,
+                                setor: equipamento.setor
+                              }));
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.equipamento === equipamento.equipamento ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium text-xs sm:text-sm">{equipamento.patrimonio} - {equipamento.equipamento}</span>
+                              <span className="text-[10px] sm:text-xs text-muted-foreground">Setor: {equipamento.setor}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* Hora Inicial e Hora Final */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="hrInicial" className="text-xs sm:text-sm">Hora Inicial</Label>
+              <Input
+                id="hrInicial"
+                name="hrInicial"
+                type="time"
+                value={formData.hrInicial}
+                onChange={handleChange}
+                className="h-9 text-xs sm:text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="hrFinal" className="text-xs sm:text-sm">Hora Fim</Label>
+              <Input
+                id="hrFinal"
+                name="hrFinal"
+                type="time"
+                value={formData.hrFinal}
+                onChange={handleChange}
+                className="h-9 text-xs sm:text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Linha Parada e Tipo Manutenção */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="linhaParada" className="text-xs sm:text-sm">Linha Parada</Label>
+              <Select 
+                value={formData.linhaParada} 
+                onValueChange={(value) => handleSelectChange("linhaParada", value)}
+              >
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Sim">Sim</SelectItem>
+                  <SelectItem value="Não">Não</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="tipoManutencao" className="text-xs sm:text-sm">Tipo</Label>
+              <Select 
+                value={formData.tipoManutencao} 
+                onValueChange={(value) => handleSelectChange("tipoManutencao", value)}
+              >
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Corretiva">Corretiva</SelectItem>
+                  <SelectItem value="Preventiva">Preventiva</SelectItem>
+                  <SelectItem value="Preditiva">Preditiva</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Produtos */}
+          <div className="space-y-2">
+            <Label className="text-xs sm:text-sm">Produtos Utilizados</Label>
+            <Popover open={produtosPopoverOpen} onOpenChange={setProdutosPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-9 text-xs sm:text-sm"
+                >
+                  <Plus className="mr-2 h-3.5 w-3.5" />
+                  Adicionar Produto
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
+                <Command>
+                  <CommandInput 
+                    placeholder="Buscar produto..." 
+                    value={searchTerm}
+                    onValueChange={setSearchTerm}
+                    className="h-9"
+                  />
+                  <CommandList className="max-h-[200px] overflow-y-auto">
+                    <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {produtosDisponiveis.map((produto) => (
+                        <CommandItem
+                          key={produto.id}
+                          value={produto.nome}
+                          onSelect={() => adicionarProduto(produto)}
+                        >
+                          <div className="flex flex-col flex-1">
+                            <span className="font-medium text-xs sm:text-sm">{produto.nome}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              Qtd: {produto.quantidade} | R$ {produto.valor_unitario.toFixed(2)}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            {produtosSelecionados.length > 0 && (
+              <div className="space-y-2 mt-2">
+                {produtosSelecionados.map((produto) => (
+                  <div key={produto.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">{produto.nome}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        R$ {(produto.valor_unitario * produto.quantidadeSelecionada).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => diminuirQuantidade(produto.id)}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-8 text-center text-xs sm:text-sm">{produto.quantidadeSelecionada}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => aumentarQuantidade(produto.id)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => removerProduto(produto.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-xs sm:text-sm font-medium">Total:</span>
+                  <span className="text-xs sm:text-sm font-bold">R$ {calcularValorTotal()}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Responsável */}
+          <div className="space-y-1">
+            <Label htmlFor="responsavelManutencao" className="text-xs sm:text-sm">Responsável</Label>
+            <Popover open={responsavelPopoverOpen} onOpenChange={setResponsavelPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className={cn(
+                    "w-full justify-between text-left h-9 text-xs sm:text-sm",
+                    !formData.responsavelManutencao && "text-muted-foreground"
+                  )}
+                  disabled={loadingUsuarios}
+                >
+                  <span className="truncate">
+                    {loadingUsuarios
+                      ? "Carregando..."
+                      : getSelectedUsuarioName() || "Selecione o responsável"}
+                  </span>
+                  <Search className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar usuário..." className="h-9" />
+                  <CommandList className="max-h-[200px] overflow-y-auto">
+                    <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {usuarios.map((usuario) => (
+                        <CommandItem
+                          key={usuario.id}
+                          value={`${usuario.nome} ${usuario.cargo}`}
+                          onSelect={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              responsavelManutencao: usuario.id
+                            }));
+                            setResponsavelPopoverOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.responsavelManutencao === usuario.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span className="font-medium text-xs sm:text-sm">{usuario.nome}</span>
+                            <span className="text-[10px] text-muted-foreground">{usuario.cargo}</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Descrição */}
+          <div className="space-y-1">
+            <Label htmlFor="descricaoMotivo" className="text-xs sm:text-sm">Descrição do Motivo*</Label>
+            <Textarea
+              id="descricaoMotivo"
+              name="descricaoMotivo"
+              placeholder="Descreva o motivo da parada..."
+              value={formData.descricaoMotivo}
+              onChange={handleChange}
+              className="min-h-[60px] text-xs sm:text-sm resize-none"
+            />
+          </div>
+
+          {/* Solução */}
+          <div className="space-y-1">
+            <Label htmlFor="solucaoAplicada" className="text-xs sm:text-sm">Solução Aplicada</Label>
+            <Textarea
+              id="solucaoAplicada"
+              name="solucaoAplicada"
+              placeholder="Descreva a solução aplicada..."
+              value={formData.solucaoAplicada}
+              onChange={handleChange}
+              className="min-h-[60px] text-xs sm:text-sm resize-none"
+            />
+          </div>
+
+          {/* Origem da Parada */}
+          <div className="space-y-2">
+            <Label className="text-xs sm:text-sm">Origem da Parada</Label>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {[
+                { key: "automatizacao", label: "Automação" },
+                { key: "terceiros", label: "Terceiros" },
+                { key: "eletrica", label: "Elétrica" },
+                { key: "mecanica", label: "Mecânica" },
+                { key: "outro", label: "Outro" },
+              ].map((item) => (
+                <div key={item.key} className="flex items-center space-x-1.5">
+                  <Checkbox
+                    id={item.key}
+                    checked={origemParada[item.key as keyof typeof origemParada]}
+                    onCheckedChange={(checked) => handleOrigemChange(item.key, checked as boolean)}
+                  />
+                  <label htmlFor={item.key} className="text-[10px] sm:text-xs cursor-pointer">
+                    {item.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Observação */}
+          <div className="space-y-1">
+            <Label htmlFor="observacao" className="text-xs sm:text-sm">Observações</Label>
+            <Textarea
+              id="observacao"
+              name="observacao"
+              placeholder="Observações adicionais..."
+              value={formData.observacao}
+              onChange={handleChange}
+              className="min-h-[50px] text-xs sm:text-sm resize-none"
+            />
+          </div>
+
+          {/* Botão Submit */}
+          <Button
+            type="submit"
+            className="w-full h-10 sm:h-11 text-sm sm:text-base"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Registrando...
+              </>
+            ) : (
+              "Registrar Parada"
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default NovaParadaMaquina;
