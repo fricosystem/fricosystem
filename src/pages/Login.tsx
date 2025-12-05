@@ -163,7 +163,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-screen max-w-full overflow-x-hidden bg-gradient-to-b from-[#0d1525] via-[#0a1118] to-[#060d14] text-white flex flex-col">
+    <div className="min-h-screen w-screen max-w-full overflow-x-hidden bg-gradient-to-b from-black via-[#0a1118] to-[#060d14] text-white flex flex-col">
       
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md py-2 md:py-3 h-20 bg-black/20 w-screen max-w-full">
