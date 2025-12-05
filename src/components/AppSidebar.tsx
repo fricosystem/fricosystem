@@ -145,6 +145,11 @@ const AppSidebar = () => {
     label: "Manutenção",
     icon: Wrench,
     items: [{
+      to: "/manutencoes-dashboard",
+      icon: BarChart3,
+      label: "Dashboard",
+      permission: "manutencoes_dashboard"
+    }, {
       to: "/maquinas",
       icon: WashingMachine,
       label: "Máquinas",
@@ -159,6 +164,21 @@ const AppSidebar = () => {
       icon: ClipboardCheck,
       label: "Execução Preventiva",
       permission: "execucao_preventiva"
+    }, {
+      to: "/parada-maquina",
+      icon: Wrench,
+      label: "Parada de Máquina",
+      permission: "parada_maquina"
+    }, {
+      to: "/configuracoes-manutencao",
+      icon: Cog,
+      label: "Configurações",
+      permission: "configuracoes_manutencao"
+    }, {
+      to: "/automacao-manutencao",
+      icon: Settings,
+      label: "Automação",
+      permission: "automacao_manutencao"
     }]
   }, {
     label: "Requisições",
@@ -174,11 +194,6 @@ const AppSidebar = () => {
       icon: ShoppingCart,
       label: "Carrinho",
       permission: "carrinho"
-    }, {
-      to: "/ordensServico",
-      icon: Wrench,
-      label: "Ordens de Serviço",
-      permission: "ordens_servico"
     }, {
       to: "/devolucao",
       icon: RotateCcw,
