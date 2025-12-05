@@ -104,11 +104,15 @@ const ListaParadasMaquina = () => {
   const fetchParadas = async () => {
     setLoading(true);
     try {
+      console.log("Buscando paradas de máquina...");
       const q = query(collection(db, "paradas_maquina"), orderBy("criadoEm", "desc"));
       const querySnapshot = await getDocs(q);
       
+      console.log("Total de paradas encontradas:", querySnapshot.size);
+      
       const fetchedParadas: ParadaMaquina[] = [];
       querySnapshot.forEach((doc) => {
+        console.log("Parada:", doc.id, doc.data());
         fetchedParadas.push({
           id: doc.id,
           ...doc.data()
@@ -116,8 +120,10 @@ const ListaParadasMaquina = () => {
       });
       
       setParadas(fetchedParadas);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar paradas:", error);
+      console.error("Código do erro:", error?.code);
+      console.error("Mensagem:", error?.message);
       toast.error("Erro ao carregar as paradas de máquina");
     } finally {
       setLoading(false);
@@ -425,33 +431,8 @@ const ListaParadasMaquina = () => {
                             </div>
                           )}
                           <div className="col-span-2 pt-2 border-t">
-                            <h4 className="font-semibold text-xs text-muted-foreground mb-2">Alterar Status</h4>
-                            <div className="flex gap-2 flex-wrap">
-                              <Button
-                                size="sm"
-                                variant={selectedParada.status === "pendente" ? "default" : "outline"}
-                                className="h-7 text-xs"
-                                onClick={() => handleStatusChange(selectedParada.id, "pendente")}
-                              >
-                                Pendente
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant={selectedParada.status === "em_andamento" ? "default" : "outline"}
-                                className="h-7 text-xs"
-                                onClick={() => handleStatusChange(selectedParada.id, "em_andamento")}
-                              >
-                                Em Andamento
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant={selectedParada.status === "concluido" ? "default" : "outline"}
-                                className="h-7 text-xs"
-                                onClick={() => handleStatusChange(selectedParada.id, "concluido")}
-                              >
-                                Concluído
-                              </Button>
-                            </div>
+                            <h4 className="font-semibold text-xs text-muted-foreground mb-2">Status Atual</h4>
+                            {getStatusBadge(selectedParada.status)}
                           </div>
                         </div>
                       )}
