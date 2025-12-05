@@ -21,7 +21,7 @@ import Carrinho from "./pages/Carrinho";
 import Requisicoes from "./pages/Requisicoes";
 import DevolucaoMateriais from "./pages/DevolucaoMateriais";
 import Enderecamento from "./pages/Enderecamento";
-import OrdensServico from "./pages/OrdensServico";
+import ParadaMaquina from "./pages/ParadaMaquina";
 import Fornecedores from "./pages/Fornecedores";
 import ImportarPlanilha from "./pages/ImportarPlanilha";
 import MedidaLenha from "./pages/MedidaLenha";
@@ -124,7 +124,7 @@ const AppContent = () => {
           <Route path="/requisicoes" element={<AuthGuard><Requisicoes /></AuthGuard>} />
           <Route path="/devolucao" element={<AuthGuard><DevolucaoMateriais /></AuthGuard>} />
           <Route path="/enderecamento" element={<AuthGuard><Enderecamento /></AuthGuard>} />
-          <Route path="/ordensServico" element={<AuthGuard><OrdensServico /></AuthGuard>} />
+          <Route path="/parada-maquina" element={<AuthGuard><ParadaMaquina /></AuthGuard>} />
           <Route path="/fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
           <Route path="/importar-planilha" element={<AuthGuard><ImportarPlanilha /></AuthGuard>} />
           <Route path="/medida-de-lenha" element={<AuthGuard><MedidaLenha /></AuthGuard>} />
