@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { collection, addDoc, Timestamp, getDocs, query, limit, doc, writeBatch } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -63,7 +62,11 @@ interface ProdutoSelecionado extends Produto {
   quantidadeSelecionada: number;
 }
 
-const NovaParadaMaquina = () => {
+interface NovaParadaMaquinaProps {
+  onSuccess?: () => void;
+}
+
+const NovaParadaMaquina = ({ onSuccess }: NovaParadaMaquinaProps) => {
   const { user, userData } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -410,6 +413,8 @@ const NovaParadaMaquina = () => {
       
       setProdutosSelecionados([]);
       
+      onSuccess?.();
+      
     } catch (error) {
       console.error("Erro ao registrar parada de máquina:", error);
       toast.error("Erro ao registrar parada de máquina");
@@ -419,12 +424,7 @@ const NovaParadaMaquina = () => {
   };
 
   return (
-    <Card className="border-0 shadow-none">
-      <CardHeader className="px-0 py-2 sm:py-4">
-        <CardTitle className="text-base sm:text-lg md:text-xl font-bold text-center">Nova Parada de Máquina</CardTitle>
-      </CardHeader>
-      <CardContent className="px-0">
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {/* Setor e Equipamento */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -801,10 +801,8 @@ const NovaParadaMaquina = () => {
             ) : (
               "Registrar Parada"
             )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </Button>
+      </form>
   );
 };
 
