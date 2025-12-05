@@ -1,16 +1,21 @@
 import { useState } from "react";
-import { Bell, ArrowLeft } from "lucide-react";
+import { Bell, ArrowLeft, Plus, ScanQrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import NovaParadaMaquina from "@/components/ParadaMaquina/NovaParadaMaquina";
 import ListaParadasMaquina from "@/components/ParadaMaquina/ListaParadasMaquina";
-
-type TabType = "nova" | "lista";
+import QrScannerModal from "@/components/ParadaMaquina/QrScannerModal";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export default function ParadaMaquina() {
-  const [activeTab, setActiveTab] = useState<TabType>("nova");
   const navigate = useNavigate();
+  const [isNovaParadaOpen, setIsNovaParadaOpen] = useState(false);
+  const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -37,33 +42,48 @@ export default function ParadaMaquina() {
         </div>
       </header>
 
-      {/* Conteúdo Principal */}
+      {/* Conteúdo Principal - Lista de Paradas */}
       <main className="flex-1 container mx-auto px-3 sm:px-4 py-3 sm:py-4 overflow-auto">
-        {activeTab === "nova" && <NovaParadaMaquina />}
-        {activeTab === "lista" && <ListaParadasMaquina />}
+        <ListaParadasMaquina />
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="sticky bottom-0 bg-background/95 backdrop-blur border-t safe-area-bottom">
-        <div className="container mx-auto px-2">
-          <div className="grid grid-cols-2 gap-1 py-2">
-            <Button
-              variant={activeTab === "nova" ? "default" : "ghost"}
-              className="flex flex-col items-center gap-1 h-14 sm:h-16"
-              onClick={() => setActiveTab("nova")}
-            >
-              <span className="text-xs sm:text-sm font-medium">Nova Parada</span>
-            </Button>
-            <Button
-              variant={activeTab === "lista" ? "default" : "ghost"}
-              className="flex flex-col items-center gap-1 h-14 sm:h-16"
-              onClick={() => setActiveTab("lista")}
-            >
-              <span className="text-xs sm:text-sm font-medium">Paradas Criadas</span>
-            </Button>
-          </div>
-        </div>
-      </nav>
+      {/* Botões Flutuantes */}
+      <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
+        <Button 
+          onClick={() => setIsQrScannerOpen(true)}
+          variant="outline"
+          className="h-14 w-14 rounded-full shadow-lg bg-background"
+          size="icon"
+        >
+          <ScanQrCode className="h-6 w-6" />
+        </Button>
+        <Button 
+          onClick={() => setIsNovaParadaOpen(true)}
+          className="h-16 w-16 rounded-full shadow-lg"
+          size="icon"
+        >
+          <Plus className="h-7 w-7" />
+        </Button>
+      </div>
+
+      {/* Modal Deslizante - Nova Parada */}
+      <Sheet open={isNovaParadaOpen} onOpenChange={setIsNovaParadaOpen}>
+        <SheetContent 
+          side="right" 
+          className="w-full sm:max-w-lg overflow-y-auto p-4"
+        >
+          <SheetHeader className="mb-4">
+            <SheetTitle>Nova Parada de Máquina</SheetTitle>
+          </SheetHeader>
+          <NovaParadaMaquina onSuccess={() => setIsNovaParadaOpen(false)} />
+        </SheetContent>
+      </Sheet>
+
+      {/* Modal QR Scanner */}
+      <QrScannerModal 
+        isOpen={isQrScannerOpen} 
+        onClose={() => setIsQrScannerOpen(false)} 
+      />
     </div>
   );
 }
