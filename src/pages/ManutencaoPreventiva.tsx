@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Calendar, CheckCircle, AlertCircle, Clock, Settings, Trash2 } from "lucide-react";
+import { Plus, Search, Calendar, CheckCircle, AlertCircle, Clock, Settings, Trash2, UserCheck } from "lucide-react";
 import { NovoManutentorModal } from "@/components/ManutencaoPreventiva/NovoManutentorModal";
 import { NovaTarefaModal } from "@/components/ManutencaoPreventiva/NovaTarefaModal";
 import { RegistrarExecucaoModal } from "@/components/ManutencaoPreventiva/RegistrarExecucaoModal";
 import { DashboardKPIs } from "@/components/ManutencaoPreventiva/DashboardKPIs";
 import { CalendarioManutencao } from "@/components/ManutencaoPreventiva/CalendarioManutencao";
 import { TimelineManutencao } from "@/components/ManutencaoPreventiva/TimelineManutencao";
+import { ProximosManutentores } from "@/components/ManutencaoPreventiva/ProximosManutentores";
 import { diasParaManutencao, determinarStatusPorManutencao } from "@/utils/manutencaoUtils";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
@@ -20,6 +21,7 @@ import { deleteTarefaManutencao, deleteManutentor } from "@/firebase/manutencaoP
 import { useToast } from "@/hooks/use-toast";
 import AppLayout from "@/layouts/AppLayout";
 import { useNavigate } from "react-router-dom";
+import { atribuirTarefasOrfas } from "@/services/rodizioManutentores";
 
 export default function ManutencaoPreventiva() {
   const { toast } = useToast();
@@ -32,6 +34,7 @@ export default function ManutencaoPreventiva() {
   const [tarefas, setTarefas] = useState<TarefaManutencao[]>([]);
   const [manutentores, setManutentores] = useState<Manutentor[]>([]);
   const [busca, setBusca] = useState("");
+  const verificouOrfas = useRef(false);
 
   // Efeito para mostrar alertas de tarefas críticas ao carregar
   useEffect(() => {
@@ -51,6 +54,36 @@ export default function ManutencaoPreventiva() {
       });
     }
   }, [tarefas.length]);
+
+  // Verificar e atribuir tarefas órfãs ao carregar
+  useEffect(() => {
+    if (tarefas.length === 0 || verificouOrfas.current) return;
+    
+    const verificarTarefasOrfas = async () => {
+      verificouOrfas.current = true;
+      
+      try {
+        const resultado = await atribuirTarefasOrfas();
+        
+        if (resultado.totalAtribuidas > 0) {
+          toast({
+            title: `${resultado.totalAtribuidas} tarefa(s) atribuída(s) automaticamente`,
+            description: resultado.atribuicoes.slice(0, 2).map(a => 
+              `${a.manutentorNome} → ${a.tarefaTipo}`
+            ).join(", "),
+          });
+        }
+        
+        if (resultado.erros.length > 0) {
+          console.warn("Erros ao atribuir tarefas órfãs:", resultado.erros);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar tarefas órfãs:", error);
+      }
+    };
+    
+    verificarTarefasOrfas();
+  }, [tarefas]);
 
   useEffect(() => {
     // Ordenar por dataHoraAgendada para cronograma
@@ -203,8 +236,11 @@ export default function ManutencaoPreventiva() {
           </TabsList>
 
           <TabsContent value="dashboard">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <DashboardKPIs tarefas={tarefas} />
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <DashboardKPIs tarefas={tarefas} />
+                <ProximosManutentores tarefas={tarefas} />
+              </div>
               <TimelineManutencao 
                 tarefas={tarefas
                   .filter(t => t.status === "pendente")
