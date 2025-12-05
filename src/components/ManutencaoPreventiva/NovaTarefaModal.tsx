@@ -11,9 +11,10 @@ import { addTarefaManutencao } from "@/firebase/manutencaoPreventiva";
 import { TipoManutencao, PeriodoManutencao, PERIODOS_DIAS, Manutentor } from "@/types/typesManutencaoPreventiva";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
-import { selecionarManutentorPorRodizio } from "@/services/rodizioManutentores";
+import { selecionarManutentorPorMenorCarga, ResultadoSelecao } from "@/services/rodizioManutentores";
 import { Badge } from "@/components/ui/badge";
-import { Users, Shuffle } from "lucide-react";
+import { Users, Shuffle, CheckCircle2, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface NovaTarefaModalProps {
   open: boolean;
@@ -67,6 +68,8 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
   const [selecaoAutomatica, setSelecaoAutomatica] = useState(true);
   const [manutentorId, setManutentorId] = useState("");
   const [manutentorSelecionado, setManutentorSelecionado] = useState<Manutentor | null>(null);
+  const [previewSelecao, setPreviewSelecao] = useState<ResultadoSelecao | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
     loadMaquinas();
@@ -83,7 +86,24 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
       setManutentorId("");
       setManutentorSelecionado(null);
     }
-  }, [tipo, manutentores]);
+    
+    // Preview da seleção automática
+    if (selecaoAutomatica && filtrados.length > 0) {
+      loadPreviewSelecao();
+    }
+  }, [tipo, manutentores, selecaoAutomatica]);
+
+  const loadPreviewSelecao = async () => {
+    setLoadingPreview(true);
+    try {
+      const resultado = await selecionarManutentorPorMenorCarga(tipo);
+      setPreviewSelecao(resultado);
+    } catch (error) {
+      console.error("Erro ao carregar preview:", error);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
 
   const loadMaquinas = async () => {
     try {
@@ -145,10 +165,14 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
     setLoading(true);
     try {
       let manutentor: Manutentor | null = null;
+      let motivoSelecao = "";
 
       if (selecaoAutomatica) {
-        // Usar rodízio automático
-        manutentor = await selecionarManutentorPorRodizio(tipo);
+        // Usar algoritmo de menor carga
+        const resultado = await selecionarManutentorPorMenorCarga(tipo);
+        manutentor = resultado.manutentor;
+        motivoSelecao = resultado.motivo;
+        
         if (!manutentor) {
           toast({
             title: "Atenção",
@@ -198,7 +222,7 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
       toast({
         title: "Sucesso",
         description: manutentor 
-          ? `Tarefa criada e atribuída a ${manutentor.nome}`
+          ? `✅ Tarefa criada e atribuída a ${manutentor.nome}. ${motivoSelecao}`
           : "Tarefa criada com sucesso"
       });
 
@@ -326,22 +350,47 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
               </div>
             </div>
 
-            {selecaoAutomatica ? (
-              <div className="text-sm text-muted-foreground bg-primary/5 p-3 rounded">
-                <p className="flex items-center gap-2">
-                  <Shuffle className="h-4 w-4" />
-                  O sistema selecionará automaticamente o manutentor com menor carga de trabalho
-                </p>
-                {manutentoresFiltrados.length > 0 && (
-                  <p className="mt-2">
-                    <span className="font-medium">{manutentoresFiltrados.length}</span> manutentor(es) disponível(is) para {tipo}
+          {selecaoAutomatica ? (
+              <div className="space-y-3">
+                <div className="text-sm text-muted-foreground bg-primary/5 p-3 rounded">
+                  <p className="flex items-center gap-2">
+                    <Shuffle className="h-4 w-4" />
+                    Seleção automática por menor carga de trabalho
                   </p>
-                )}
-                {manutentoresFiltrados.length === 0 && (
-                  <p className="mt-2 text-destructive">
-                    Nenhum manutentor ativo para {tipo}
-                  </p>
-                )}
+                  {manutentoresFiltrados.length > 0 && (
+                    <p className="mt-2">
+                      <span className="font-medium">{manutentoresFiltrados.length}</span> manutentor(es) disponível(is) para {tipo}
+                    </p>
+                  )}
+                  {manutentoresFiltrados.length === 0 && (
+                    <p className="mt-2 text-destructive">
+                      Nenhum manutentor ativo para {tipo}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Preview da seleção automática */}
+                {loadingPreview ? (
+                  <div className="text-sm text-muted-foreground">Calculando...</div>
+                ) : previewSelecao?.manutentor ? (
+                  <Alert className="border-green-500/50 bg-green-50 dark:bg-green-950/30">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <AlertDescription className="text-sm">
+                      <span className="font-medium">{previewSelecao.manutentor.nome}</span> será selecionado
+                      <br />
+                      <span className="text-xs text-muted-foreground">
+                        {previewSelecao.motivo}
+                      </span>
+                    </AlertDescription>
+                  </Alert>
+                ) : previewSelecao ? (
+                  <Alert variant="destructive">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      {previewSelecao.motivo}
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
               </div>
             ) : (
               <div className="space-y-2">
