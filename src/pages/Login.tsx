@@ -8,7 +8,7 @@ import { Footer } from "@/components/Login/Footer";
 
 const Login = () => {
   return (
-    <div className="min-h-screen w-screen max-w-full overflow-x-hidden bg-green-100 dark:bg-gray-900/90 text-white flex flex-col">
+    <div className="min-h-screen w-screen max-w-full overflow-x-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 text-white flex flex-col">
       <Header />
       <main className="flex-grow w-full">
         <Hero />
