@@ -204,7 +204,7 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
   };
   
   const formatarData = (data: Date): string => {
-    return format(data, "dd/MM/yyyy", { locale: ptBR });
+    return format(data, "dd/MM/yyyy - HH:mm", { locale: ptBR });
   };
   
   const formatarValor = (valor: number): string => {
@@ -264,7 +264,7 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[100px]">Data</TableHead>
+                    <TableHead className="min-w-[130px]">Data / Hora</TableHead>
                     <TableHead className="hidden md:table-cell min-w-[100px]">NFe</TableHead>
                     <TableHead className="min-w-[80px]">Metros³</TableHead>
                     <TableHead className="min-w-[120px]">Fornecedor</TableHead>

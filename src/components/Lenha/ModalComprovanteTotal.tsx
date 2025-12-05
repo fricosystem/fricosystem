@@ -39,10 +39,10 @@ const ModalComprovanteTotal = ({
   };
 
   const formatarData = (data: Date): string => {
-    return format(data, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    return format(data, "dd/MM/yyyy - HH:mm", { locale: ptBR });
   };
 
-  const dataFormatada = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  const dataFormatada = format(new Date(), "dd/MM/yyyy - HH:mm", { locale: ptBR });
 
   const handleImprimir = () => {
     setIsPrinting(true);
@@ -231,12 +231,12 @@ const ModalComprovanteTotal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={isPrinting ? undefined : onClose}>
-      <DialogContent className="sm:max-w-4xl print:hidden bg-gray-900 text-gray-100 border-gray-700">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto print:hidden bg-gray-900 text-gray-100 border-gray-700">
         <DialogHeader>
           <DialogTitle className="text-center text-xl text-white">Modelo de impressão</DialogTitle>
         </DialogHeader>
 
-        <div ref={comprovanteRef} className="p-6 bg-gray-800 rounded-lg border border-gray-700">
+        <div ref={comprovanteRef} className="p-4 md:p-6 bg-gray-800 rounded-lg border border-gray-700">
           <div className="flex items-center mb-6 pb-4 border-b border-gray-700">
             <div className="mr-4">
               <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" 
