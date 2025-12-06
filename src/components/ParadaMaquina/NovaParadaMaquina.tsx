@@ -9,21 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, Check } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 interface Equipamento {
   id: string;
@@ -38,11 +24,17 @@ interface Setor {
   nome: string;
 }
 
-interface NovaParadaMaquinaProps {
-  onSuccess?: () => void;
+interface InitialData {
+  setor: string;
+  equipamento: string;
 }
 
-const NovaParadaMaquina = ({ onSuccess }: NovaParadaMaquinaProps) => {
+interface NovaParadaMaquinaProps {
+  onSuccess?: () => void;
+  initialData?: InitialData | null;
+}
+
+const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) => {
   const { user, userData } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
@@ -50,8 +42,6 @@ const NovaParadaMaquina = ({ onSuccess }: NovaParadaMaquinaProps) => {
   const [loadingSetores, setLoadingSetores] = useState(false);
   const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
   const [collectionChecked, setCollectionChecked] = useState(false);
-  const [setorPopoverOpen, setSetorPopoverOpen] = useState(false);
-  const [equipamentoPopoverOpen, setEquipamentoPopoverOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     setor: "",
@@ -64,6 +54,31 @@ const NovaParadaMaquina = ({ onSuccess }: NovaParadaMaquinaProps) => {
     tipoManutencao: "",
     solucaoAplicada: "",
   });
+
+  // Apply initial data from QR scan - aguarda equipamentos carregarem
+  useEffect(() => {
+    if (initialData && !loadingEquipamentos && equipamentos.length > 0) {
+      // Busca o equipamento na lista para pegar o setor correto
+      const equipamentoEncontrado = equipamentos.find(
+        e => e.equipamento.toLowerCase() === initialData.equipamento?.toLowerCase()
+      );
+      
+      if (equipamentoEncontrado) {
+        setFormData(prev => ({
+          ...prev,
+          setor: equipamentoEncontrado.setor,
+          equipamento: equipamentoEncontrado.equipamento
+        }));
+      } else {
+        // Se não encontrar na lista, usa os dados do initialData diretamente
+        setFormData(prev => ({
+          ...prev,
+          setor: initialData.setor || "",
+          equipamento: initialData.equipamento || ""
+        }));
+      }
+    }
+  }, [initialData, loadingEquipamentos, equipamentos]);
 
   const [origemParada, setOrigemParada] = useState({
     automatizacao: false,
@@ -245,115 +260,51 @@ const NovaParadaMaquina = ({ onSuccess }: NovaParadaMaquinaProps) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="setor" className="text-xs sm:text-sm">Setor*</Label>
-              <Popover open={setorPopoverOpen} onOpenChange={setSetorPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className={cn(
-                      "w-full justify-between text-left h-9 text-xs sm:text-sm",
-                      !formData.setor && "text-muted-foreground"
-                    )}
-                    disabled={loadingSetores}
-                  >
-                    <span className="truncate">
-                      {loadingSetores
-                        ? "Carregando..."
-                        : formData.setor || "Selecione o setor"}
-                    </span>
-                    <Search className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[95vw] sm:w-[300px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Buscar setor..." className="h-9" />
-                    <CommandList className="max-h-[200px] overflow-y-auto">
-                      <CommandEmpty>Nenhum setor encontrado.</CommandEmpty>
-                      <CommandGroup>
-                        {setores.map((setor) => (
-                          <CommandItem
-                            key={setor.id}
-                            value={setor.nome}
-                            onSelect={() => {
-                              handleSelectChange("setor", setor.nome);
-                              setSetorPopoverOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                formData.setor === setor.nome ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <span className="text-xs sm:text-sm">{setor.nome}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Select
+                value={formData.setor}
+                onValueChange={(value) => handleSelectChange("setor", value)}
+                disabled={loadingSetores}
+              >
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder={loadingSetores ? "Carregando..." : "Selecione o setor"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px] bg-background z-50">
+                  {setores.map((setor) => (
+                    <SelectItem key={setor.id} value={setor.nome} className="text-xs sm:text-sm">
+                      {setor.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="equipamento" className="text-xs sm:text-sm">Equipamento*</Label>
-              <Popover open={equipamentoPopoverOpen} onOpenChange={setEquipamentoPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className={cn(
-                      "w-full justify-between text-left h-9 text-xs sm:text-sm",
-                      !formData.equipamento && "text-muted-foreground"
-                    )}
-                    disabled={loadingEquipamentos}
-                  >
-                    <span className="truncate">
-                      {loadingEquipamentos
-                        ? "Carregando..."
-                        : formData.equipamento
-                          ? equipamentos.find(e => e.equipamento === formData.equipamento)?.patrimonio + " - " + formData.equipamento
-                          : "Selecione o equipamento"}
-                    </span>
-                    <Search className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[95vw] sm:w-[400px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Buscar equipamento..." className="h-9" />
-                    <CommandList className="max-h-[200px] overflow-y-auto">
-                      <CommandEmpty>Nenhum equipamento encontrado.</CommandEmpty>
-                      <CommandGroup>
-                        {equipamentos.map((equipamento) => (
-                          <CommandItem
-                            key={equipamento.id}
-                            value={`${equipamento.patrimonio} ${equipamento.equipamento} ${equipamento.setor}`}
-                            onSelect={() => {
-                              setFormData(prev => ({
-                                ...prev,
-                                equipamento: equipamento.equipamento,
-                                setor: equipamento.setor
-                              }));
-                              setEquipamentoPopoverOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                formData.equipamento === equipamento.equipamento ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="flex flex-col">
-                              <span className="font-medium text-xs sm:text-sm">{equipamento.patrimonio} - {equipamento.equipamento}</span>
-                              <span className="text-[10px] text-muted-foreground">Setor: {equipamento.setor}</span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Select
+                value={formData.equipamento}
+                onValueChange={(value) => {
+                  const equipamento = equipamentos.find(e => e.equipamento === value);
+                  if (equipamento) {
+                    setFormData(prev => ({
+                      ...prev,
+                      equipamento: equipamento.equipamento,
+                      setor: equipamento.setor
+                    }));
+                  }
+                }}
+                disabled={loadingEquipamentos}
+              >
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder={loadingEquipamentos ? "Carregando..." : "Selecione o equipamento"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px] bg-background z-50">
+                  {equipamentos.map((equipamento) => (
+                    <SelectItem key={equipamento.id} value={equipamento.equipamento} className="text-xs sm:text-sm">
+                      {equipamento.patrimonio} - {equipamento.equipamento}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

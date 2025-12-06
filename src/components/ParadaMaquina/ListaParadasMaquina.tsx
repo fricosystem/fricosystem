@@ -305,8 +305,8 @@ const ListaParadasMaquina = () => {
   };
 
   return (
-    <Card className="border-0 shadow-none">
-      <CardHeader className="px-0 py-2 sm:py-4">
+    <Card className="border-0 shadow-none flex flex-col h-full">
+      <CardHeader className="px-0 py-2 sm:py-4 sticky top-0 bg-background z-10">
         <CardTitle className="text-base sm:text-lg font-bold text-center">Paradas de Máquina</CardTitle>
         <div className="mt-2">
           <div className="relative w-full">
@@ -320,7 +320,7 @@ const ListaParadasMaquina = () => {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-0 pb-4">
+      <CardContent className="px-0 pb-4 flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
