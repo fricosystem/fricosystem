@@ -1,13 +1,12 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Plus, Search, Camera, Edit, Trash2, Check } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Camera, Check, Search, ArrowLeft } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import AppLayout from "@/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import CameraModal from "@/components/CameraModal";
+import MaquinasDoSetor from "@/components/Maquinas/MaquinasDoSetor";
 
 interface Equipamento {
   id: string;
@@ -50,8 +50,11 @@ interface Maquina {
 }
 
 const Maquinas = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const setorSelecionado = searchParams.get("setor");
+  
   const [maquinas, setMaquinas] = useState<Maquina[]>([]);
-  const [filteredMaquinas, setFilteredMaquinas] = useState<Maquina[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -61,7 +64,6 @@ const Maquinas = () => {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [editingMaquina, setEditingMaquina] = useState<Maquina | null>(null);
   const [equipamentoSelecionado, setEquipamentoSelecionado] = useState<string>("");
-  const [openPopover, setOpenPopover] = useState(false);
   const [formData, setFormData] = useState({
     equipamento: "",
     patrimonio: "",
@@ -72,6 +74,13 @@ const Maquinas = () => {
     descricao: "",
   });
   const { toast } = useToast();
+
+  // Redireciona para setores se não tiver setor selecionado
+  useEffect(() => {
+    if (!setorSelecionado) {
+      navigate("/setores", { replace: true });
+    }
+  }, [setorSelecionado, navigate]);
 
   const fetchMaquinas = async () => {
     try {
@@ -95,7 +104,6 @@ const Maquinas = () => {
         } as Maquina;
       });
       
-      // Ordenar por data de criação (mais recentes primeiro)
       maquinasData.sort((a, b) => {
         if (!a.createdAt) return 1;
         if (!b.createdAt) return -1;
@@ -103,7 +111,6 @@ const Maquinas = () => {
       });
       
       setMaquinas(maquinasData);
-      setFilteredMaquinas(maquinasData);
     } catch (error) {
       console.error("Erro ao buscar máquinas:", error);
       toast({
@@ -120,7 +127,6 @@ const Maquinas = () => {
     fetchMaquinas();
   }, []);
 
-  // Carregar equipamentos do Firebase
   useEffect(() => {
     const fetchEquipamentos = async () => {
       try {
@@ -155,29 +161,6 @@ const Maquinas = () => {
 
     fetchEquipamentos();
   }, []);
-
-  // Memoiza a filtragem para evitar recálculos desnecessários
-  const filteredMaquinasData = useMemo(() => {
-    let filtered = maquinas;
-
-    if (searchTerm) {
-      filtered = filtered.filter(maquina => 
-        maquina.equipamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        maquina.patrimonio.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        maquina.setor.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statusFilter !== "todas") {
-      filtered = filtered.filter(maquina => maquina.status === statusFilter);
-    }
-
-    return filtered;
-  }, [maquinas, searchTerm, statusFilter]);
-
-  useEffect(() => {
-    setFilteredMaquinas(filteredMaquinasData);
-  }, [filteredMaquinasData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +222,6 @@ const Maquinas = () => {
       descricao: "",
     });
     setEquipamentoSelecionado("");
-    setOpenPopover(false);
   };
 
   const handleEdit = useCallback((maquina: Maquina) => {
@@ -286,175 +268,55 @@ const Maquinas = () => {
     });
   }, [toast]);
 
-  // Memoiza as estatísticas
-  const stats = useMemo(() => ({
-    total: maquinas.length,
-    ativas: maquinas.filter(m => m.status === "Ativa").length,
-    inativas: maquinas.filter(m => m.status === "Inativa").length,
-  }), [maquinas]);
+  const handleAddMaquina = () => {
+    resetForm();
+    setEditingMaquina(null);
+    setIsModalOpen(true);
+  };
+
+  if (!setorSelecionado) {
+    return null; // Será redirecionado pelo useEffect
+  }
 
   return (
     <AppLayout title="Máquinas">
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Máquinas</h1>
-            <p className="text-muted-foreground mt-1">
-              Gerencie as máquinas da empresa
-            </p>
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => navigate("/setores")}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Máquinas</h1>
+              <p className="text-muted-foreground mt-1">
+                Setor: {setorSelecionado}
+              </p>
+            </div>
           </div>
-          <Button 
-            onClick={() => {
-              resetForm();
-              setEditingMaquina(null);
-              setIsModalOpen(true);
-            }}
-            className="gap-2"
-          >
+          <Button onClick={handleAddMaquina} className="gap-2">
             <Plus className="h-4 w-4" />
             Nova Máquina
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Máquinas</CardTitle>
-              <Camera className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Máquinas Ativas</CardTitle>
-              <Camera className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.ativas}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Máquinas Inativas</CardTitle>
-              <Camera className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.inativas}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-4 flex-wrap">
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar máquinas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas</SelectItem>
-              <SelectItem value="Ativa">Ativas</SelectItem>
-              <SelectItem value="Inativa">Inativas</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Máquinas Grid */}
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Carregando máquinas...</p>
-          </div>
-        ) : filteredMaquinas.length === 0 ? (
-          <div className="text-center py-12">
-            <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              {searchTerm || statusFilter !== "todas" 
-                ? "Nenhuma máquina encontrada com os filtros aplicados."
-                : "Nenhuma máquina cadastrada. Adicione sua primeira máquina!"}
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredMaquinas.map((maquina) => (
-              <Card key={maquina.id} className="overflow-hidden">
-                <div className="aspect-video relative bg-muted">
-                  <img 
-                    src={maquina.imagemUrl} 
-                    alt={maquina.equipamento}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder.svg';
-                    }}
-                  />
-                  <div className="absolute top-2 right-2">
-                    <Badge variant={maquina.status === "Ativa" ? "default" : "secondary"}>
-                      {maquina.status}
-                    </Badge>
-                  </div>
-                </div>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">{maquina.equipamento}</CardTitle>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <p>Patrimônio: {maquina.patrimonio}</p>
-                    <p>Setor: {maquina.setor}</p>
-                    <p>Tag: {maquina.tag}</p>
-                  </div>
-                  {maquina.descricao && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
-                      {maquina.descricao}
-                    </p>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      onClick={() => window.location.href = `/maquinas/${maquina.id}`}
-                      className="w-full"
-                    >
-                      Ver Detalhes
-                    </Button>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(maquina)}
-                        className="flex-1"
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(maquina.id)}
-                        className="flex-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Excluir
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        {/* Conteúdo */}
+        <MaquinasDoSetor
+          setor={setorSelecionado}
+          maquinas={maquinas}
+          searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          onSearchChange={setSearchTerm}
+          onStatusFilterChange={setStatusFilter}
+          onVoltar={() => navigate("/setores")}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onVerDetalhes={(id) => navigate(`/maquinas/${id}`)}
+        />
 
         {/* Modal de Cadastro */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
