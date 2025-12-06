@@ -289,6 +289,11 @@ const AppSidebar = () => {
       label: "Gestão de Unidades",
       permission: "gestao_unidades"
     }, {
+      to: "/gestao-setores",
+      icon: Factory,
+      label: "Gestão de Setores",
+      permission: "gestao_setores"
+    }, {
       to: "/gestao-tarefas",
       icon: ClipboardCheck,
       label: "Gestão de Tarefas",
