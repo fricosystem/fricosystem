@@ -44,6 +44,8 @@ import GestaoPerfis from "./pages/GestaoPerfis";
 import CentroCusto from "./pages/CentroCusto";
 import Unidades from "./pages/Unidades";
 import Maquinas from "./pages/Maquinas";
+import Setores from "./pages/Setores";
+import GestaoSetores from "./pages/GestaoSetores";
 import MaquinaDetalhes from "./pages/MaquinaDetalhes";
 import ManutencoesDashboard from "./pages/ManutencoesDashboard";
 import ManutencaoPreventiva from "./pages/ManutencaoPreventiva";
@@ -135,6 +137,8 @@ const AppContent = () => {
           <Route path="/notas-fiscais-lancamento" element={<AuthGuard><NotasFiscaisLancamento /></AuthGuard>} />
           <Route path="/centro-custo" element={<AuthGuard><CentroCusto /></AuthGuard>} />
           <Route path="/unidades" element={<AuthGuard><Unidades /></AuthGuard>} />
+          <Route path="/setores" element={<AuthGuard><Setores /></AuthGuard>} />
+          <Route path="/gestao-setores" element={<AuthGuard><GestaoSetores /></AuthGuard>} />
           <Route path="/maquinas" element={<AuthGuard><Maquinas /></AuthGuard>} />
           <Route path="/maquinas/:id" element={<AuthGuard><MaquinaDetalhes /></AuthGuard>} />
           <Route path="/manutencoes-dashboard" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
