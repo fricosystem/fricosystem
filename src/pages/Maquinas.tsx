@@ -259,6 +259,28 @@ const Maquinas = () => {
     }
   }, [toast]);
 
+  const handleRename = useCallback(async (id: string, novoNome: string) => {
+    try {
+      const equipamentoRef = doc(db, "equipamentos", id);
+      await updateDoc(equipamentoRef, {
+        equipamento: novoNome,
+        updatedAt: serverTimestamp(),
+      });
+      toast({
+        title: "Sucesso",
+        description: "Nome da máquina atualizado com sucesso!",
+      });
+      fetchMaquinas();
+    } catch (error) {
+      console.error("Erro ao renomear máquina:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível renomear a máquina.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
   const handlePhotoTaken = useCallback((imageUrl: string) => {
     setFormData(prev => ({ ...prev, imagemUrl: imageUrl }));
     setIsCameraOpen(false);
@@ -316,6 +338,7 @@ const Maquinas = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onVerDetalhes={(id) => navigate(`/maquinas/${id}`)}
+          onRename={handleRename}
         />
 
         {/* Modal de Cadastro */}

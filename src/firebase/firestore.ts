@@ -200,3 +200,57 @@ export const deleteGitHubConfig = async (docId: string) => {
     throw error;
   }
 };
+
+// Configurações de Commit Entrada
+export const getCommitEntradaConfig = async () => {
+  try {
+    const { getDocs, collection: col } = await import("firebase/firestore");
+    const querySnapshot = await getDocs(col(db, "github_commit_entrada"));
+    
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      const data = doc.data();
+      
+      // Descriptografa o token se estiver criptografado
+      const token = data.encryptedToken ? atob(data.encryptedToken) : data.token;
+      
+      return {
+        id: doc.id,
+        token,
+        owner: data.owner,
+        repo: data.repo,
+        branch: data.branch || 'main',
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Erro ao buscar configuração de Commit Entrada:", error);
+    throw error;
+  }
+};
+
+export const saveCommitEntradaConfig = async (config: {
+  token: string;
+  owner: string;
+  repo: string;
+  branch?: string;
+}) => {
+  try {
+    const encryptedToken = btoa(config.token);
+    
+    const docRef = await addDoc(collection(db, "github_commit_entrada"), {
+      owner: config.owner,
+      repo: config.repo,
+      branch: config.branch || 'main',
+      encryptedToken,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Erro ao salvar configuração de Commit Entrada:", error);
+    throw error;
+  }
+};

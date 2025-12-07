@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Factory, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, query, where } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import AppLayout from "@/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,10 @@ const Setores = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [novoSetor, setNovoSetor] = useState("");
+  const [setorEditando, setSetorEditando] = useState("");
+  const [novoNomeSetor, setNovoNomeSetor] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -97,6 +100,78 @@ const Setores = () => {
 
   const handleSetorSelect = (setor: string) => {
     navigate(`/maquinas?setor=${encodeURIComponent(setor)}`);
+  };
+
+  const handleEditSetor = (setor: string) => {
+    setSetorEditando(setor);
+    setNovoNomeSetor(setor);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEditSetor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!novoNomeSetor.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome do setor é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (novoNomeSetor.trim().toLowerCase() === setorEditando.toLowerCase()) {
+      setIsEditModalOpen(false);
+      return;
+    }
+
+    // Verifica se o novo nome já existe
+    const setorExistente = maquinas.some(
+      m => m.setor.toLowerCase() === novoNomeSetor.trim().toLowerCase() && 
+           m.setor.toLowerCase() !== setorEditando.toLowerCase()
+    );
+
+    if (setorExistente) {
+      toast({
+        title: "Erro",
+        description: "Já existe um setor com este nome.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Busca todos os equipamentos do setor antigo e atualiza
+      const equipamentosRef = collection(db, "equipamentos");
+      const q = query(equipamentosRef, where("setor", "==", setorEditando));
+      const snapshot = await getDocs(q);
+      
+      const updatePromises = snapshot.docs.map(docSnap => 
+        updateDoc(doc(db, "equipamentos", docSnap.id), {
+          setor: novoNomeSetor.trim(),
+          updatedAt: serverTimestamp(),
+        })
+      );
+
+      await Promise.all(updatePromises);
+
+      toast({
+        title: "Sucesso",
+        description: "Nome do setor atualizado com sucesso!",
+      });
+
+      setIsEditModalOpen(false);
+      setSetorEditando("");
+      setNovoNomeSetor("");
+      fetchMaquinas();
+    } catch (error) {
+      console.error("Erro ao atualizar setor:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o nome do setor.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddSetor = async (e: React.FormEvent) => {
@@ -238,6 +313,7 @@ const Setores = () => {
                   maquinasAtivas={setor.ativas}
                   maquinasInativas={setor.inativas}
                   onClick={() => handleSetorSelect(setor.nome)}
+                  onEdit={handleEditSetor}
                 />
               ))}
             </div>
@@ -274,6 +350,43 @@ const Setores = () => {
                 </Button>
                 <Button type="submit" className="flex-1">
                   Adicionar
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Editar Setor */}
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Editar Nome do Setor</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSaveEditSetor} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="editNomeSetor">Nome do Setor *</Label>
+                <Input
+                  id="editNomeSetor"
+                  value={novoNomeSetor}
+                  onChange={(e) => setNovoNomeSetor(e.target.value)}
+                  placeholder="Ex: Produção, Manutenção, etc."
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setSetorEditando("");
+                    setNovoNomeSetor("");
+                  }}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1">
+                  Salvar
                 </Button>
               </div>
             </form>

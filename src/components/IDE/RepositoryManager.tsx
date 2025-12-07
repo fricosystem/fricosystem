@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { githubService } from '@/services/githubService';
-import { Trash2, RotateCcw, Folder, Loader2, GitBranch, CheckCircle2 } from 'lucide-react';
+import { getCommitEntradaConfig } from '@/firebase/firestore';
+import { Trash2, Download, Folder, Loader2, GitBranch, CheckCircle2, Upload } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
-
+import { Octokit } from '@octokit/rest';
 interface Repository {
   id: number;
   name: string;
@@ -18,10 +18,6 @@ interface Repository {
   updated_at: string;
 }
 
-interface RestoreOptions {
-  type: 'commit' | 'full';
-  commitSha?: string;
-}
 
 interface DeleteProgress {
   repoName: string;
@@ -34,10 +30,7 @@ const RepositoryManager: React.FC = () => {
   const [selectedRepos, setSelectedRepos] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [repoToDelete, setRepoToDelete] = useState<Repository | null>(null);
-  const [repoToRestore, setRepoToRestore] = useState<Repository | null>(null);
-  const [restoreOptions, setRestoreOptions] = useState<RestoreOptions>({ type: 'full' });
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteProgress, setDeleteProgress] = useState<DeleteProgress[]>([]);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -198,77 +191,260 @@ const RepositoryManager: React.FC = () => {
     }
   };
 
-  const handleRestore = (repo: Repository) => {
-    setRepoToRestore(repo);
-    setRestoreOptions({ type: 'full' });
-    setShowRestoreModal(true);
-  };
-
-  const confirmRestore = async () => {
-    if (!repoToRestore) return;
-
+  const handleCommitEntrada = async (repo: Repository) => {
     try {
       setActionLoading(true);
-      const octokit = githubService.getOctokit();
-      if (!octokit) throw new Error("GitHub não configurado");
-
-      const [owner, name] = repoToRestore.full_name.split('/');
-
-      if (restoreOptions.type === 'full') {
-        // Restaura o projeto completo do branch padrão
-        const { data: contents } = await octokit.repos.getContent({
-          owner,
-          repo: name,
-          path: '',
-          ref: repoToRestore.default_branch,
-        });
-
+      
+      // Buscar configuração de commit entrada do Firestore
+      const commitEntradaConfig = await getCommitEntradaConfig();
+      if (!commitEntradaConfig) {
         toast({
-          title: "Restauração Iniciada",
-          description: "Restaurando projeto completo...",
+          title: "Configuração não encontrada",
+          description: "Configure o repositório de destino para Commit Entrada no Firestore (coleção: github_commit_entrada)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Criar Octokit com token da configuração de origem (repo atual)
+      const sourceOctokit = githubService.getOctokit();
+      if (!sourceOctokit) throw new Error("GitHub não configurado");
+
+      // Criar Octokit para destino (fricosystem)
+      const destOctokit = new Octokit({ auth: commitEntradaConfig.token });
+      
+      const [sourceOwner, sourceRepoName] = repo.full_name.split('/');
+      const destOwner = commitEntradaConfig.owner;
+      const destRepoName = commitEntradaConfig.repo;
+      const destBranch = commitEntradaConfig.branch || 'main';
+      const sourceBranch = repo.default_branch;
+
+      toast({
+        title: "Iniciando Commit Entrada",
+        description: `Buscando arquivos modificados de ${repo.name}...`,
+      });
+
+      // Buscar todos os arquivos do repositório de origem
+      const getFilesRecursively = async (path: string = ''): Promise<Array<{path: string, sha: string, content?: string}>> => {
+        const { data } = await sourceOctokit.repos.getContent({
+          owner: sourceOwner,
+          repo: sourceRepoName,
+          path,
+          ref: sourceBranch,
         });
 
-        // Aqui você implementaria a lógica real de restauração dos arquivos
-        // Por enquanto, apenas simula
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        const files: Array<{path: string, sha: string, content?: string}> = [];
+        
+        if (Array.isArray(data)) {
+          for (const item of data) {
+            if (item.type === 'file') {
+              // Ignorar arquivos desnecessários
+              if (item.name.startsWith('.') || 
+                  item.path.includes('node_modules') || 
+                  item.path.includes('.git/')) {
+                continue;
+              }
+              files.push({ path: item.path, sha: item.sha });
+            } else if (item.type === 'dir') {
+              // Ignorar diretórios desnecessários
+              if (item.name === 'node_modules' || item.name === '.git') continue;
+              const subFiles = await getFilesRecursively(item.path);
+              files.push(...subFiles);
+            }
+          }
+        }
+        
+        return files;
+      };
 
+      // Buscar arquivos de origem
+      const sourceFiles = await getFilesRecursively();
+      
+      // Buscar arquivos de destino para comparação
+      let destFiles: Map<string, string> = new Map();
+      try {
+        const getDestFilesRecursively = async (path: string = ''): Promise<void> => {
+          try {
+            const { data } = await destOctokit.repos.getContent({
+              owner: destOwner,
+              repo: destRepoName,
+              path,
+              ref: destBranch,
+            });
+
+            if (Array.isArray(data)) {
+              for (const item of data) {
+                if (item.type === 'file') {
+                  destFiles.set(item.path, item.sha);
+                } else if (item.type === 'dir') {
+                  if (item.name === 'node_modules' || item.name === '.git') continue;
+                  await getDestFilesRecursively(item.path);
+                }
+              }
+            }
+          } catch (e) {
+            // Diretório não existe no destino
+          }
+        };
+        await getDestFilesRecursively();
+      } catch (e) {
+        // Repositório destino pode estar vazio
+      }
+
+      // Identificar arquivos modificados/novos
+      const modifiedFiles: Array<{path: string, sha: string}> = [];
+      for (const sourceFile of sourceFiles) {
+        const destSha = destFiles.get(sourceFile.path);
+        if (!destSha || destSha !== sourceFile.sha) {
+          modifiedFiles.push(sourceFile);
+        }
+      }
+
+      if (modifiedFiles.length === 0) {
         toast({
-          title: "Sucesso",
-          description: "Projeto restaurado com sucesso",
+          title: "Nenhuma alteração",
+          description: "Não há arquivos modificados para enviar",
         });
-      } else if (restoreOptions.type === 'commit' && restoreOptions.commitSha) {
-        // Restaura arquivos de um commit específico
-        const { data: commit } = await octokit.repos.getCommit({
-          owner,
-          repo: name,
-          ref: restoreOptions.commitSha,
-        });
+        setActionLoading(false);
+        return;
+      }
 
+      toast({
+        title: "Processando",
+        description: `Enviando ${modifiedFiles.length} arquivo(s) modificado(s)...`,
+      });
+
+      // Buscar referência do branch de destino
+      let destRefSha: string;
+      try {
+        const { data: refData } = await destOctokit.git.getRef({
+          owner: destOwner,
+          repo: destRepoName,
+          ref: `heads/${destBranch}`,
+        });
+        destRefSha = refData.object.sha;
+      } catch (e) {
         toast({
-          title: "Restauração Iniciada",
-          description: "Restaurando arquivos do commit...",
+          title: "Erro",
+          description: `Branch ${destBranch} não encontrado no repositório de destino`,
+          variant: "destructive",
         });
+        return;
+      }
 
-        // Implementar lógica de restauração por commit
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      // Buscar árvore base
+      const { data: baseCommit } = await destOctokit.git.getCommit({
+        owner: destOwner,
+        repo: destRepoName,
+        commit_sha: destRefSha,
+      });
 
+      // Criar blobs para cada arquivo modificado
+      const treeItems: Array<{path: string, mode: '100644', type: 'blob', sha: string}> = [];
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      for (const file of modifiedFiles) {
+        try {
+          // Buscar conteúdo do arquivo de origem
+          const { data: fileData } = await sourceOctokit.repos.getContent({
+            owner: sourceOwner,
+            repo: sourceRepoName,
+            path: file.path,
+            ref: sourceBranch,
+          });
+
+          if ('content' in fileData && fileData.content) {
+            // Criar blob no destino
+            const { data: blob } = await destOctokit.git.createBlob({
+              owner: destOwner,
+              repo: destRepoName,
+              content: fileData.content,
+              encoding: 'base64',
+            });
+
+            treeItems.push({
+              path: file.path,
+              mode: '100644',
+              type: 'blob',
+              sha: blob.sha,
+            });
+            successCount++;
+          }
+        } catch (err: any) {
+          errorCount++;
+          errors.push(`${file.path}: ${err.message}`);
+          console.error(`Erro ao processar arquivo ${file.path}:`, err);
+        }
+      }
+
+      if (treeItems.length === 0) {
         toast({
-          title: "Sucesso",
-          description: "Arquivos restaurados do commit",
+          title: "Erro",
+          description: "Nenhum arquivo pôde ser processado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Criar nova árvore
+      const { data: newTree } = await destOctokit.git.createTree({
+        owner: destOwner,
+        repo: destRepoName,
+        base_tree: baseCommit.tree.sha,
+        tree: treeItems,
+      });
+
+      // Criar commit
+      const commitMessage = `📥 Commit Entrada - ${new Date().toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).replace(',', ' -')}\n\nOrigem: ${repo.full_name}\nArquivos: ${successCount} enviado(s)${errorCount > 0 ? `, ${errorCount} erro(s)` : ''}`;
+
+      const { data: newCommit } = await destOctokit.git.createCommit({
+        owner: destOwner,
+        repo: destRepoName,
+        message: commitMessage,
+        tree: newTree.sha,
+        parents: [destRefSha],
+      });
+
+      // Atualizar referência
+      await destOctokit.git.updateRef({
+        owner: destOwner,
+        repo: destRepoName,
+        ref: `heads/${destBranch}`,
+        sha: newCommit.sha,
+      });
+
+      if (errorCount > 0) {
+        toast({
+          title: "Commit Entrada Parcial",
+          description: `${successCount} arquivo(s) enviado(s), ${errorCount} erro(s). Verifique o console para detalhes.`,
+          variant: "default",
+        });
+        console.warn('Erros durante commit entrada:', errors);
+      } else {
+        toast({
+          title: "✅ Commit Entrada Realizado",
+          description: `${successCount} arquivo(s) enviado(s) para ${destOwner}/${destRepoName}`,
         });
       }
 
+      await loadRepositories();
     } catch (error: any) {
-      console.error('Erro ao restaurar:', error);
+      console.error('Erro ao fazer commit entrada:', error);
       toast({
         title: "Erro",
-        description: error.message || "Falha ao restaurar repositório",
+        description: error.message || "Falha ao fazer commit de entrada",
         variant: "destructive",
       });
     } finally {
       setActionLoading(false);
-      setShowRestoreModal(false);
-      setRepoToRestore(null);
     }
   };
 
@@ -357,7 +533,13 @@ const RepositoryManager: React.FC = () => {
                       </span>
                       <span>•</span>
                       <span>
-                        {new Date(repo.updated_at).toLocaleDateString('pt-BR')}
+                        {new Date(repo.updated_at).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }).replace(',', ' -')}
                       </span>
                     </div>
                   </div>
@@ -367,11 +549,16 @@ const RepositoryManager: React.FC = () => {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleRestore(repo)}
-                        className="h-8 w-8 p-0"
-                        title="Restaurar"
+                        onClick={() => handleCommitEntrada(repo)}
+                        className="h-8 w-8 p-0 hover:text-primary"
+                        title="Commit Entrada - Enviar para fricosystem"
+                        disabled={actionLoading}
                       >
-                        <RotateCcw className="h-4 w-4" />
+                        {actionLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button
                         size="sm"
@@ -510,88 +697,6 @@ const RepositoryManager: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de restauração */}
-      <Dialog open={showRestoreModal} onOpenChange={setShowRestoreModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Restaurar Repositório</DialogTitle>
-            <DialogDescription>
-              Escolha como deseja restaurar o repositório "{repoToRestore?.name}"
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de Restauração</label>
-              <Select
-                value={restoreOptions.type}
-                onValueChange={(value: 'commit' | 'full') => 
-                  setRestoreOptions({ ...restoreOptions, type: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="full">Projeto Completo</SelectItem>
-                  <SelectItem value="commit">Commit Específico</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {restoreOptions.type === 'commit' && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">SHA do Commit</label>
-                <input
-                  type="text"
-                  placeholder="Digite o SHA do commit"
-                  className="w-full px-3 py-2 text-sm border rounded-md"
-                  value={restoreOptions.commitSha || ''}
-                  onChange={(e) => 
-                    setRestoreOptions({ ...restoreOptions, commitSha: e.target.value })
-                  }
-                />
-              </div>
-            )}
-
-            <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
-              <p className="font-medium mb-1">⚠️ Atenção:</p>
-              <p>
-                {restoreOptions.type === 'full' 
-                  ? 'Todos os arquivos modificados serão substituídos pela versão do repositório.'
-                  : 'Os arquivos serão restaurados para o estado do commit especificado.'
-                }
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowRestoreModal(false)}
-              disabled={actionLoading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={confirmRestore}
-              disabled={actionLoading || (restoreOptions.type === 'commit' && !restoreOptions.commitSha)}
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Restaurando...
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Restaurar
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

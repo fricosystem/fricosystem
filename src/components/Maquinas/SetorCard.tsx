@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Factory, ChevronRight } from "lucide-react";
+import { Factory, ChevronRight, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface SetorCardProps {
   setor: string;
@@ -8,6 +9,7 @@ interface SetorCardProps {
   maquinasAtivas: number;
   maquinasInativas: number;
   onClick: () => void;
+  onEdit?: (setor: string) => void;
 }
 
 const SetorCard = ({ 
@@ -15,8 +17,14 @@ const SetorCard = ({
   quantidadeMaquinas, 
   maquinasAtivas, 
   maquinasInativas,
-  onClick 
+  onClick,
+  onEdit
 }: SetorCardProps) => {
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.(setor);
+  };
+
   return (
     <Card 
       className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group"
@@ -35,7 +43,17 @@ const SetorCard = ({
               </p>
             </div>
           </div>
-          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handleEditClick}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
         </div>
         
         <div className="flex gap-2 mt-4">

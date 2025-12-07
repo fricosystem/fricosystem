@@ -1,10 +1,12 @@
-import { useMemo } from "react";
-import { ArrowLeft, Search, Camera, Edit, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Search, Camera, Edit, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface Maquina {
   id: string;
@@ -28,6 +30,7 @@ interface MaquinasDoSetorProps {
   onEdit: (maquina: Maquina) => void;
   onDelete: (id: string) => void;
   onVerDetalhes: (id: string) => void;
+  onRename?: (id: string, novoNome: string) => void;
 }
 
 const MaquinasDoSetor = ({
@@ -40,8 +43,27 @@ const MaquinasDoSetor = ({
   onVoltar,
   onEdit,
   onDelete,
-  onVerDetalhes
+  onVerDetalhes,
+  onRename
 }: MaquinasDoSetorProps) => {
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [selectedMaquina, setSelectedMaquina] = useState<Maquina | null>(null);
+  const [novoNome, setNovoNome] = useState("");
+
+  const handleOpenRenameModal = (maquina: Maquina) => {
+    setSelectedMaquina(maquina);
+    setNovoNome(maquina.equipamento);
+    setIsRenameModalOpen(true);
+  };
+
+  const handleRename = () => {
+    if (selectedMaquina && novoNome.trim() && onRename) {
+      onRename(selectedMaquina.id, novoNome.trim());
+      setIsRenameModalOpen(false);
+      setSelectedMaquina(null);
+      setNovoNome("");
+    }
+  };
   const maquinasFiltradas = useMemo(() => {
     let filtered = maquinas.filter(m => m.setor === setor);
 
@@ -165,7 +187,20 @@ const MaquinasDoSetor = ({
                 </div>
               </div>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">{maquina.equipamento}</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{maquina.equipamento}</CardTitle>
+                  {onRename && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenRenameModal(maquina)}
+                      className="h-8 w-8"
+                      title="Renomear máquina"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Patrimônio: {maquina.patrimonio}</p>
                   <p>Tag: {maquina.tag}</p>
@@ -210,6 +245,40 @@ const MaquinasDoSetor = ({
           ))}
         </div>
       )}
+      {/* Modal de Renomear */}
+      <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Renomear Máquina</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="novoNome">Nome da Máquina</Label>
+              <Input
+                id="novoNome"
+                value={novoNome}
+                onChange={(e) => setNovoNome(e.target.value)}
+                placeholder="Digite o novo nome"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRenameModalOpen(false);
+                setSelectedMaquina(null);
+                setNovoNome("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleRename} disabled={!novoNome.trim()}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
