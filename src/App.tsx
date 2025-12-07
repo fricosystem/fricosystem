@@ -49,9 +49,7 @@ import GestaoSetores from "./pages/GestaoSetores";
 import MaquinaDetalhes from "./pages/MaquinaDetalhes";
 import ManutencoesDashboard from "./pages/ManutencoesDashboard";
 import ManutencaoPreventiva from "./pages/ManutencaoPreventiva";
-import ConfiguracoesManutencao from "./pages/ConfiguracoesManutencao";
 import GestaoTarefas from "./pages/GestaoTarefas";
-import AutomacaoManutencao from "./pages/AutomacaoManutencao";
 import ExecucaoPreventiva from "./pages/ExecucaoPreventiva";
 import { ManutentorGuard } from "./guards/ManutentorGuard";
 
@@ -143,8 +141,6 @@ const AppContent = () => {
           <Route path="/maquinas/:id" element={<AuthGuard><MaquinaDetalhes /></AuthGuard>} />
           <Route path="/manutencoes-dashboard" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
           <Route path="/manutencao-preventiva" element={<AuthGuard><ManutencaoPreventiva /></AuthGuard>} />
-          <Route path="/configuracoes-manutencao" element={<AuthGuard><ConfiguracoesManutencao /></AuthGuard>} />
-          <Route path="/automacao-manutencao" element={<AuthGuard><AutomacaoManutencao /></AuthGuard>} />
           <Route path="/execucao-preventiva" element={<AuthGuard><ManutentorGuard><ExecucaoPreventiva /></ManutentorGuard></AuthGuard>} />
           <Route path="/gestao-tarefas" element={<AuthGuard><GestaoTarefas /></AuthGuard>} />
            <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />

@@ -1007,20 +1007,20 @@ const Dashboard = () => {
       {/* Seletor de período */}
       <div className="mb-6">
         <Tabs defaultValue="hoje" value={period} onValueChange={v => setPeriod(v as "hoje" | "semana" | "mes" | "ano" | "personalizado")}>
-          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800">
-            <TabsTrigger value="hoje" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <TabsTrigger value="hoje" className="flex items-center gap-2 rounded-l-lg rounded-r-none">
               <Clock className="h-4 w-4" /> Hoje
             </TabsTrigger>
-            <TabsTrigger value="semana" className="flex items-center gap-2">
+            <TabsTrigger value="semana" className="flex items-center gap-2 rounded-none">
               <Calendar className="h-4 w-4" /> Semana
             </TabsTrigger>
-            <TabsTrigger value="mes" className="flex items-center gap-2">
+            <TabsTrigger value="mes" className="flex items-center gap-2 rounded-none">
               <Layers className="h-4 w-4" /> Mês
             </TabsTrigger>
-            <TabsTrigger value="ano" className="flex items-center gap-2">
+            <TabsTrigger value="ano" className="flex items-center gap-2 rounded-none">
               <BarChart2 className="h-4 w-4" /> Ano
             </TabsTrigger>
-            <TabsTrigger value="personalizado" className="flex items-center gap-2">
+            <TabsTrigger value="personalizado" className="flex items-center gap-2 rounded-r-lg rounded-l-none">
               <Calendar className="h-4 w-4" /> Personalizado
             </TabsTrigger>
           </TabsList>

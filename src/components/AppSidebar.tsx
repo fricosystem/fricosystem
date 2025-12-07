@@ -169,16 +169,6 @@ const AppSidebar = () => {
       icon: Wrench,
       label: "Parada de Máquina",
       permission: "parada_maquina"
-    }, {
-      to: "/configuracoes-manutencao",
-      icon: Cog,
-      label: "Configurações",
-      permission: "configuracoes_manutencao"
-    }, {
-      to: "/automacao-manutencao",
-      icon: Settings,
-      label: "Automação",
-      permission: "automacao_manutencao"
     }]
   }, {
     label: "Requisições",

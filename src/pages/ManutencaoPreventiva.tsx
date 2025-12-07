@@ -169,20 +169,6 @@ export default function ManutencaoPreventiva() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <p className="text-muted-foreground">Sistema completo de manutenção preventiva</p>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/configuracoes-manutencao")}>
-              <Settings className="mr-2 h-4 w-4" />
-              Configurações
-            </Button>
-            <Button onClick={() => setShowManutentorModal(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Manutentor
-            </Button>
-            <Button onClick={() => setShowTarefaModal(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Tarefa
-            </Button>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -239,25 +225,24 @@ export default function ManutencaoPreventiva() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <DashboardKPIs tarefas={tarefas} />
-                <ProximosManutentores tarefas={tarefas} />
+                <TimelineManutencao 
+                  tarefas={tarefas
+                    .filter(t => t.status === "pendente")
+                    .slice(0, 10)
+                    .map(t => ({
+                      id: t.id,
+                      nome: t.descricaoTarefa,
+                      maquina: t.maquinaNome,
+                      maquinaId: t.maquinaId,
+                      data: t.proximaExecucao,
+                      diasRestantes: diasParaManutencao(t.proximaExecucao),
+                      urgencia: determinarStatusPorManutencao(t.proximaExecucao) === "Crítico" ? "critico" :
+                               determinarStatusPorManutencao(t.proximaExecucao) === "Atenção" ? "alto" : "baixo"
+                    }))
+                  }
+                  todasTarefas={tarefas}
+                />
               </div>
-              <TimelineManutencao 
-                tarefas={tarefas
-                  .filter(t => t.status === "pendente")
-                  .slice(0, 10)
-                  .map(t => ({
-                    id: t.id,
-                    nome: t.descricaoTarefa,
-                    maquina: t.maquinaNome,
-                    maquinaId: t.maquinaId,
-                    data: t.proximaExecucao,
-                    diasRestantes: diasParaManutencao(t.proximaExecucao),
-                    urgencia: determinarStatusPorManutencao(t.proximaExecucao) === "Crítico" ? "critico" :
-                             determinarStatusPorManutencao(t.proximaExecucao) === "Atenção" ? "alto" : "baixo"
-                  }))
-                }
-                todasTarefas={tarefas}
-              />
             </div>
           </TabsContent>
 
@@ -272,7 +257,7 @@ export default function ManutencaoPreventiva() {
           </TabsContent>
 
           <TabsContent value="tarefas" className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -282,10 +267,6 @@ export default function ManutencaoPreventiva() {
                   className="pl-8"
                 />
               </div>
-              <Button onClick={() => setShowTarefaModal(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Tarefa
-              </Button>
             </div>
 
             <Card>
