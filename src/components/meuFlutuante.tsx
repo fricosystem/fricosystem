@@ -368,7 +368,7 @@ const FuturisticFloatingMenu = () => {
         { id: "gestao-perfis", icon: <IdCard size={20} />, label: "Gestão de Perfis", path: "/gestao-perfis", permission: "gestao_perfis" },
         { id: "gestao-produtos", icon: <Cog size={20} />, label: "Gestão de Produtos", path: "/gestao-produtos", permission: "gestao_produtos" },
         { id: "unidades", icon: <Building2 size={20} />, label: "Gestão de Unidades", path: "/unidades", permission: "gestao_unidades" },
-        { id: "gestao-setores", icon: <Factory size={20} />, label: "Gestão de Setores", path: "/gestao-setores", permission: "gestao_setores" },
+        { id: "gestao-manutencao", icon: <Factory size={20} />, label: "Gestão de Manutenção", path: "/gestao-manutencao", permission: "gestao_manutencao" },
         { id: "gestao-tarefas", icon: <ClipboardCheck size={20} />, label: "Gestão de Tarefas", path: "/gestao-tarefas", permission: "gestao_tarefas" },
       ]),
     }] : []),

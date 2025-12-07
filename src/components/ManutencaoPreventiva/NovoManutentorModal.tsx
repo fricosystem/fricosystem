@@ -197,7 +197,11 @@ export function NovoManutentorModal({ open, onOpenChange, onSuccess }: NovoManut
                 </SelectTrigger>
                 <SelectContent>
                   {funcionarios
-                    ?.filter((funcionario) => funcionario.perfil === "MANUTENTOR")
+                    ?.filter((funcionario) => 
+                      funcionario.perfil === "MANUTENTOR" &&
+                      !manutentores.some(m => m.usuarioId === funcionario.id) &&
+                      !listaManutentores.some(m => m.usuarioId === funcionario.id)
+                    )
                     .map((funcionario) => (
                       <SelectItem key={funcionario.id} value={funcionario.id}>
                         {funcionario.nome} - {funcionario.email}

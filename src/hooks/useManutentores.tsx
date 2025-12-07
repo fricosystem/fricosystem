@@ -9,7 +9,10 @@ export interface Manutentor {
   nome: string;
   email: string;
   funcao: TipoManutencao;
+  ordemPrioridade: number;
+  capacidadeDiaria: number;
   ativo: boolean;
+  createdAt?: Date;
 }
 
 const getManutentores = async (): Promise<Manutentor[]> => {

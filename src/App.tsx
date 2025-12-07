@@ -138,7 +138,7 @@ const AppContent = () => {
           <Route path="/centro-custo" element={<AuthGuard><CentroCusto /></AuthGuard>} />
           <Route path="/unidades" element={<AuthGuard><Unidades /></AuthGuard>} />
           <Route path="/setores" element={<AuthGuard><Setores /></AuthGuard>} />
-          <Route path="/gestao-setores" element={<AuthGuard><GestaoSetores /></AuthGuard>} />
+          <Route path="/gestao-manutencao" element={<AuthGuard><GestaoSetores /></AuthGuard>} />
           <Route path="/maquinas" element={<AuthGuard><Maquinas /></AuthGuard>} />
           <Route path="/maquinas/:id" element={<AuthGuard><MaquinaDetalhes /></AuthGuard>} />
           <Route path="/manutencoes-dashboard" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
