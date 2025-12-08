@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Plus, Camera, Check, Search, ArrowLeft } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { addDoc, updateDoc, doc, deleteDoc, serverTimestamp, collection } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import AppLayout from "@/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -27,14 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 import CameraModal from "@/components/CameraModal";
 import MaquinasDoSetor from "@/components/Maquinas/MaquinasDoSetor";
-
-interface Equipamento {
-  id: string;
-  patrimonio: string;
-  equipamento: string;
-  setor: string;
-  tag: string;
-}
+import { useEquipamentos } from "@/contexts/EquipamentosContext";
 
 interface Maquina {
   id: string;
@@ -54,10 +47,8 @@ const Maquinas = () => {
   const navigate = useNavigate();
   const setorSelecionado = searchParams.get("setor");
   
-  const [maquinas, setMaquinas] = useState<Maquina[]>([]);
-  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
-  const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { maquinas, equipamentos, loading, fetchData, invalidateCache } = useEquipamentos();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todas");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,85 +73,17 @@ const Maquinas = () => {
     }
   }, [setorSelecionado, navigate]);
 
-  const fetchMaquinas = async () => {
-    try {
-      setLoading(true);
-      const equipamentosRef = collection(db, "equipamentos");
-      const snapshot = await getDocs(equipamentosRef);
-      
-      const maquinasData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          equipamento: data.equipamento || "",
-          patrimonio: data.patrimonio || "",
-          setor: data.setor || "",
-          tag: data.tag || "",
-          imagemUrl: data.imagemUrl || "",
-          status: data.status || "Ativa",
-          descricao: data.descricao || "",
-          createdAt: data.createdAt || data.dataCriacao || null,
-          updatedAt: data.updatedAt || data.dataAtualizacao || null,
-        } as Maquina;
-      });
-      
-      maquinasData.sort((a, b) => {
-        if (!a.createdAt) return 1;
-        if (!b.createdAt) return -1;
-        return b.createdAt.seconds - a.createdAt.seconds;
-      });
-      
-      setMaquinas(maquinasData);
-    } catch (error) {
-      console.error("Erro ao buscar máquinas:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as máquinas.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  // Carrega dados ao montar (usa cache se disponível)
+  useEffect(() => {
+    if (setorSelecionado) {
+      fetchData();
     }
-  };
+  }, [setorSelecionado, fetchData]);
 
-  useEffect(() => {
-    fetchMaquinas();
-  }, []);
-
-  useEffect(() => {
-    const fetchEquipamentos = async () => {
-      try {
-        setLoadingEquipamentos(true);
-        const equipamentosRef = collection(db, "equipamentos");
-        const snapshot = await getDocs(equipamentosRef);
-        
-        const equipamentosData: Equipamento[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          equipamentosData.push({
-            id: doc.id,
-            patrimonio: data.patrimonio || "",
-            equipamento: data.equipamento || "",
-            setor: data.setor || "",
-            tag: data.tag || "",
-          });
-        });
-        
-        setEquipamentos(equipamentosData);
-      } catch (error) {
-        console.error("Erro ao buscar equipamentos:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar a lista de equipamentos.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingEquipamentos(false);
-      }
-    };
-
-    fetchEquipamentos();
-  }, []);
+  const refreshData = useCallback(() => {
+    invalidateCache();
+    fetchData(true);
+  }, [invalidateCache, fetchData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,7 +123,7 @@ const Maquinas = () => {
       setIsModalOpen(false);
       setEditingMaquina(null);
       resetForm();
-      fetchMaquinas();
+      refreshData();
     } catch (error) {
       console.error("Erro ao salvar máquina:", error);
       toast({
@@ -248,7 +171,7 @@ const Maquinas = () => {
         title: "Sucesso",
         description: "Máquina excluída com sucesso!",
       });
-      fetchMaquinas();
+      refreshData();
     } catch (error) {
       console.error("Erro ao excluir máquina:", error);
       toast({
@@ -257,7 +180,7 @@ const Maquinas = () => {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, refreshData]);
 
   const handleRename = useCallback(async (id: string, novoNome: string) => {
     try {
@@ -270,7 +193,7 @@ const Maquinas = () => {
         title: "Sucesso",
         description: "Nome da máquina atualizado com sucesso!",
       });
-      fetchMaquinas();
+      refreshData();
     } catch (error) {
       console.error("Erro ao renomear máquina:", error);
       toast({
@@ -279,7 +202,7 @@ const Maquinas = () => {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, refreshData]);
 
   const handlePhotoTaken = useCallback((imageUrl: string) => {
     setFormData(prev => ({ ...prev, imagemUrl: imageUrl }));
@@ -297,7 +220,28 @@ const Maquinas = () => {
   };
 
   if (!setorSelecionado) {
-    return null; // Será redirecionado pelo useEffect
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <AppLayout title="Máquinas">
+        <div className="container mx-auto p-6 space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 bg-muted animate-pulse rounded" />
+            <div className="space-y-2">
+              <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+              <div className="h-4 w-48 bg-muted animate-pulse rounded" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-48 bg-muted animate-pulse rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
 
   return (
@@ -362,9 +306,9 @@ const Maquinas = () => {
                         "w-full justify-between",
                         !equipamentoSelecionado && "text-muted-foreground"
                       )}
-                      disabled={loadingEquipamentos}
+                      disabled={loading}
                     >
-                      {loadingEquipamentos
+                      {loading
                         ? "Carregando equipamentos..."
                         : equipamentoSelecionado
                           ? equipamentos.find(e => e.equipamento === equipamentoSelecionado)?.patrimonio + " - " + equipamentoSelecionado
