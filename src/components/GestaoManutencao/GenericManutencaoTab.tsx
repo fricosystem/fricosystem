@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import StatsCard from "@/components/StatsCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Switch } from "@/components/ui/switch";
 
 
 interface Item {
@@ -371,8 +371,8 @@ const GenericManutencaoTab = ({
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Descrição</TableHead>
-                    <TableHead>Editar</TableHead>
-                    <TableHead>Ativo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -383,21 +383,27 @@ const GenericManutencaoTab = ({
                         {item.descricao || "-"}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(item)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <Badge variant={item.status === "Ativo" ? "default" : "secondary"}>
+                          {item.status}
+                        </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={item.status === "Ativo"}
-                          onCheckedChange={(checked) => 
-                            handleStatusChange(item, checked ? "Ativo" : "Inativo")
-                          }
-                        />
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant={item.status === "Ativo" ? "secondary" : "default"}
+                            size="sm"
+                            onClick={() => handleStatusChange(item, item.status === "Ativo" ? "Inativo" : "Ativo")}
+                          >
+                            {item.status === "Ativo" ? "Desativar" : "Ativar"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
