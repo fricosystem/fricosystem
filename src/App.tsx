@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ManutencaoAlertsProvider } from "@/contexts/ManutencaoAlertsContext";
+import { EquipamentosProvider } from "@/contexts/EquipamentosContext";
 
 // Páginas
 import Login from "./pages/Login";
@@ -174,7 +175,9 @@ const App = () => {
       <ThemeProvider>
         <AuthProvider>
           <ManutencaoAlertsProvider>
-            <AppContent />
+            <EquipamentosProvider>
+              <AppContent />
+            </EquipamentosProvider>
           </ManutencaoAlertsProvider>
         </AuthProvider>
       </ThemeProvider>
