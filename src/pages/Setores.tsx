@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Factory, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, query, where } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import AppLayout from "@/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import SetorCard from "@/components/Maquinas/SetorCard";
-
-interface Maquina {
-  id: string;
-  setor: string;
-  status: "Ativa" | "Inativa";
-}
+import { useEquipamentos } from "@/contexts/EquipamentosContext";
 
 interface SetorInfo {
   nome: string;
@@ -26,8 +21,7 @@ interface SetorInfo {
 }
 
 const Setores = () => {
-  const [maquinas, setMaquinas] = useState<Maquina[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { maquinas, loading, fetchData, invalidateCache } = useEquipamentos();
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -37,42 +31,23 @@ const Setores = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const fetchMaquinas = async () => {
-    try {
-      setLoading(true);
-      const equipamentosRef = collection(db, "equipamentos");
-      const snapshot = await getDocs(equipamentosRef);
-      
-      const maquinasData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          setor: data.setor || "",
-          status: data.status || "Ativa",
-        } as Maquina;
-      });
-      
-      setMaquinas(maquinasData);
-    } catch (error) {
-      console.error("Erro ao buscar máquinas:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os setores.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Carrega dados ao montar (usa cache se disponível)
   useEffect(() => {
-    fetchMaquinas();
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   const setores = (() => {
     const setorMap = new Map<string, SetorInfo>();
     
-    maquinas.forEach(maquina => {
+    // Filtra máquinas pelo termo de busca
+    const maquinasFiltradas = searchTerm
+      ? maquinas.filter(m => 
+          m.equipamento.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : maquinas;
+    
+    // Agrupa por setor
+    maquinasFiltradas.forEach(maquina => {
       const setor = maquina.setor || "Sem Setor";
       
       if (!setorMap.has(setor)) {
@@ -94,7 +69,6 @@ const Setores = () => {
     });
     
     return Array.from(setorMap.values())
-      .filter(s => s.nome.toLowerCase().includes(searchTerm.toLowerCase()))
       .sort((a, b) => a.nome.localeCompare(b.nome));
   })();
 
@@ -163,7 +137,8 @@ const Setores = () => {
       setIsEditModalOpen(false);
       setSetorEditando("");
       setNovoNomeSetor("");
-      fetchMaquinas();
+      invalidateCache();
+      fetchData(true);
     } catch (error) {
       console.error("Erro ao atualizar setor:", error);
       toast({
@@ -221,7 +196,8 @@ const Setores = () => {
 
       setIsModalOpen(false);
       setNovoSetor("");
-      fetchMaquinas();
+      invalidateCache();
+      fetchData(true);
     } catch (error) {
       console.error("Erro ao adicionar setor:", error);
       toast({
@@ -253,7 +229,7 @@ const Setores = () => {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar setor..."
+            placeholder="Buscar máquina..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"

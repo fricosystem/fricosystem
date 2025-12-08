@@ -275,13 +275,13 @@ const ListaParadasMaquina = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pendente":
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs">Pendente</Badge>;
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 text-sm sm:text-base px-3 py-1">Pendente</Badge>;
       case "em_andamento":
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800 text-[10px] sm:text-xs">Em andamento</Badge>;
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800 text-sm sm:text-base px-3 py-1">Em andamento</Badge>;
       case "concluido":
-        return <Badge variant="outline" className="bg-green-100 text-green-800 text-[10px] sm:text-xs">Concluído</Badge>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800 text-sm sm:text-base px-3 py-1">Concluído</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px] sm:text-xs">{status}</Badge>;
+        return <Badge variant="outline" className="text-sm sm:text-base px-3 py-1">{status}</Badge>;
     }
   };
 
@@ -306,52 +306,52 @@ const ListaParadasMaquina = () => {
 
   return (
     <Card className="border-0 shadow-none flex flex-col h-full">
-      <CardHeader className="px-0 py-2 sm:py-4 sticky top-0 bg-background z-10">
-        <CardTitle className="text-base sm:text-lg font-bold text-center">Paradas de Máquina</CardTitle>
-        <div className="mt-2">
+      <CardHeader className="px-0 py-3 sm:py-5 sticky top-0 bg-background z-10">
+        <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold text-center">Paradas de Máquina</CardTitle>
+        <div className="mt-3">
           <div className="relative w-full">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-5 sm:w-5 text-muted-foreground" />
             <Input
               placeholder="Buscar..."
               value={searchTerm}
               onChange={handleSearch}
-              className="pl-8 w-full text-xs sm:text-sm h-9"
+              className="pl-11 w-full text-base sm:text-base h-12 sm:h-14"
             />
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-0 pb-4 flex-1 overflow-y-auto">
+      <CardContent className="px-0 pb-6 flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="ml-2 text-sm">Carregando...</span>
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-3 text-base">Carregando...</span>
           </div>
         ) : filteredParadas.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground text-sm">Nenhuma parada encontrada</p>
+          <div className="text-center py-12">
+            <p className="text-muted-foreground text-base">Nenhuma parada encontrada</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3 sm:space-y-4">
             {filteredParadas.map((parada) => (
-              <div key={parada.id} className="border rounded-lg p-3 space-y-2">
-                <div className="flex justify-between items-start gap-2">
+              <div key={parada.id} className="border rounded-xl p-4 sm:p-5 space-y-3">
+                <div className="flex justify-between items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{parada.equipamento}</div>
-                    <div className="text-xs text-muted-foreground">{parada.setor}</div>
+                    <div className="font-semibold text-base sm:text-lg truncate">{parada.equipamento}</div>
+                    <div className="text-sm sm:text-base text-muted-foreground">{parada.setor}</div>
                   </div>
                   {getStatusBadge(parada.status)}
                 </div>
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                <div className="flex justify-between items-center text-sm sm:text-base text-muted-foreground">
                   <span>{parada.tipoManutencao || "-"}</span>
                   <span>{parada.criadoEm && format(parada.criadoEm.toDate(), "dd/MM/yy HH:mm")}</span>
                 </div>
-                <div className="flex gap-2 pt-1">
+                <div className="flex gap-3 pt-2">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button 
                         variant="outline" 
-                        size="sm"
-                        className="flex-1 h-8 text-xs"
+                        size="lg"
+                        className="flex-1 h-12 sm:h-14 text-base"
                         onClick={() => setSelectedParada(parada)}
                       >
                         Detalhes
