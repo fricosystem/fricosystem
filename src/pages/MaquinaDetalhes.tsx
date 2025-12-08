@@ -82,6 +82,7 @@ interface Maquina {
   imagemUrl: string;
   status: "Ativa" | "Inativa";
   descricao?: string;
+  setor?: string;
   sistemas?: Sistema[];
 }
 
@@ -169,6 +170,7 @@ const MaquinaDetalhes = () => {
             imagemUrl: data.imagemUrl || "",
             status: data.status || "Ativa",
             descricao: data.descricao || "",
+            setor: data.setor || "",
             sistemas: data.sistemas || []
           } as Maquina);
         } else {
@@ -638,7 +640,7 @@ const MaquinaDetalhes = () => {
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate("/maquinas")}>
+          <Button variant="outline" size="icon" onClick={() => navigate(`/maquinas?setor=${encodeURIComponent(maquina.setor || "")}`)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">

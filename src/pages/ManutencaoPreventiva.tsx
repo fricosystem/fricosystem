@@ -280,6 +280,7 @@ export default function ManutencaoPreventiva() {
                     <TableHead>Descrição</TableHead>
                     <TableHead>Manutentor</TableHead>
                     <TableHead>Período</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -292,11 +293,34 @@ export default function ManutencaoPreventiva() {
                       <TableCell className="max-w-xs truncate">{tarefa.descricaoTarefa}</TableCell>
                       <TableCell>{tarefa.manutentorNome}</TableCell>
                       <TableCell>{tarefa.periodoLabel}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {tarefa.status === "pendente" && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setTarefaSelecionada(tarefa);
+                                setShowExecucaoModal(true);
+                              }}
+                            >
+                              Executar
+                            </Button>
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleDeleteTarefa(tarefa.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {tarefasFiltradas.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Nenhuma tarefa encontrada
                       </TableCell>
                     </TableRow>
@@ -314,6 +338,7 @@ export default function ManutencaoPreventiva() {
                     <TableHead>Nome</TableHead>
                     <TableHead>Função</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -327,6 +352,15 @@ export default function ManutencaoPreventiva() {
                         ) : (
                           <Badge variant="secondary">Inativo</Badge>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={() => handleDeleteManutentor(manutentor.id)}
+                        >
+                          Excluir
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

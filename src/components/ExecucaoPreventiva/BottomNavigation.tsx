@@ -26,7 +26,7 @@ export function BottomNavigation({ activeTab, onTabChange, badgeCounts }: Bottom
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t pb-safe">
-      <div className="flex justify-center py-2 px-2 overflow-x-auto scrollbar-hide gap-1">
+      <div className="flex justify-start md:justify-center py-2 px-2 overflow-x-auto scrollbar-hide gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

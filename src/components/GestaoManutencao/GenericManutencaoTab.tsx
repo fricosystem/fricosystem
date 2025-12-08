@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, RefreshCw, Pencil, LucideIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
@@ -383,27 +384,24 @@ const GenericManutencaoTab = ({
                         {item.descricao || "-"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={item.status === "Ativo" ? "default" : "secondary"}>
-                          {item.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={item.status === "Ativo"}
+                            onCheckedChange={(checked) => handleStatusChange(item, checked ? "Ativo" : "Inativo")}
+                          />
+                          <span className={`text-xs ${item.status === "Ativo" ? "text-green-600" : "text-muted-foreground"}`}>
+                            {item.status}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(item)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant={item.status === "Ativo" ? "secondary" : "default"}
-                            size="sm"
-                            onClick={() => handleStatusChange(item, item.status === "Ativo" ? "Inativo" : "Ativo")}
-                          >
-                            {item.status === "Ativo" ? "Desativar" : "Ativar"}
-                          </Button>
-                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

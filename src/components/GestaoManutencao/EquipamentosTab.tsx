@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, RefreshCw, Pencil, Cog, Eye, EyeOff } from "lucide-react";
+import { Plus, RefreshCw, Pencil, Cog } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
@@ -626,6 +627,7 @@ const EquipamentosTab = () => {
                     <TableHead>Setor</TableHead>
                     <TableHead>Tag</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Ativo</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -641,23 +643,25 @@ const EquipamentosTab = () => {
                           {equipamento.status === "Ativa" ? "Ativo" : "Inativo"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(equipamento)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant={equipamento.status === "Ativa" ? "secondary" : "default"}
-                            size="sm"
-                            onClick={() => handleStatusChange(equipamento, equipamento.status === "Ativa" ? "Inativa" : "Ativa")}
-                          >
-                            {equipamento.status === "Ativa" ? "Desativar" : "Ativar"}
-                          </Button>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={equipamento.status === "Ativa"}
+                            onCheckedChange={(checked) => handleStatusChange(equipamento, checked ? "Ativa" : "Inativa")}
+                          />
+                          <span className={`text-xs ${equipamento.status === "Ativa" ? "text-green-600" : "text-muted-foreground"}`}>
+                            {equipamento.status === "Ativa" ? "Ativo" : "Inativo"}
+                          </span>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(equipamento)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

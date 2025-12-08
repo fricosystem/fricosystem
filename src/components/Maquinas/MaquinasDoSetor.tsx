@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-
 interface Maquina {
   id: string;
   equipamento: string;
@@ -18,7 +17,6 @@ interface Maquina {
   status: "Ativa" | "Inativa";
   descricao?: string;
 }
-
 interface MaquinasDoSetorProps {
   setor: string;
   maquinas: Maquina[];
@@ -32,7 +30,6 @@ interface MaquinasDoSetorProps {
   onVerDetalhes: (id: string) => void;
   onRename?: (id: string, novoNome: string) => void;
 }
-
 const MaquinasDoSetor = ({
   setor,
   maquinas,
@@ -49,13 +46,11 @@ const MaquinasDoSetor = ({
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [selectedMaquina, setSelectedMaquina] = useState<Maquina | null>(null);
   const [novoNome, setNovoNome] = useState("");
-
   const handleOpenRenameModal = (maquina: Maquina) => {
     setSelectedMaquina(maquina);
     setNovoNome(maquina.equipamento);
     setIsRenameModalOpen(true);
   };
-
   const handleRename = () => {
     if (selectedMaquina && novoNome.trim() && onRename) {
       onRename(selectedMaquina.id, novoNome.trim());
@@ -66,41 +61,22 @@ const MaquinasDoSetor = ({
   };
   const maquinasFiltradas = useMemo(() => {
     let filtered = maquinas.filter(m => m.setor === setor);
-
     if (searchTerm) {
-      filtered = filtered.filter(maquina =>
-        maquina.equipamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        maquina.patrimonio.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      filtered = filtered.filter(maquina => maquina.equipamento.toLowerCase().includes(searchTerm.toLowerCase()) || maquina.patrimonio.toLowerCase().includes(searchTerm.toLowerCase()));
     }
-
     if (statusFilter !== "todas") {
       filtered = filtered.filter(maquina => maquina.status === statusFilter);
     }
-
     return filtered;
   }, [maquinas, setor, searchTerm, statusFilter]);
-
   const stats = useMemo(() => ({
     total: maquinasFiltradas.length,
     ativas: maquinasFiltradas.filter(m => m.status === "Ativa").length,
-    inativas: maquinasFiltradas.filter(m => m.status === "Inativa").length,
+    inativas: maquinasFiltradas.filter(m => m.status === "Inativa").length
   }), [maquinasFiltradas]);
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Header com voltar */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onVoltar}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h2 className="text-2xl font-bold">{setor}</h2>
-          <p className="text-muted-foreground">
-            {stats.total} {stats.total === 1 ? 'máquina' : 'máquinas'} neste setor
-          </p>
-        </div>
-      </div>
+      
 
       {/* Stats do setor */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -135,12 +111,7 @@ const MaquinasDoSetor = ({
         <div className="flex-1 min-w-[200px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar máquinas..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10"
-            />
+            <Input placeholder="Buscar máquinas..." value={searchTerm} onChange={e => onSearchChange(e.target.value)} className="pl-10" />
           </div>
         </div>
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
@@ -156,30 +127,18 @@ const MaquinasDoSetor = ({
       </div>
 
       {/* Grid de máquinas */}
-      {maquinasFiltradas.length === 0 ? (
-        <div className="text-center py-12">
+      {maquinasFiltradas.length === 0 ? <div className="text-center py-12">
           <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">
-            {searchTerm || statusFilter !== "todas"
-              ? "Nenhuma máquina encontrada com os filtros aplicados."
-              : "Nenhuma máquina neste setor."}
+            {searchTerm || statusFilter !== "todas" ? "Nenhuma máquina encontrada com os filtros aplicados." : "Nenhuma máquina neste setor."}
           </p>
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {maquinasFiltradas.map((maquina) => (
-            <Card key={maquina.id} className="overflow-hidden">
+        </div> : <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {maquinasFiltradas.map(maquina => <Card key={maquina.id} className="overflow-hidden">
               <div className="aspect-video relative bg-muted">
-                <img
-                  src={maquina.imagemUrl}
-                  alt={maquina.equipamento}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder.svg';
-                  }}
-                />
+                <img src={maquina.imagemUrl} alt={maquina.equipamento} className="w-full h-full object-cover" loading="lazy" onError={e => {
+            const target = e.target as HTMLImageElement;
+            target.src = '/placeholder.svg';
+          }} />
                 <div className="absolute top-2 right-2">
                   <Badge variant={maquina.status === "Ativa" ? "default" : "secondary"}>
                     {maquina.status}
@@ -189,62 +148,37 @@ const MaquinasDoSetor = ({
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{maquina.equipamento}</CardTitle>
-                  {onRename && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleOpenRenameModal(maquina)}
-                      className="h-8 w-8"
-                      title="Renomear máquina"
-                    >
+                  {onRename && <Button variant="ghost" size="icon" onClick={() => handleOpenRenameModal(maquina)} className="h-8 w-8" title="Renomear máquina">
                       <Pencil className="h-4 w-4" />
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Patrimônio: {maquina.patrimonio}</p>
                   <p>Tag: {maquina.tag}</p>
                 </div>
-                {maquina.descricao && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                {maquina.descricao && <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
                     {maquina.descricao}
-                  </p>
-                )}
+                  </p>}
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-2">
-                  <Button
-                    onClick={() => onVerDetalhes(maquina.id)}
-                    className="w-full"
-                  >
+                  <Button onClick={() => onVerDetalhes(maquina.id)} className="w-full">
                     Ver Detalhes
                   </Button>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEdit(maquina)}
-                      className="flex-1"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => onEdit(maquina)} className="flex-1">
                       <Edit className="h-4 w-4 mr-1" />
                       Editar
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onDelete(maquina.id)}
-                      className="flex-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => onDelete(maquina.id)} className="flex-1 text-destructive hover:bg-destructive hover:text-destructive-foreground">
                       <Trash2 className="h-4 w-4 mr-1" />
                       Excluir
                     </Button>
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+            </Card>)}
+        </div>}
       {/* Modal de Renomear */}
       <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
@@ -254,23 +188,15 @@ const MaquinasDoSetor = ({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="novoNome">Nome da Máquina</Label>
-              <Input
-                id="novoNome"
-                value={novoNome}
-                onChange={(e) => setNovoNome(e.target.value)}
-                placeholder="Digite o novo nome"
-              />
+              <Input id="novoNome" value={novoNome} onChange={e => setNovoNome(e.target.value)} placeholder="Digite o novo nome" />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsRenameModalOpen(false);
-                setSelectedMaquina(null);
-                setNovoNome("");
-              }}
-            >
+            <Button variant="outline" onClick={() => {
+            setIsRenameModalOpen(false);
+            setSelectedMaquina(null);
+            setNovoNome("");
+          }}>
               Cancelar
             </Button>
             <Button onClick={handleRename} disabled={!novoNome.trim()}>
@@ -279,8 +205,6 @@ const MaquinasDoSetor = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
-
 export default MaquinasDoSetor;
