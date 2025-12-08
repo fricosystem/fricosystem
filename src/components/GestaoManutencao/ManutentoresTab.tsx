@@ -1,21 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { collection, getDocs, updateDoc, doc, query, orderBy } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Users, Search, Loader2, Trash2, UserPlus } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Plus, Pencil, Users, Search, Loader2, UserPlus } from "lucide-react";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useManutentores } from "@/hooks/useManutentores";
 import { addManutentor } from "@/firebase/manutencaoPreventiva";
 import { TipoManutencao } from "@/types/typesManutencaoPreventiva";
+import StatsCard from "@/components/StatsCard";
 
 // Use the Manutentor type from the hook
 import type { Manutentor } from "@/hooks/useManutentores";
@@ -43,6 +43,7 @@ const TIPOS_MANUTENCAO: TipoManutencao[] = [
 const ManutentoresTab = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"todos" | "ativo" | "inativo">("todos");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingManutentor, setEditingManutentor] = useState<Manutentor | null>(null);
   const { data: funcionarios, isLoading: loadingFuncionarios } = useFuncionarios();
@@ -58,26 +59,14 @@ const ManutentoresTab = () => {
     ativo: true,
   });
 
-  // Agrupar manutentores por centro de custo
-  const manutentoresPorCentroDeCusto = () => {
-    const grupos: Record<string, any[]> = {};
-    
-    manutentores.forEach(manutentor => {
-      const funcionario = funcionarios?.find(f => f.id === manutentor.usuarioId);
-      const centroDeCusto = funcionario?.centro_de_custo || "Não definido";
-      
-      if (!grupos[centroDeCusto]) {
-        grupos[centroDeCusto] = [];
-      }
-      
-      grupos[centroDeCusto].push({
-        ...manutentor,
-        centroDeCusto
-      });
-    });
-    
-    return grupos;
-  };
+  const stats = useMemo(() => {
+    const total = manutentores.length;
+    const ativos = manutentores.filter(m => m.ativo !== false).length;
+    const inativos = manutentores.filter(m => m.ativo === false).length;
+    const funcoesCount = new Set(manutentores.map(m => m.funcao)).size;
+
+    return { total, ativos, inativos, funcoesCount };
+  }, [manutentores]);
 
   const resetForm = () => {
     setUsuarioSelecionadoId("");
@@ -220,83 +209,119 @@ const ManutentoresTab = () => {
     }
   };
 
-  const filteredManutentores = manutentores.filter((m) =>
-    m.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.funcao?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const grupos = manutentoresPorCentroDeCusto();
+  const filteredManutentores = manutentores.filter((m) => {
+    const matchesSearch = m.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.funcao?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "todos" || 
+      (statusFilter === "ativo" && m.ativo !== false) || 
+      (statusFilter === "inativo" && m.ativo === false);
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Manutentores
-          </CardTitle>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar manutentores..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Button className="gap-2" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
-              <Plus className="h-4 w-4" />
-              Novo Manutentor
-            </Button>
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatsCard
+          title="Total de Manutentores"
+          value={stats.total.toString()}
+          icon={<Users className="h-4 w-4" />}
+          description="Manutentores cadastrados"
+        />
+        <StatsCard
+          title="Manutentores Ativos"
+          value={stats.ativos.toString()}
+          icon={<Users className="h-4 w-4" />}
+          description="Em operação"
+        />
+        <StatsCard
+          title="Manutentores Inativos"
+          value={stats.inativos.toString()}
+          icon={<Users className="h-4 w-4" />}
+          description="Desativados"
+        />
+        <StatsCard
+          title="Funções"
+          value={stats.funcoesCount.toString()}
+          icon={<Users className="h-4 w-4" />}
+          description="Tipos de manutenção"
+        />
+      </div>
+
+      {/* Filters and Actions */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="flex-1 max-w-sm">
+            <Input
+              placeholder="Buscar manutentores..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
+          
+          <Select value={statusFilter} onValueChange={(value: "todos" | "ativo" | "inativo") => setStatusFilter(value)}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </CardHeader>
-      <CardContent>
-        {loadingManutentores ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : filteredManutentores.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            {searchTerm ? "Nenhum manutentor encontrado" : "Nenhum manutentor cadastrado"}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Função</TableHead>
-                  <TableHead>Prioridade</TableHead>
-                  <TableHead>Cap. Diária</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredManutentores.map((manutentor) => (
-                  <TableRow key={manutentor.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <p>{manutentor.nome}</p>
-                        <p className="text-xs text-muted-foreground">{manutentor.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{manutentor.funcao || "-"}</TableCell>
-                    <TableCell>{manutentor.ordemPrioridade || "-"}</TableCell>
-                    <TableCell>{manutentor.capacidadeDiaria || "-"}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        manutentor.ativo 
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" 
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                      }`}>
-                        {manutentor.ativo ? "Ativo" : "Inativo"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+        
+        <Button className="gap-2" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+          <Plus className="h-4 w-4" />
+          Novo Manutentor
+        </Button>
+      </div>
+
+      {/* Table Card */}
+      <Card>
+        <CardContent className="pt-6">
+          {loadingManutentores ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredManutentores.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm ? "Nenhum manutentor encontrado" : "Nenhum manutentor cadastrado"}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Função</TableHead>
+                    <TableHead>Prioridade</TableHead>
+                    <TableHead>Cap. Diária</TableHead>
+                    <TableHead className="text-center">Ativo</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredManutentores.map((manutentor) => (
+                    <TableRow key={manutentor.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <p>{manutentor.nome}</p>
+                          <p className="text-xs text-muted-foreground">{manutentor.email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{manutentor.funcao || "-"}</TableCell>
+                      <TableCell>{manutentor.ordemPrioridade || "-"}</TableCell>
+                      <TableCell>{manutentor.capacidadeDiaria || "-"}</TableCell>
+                      <TableCell className="text-center">
+                        <Switch
+                          checked={manutentor.ativo !== false}
+                          onCheckedChange={(checked) => handleStatusChange(manutentor, checked)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
                         <Button
                           variant="outline"
                           size="sm"
@@ -304,22 +329,15 @@ const ManutentoresTab = () => {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant={manutentor.ativo ? "secondary" : "default"}
-                          size="sm"
-                          onClick={() => handleStatusChange(manutentor, !manutentor.ativo)}
-                        >
-                          {manutentor.ativo ? "Desativar" : "Ativar"}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Modal Novo/Editar Manutentor */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -471,7 +489,6 @@ const ManutentoresTab = () => {
                                     min="1"
                                     value={manutentor.ordemPrioridade}
                                     onChange={(e) => handleAtualizarManutentor(manutentor.usuarioId, "ordemPrioridade", Number(e.target.value))}
-                                    placeholder="1"
                                   />
                                 </div>
 
@@ -482,7 +499,6 @@ const ManutentoresTab = () => {
                                     min="1"
                                     value={manutentor.capacidadeDiaria}
                                     onChange={(e) => handleAtualizarManutentor(manutentor.usuarioId, "capacidadeDiaria", Number(e.target.value))}
-                                    placeholder="5"
                                   />
                                 </div>
 
@@ -496,13 +512,13 @@ const ManutentoresTab = () => {
                               </div>
                             </div>
 
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm"
                               onClick={() => handleRemoverUsuario(manutentor.usuarioId)}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              Remover
                             </Button>
                           </div>
                         </Card>
@@ -510,72 +526,28 @@ const ManutentoresTab = () => {
                     </div>
                   </div>
                 )}
-
-                <Separator />
-
-                {/* Manutentores Cadastrados por Centro de Custo */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    <Label className="text-lg">Manutentores Cadastrados</Label>
-                  </div>
-                  
-                  {loadingManutentores ? (
-                    <p className="text-sm text-muted-foreground">Carregando...</p>
-                  ) : Object.keys(grupos).length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Nenhum manutentor cadastrado ainda.</p>
-                  ) : (
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                      {Object.entries(grupos).map(([centroDeCusto, manutentoresDoCentro]) => (
-                        <Card key={centroDeCusto} className="p-4">
-                          <h3 className="font-semibold mb-3 text-primary">
-                            {centroDeCusto} ({manutentoresDoCentro.length})
-                          </h3>
-                          <div className="space-y-2">
-                            {manutentoresDoCentro.map((manutentor) => (
-                              <div 
-                                key={manutentor.id} 
-                                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                              >
-                                <div className="flex-1">
-                                  <p className="font-medium text-sm">{manutentor.nome}</p>
-                                  <p className="text-xs text-muted-foreground">{manutentor.email}</p>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                                    {manutentor.funcao}
-                                  </span>
-                                  <span className={`text-xs px-2 py-1 rounded ${
-                                    manutentor.ativo 
-                                      ? 'bg-green-500/10 text-green-600' 
-                                      : 'bg-red-500/10 text-red-600'
-                                  }`}>
-                                    {manutentor.ativo ? 'Ativo' : 'Inativo'}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </>
             )}
 
-            <DialogFooter className="pt-4 border-t">
+            <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading || (!editingManutentor && listaManutentores.length === 0)}>
-                {loading ? "Salvando..." : editingManutentor ? "Salvar" : `Salvar ${listaManutentores.length} Manutentor(es)`}
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  editingManutentor ? "Salvar Alterações" : "Cadastrar Manutentores"
+                )}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 };
 

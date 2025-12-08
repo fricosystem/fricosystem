@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, RefreshCw, Pencil, Cog, Eye, EyeOff } from "lucide-react";
+import { Plus, RefreshCw, Pencil, Cog } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
@@ -7,15 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import StatsCard from "@/components/StatsCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Switch } from "@/components/ui/switch";
 
 interface Equipamento {
   id: string;
@@ -625,8 +624,8 @@ const EquipamentosTab = () => {
                     <TableHead>Patrimônio</TableHead>
                     <TableHead>Setor</TableHead>
                     <TableHead>Tag</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead>Editar</TableHead>
+                    <TableHead>Ativo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -637,27 +636,21 @@ const EquipamentosTab = () => {
                       <TableCell>{equipamento.setor}</TableCell>
                       <TableCell>{equipamento.tag || "-"}</TableCell>
                       <TableCell>
-                        <Badge variant={equipamento.status === "Ativa" ? "default" : "secondary"}>
-                          {equipamento.status === "Ativa" ? "Ativo" : "Inativo"}
-                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(equipamento)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(equipamento)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant={equipamento.status === "Ativa" ? "secondary" : "default"}
-                            size="sm"
-                            onClick={() => handleStatusChange(equipamento, equipamento.status === "Ativa" ? "Inativa" : "Ativa")}
-                          >
-                            {equipamento.status === "Ativa" ? "Desativar" : "Ativar"}
-                          </Button>
-                        </div>
+                      <TableCell>
+                        <Switch
+                          checked={equipamento.status === "Ativa"}
+                          onCheckedChange={(checked) => 
+                            handleStatusChange(equipamento, checked ? "Ativa" : "Inativa")
+                          }
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

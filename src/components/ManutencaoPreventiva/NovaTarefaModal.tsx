@@ -22,15 +22,11 @@ interface NovaTarefaModalProps {
   onSuccess: () => void;
 }
 
-const TIPOS_MANUTENCAO: TipoManutencao[] = [
-  "Elétrica",
-  "Mecânica",
-  "Hidráulica",
-  "Pneumática",
-  "Lubrificação",
-  "Calibração",
-  "Inspeção"
-];
+interface TipoManutencaoDoc {
+  id: string;
+  nome: string;
+  ativo?: boolean;
+}
 
 const PERIODOS: PeriodoManutencao[] = [
   "Diário",
@@ -46,6 +42,8 @@ const PERIODOS: PeriodoManutencao[] = [
 export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [tiposManutencao, setTiposManutencao] = useState<TipoManutencaoDoc[]>([]);
+  const [setores, setSetores] = useState<{ id: string; nome: string; ativo?: boolean }[]>([]);
   const [maquinas, setMaquinas] = useState<any[]>([]);
   const [manutentores, setManutentores] = useState<Manutentor[]>([]);
   const [manutentoresFiltrados, setManutentoresFiltrados] = useState<Manutentor[]>([]);
@@ -72,9 +70,44 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
+    loadTiposManutencao();
+    loadSetores();
     loadMaquinas();
     loadManutentores();
   }, []);
+
+  const loadSetores = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "setores"));
+      const docs = querySnapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      })) as { id: string; nome: string; ativo?: boolean }[];
+      const ativos = docs.filter(s => s.ativo !== false);
+      setSetores(ativos);
+    } catch (error) {
+      console.error("Erro ao carregar setores:", error);
+    }
+  };
+
+  const loadTiposManutencao = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "tipos_manutencao"));
+      const docs = querySnapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      })) as TipoManutencaoDoc[];
+      const ativos = docs.filter(t => t.ativo !== false);
+      setTiposManutencao(ativos);
+      
+      // Definir tipo inicial se houver tipos disponíveis
+      if (ativos.length > 0 && !tipo) {
+        setTipo(ativos[0].nome as TipoManutencao);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar tipos de manutenção:", error);
+    }
+  };
 
   // Filtrar manutentores por tipo de manutenção selecionado
   useEffect(() => {
@@ -274,8 +307,8 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TIPOS_MANUTENCAO.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  {tiposManutencao.map((t) => (
+                    <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -323,12 +356,16 @@ export function NovaTarefaModal({ open, onOpenChange, onSuccess }: NovaTarefaMod
 
             <div className="space-y-2">
               <Label htmlFor="setor">Setor</Label>
-              <Input
-                id="setor"
-                value={setor}
-                onChange={(e) => setSetor(e.target.value)}
-                placeholder="Ex: Produção"
-              />
+              <Select value={setor} onValueChange={setSetor}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o setor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {setores.map((s) => (
+                    <SelectItem key={s.id} value={s.nome}>{s.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

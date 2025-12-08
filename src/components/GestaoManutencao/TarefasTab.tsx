@@ -1,26 +1,19 @@
-import { useState, useEffect } from "react";
-import { collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { useState, useEffect, useMemo } from "react";
+import { collection, getDocs, query, orderBy, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Pencil, ClipboardList, Search, Loader2, Trash2 } from "lucide-react";
+import { Plus, ClipboardList, Search, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NovaTarefaModal } from "@/components/ManutencaoPreventiva/NovaTarefaModal";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import StatsCard from "@/components/StatsCard";
 
 interface Tarefa {
   id: string;
@@ -39,6 +32,7 @@ interface Tarefa {
   dataHoraAgendada?: string;
   prioridade: "baixa" | "media" | "alta" | "critica";
   status: "pendente" | "em_andamento" | "concluida" | "cancelada";
+  ativo: boolean;
   createdAt: any;
 }
 
@@ -68,16 +62,17 @@ const TarefasTab = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tarefaToDelete, setTarefaToDelete] = useState<Tarefa | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"todos" | "ativo" | "inativo">("todos");
 
   const fetchTarefas = async () => {
     try {
       setLoading(true);
       const q = query(collection(db, "tarefas_manutencao"), orderBy("proximaExecucao", "asc"));
       const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const data = querySnapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ativo: docSnap.data().ativo !== false,
+        ...docSnap.data(),
       })) as Tarefa[];
       setTarefas(data);
     } catch (error) {
@@ -92,41 +87,41 @@ const TarefasTab = () => {
     fetchTarefas();
   }, []);
 
-  const handleDelete = async () => {
-    if (!tarefaToDelete) return;
-    
-    try {
-      await deleteDoc(doc(db, "tarefas_manutencao", tarefaToDelete.id));
-      toast.success("Tarefa excluída com sucesso");
-      fetchTarefas();
-    } catch (error) {
-      console.error("Erro ao excluir tarefa:", error);
-      toast.error("Erro ao excluir tarefa");
-    } finally {
-      setTarefaToDelete(null);
-    }
-  };
+  const stats = useMemo(() => {
+    const total = tarefas.length;
+    const ativos = tarefas.filter(t => t.ativo).length;
+    const inativos = tarefas.filter(t => !t.ativo).length;
+    const pendentes = tarefas.filter(t => t.status === "pendente").length;
 
-  const handleStatusChange = async (tarefa: Tarefa, newStatus: Tarefa["status"]) => {
+    return { total, ativos, inativos, pendentes };
+  }, [tarefas]);
+
+  const handleToggleAtivo = async (tarefa: Tarefa) => {
     try {
       await updateDoc(doc(db, "tarefas_manutencao", tarefa.id), {
-        status: newStatus,
+        ativo: !tarefa.ativo,
         updatedAt: new Date(),
       });
-      toast.success("Status atualizado com sucesso");
+      toast.success(tarefa.ativo ? "Tarefa desativada" : "Tarefa ativada");
       fetchTarefas();
     } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-      toast.error("Erro ao atualizar status");
+      console.error("Erro ao atualizar tarefa:", error);
+      toast.error("Erro ao atualizar tarefa");
     }
   };
 
-  const filteredTarefas = tarefas.filter((t) =>
-    t.descricaoTarefa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.maquinaNome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.manutentorNome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.tipo?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTarefas = tarefas.filter((t) => {
+    const matchesSearch = t.descricaoTarefa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.maquinaNome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.manutentorNome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.tipo?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "todos" || 
+      (statusFilter === "ativo" && t.ativo) || 
+      (statusFilter === "inativo" && !t.ativo);
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const formatDate = (dateStr: string) => {
     try {
@@ -137,32 +132,68 @@ const TarefasTab = () => {
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              Tarefas de Manutenção
-            </CardTitle>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar tarefas..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Nova Tarefa
-              </Button>
-            </div>
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatsCard
+          title="Total de Tarefas"
+          value={stats.total.toString()}
+          icon={<ClipboardList className="h-4 w-4" />}
+          description="Tarefas cadastradas"
+        />
+        <StatsCard
+          title="Tarefas Ativas"
+          value={stats.ativos.toString()}
+          icon={<ClipboardList className="h-4 w-4" />}
+          description="Em operação"
+        />
+        <StatsCard
+          title="Tarefas Inativas"
+          value={stats.inativos.toString()}
+          icon={<ClipboardList className="h-4 w-4" />}
+          description="Desativadas"
+        />
+        <StatsCard
+          title="Pendentes"
+          value={stats.pendentes.toString()}
+          icon={<ClipboardList className="h-4 w-4" />}
+          description="Aguardando execução"
+        />
+      </div>
+
+      {/* Filters and Actions */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="flex-1 max-w-sm">
+            <Input
+              placeholder="Buscar tarefas..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
           </div>
-        </CardHeader>
-        <CardContent>
+          
+          <Select value={statusFilter} onValueChange={(value: "todos" | "ativo" | "inativo") => setStatusFilter(value)}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Nova Tarefa
+        </Button>
+      </div>
+
+      {/* Table Card */}
+      <Card>
+        <CardContent className="pt-6">
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -184,7 +215,7 @@ const TarefasTab = () => {
                     <TableHead>Data</TableHead>
                     <TableHead>Prioridade</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-center">Ativo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -215,16 +246,11 @@ const TarefasTab = () => {
                           {statusLabels[tarefa.status] || "Pendente"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setTarefaToDelete(tarefa)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <TableCell className="text-center">
+                        <Switch
+                          checked={tarefa.ativo}
+                          onCheckedChange={() => handleToggleAtivo(tarefa)}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -240,25 +266,7 @@ const TarefasTab = () => {
         onOpenChange={setIsModalOpen}
         onSuccess={fetchTarefas}
       />
-
-      <AlertDialog open={!!tarefaToDelete} onOpenChange={() => setTarefaToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir a tarefa "{tarefaToDelete?.descricaoTarefa}"?
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    </div>
   );
 };
 

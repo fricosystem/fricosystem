@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import StatsCard from "@/components/StatsCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 
 
 interface Setor {
@@ -460,8 +460,8 @@ const SetoresTab = () => {
                     <TableHead>Nome do Setor</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Unidade</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead>Editar</TableHead>
+                    <TableHead>Ativo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -471,27 +471,21 @@ const SetoresTab = () => {
                       <TableCell className="text-muted-foreground">{setor.descricao || "-"}</TableCell>
                       <TableCell>{setor.unidade}</TableCell>
                       <TableCell>
-                        <Badge variant={setor.status === "Ativo" ? "default" : "secondary"}>
-                          {setor.status}
-                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(setor)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(setor)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant={setor.status === "Ativo" ? "secondary" : "default"}
-                            size="sm"
-                            onClick={() => handleStatusChange(setor, setor.status === "Ativo" ? "Inativo" : "Ativo")}
-                          >
-                            {setor.status === "Ativo" ? "Desativar" : "Ativar"}
-                          </Button>
-                        </div>
+                      <TableCell>
+                        <Switch
+                          checked={setor.status === "Ativo"}
+                          onCheckedChange={(checked) => 
+                            handleStatusChange(setor, checked ? "Ativo" : "Inativo")
+                          }
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
