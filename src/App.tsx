@@ -62,6 +62,9 @@ import Reunioes from "./pages/Agendamento";
 // Páginas de Inventário
 import Inventario from "./pages/Inventario";
 
+// Página de Manuais
+import Manuais from "./pages/Manuais";
+
 // Create a client
 const queryClient = new QueryClient();
 
@@ -160,6 +163,9 @@ const AppContent = () => {
           <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />
           <Route path="/email" element={<AuthGuard><Email /></AuthGuard>} />
           <Route path="/reunioes" element={<AuthGuard><Reunioes /></AuthGuard>} />
+          
+          {/* Manuais */}
+          <Route path="/manuais" element={<AuthGuard><Manuais /></AuthGuard>} />
           
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />

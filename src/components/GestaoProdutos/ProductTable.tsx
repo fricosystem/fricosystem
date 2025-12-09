@@ -92,9 +92,9 @@ export const ProductTable = ({
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground">Cód. Fornecedor: {produto.codigo_estoque}</p>
-                        {produto.codigo_material && (
-                          <p className="text-xs text-muted-foreground">Cód.: {produto.codigo_material}</p>
+                        <p className="text-xs text-muted-foreground">Cód. Fornecedor: {produto.codigo_material}</p>
+                        {produto.codigo_estoque && (
+                          <p className="text-xs text-muted-foreground">Cód. Estoque: {produto.codigo_estoque}</p>
                         )}
                       </div>
                     </div>
@@ -192,8 +192,8 @@ export const ProductTable = ({
 
   return (
     <>
-      <div className="overflow-x-auto shadow-md rounded-lg">
-        <table className="min-w-full divide-y divide-border">
+      <div className="overflow-x-auto shadow-md rounded-lg w-full max-w-full">
+        <table className="w-full min-w-[800px] divide-y divide-border">
           <thead className="bg-muted">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">IMAGEM</th>
@@ -223,10 +223,10 @@ export const ProductTable = ({
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-foreground">
-                  {produto.codigo_estoque}
+                  {produto.codigo_material || "-"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-foreground">
-                  {produto.codigo_material || "-"}
+                  {produto.codigo_estoque}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center gap-2">

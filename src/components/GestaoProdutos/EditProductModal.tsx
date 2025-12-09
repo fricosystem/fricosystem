@@ -239,24 +239,23 @@ export const EditProductModal = ({
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          {/* Código do Produto */}
+          {/* Código Fornecedor */}
           <div className="space-y-2">
-            <Label>Código do produto*</Label>
+            <Label>Código Fornecedor</Label>
             <Input
-              placeholder="Presente no item da Nota Fiscal"
-              value={editedProduto.codigo_estoque || ""}
-              onChange={(e) => setEditedProduto({...editedProduto, codigo_estoque: e.target.value})}
-              required
+              placeholder="Código do fornecedor (Nota Fiscal)"
+              value={editedProduto.codigo_material || ""}
+              onChange={(e) => setEditedProduto({...editedProduto, codigo_material: e.target.value})}
             />
           </div>
 
-          {/* Código Material */}
+          {/* Código Estoque */}
           <div className="space-y-2">
-            <Label>Código Material (Casa)</Label>
+            <Label>Código Estoque*</Label>
             <Input
-              placeholder="Material específico da casa"
-              value={editedProduto.codigo_material || ""}
-              onChange={(e) => setEditedProduto({...editedProduto, codigo_material: e.target.value})}
+              placeholder="Código interno do estoque"
+              value={editedProduto.codigo_estoque || ""}
+              onChange={(e) => setEditedProduto({...editedProduto, codigo_estoque: e.target.value})}
               required
             />
           </div>

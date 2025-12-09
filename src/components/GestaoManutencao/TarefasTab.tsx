@@ -1,15 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, getDocs, query, orderBy, updateDoc, doc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, ClipboardList, RefreshCw, Loader2, Clock, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { Plus, Pencil, ClipboardList, RefreshCw, Loader2, Clock, CheckCircle, XCircle } from "lucide-react";
 import { NovaTarefaModal } from "@/components/ManutencaoPreventiva/NovaTarefaModal";
-import { Badge } from "@/components/ui/badge";
+import { EditarTarefaModal } from "@/components/GestaoManutencao/EditarTarefaModal";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import StatsCard from "@/components/StatsCard";
@@ -30,7 +31,7 @@ interface Tarefa {
   proximaExecucao: string;
   dataHoraAgendada?: string;
   prioridade: "baixa" | "media" | "alta" | "critica";
-  status: "pendente" | "em_andamento" | "concluida" | "cancelada";
+  ativo: boolean;
   createdAt: any;
 }
 
@@ -41,19 +42,6 @@ const prioridadeColors = {
   critica: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
 };
 
-const statusColors = {
-  pendente: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
-  em_andamento: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
-  concluida: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
-  cancelada: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100",
-};
-
-const statusLabels = {
-  pendente: "Pendente",
-  em_andamento: "Em Andamento",
-  concluida: "Concluída",
-  cancelada: "Cancelada",
-};
 
 const TarefasTab = () => {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
@@ -62,6 +50,27 @@ const TarefasTab = () => {
   const [statusFilter, setStatusFilter] = useState("todos");
   const [prioridadeFilter, setPrioridadeFilter] = useState("todos");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [tarefaParaEditar, setTarefaParaEditar] = useState<Tarefa | null>(null);
+
+  const handleEditarTarefa = (tarefa: Tarefa) => {
+    setTarefaParaEditar(tarefa);
+    setIsEditModalOpen(true);
+  };
+
+  const handleAtivoChange = async (tarefa: Tarefa, newAtivo: boolean) => {
+    try {
+      await updateDoc(doc(db, "tarefas_manutencao", tarefa.id), {
+        ativo: newAtivo,
+        atualizadoEm: new Date(),
+      });
+      toast.success(`Tarefa ${newAtivo ? "ativada" : "desativada"} com sucesso`);
+      fetchTarefas();
+    } catch (error) {
+      console.error("Erro ao alterar status:", error);
+      toast.error("Erro ao alterar status");
+    }
+  };
 
   const fetchTarefas = async () => {
     try {
@@ -87,11 +96,10 @@ const TarefasTab = () => {
 
   const stats = useMemo(() => {
     const total = tarefas.length;
-    const pendentes = tarefas.filter(t => t.status === "pendente").length;
-    const emAndamento = tarefas.filter(t => t.status === "em_andamento").length;
-    const concluidas = tarefas.filter(t => t.status === "concluida").length;
+    const ativos = tarefas.filter(t => t.ativo !== false).length;
+    const inativos = tarefas.filter(t => t.ativo === false).length;
 
-    return { total, pendentes, emAndamento, concluidas };
+    return { total, ativos, inativos };
   }, [tarefas]);
 
   const filteredTarefas = useMemo(() => {
@@ -107,7 +115,9 @@ const TarefasTab = () => {
     }
 
     if (statusFilter !== "todos") {
-      filtered = filtered.filter(t => t.status === statusFilter);
+      filtered = filtered.filter(t => 
+        statusFilter === "ativo" ? t.ativo !== false : t.ativo === false
+      );
     }
 
     if (prioridadeFilter !== "todos") {
@@ -136,22 +146,16 @@ const TarefasTab = () => {
           description="Tarefas cadastradas"
         />
         <StatsCard
-          title="Pendentes"
-          value={stats.pendentes.toString()}
-          icon={<Clock className="h-4 w-4" />}
-          description="Aguardando execução"
-        />
-        <StatsCard
-          title="Em Andamento"
-          value={stats.emAndamento.toString()}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          description="Sendo executadas"
-        />
-        <StatsCard
-          title="Concluídas"
-          value={stats.concluidas.toString()}
+          title="Ativas"
+          value={stats.ativos.toString()}
           icon={<CheckCircle className="h-4 w-4" />}
-          description="Finalizadas"
+          description="Tarefas ativas"
+        />
+        <StatsCard
+          title="Inativas"
+          value={stats.inativos.toString()}
+          icon={<XCircle className="h-4 w-4" />}
+          description="Tarefas inativas"
         />
       </div>
 
@@ -172,10 +176,8 @@ const TarefasTab = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os Status</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
-              <SelectItem value="em_andamento">Em Andamento</SelectItem>
-              <SelectItem value="concluida">Concluída</SelectItem>
-              <SelectItem value="cancelada">Cancelada</SelectItem>
+              <SelectItem value="ativo">Ativos</SelectItem>
+              <SelectItem value="inativo">Inativos</SelectItem>
             </SelectContent>
           </Select>
 
@@ -257,24 +259,27 @@ const TarefasTab = () => {
                       <TableCell>{tarefa.manutentorNome || "-"}</TableCell>
                       <TableCell>{formatDate(tarefa.proximaExecucao)}</TableCell>
                       <TableCell>
-                        <Badge className={prioridadeColors[tarefa.prioridade] || prioridadeColors.media}>
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${prioridadeColors[tarefa.prioridade] || prioridadeColors.media}`}>
                           {tarefa.prioridade?.charAt(0).toUpperCase() + tarefa.prioridade?.slice(1)}
-                        </Badge>
+                        </span>
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusColors[tarefa.status] || statusColors.pendente}>
-                          {statusLabels[tarefa.status] || "Pendente"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={tarefa.ativo !== false}
+                            onCheckedChange={(checked) => handleAtivoChange(tarefa, checked)}
+                          />
+                          <span className={`text-xs ${tarefa.ativo !== false ? "text-green-600" : "text-muted-foreground"}`}>
+                            {tarefa.ativo !== false ? "Ativo" : "Inativo"}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              // TODO: Implement edit functionality
-                              toast.info("Edição em desenvolvimento");
-                            }}
+                            onClick={() => handleEditarTarefa(tarefa)}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -292,6 +297,13 @@ const TarefasTab = () => {
       <NovaTarefaModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
+        onSuccess={fetchTarefas}
+      />
+
+      <EditarTarefaModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        tarefa={tarefaParaEditar}
         onSuccess={fetchTarefas}
       />
     </div>

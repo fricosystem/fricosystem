@@ -89,7 +89,7 @@ const ProductEditDialog: React.FC<ProductEditDialogProps> = ({
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="codigoEstoque">Código Estoque</Label>
+                <Label htmlFor="codigoEstoque">Cód. Fornecedor</Label>
                 <Input
                   id="codigoEstoque"
                   name="codigoEstoque"
@@ -99,14 +99,19 @@ const ProductEditDialog: React.FC<ProductEditDialogProps> = ({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="deposito">Depósito</Label>
-                <Input
-                  id="deposito"
-                  name="deposito"
-                  value={formData.deposito}
-                  onChange={handleChange}
-                />
+                <Label htmlFor="codigo">Cód. Estoque</Label>
+                <Input id="codigo" value={product.codigo} disabled />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="deposito">Depósito</Label>
+              <Input
+                id="deposito"
+                name="deposito"
+                value={formData.deposito}
+                onChange={handleChange}
+              />
             </div>
             
             <div className="grid grid-cols-2 gap-4">

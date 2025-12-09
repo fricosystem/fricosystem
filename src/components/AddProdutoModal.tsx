@@ -554,9 +554,9 @@ const AddProdutoModal = ({ open, onOpenChange, onSuccess }: AddProdutoModalProps
                 name="codigo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Código do poduto*</FormLabel>
+                    <FormLabel>Código Fornecedor</FormLabel>
                     <FormControl>
-                      <Input placeholder="Presente no item da Nota Fiscal" {...field} required />
+                      <Input placeholder="Código do fornecedor (Nota Fiscal)" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

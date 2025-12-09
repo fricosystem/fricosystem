@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { ArrowLeft, Search, Camera, Edit, Trash2, Pencil } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { ArrowLeft, Search, Camera, Edit, Trash2, Pencil, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { db } from "@/firebase/firebase";
+import { collection, getDocs } from "firebase/firestore";
+import ManualPdfModal from "./ManualPdfModal";
+import ManualUploadButton from "./ManualUploadButton";
+
+interface ManualMaquina {
+  maquinaId: string;
+  pdfUrl: string;
+  maquinaNome: string;
+}
+
 interface Maquina {
   id: string;
   equipamento: string;
@@ -46,11 +57,38 @@ const MaquinasDoSetor = ({
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [selectedMaquina, setSelectedMaquina] = useState<Maquina | null>(null);
   const [novoNome, setNovoNome] = useState("");
+  const [manuais, setManuais] = useState<Record<string, ManualMaquina>>({});
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [selectedManual, setSelectedManual] = useState<{ url: string; nome: string } | null>(null);
+
+  // Fetch manuais from Firestore
+  useEffect(() => {
+    const fetchManuais = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "manuais_maquinas"));
+        const manuaisData: Record<string, ManualMaquina> = {};
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          manuaisData[doc.id] = {
+            maquinaId: doc.id,
+            pdfUrl: data.pdfUrl,
+            maquinaNome: data.maquinaNome,
+          };
+        });
+        setManuais(manuaisData);
+      } catch (error) {
+        console.error("Erro ao buscar manuais:", error);
+      }
+    };
+    fetchManuais();
+  }, []);
+
   const handleOpenRenameModal = (maquina: Maquina) => {
     setSelectedMaquina(maquina);
     setNovoNome(maquina.equipamento);
     setIsRenameModalOpen(true);
   };
+
   const handleRename = () => {
     if (selectedMaquina && novoNome.trim() && onRename) {
       onRename(selectedMaquina.id, novoNome.trim());
@@ -58,6 +96,21 @@ const MaquinasDoSetor = ({
       setSelectedMaquina(null);
       setNovoNome("");
     }
+  };
+
+  const handleOpenManual = (maquina: Maquina) => {
+    const manual = manuais[maquina.id];
+    if (manual) {
+      setSelectedManual({ url: manual.pdfUrl, nome: maquina.equipamento });
+      setIsPdfModalOpen(true);
+    }
+  };
+
+  const handleManualUploadSuccess = (maquinaId: string, maquinaNome: string, url: string) => {
+    setManuais(prev => ({
+      ...prev,
+      [maquinaId]: { maquinaId, pdfUrl: url, maquinaNome }
+    }));
   };
   const maquinasFiltradas = useMemo(() => {
     let filtered = maquinas.filter(m => m.setor === setor);
@@ -148,9 +201,25 @@ const MaquinasDoSetor = ({
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{maquina.equipamento}</CardTitle>
-                  {onRename && <Button variant="ghost" size="icon" onClick={() => handleOpenRenameModal(maquina)} className="h-8 w-8" title="Renomear máquina">
-                      <Pencil className="h-4 w-4" />
-                    </Button>}
+                  <div className="flex items-center gap-1">
+                    {manuais[maquina.id] ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleOpenManual(maquina)}
+                        title="Ver manual"
+                        className="h-8 w-8"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <ManualUploadButton
+                        maquinaId={maquina.id}
+                        maquinaNome={maquina.equipamento}
+                        onUploadSuccess={(url) => handleManualUploadSuccess(maquina.id, maquina.equipamento, url)}
+                      />
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Patrimônio: {maquina.patrimonio}</p>
@@ -205,6 +274,19 @@ const MaquinasDoSetor = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de PDF */}
+      {selectedManual && (
+        <ManualPdfModal
+          isOpen={isPdfModalOpen}
+          onClose={() => {
+            setIsPdfModalOpen(false);
+            setSelectedManual(null);
+          }}
+          pdfUrl={selectedManual.url}
+          maquinaNome={selectedManual.nome}
+        />
+      )}
     </div>;
 };
 export default MaquinasDoSetor;

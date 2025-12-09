@@ -24,11 +24,6 @@ interface Setor {
   nome: string;
 }
 
-interface TipoManutencao {
-  id: string;
-  nome: string;
-}
-
 interface InitialData {
   setor: string;
   equipamento: string;
@@ -44,10 +39,8 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
-  const [tiposManutencao, setTiposManutencao] = useState<TipoManutencao[]>([]);
   const [loadingSetores, setLoadingSetores] = useState(false);
   const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
-  const [loadingTiposManutencao, setLoadingTiposManutencao] = useState(false);
   const [collectionChecked, setCollectionChecked] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -55,9 +48,11 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
     equipamento: "",
     hrInicial: "",
     hrFinal: "",
+    linhaParada: "",
     descricaoMotivo: "",
     observacao: "",
     tipoManutencao: "",
+    solucaoAplicada: "",
   });
 
   // Apply initial data from QR scan - aguarda equipamentos carregarem
@@ -170,34 +165,6 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
     fetchSetores();
   }, []);
 
-  useEffect(() => {
-    const fetchTiposManutencao = async () => {
-      try {
-        setLoadingTiposManutencao(true);
-        const tiposRef = collection(db, "tipos_manutencao");
-        const querySnapshot = await getDocs(tiposRef);
-        
-        const tiposData: TipoManutencao[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          tiposData.push({
-            id: doc.id,
-            nome: data.nome || "",
-          });
-        });
-        
-        setTiposManutencao(tiposData);
-      } catch (error) {
-        console.error("Erro ao buscar tipos de manutenção:", error);
-        toast.error("Não foi possível carregar os tipos de manutenção.");
-      } finally {
-        setLoadingTiposManutencao(false);
-      }
-    };
-
-    fetchTiposManutencao();
-  }, []);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -239,10 +206,12 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
         equipamento: formData.equipamento,
         hrInicial: formData.hrInicial,
         hrFinal: formData.hrFinal,
+        linhaParada: formData.linhaParada,
         descricaoMotivo: formData.descricaoMotivo,
         observacao: formData.observacao,
         origemParada: origemParada,
         tipoManutencao: formData.tipoManutencao,
+        solucaoAplicada: formData.solucaoAplicada,
         criadoPor: user?.uid || "",
         criadoEm: Timestamp.now(),
         status: "pendente"
@@ -260,9 +229,11 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
         equipamento: "",
         hrInicial: "",
         hrFinal: "",
+        linhaParada: "",
         descricaoMotivo: "",
         observacao: "",
         tipoManutencao: "",
+        solucaoAplicada: "",
       });
       
       setOrigemParada({
@@ -284,22 +255,22 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {/* Setor e Equipamento */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="setor" className="text-sm sm:text-base font-medium">Setor*</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="setor" className="text-xs sm:text-sm">Setor*</Label>
               <Select
                 value={formData.setor}
                 onValueChange={(value) => handleSelectChange("setor", value)}
                 disabled={loadingSetores}
               >
-                <SelectTrigger className="h-12 sm:h-14 text-base">
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
                   <SelectValue placeholder={loadingSetores ? "Carregando..." : "Selecione o setor"} />
                 </SelectTrigger>
-                <SelectContent className="max-h-[250px] bg-background z-50">
+                <SelectContent className="max-h-[200px] bg-background z-50">
                   {setores.map((setor) => (
-                    <SelectItem key={setor.id} value={setor.nome} className="text-base py-3">
+                    <SelectItem key={setor.id} value={setor.nome} className="text-xs sm:text-sm">
                       {setor.nome}
                     </SelectItem>
                   ))}
@@ -307,8 +278,8 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="equipamento" className="text-sm sm:text-base font-medium">Equipamento*</Label>
+            <div className="space-y-1">
+              <Label htmlFor="equipamento" className="text-xs sm:text-sm">Equipamento*</Label>
               <Select
                 value={formData.equipamento}
                 onValueChange={(value) => {
@@ -323,12 +294,12 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                 }}
                 disabled={loadingEquipamentos}
               >
-                <SelectTrigger className="h-12 sm:h-14 text-base">
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
                   <SelectValue placeholder={loadingEquipamentos ? "Carregando..." : "Selecione o equipamento"} />
                 </SelectTrigger>
-                <SelectContent className="max-h-[250px] bg-background z-50">
+                <SelectContent className="max-h-[200px] bg-background z-50">
                   {equipamentos.map((equipamento) => (
-                    <SelectItem key={equipamento.id} value={equipamento.equipamento} className="text-base py-3">
+                    <SelectItem key={equipamento.id} value={equipamento.equipamento} className="text-xs sm:text-sm">
                       {equipamento.patrimonio} - {equipamento.equipamento}
                     </SelectItem>
                   ))}
@@ -338,69 +309,96 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
           </div>
 
           {/* Hora Inicial e Hora Final */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="hrInicial" className="text-sm sm:text-base font-medium">Hora Inicial</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="hrInicial" className="text-xs sm:text-sm">Hora Inicial</Label>
               <Input
                 id="hrInicial"
                 name="hrInicial"
                 type="time"
                 value={formData.hrInicial}
                 onChange={handleChange}
-                className="h-12 sm:h-14 text-base"
+                className="h-9 text-xs sm:text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="hrFinal" className="text-sm sm:text-base font-medium">Hora Fim</Label>
+            <div className="space-y-1">
+              <Label htmlFor="hrFinal" className="text-xs sm:text-sm">Hora Fim</Label>
               <Input
                 id="hrFinal"
                 name="hrFinal"
                 type="time"
                 value={formData.hrFinal}
                 onChange={handleChange}
-                className="h-12 sm:h-14 text-base"
+                className="h-9 text-xs sm:text-sm"
               />
             </div>
           </div>
 
-          {/* Tipo Manutenção */}
-          <div className="space-y-2">
-            <Label htmlFor="tipoManutencao" className="text-sm sm:text-base font-medium">Tipo</Label>
-            <Select 
-              value={formData.tipoManutencao} 
-              onValueChange={(value) => handleSelectChange("tipoManutencao", value)}
-              disabled={loadingTiposManutencao}
-            >
-              <SelectTrigger className="h-12 sm:h-14 text-base">
-                <SelectValue placeholder={loadingTiposManutencao ? "Carregando..." : "Selecione"} />
-              </SelectTrigger>
-              <SelectContent className="max-h-[250px] bg-background z-50">
-                {tiposManutencao.map((tipo) => (
-                  <SelectItem key={tipo.id} value={tipo.nome} className="text-base py-3">
-                    {tipo.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Linha Parada e Tipo Manutenção */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="linhaParada" className="text-xs sm:text-sm">Linha Parada</Label>
+              <Select 
+                value={formData.linhaParada} 
+                onValueChange={(value) => handleSelectChange("linhaParada", value)}
+              >
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Sim">Sim</SelectItem>
+                  <SelectItem value="Não">Não</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="tipoManutencao" className="text-xs sm:text-sm">Tipo</Label>
+              <Select 
+                value={formData.tipoManutencao} 
+                onValueChange={(value) => handleSelectChange("tipoManutencao", value)}
+              >
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Corretiva">Corretiva</SelectItem>
+                  <SelectItem value="Preventiva">Preventiva</SelectItem>
+                  <SelectItem value="Preditiva">Preditiva</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="descricaoMotivo" className="text-sm sm:text-base font-medium">Descrição do Motivo*</Label>
+          <div className="space-y-1">
+            <Label htmlFor="descricaoMotivo" className="text-xs sm:text-sm">Descrição do Motivo*</Label>
             <Textarea
               id="descricaoMotivo"
               name="descricaoMotivo"
               placeholder="Descreva o motivo da parada..."
               value={formData.descricaoMotivo}
               onChange={handleChange}
-              className="min-h-[80px] sm:min-h-[100px] text-base resize-none"
+              className="min-h-[60px] text-xs sm:text-sm resize-none"
             />
           </div>
 
+          {/* Solução */}
+          <div className="space-y-1">
+            <Label htmlFor="solucaoAplicada" className="text-xs sm:text-sm">Solução Aplicada</Label>
+            <Textarea
+              id="solucaoAplicada"
+              name="solucaoAplicada"
+              placeholder="Descreva a solução aplicada..."
+              value={formData.solucaoAplicada}
+              onChange={handleChange}
+              className="min-h-[60px] text-xs sm:text-sm resize-none"
+            />
+          </div>
 
           {/* Origem da Parada */}
-          <div className="space-y-3">
-            <Label className="text-sm sm:text-base font-medium">Origem da Parada</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <div className="space-y-2">
+            <Label className="text-xs sm:text-sm">Origem da Parada</Label>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {[
                 { key: "automatizacao", label: "Automação" },
                 { key: "terceiros", label: "Terceiros" },
@@ -408,14 +406,13 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                 { key: "mecanica", label: "Mecânica" },
                 { key: "outro", label: "Outro" },
               ].map((item) => (
-                <div key={item.key} className="flex items-center space-x-2.5 p-3 border rounded-lg">
+                <div key={item.key} className="flex items-center space-x-1.5">
                   <Checkbox
                     id={item.key}
                     checked={origemParada[item.key as keyof typeof origemParada]}
                     onCheckedChange={(checked) => handleOrigemChange(item.key, checked as boolean)}
-                    className="h-5 w-5"
                   />
-                  <label htmlFor={item.key} className="text-sm sm:text-base cursor-pointer">
+                  <label htmlFor={item.key} className="text-[10px] sm:text-xs cursor-pointer">
                     {item.label}
                   </label>
                 </div>
@@ -424,27 +421,27 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
           </div>
 
           {/* Observação */}
-          <div className="space-y-2">
-            <Label htmlFor="observacao" className="text-sm sm:text-base font-medium">Observações</Label>
+          <div className="space-y-1">
+            <Label htmlFor="observacao" className="text-xs sm:text-sm">Observações</Label>
             <Textarea
               id="observacao"
               name="observacao"
               placeholder="Observações adicionais..."
               value={formData.observacao}
               onChange={handleChange}
-              className="min-h-[70px] sm:min-h-[80px] text-base resize-none"
+              className="min-h-[50px] text-xs sm:text-sm resize-none"
             />
           </div>
 
           {/* Botão Submit */}
           <Button
             type="submit"
-            className="w-full h-14 sm:h-16 text-base sm:text-lg font-semibold"
+            className="w-full h-10 sm:h-11 text-sm sm:text-base"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Registrando...
               </>
             ) : (

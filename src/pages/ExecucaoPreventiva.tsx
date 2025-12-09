@@ -73,7 +73,7 @@ export default function ExecucaoPreventiva() {
     <div className="min-h-screen bg-background">
       {/* Header Fixo */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold">{getPageTitle()}</h1>
             <p className="text-xs text-muted-foreground">{getPageSubtitle()}</p>

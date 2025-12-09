@@ -171,13 +171,13 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, isOpen, onClos
             
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
             <div className="space-y-1">
-              <p className="font-medium">Código Material:</p>
-              <p className="text-muted-foreground">{product.codigo_material}</p>
+              <p className="font-medium">Cód. Fornecedor:</p>
+              <p className="text-muted-foreground">{product.codigo_estoque}</p>
             </div>
             
             <div className="space-y-1">
-              <p className="font-medium">Código Estoque:</p>
-              <p className="text-muted-foreground">{product.codigo_estoque}</p>
+              <p className="font-medium">Cód. Estoque:</p>
+              <p className="text-muted-foreground">{product.codigo_material}</p>
             </div>
             
             <div className="space-y-1">

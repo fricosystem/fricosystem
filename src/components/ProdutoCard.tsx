@@ -248,12 +248,12 @@ const ProdutoCard = ({
                       <h3 className="font-semibold text-primary mb-2">Identificação</h3>
                       <div className="space-y-3">
                         <div>
-                          <p className="text-sm text-muted-foreground">Código Material</p>
-                          <p className="text-sm">{codigo || "Não informado"}</p>
+                          <p className="text-sm text-muted-foreground">Cód. Fornecedor</p>
+                          <p className="text-sm">{codigoEstoque || "Não informado"}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Código Estoque</p>
-                          <p className="text-sm">{codigoEstoque || "Não informado"}</p>
+                          <p className="text-sm text-muted-foreground">Cód. Estoque</p>
+                          <p className="text-sm">{codigo || "Não informado"}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Unidade de Medida</p>
@@ -377,11 +377,11 @@ const ProdutoCard = ({
         <div className="space-y-2 text-sm mb-2">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Cód. Fornecedor:</span>
-            <span className="font-medium">{codigo}</span>
+            <span className="font-medium">{codigoEstoque || "N/A"}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Cód. Estoque:</span>
-            <span className="font-medium">{codigoEstoque || "N/A"}</span>
+            <span className="font-medium">{codigo}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Quantidade:</span>

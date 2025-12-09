@@ -15,7 +15,7 @@ import {
   ShoppingBasket, Scan, FileInput, ReceiptText, ArrowRightLeft, 
   MapPin, TreePine, FileOutput, ClipboardCheck, RotateCcw, UserCheck, 
   Building, DollarSign, Calculator, Upload, Shield, Cog, PackageCheck, 
-  Gavel, X, Menu, MessageSquare, Mail, Calendar, WashingMachine, Monitor, Code, UserCog, IdCard
+  Gavel, X, Menu, MessageSquare, Mail, Calendar, WashingMachine, Monitor, Code, UserCog, IdCard, BookOpen
 } from "lucide-react";
 
 const FuturisticFloatingMenu = () => {
@@ -357,6 +357,14 @@ const FuturisticFloatingMenu = () => {
         { id: "chat", icon: <MessageSquare size={20} />, label: "Chat", path: "/chat", permission: "chat" },
         { id: "email", icon: <Mail size={20} />, label: "Email", path: "/email", permission: "email" },
         { id: "reunioes", icon: <Calendar size={20} />, label: "Reuniões", path: "/reunioes", permission: "reunioes" },
+      ]),
+    },
+    {
+      id: "manuais",
+      icon: <BookOpen size={24} />,
+      label: "Manuais",
+      items: filterItemsByPermission([
+        { id: "manuais", icon: <BookOpen size={20} />, label: "Manuais", path: "/manuais", permission: "manuais" },
       ]),
     },
     ...(isAdmin ? [{

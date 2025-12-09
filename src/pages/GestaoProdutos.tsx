@@ -381,7 +381,7 @@ const GestaoProdutos = () => {
 
   return (
     <AppLayout title="Gestão de Produtos">
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col w-full max-w-full overflow-hidden">
         {renderContent()}
         
         <EditProductModal

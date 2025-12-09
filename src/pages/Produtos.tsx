@@ -430,7 +430,8 @@ const Produtos = () => {
                     <ShadcnTable>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Código</TableHead>
+                          <TableHead>Cód. Fornecedor</TableHead>
+                          <TableHead>Cód. Estoque</TableHead>
                           <TableHead>Nome</TableHead>
                           <TableHead>Fornecedor</TableHead>
                           <TableHead>Estoque</TableHead>
@@ -443,6 +444,7 @@ const Produtos = () => {
                         {produtosPaginados.map(produto => (
                           <TableRow key={produto.id} className="cursor-pointer hover:bg-gray-800" onClick={() => handleRowClick(produto)}>
                             <TableCell className="font-medium">{produto.codigoEstoque}</TableCell>
+                            <TableCell className="font-medium">{produto.codigo}</TableCell>
                             <TableCell>{produto.nome}</TableCell>
                             <TableCell>{produto.fornecedor_nome || "-"}</TableCell>
                             <TableCell>
