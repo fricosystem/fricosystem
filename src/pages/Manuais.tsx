@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, addDoc, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, query, orderBy } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Loader2 } from "lucide-react";
@@ -18,10 +18,12 @@ export interface Manual {
   id: string;
   titulo: string;
   subtitulo: string;
-  pdfUrl: string;
+  imagens: string[];
   capaUrl: string;
   ativo: boolean;
   dataCriacao: string;
+  // Legacy field for backwards compatibility
+  pdfUrl?: string;
 }
 
 const Manuais = () => {
@@ -72,10 +74,11 @@ const Manuais = () => {
         id: doc.id,
         titulo: doc.data().titulo || "",
         subtitulo: doc.data().subtitulo || "",
-        pdfUrl: doc.data().pdfUrl || "",
+        imagens: doc.data().imagens || [],
         capaUrl: doc.data().capaUrl || "",
         ativo: doc.data().ativo !== false,
         dataCriacao: doc.data().dataCriacao || new Date().toISOString(),
+        pdfUrl: doc.data().pdfUrl || "",
       }));
 
       setManuais(manuaisData);
@@ -234,7 +237,7 @@ const Manuais = () => {
                 setIsViewerOpen(false);
                 setSelectedManual(null);
               }}
-              pdfUrl={selectedManual.pdfUrl}
+              imagens={selectedManual.imagens}
               titulo={`${selectedManual.titulo} - ${selectedManual.subtitulo}`}
             />
           </>
