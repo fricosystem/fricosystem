@@ -17,11 +17,10 @@ export const uploadPdfToCloudinary = async (file: File): Promise<string> => {
     formData.append('file', file);
     formData.append('upload_preset', CLOUDINARY_MANUAIS_CONFIG.uploadPreset);
     formData.append('cloud_name', CLOUDINARY_MANUAIS_CONFIG.cloudName);
-    formData.append('api_key', CLOUDINARY_MANUAIS_CONFIG.apiKey);
-    formData.append('resource_type', 'raw');
 
+    // Use auto/upload for better compatibility and public access
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUDINARY_MANUAIS_CONFIG.cloudName}/raw/upload`,
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_MANUAIS_CONFIG.cloudName}/auto/upload`,
       {
         method: 'POST',
         body: formData,

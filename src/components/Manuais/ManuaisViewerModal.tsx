@@ -133,6 +133,11 @@ const ManuaisViewerModal = ({ isOpen, onClose, pdfUrl, titulo }: ManuaisViewerMo
           <Document
             file={pdfUrl}
             onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={(error) => console.error("Erro ao carregar PDF:", error)}
+            options={{
+              cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+              cMapPacked: true,
+            }}
             loading={
               <div className="flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -141,8 +146,9 @@ const ManuaisViewerModal = ({ isOpen, onClose, pdfUrl, titulo }: ManuaisViewerMo
             error={
               <div className="text-center text-destructive">
                 <p>Erro ao carregar o PDF.</p>
+                <p className="text-sm text-muted-foreground mt-2">O arquivo pode estar inacessível ou corrompido.</p>
                 <Button variant="outline" className="mt-4" onClick={handleDownload}>
-                  Baixar PDF
+                  Tentar Baixar PDF
                 </Button>
               </div>
             }
