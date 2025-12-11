@@ -157,44 +157,60 @@ const FiltrosRegistros = ({ registros, onFiltrar }: FiltrosRegistrosProps) => {
           </SelectContent>
         </Select>
 
-        {/* Date Range Picker para período personalizado */}
+        {/* Date Pickers separados para período personalizado */}
         {periodoSelecionado === "personalizado" && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "h-8 w-auto justify-start text-left font-normal text-xs px-2",
-                  !dateRange && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
-                {dateRange?.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "dd/MM", { locale: ptBR })} - {format(dateRange.to, "dd/MM", { locale: ptBR })}
-                    </>
-                  ) : (
-                    format(dateRange.from, "dd/MM/yy", { locale: ptBR })
-                  )
-                ) : (
-                  "Datas"
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-background z-50" align="start">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange?.from}
-                selected={dateRange}
-                onSelect={setDateRange}
-                numberOfMonths={1}
-                locale={ptBR}
-                className="p-3 pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex items-center gap-2">
+            {/* Data Inicial */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-8 w-auto justify-start text-left font-normal text-xs px-2",
+                    !dateRange?.from && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                  {dateRange?.from ? format(dateRange.from, "dd/MM/yy", { locale: ptBR }) : "Início"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-background z-50" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateRange?.from}
+                  onSelect={(date) => setDateRange({ from: date, to: dateRange?.to })}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+
+            <span className="text-xs text-muted-foreground">até</span>
+
+            {/* Data Final */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-8 w-auto justify-start text-left font-normal text-xs px-2",
+                    !dateRange?.to && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                  {dateRange?.to ? format(dateRange.to, "dd/MM/yy", { locale: ptBR }) : "Fim"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-background z-50" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateRange?.to}
+                  onSelect={(date) => setDateRange({ from: dateRange?.from, to: date })}
+                  disabled={(date) => dateRange?.from ? date < dateRange.from : false}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         )}
 
         {/* Filtro por Fornecedor */}

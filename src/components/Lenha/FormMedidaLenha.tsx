@@ -52,11 +52,14 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
       // Calcula cubagem usando altura média, comprimento e largura
       if (comprimento > 0 && largura > 0) {
         const cubagem = media * comprimento * largura;
-        setMetrosCubicos(Number(cubagem.toFixed(2)));
+        // Arredonda cubagem para exibição mas mantém precisão para cálculo
+        const cubagemArredondada = Math.round(cubagem * 100) / 100;
+        setMetrosCubicos(cubagemArredondada);
         
-        // Calcula valor total
-        const total = cubagem * valorUnitario;
-        setValorTotal(Number(total.toFixed(2)));
+        // Calcula valor total usando cubagem arredondada para garantir consistência
+        // Math.round garante arredondamento correto para centavos
+        const total = Math.round(cubagemArredondada * valorUnitario * 100) / 100;
+        setValorTotal(total);
       }
     } else {
       setAlturaMedia(0);
