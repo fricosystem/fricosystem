@@ -60,8 +60,10 @@ export interface Usuario {
 
 // Define permissions list
 const PERMISSOES = [
+  // Principal
   { id: 'dashboard', label: 'Dashboard Geral' },
   { id: 'ordens_compra', label: 'Ordens de Compra' },
+  // Estoque
   { id: 'produtos', label: 'Produtos' },
   { id: 'inventario', label: 'Inventário' },
   { id: 'inventario_ciclico', label: 'Inventário Cíclico' },
@@ -69,37 +71,53 @@ const PERMISSOES = [
   { id: 'notas_fiscais', label: 'NF - Entrada XML' },
   { id: 'transferencia', label: 'Transferência' },
   { id: 'enderecamento', label: 'Endereçamento' },
-  { id: 'medida_lenha', label: 'Medida de Lenha' },
+  { id: 'medida_lenha', label: 'Cubagem e Medida de Lenha' },
   { id: 'relatorios', label: 'Relatórios' },
+  // Manutenção
+  { id: 'manutencoes_dashboard', label: 'Dashboard Manutenção' },
   { id: 'maquinas', label: 'Máquinas' },
   { id: 'manutencao_preventiva', label: 'Manutenção Preventiva' },
-  { id: 'pcp', label: 'PCP - Planejamento e Controle de Produção' },
+  { id: 'execucao_preventiva', label: 'Execução Preventiva' },
+  { id: 'parada_maquina', label: 'Parada de Máquina' },
+  // Requisições
   { id: 'requisicoes', label: 'Requisições' },
   { id: 'carrinho', label: 'Carrinho' },
-  { id: 'ordens_servico', label: 'Ordens de Serviço' },
   { id: 'devolucoes', label: 'Devoluções' },
+  // Compras
   { id: 'compras', label: 'Compras' },
+  { id: 'fornecedores', label: 'Fornecedores' },
   { id: 'cotacoes_orcamentos', label: 'Cotações e Orçamentos' },
   { id: 'rastreamento_entregas', label: 'Rastreamento de Entregas' },
   { id: 'calendario_recebimento', label: 'Calendário de Recebimento' },
-  { id: 'fornecedores', label: 'Fornecedores' },
+  { id: 'ordens_servico', label: 'Ordens de Serviço' },
+  // Financeiro
   { id: 'notas_fiscais_lancamento', label: 'NF - Lançamento' },
   { id: 'centro_custo', label: 'Centro de Custo' },
   { id: 'precificacao', label: 'Precificação' },
   { id: 'relatorios_financeiros', label: 'Relatórios Financeiros' },
+  // Utilitários
   { id: 'importar_dados', label: 'Importar dados' },
   { id: 'exportar_dados', label: 'Exportar dados' },
   { id: 'backup_dados', label: 'Backup/Restauração' },
+  // Produção
+  { id: 'pcp', label: 'PCP - Planejamento e Controle de Produção' },
+  // Comunicação
   { id: 'chat', label: 'Chat' },
   { id: 'email', label: 'Email' },
   { id: 'reunioes', label: 'Reuniões' },
+  // Manuais
+  { id: 'manuais', label: 'Manuais' },
+  // Administrativo
   { id: 'gestao_usuarios', label: 'Gestão de Usuários' },
   { id: 'gestao_perfis', label: 'Gestão de Perfis' },
   { id: 'gestao_produtos', label: 'Gestão de Produtos' },
   { id: 'gestao_unidades', label: 'Gestão de Unidades' },
+  { id: 'gestao_manutencao', label: 'Gestão de Manutenção' },
   { id: 'gestao_tarefas', label: 'Gestão de Tarefas' },
+  // Desenvolvedor
   { id: 'planejamento_desenvolvimento', label: 'Planejamento de Desenvolvimento' },
   { id: 'ide', label: 'IDE - Ambiente de Desenvolvimento' },
+  // Acesso Total
   { id: 'tudo', label: 'Acesso Total (todas as permissões)' },
 ];
 

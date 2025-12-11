@@ -281,12 +281,11 @@ const FuturisticFloatingMenu = () => {
       icon: <Wrench size={24} />,
       label: "Manutenção",
       items: filterItemsByPermission([
+        { id: "manutencoes-dashboard", icon: <BarChart3 size={20} />, label: "Dashboard", path: "/manutencoes-dashboard", permission: "manutencoes_dashboard" },
         { id: "maquinas", icon: <WashingMachine size={20} />, label: "Máquinas", path: "/maquinas", permission: "maquinas" },
         { id: "manutencao-preventiva", icon: <Calendar size={20} />, label: "Manutenção Preventiva", path: "/manutencao-preventiva", permission: "manutencao_preventiva" },
         { id: "execucao-preventiva", icon: <ClipboardCheck size={20} />, label: "Execução Preventiva", path: "/execucao-preventiva", permission: "execucao_preventiva" },
-        { id: "manutencoes-dashboard", icon: <BarChart3 size={20} />, label: "Dashboard de Manutenções", path: "/manutencoes-dashboard", permission: "manutencoes_dashboard" },
-        { id: "configuracoes-manutencao", icon: <Settings size={20} />, label: "Configurações", path: "/configuracoes-manutencao", permission: "configuracoes_manutencao" },
-        { id: "automacao-manutencao", icon: <Cog size={20} />, label: "Automação", path: "/automacao-manutencao", permission: "automacao_manutencao" },
+        { id: "parada-maquina", icon: <Wrench size={20} />, label: "Parada de Máquina", path: "/parada-maquina", permission: "parada_maquina" },
       ]),
     },
     {
@@ -296,6 +295,7 @@ const FuturisticFloatingMenu = () => {
       items: filterItemsByPermission([
         { id: "produtos", icon: <PackageCheck size={20} />, label: "Produtos", path: "/produtos", permission: "produtos" },
         { id: "inventario", icon: <Scan size={20} />, label: "Inventário", path: "/inventario", permission: "inventario" },
+        { id: "inventario-ciclico", icon: <ListChecks size={20} />, label: "Inventário Cíclico", path: "/inventario-ciclico", permission: "inventario_ciclico" },
         { id: "entrada-manual", icon: <PackagePlus size={20} />, label: "Entrada Manual", path: "/entrada-manual", permission: "entrada_manual" },
         { id: "notas-fiscais", icon: <FileInput size={20} />, label: "NF - Entrada XML", path: "/notas-fiscais", permission: "notas_fiscais" },
         { id: "transferencia", icon: <ArrowRightLeft size={20} />, label: "Transferência", path: "/transferencia", permission: "transferencia" },
@@ -322,6 +322,10 @@ const FuturisticFloatingMenu = () => {
       items: filterItemsByPermission([
         { id: "compras", icon: <ShoppingBag size={20} />, label: "Compras", path: "/compras", permission: "compras" },
         { id: "fornecedores", icon: <Building size={20} />, label: "Fornecedores", path: "/fornecedores", permission: "fornecedores" },
+        { id: "cotacoes-orcamentos", icon: <Receipt size={20} />, label: "Cotações e Orçamentos", path: "/cotacoes-orcamentos", permission: "cotacoes_orcamentos" },
+        { id: "rastreamento-entregas", icon: <Truck size={20} />, label: "Rastreamento de Entregas", path: "/rastreamento-entregas", permission: "rastreamento_entregas" },
+        { id: "calendario-recebimento", icon: <CalendarCheck size={20} />, label: "Calendário de Recebimento", path: "/calendario-recebimento", permission: "calendario_recebimento" },
+        { id: "ordens-servico", icon: <ClipboardList size={20} />, label: "Ordens de Serviço", path: "/ordens-servico", permission: "ordens_servico" },
       ]),
     },
     {
@@ -331,6 +335,8 @@ const FuturisticFloatingMenu = () => {
       items: filterItemsByPermission([
         { id: "notas-fiscais-lancamento", icon: <ReceiptText size={20} />, label: "NF - Lançamento", path: "/notas-fiscais-lancamento", permission: "notas_fiscais_lancamento" },
         { id: "centro-custo", icon: <PieChart size={20} />, label: "Centro de Custo", path: "/centro-custo", permission: "centro_custo" },
+        { id: "precificacao", icon: <DollarSign size={20} />, label: "Precificação", path: "/precificacao", permission: "precificacao" },
+        { id: "relatorios-financeiros", icon: <TrendingUp size={20} />, label: "Relatórios Financeiros", path: "/relatorios-financeiros", permission: "relatorios_financeiros" },
       ]),
     },
     {
@@ -339,6 +345,8 @@ const FuturisticFloatingMenu = () => {
       label: "Utilitários",
       items: filterItemsByPermission([
         { id: "importar-planilha", icon: <Upload size={20} />, label: "Importar dados", path: "/importar-planilha", permission: "importar_dados" },
+        { id: "exportar-dados", icon: <Download size={20} />, label: "Exportar dados", path: "/exportar-dados", permission: "exportar_dados" },
+        { id: "backup-dados", icon: <Database size={20} />, label: "Backup/Restauração", path: "/backup-dados", permission: "backup_dados" },
       ]),
     },
     {

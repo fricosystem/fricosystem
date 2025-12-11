@@ -24,6 +24,11 @@ interface Setor {
   nome: string;
 }
 
+interface TipoFalha {
+  id: string;
+  nome: string;
+}
+
 interface InitialData {
   setor: string;
   equipamento: string;
@@ -39,8 +44,10 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
+  const [tiposFalhas, setTiposFalhas] = useState<TipoFalha[]>([]);
   const [loadingSetores, setLoadingSetores] = useState(false);
   const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
+  const [loadingTiposFalhas, setLoadingTiposFalhas] = useState(false);
   const [collectionChecked, setCollectionChecked] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -163,6 +170,34 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
     };
 
     fetchSetores();
+  }, []);
+
+  useEffect(() => {
+    const fetchTiposFalhas = async () => {
+      try {
+        setLoadingTiposFalhas(true);
+        const tiposFalhasRef = collection(db, "tipos_falhas");
+        const querySnapshot = await getDocs(tiposFalhasRef);
+        
+        const tiposFalhasData: TipoFalha[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          tiposFalhasData.push({
+            id: doc.id,
+            nome: data.nome || "",
+          });
+        });
+        
+        setTiposFalhas(tiposFalhasData);
+      } catch (error) {
+        console.error("Erro ao buscar tipos de falhas:", error);
+        toast.error("Não foi possível carregar a lista de tipos de falhas.");
+      } finally {
+        setLoadingTiposFalhas(false);
+      }
+    };
+
+    fetchTiposFalhas();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -353,18 +388,21 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="tipoManutencao" className="text-xs sm:text-sm">Tipo</Label>
+              <Label htmlFor="tipoManutencao" className="text-xs sm:text-sm">Tipo de Falha</Label>
               <Select 
                 value={formData.tipoManutencao} 
                 onValueChange={(value) => handleSelectChange("tipoManutencao", value)}
+                disabled={loadingTiposFalhas}
               >
                 <SelectTrigger className="h-9 text-xs sm:text-sm">
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue placeholder={loadingTiposFalhas ? "Carregando..." : "Selecione"} />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Corretiva">Corretiva</SelectItem>
-                  <SelectItem value="Preventiva">Preventiva</SelectItem>
-                  <SelectItem value="Preditiva">Preditiva</SelectItem>
+                <SelectContent className="max-h-[200px] bg-background z-50">
+                  {tiposFalhas.map((tipo) => (
+                    <SelectItem key={tipo.id} value={tipo.nome} className="text-xs sm:text-sm">
+                      {tipo.nome}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

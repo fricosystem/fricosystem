@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { collection, query, orderBy, onSnapshot, DocumentData, QueryDocumentSnapshot, doc, deleteDoc, updateDoc, getDocs, where } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge"; 
 import { db } from "@/firebase/firebase";
@@ -11,6 +11,7 @@ import ModalRecibo from "./ModalRecibo";
 import ModalEditarRegistro from "@/components/Lenha/ModalEditarRegistro";
 import ModalFornecedor from "@/components/Lenha/ModalFornecedor";
 import ModalComprovanteTotal from "./ModalComprovanteTotal";
+import FiltrosRegistros from "./FiltrosRegistros";
 import { MedidaLenha } from "@/types/typesLenha";
 import { 
   Table,
@@ -40,6 +41,7 @@ interface TabelaRegistrosProps {
 
 const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
   const [registros, setRegistros] = useState<MedidaLenha[]>([]);
+  const [registrosFiltrados, setRegistrosFiltrados] = useState<MedidaLenha[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [medidaSelecionada, setMedidaSelecionada] = useState<MedidaLenha | null>(null);
   const [modalReciboAberto, setModalReciboAberto] = useState(false);
@@ -48,10 +50,22 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
   const [registroParaExcluir, setRegistroParaExcluir] = useState<string | null>(null);
   const [excluindoRegistro, setExcluindoRegistro] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [totalMetrosCubicos, setTotalMetrosCubicos] = useState(0);
-  const [totalValor, setTotalValor] = useState(0);
   const [modalFornecedorAberto, setModalFornecedorAberto] = useState(false);
   const [atualizarDados, setAtualizarDados] = useState(false);
+
+  // Calcular totais baseados nos registros filtrados
+  const { totalMetrosCubicos, totalValor } = useMemo(() => {
+    const somaMetros = registrosFiltrados.reduce((acc, r) => acc + (r.metrosCubicos || 0), 0);
+    const somaValor = registrosFiltrados.reduce((acc, r) => acc + (r.valorTotal || 0), 0);
+    return {
+      totalMetrosCubicos: Number(somaMetros.toFixed(2)),
+      totalValor: Number(somaValor.toFixed(2))
+    };
+  }, [registrosFiltrados]);
+
+  const handleFiltrar = (filtrados: MedidaLenha[]) => {
+    setRegistrosFiltrados(filtrados);
+  };
 
   const handleEnviar = async (registroId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -88,8 +102,6 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
       const unsubscribe = onSnapshot(q, 
         (querySnapshot) => {
           const docs: MedidaLenha[] = [];
-          let somaMetrosCubicos = 0;
-          let somaValor = 0;
           
           querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
@@ -116,14 +128,10 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
             };
             
             docs.push(registro);
-            
-            somaMetrosCubicos += data.metrosCubicos;
-            somaValor += data.valorTotal;
           });
           
           setRegistros(docs);
-          setTotalMetrosCubicos(Number(somaMetrosCubicos.toFixed(2)));
-          setTotalValor(Number(somaValor.toFixed(2)));
+          setRegistrosFiltrados(docs);
           setIsLoading(false);
         },
         (error) => {
@@ -217,35 +225,41 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
   return (
     <>
       <Card className="w-full mt-4 md:mt-6">
-        <div className="p-3 md:p-4 flex flex-col gap-2 md:gap-3 border-b">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button 
-              variant="outline"
-              onClick={() => setModalComprovanteAberto(true)}
-              className="gap-2 w-full sm:w-auto text-xs md:text-sm h-9 md:h-10"
-            >
-              <Receipt className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Imprimir relatório geral</span>
-              <span className="sm:hidden">Relatório</span>
-            </Button>
+        <div className="p-3 md:p-4 border-b space-y-4">
+          {/* Botões de Ação */}
+          <div className="flex flex-wrap items-center gap-2">
             <Button 
               onClick={onClickNovo}
-              className="gap-2 w-full sm:w-auto text-xs md:text-sm h-9 md:h-10"
+              className="gap-2 text-xs md:text-sm h-9"
             >
               <File className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              Nova Medição
+              Nova medida
             </Button>
-          </div>
-          <div className="flex">
             <Button 
               variant="outline"
               onClick={() => setModalFornecedorAberto(true)}
-              className="w-full sm:w-auto text-xs md:text-sm h-9 md:h-10"
+              className="gap-2 text-xs md:text-sm h-9"
             >
-              <PlusCircle className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
-              Novo Fornecedor
+              <PlusCircle className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Novo Fornecedor</span>
+              <span className="sm:hidden">Fornecedor</span>
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setModalComprovanteAberto(true)}
+              className="gap-2 text-xs md:text-sm h-9"
+            >
+              <Receipt className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden md:inline">Imprimir relatório geral</span>
+              <span className="md:hidden">Relatório</span>
             </Button>
           </div>
+
+          {/* Filtros */}
+          <FiltrosRegistros 
+            registros={registros} 
+            onFiltrar={handleFiltrar} 
+          />
         </div>
         
         <div className="overflow-x-auto p-3 md:p-4">
@@ -258,6 +272,10 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
           ) : registros.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
               Nenhum registro encontrado. Clique em "Nova Medição" para adicionar.
+            </div>
+          ) : registrosFiltrados.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              Nenhum registro encontrado com os filtros aplicados.
             </div>
           ) : (
             <>
@@ -275,7 +293,7 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {registros.map((registro) => (
+                  {registrosFiltrados.map((registro) => (
                     <TableRow 
                       key={registro.id}
                       onClick={(e) => handleVerDetalhes(registro, e)}
@@ -350,7 +368,7 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
               <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="mb-0">
                   <p className="text-xs md:text-sm text-muted-foreground">
-                    Total de registros: <span className="font-medium">{registros.length}</span>
+                    Total de registros: <span className="font-medium">{registrosFiltrados.length}</span>
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row md:items-center gap-3 md:gap-8 w-full md:w-auto">

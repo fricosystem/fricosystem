@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import AppLayout from "@/layouts/AppLayout";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -426,15 +427,16 @@ const SupplierPage = () => {
   
   return (
     <AppLayout title="Gerenciamento de Fornecedores">
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="w-full lg:w-4/12">
+      <div className="flex flex-col xl:flex-row gap-4 md:gap-6 p-2 sm:p-0">
+        {/* Formulário de Cadastro */}
+        <div className="w-full xl:w-5/12 2xl:w-4/12">
           <Card className="shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xl text-white">Cadastro de Fornecedor</CardTitle>
-              <CardDescription>Preencha os dados do fornecedor</CardDescription>
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <CardTitle className="text-lg sm:text-xl text-white">Cadastro de Fornecedor</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Preencha os dados do fornecedor</CardDescription>
             </CardHeader>
             
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               {success ? (
                 <div className="flex flex-col items-center justify-center py-6">
                   <div className="bg-green-100 rounded-full p-2">
@@ -444,9 +446,9 @@ const SupplierPage = () => {
                   <p className="text-gray-600 mt-1 text-sm text-center">O fornecedor foi adicionado ao sistema.</p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                   <div className="space-y-3">
-                    <h3 className="text-sm font-medium text-gray-700">Dados Principais</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">Dados Principais</h3>
                     
                     <div className="space-y-2">
                       <Label htmlFor="razaoSocial" className="text-xs">Razão Social</Label>
@@ -497,9 +499,9 @@ const SupplierPage = () => {
                       </p>
                     </div>
                     
-                    <h3 className="text-sm font-medium text-gray-700 pt-1">Endereço</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground pt-1">Endereço</h3>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="rua" className="text-xs">Rua</Label>
                         <Input
@@ -508,7 +510,7 @@ const SupplierPage = () => {
                           value={formData.endereco.rua}
                           onChange={handleChange}
                           placeholder="Nome da rua"
-                          className="text-sm"
+                          className="text-sm h-9"
                         />
                       </div>
                       
@@ -520,12 +522,12 @@ const SupplierPage = () => {
                           value={formData.endereco.numero}
                           onChange={handleChange}
                           placeholder="123"
-                          className="text-sm"
+                          className="text-sm h-9"
                         />
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="bairro" className="text-xs">Bairro</Label>
                         <Input
@@ -534,7 +536,7 @@ const SupplierPage = () => {
                           value={formData.endereco.bairro}
                           onChange={handleChange}
                           placeholder="Nome do bairro"
-                          className="text-sm"
+                          className="text-sm h-9"
                         />
                       </div>
                       
@@ -546,12 +548,12 @@ const SupplierPage = () => {
                           value={formData.endereco.cep}
                           onChange={handleChange}
                           placeholder="00000-000"
-                          className="text-sm"
+                          className="text-sm h-9"
                         />
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="cidade" className="text-xs">Cidade</Label>
                         <Input
@@ -560,7 +562,7 @@ const SupplierPage = () => {
                           value={formData.endereco.cidade}
                           onChange={handleChange}
                           placeholder="Nome da cidade"
-                          className="text-sm"
+                          className="text-sm h-9"
                         />
                       </div>
                       
@@ -570,7 +572,7 @@ const SupplierPage = () => {
                           onValueChange={(value) => handleSelectChange(value, "estado")}
                           value={formData.endereco.estado}
                         >
-                          <SelectTrigger className="text-sm">
+                          <SelectTrigger className="text-sm h-9">
                             <SelectValue placeholder="Estado" />
                           </SelectTrigger>
                           <SelectContent>
@@ -614,13 +616,13 @@ const SupplierPage = () => {
                         value={formData.endereco.complemento}
                         onChange={handleChange}
                         placeholder="Sala, Andar, etc."
-                        className="text-sm"
+                        className="text-sm h-9"
                       />
                     </div>
                     
-                    <h3 className="text-sm font-medium text-gray-700 pt-1">Contato</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground pt-1">Contato</h3>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="telefone" className="text-xs">Telefone</Label>
                         <Input
@@ -630,7 +632,7 @@ const SupplierPage = () => {
                           onChange={handleChange}
                           placeholder="(00) 00000-0000"
                           maxLength={15}
-                          className="text-sm"
+                          className="text-sm h-9"
                         />
                       </div>
                       
@@ -643,7 +645,7 @@ const SupplierPage = () => {
                           value={formData.email}
                           onChange={handleChange}
                           placeholder="exemplo@empresa.com"
-                          className="text-sm"
+                          className="text-sm h-9"
                         />
                       </div>
                     </div>
@@ -656,20 +658,20 @@ const SupplierPage = () => {
                         value={formData.pessoaContato}
                         onChange={handleChange}
                         placeholder="Nome completo"
-                        className="text-sm"
+                        className="text-sm h-9"
                       />
                     </div>
                     
-                    <h3 className="text-sm font-medium text-gray-700 pt-1">Informações Comerciais</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground pt-1">Informações Comerciais</h3>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="condicoesPagamento" className="text-xs">Condições de Pagamento</Label>
                         <Select 
                           onValueChange={handlePaymentChange}
                           value={formData.condicoesPagamento}
                         >
-                          <SelectTrigger className="text-sm">
+                          <SelectTrigger className="text-sm h-9">
                             <SelectValue placeholder="Condição" />
                           </SelectTrigger>
                           <SelectContent>
@@ -695,25 +697,25 @@ const SupplierPage = () => {
                           value={formData.prazoEntrega}
                           onChange={handleChange}
                           placeholder="Dias"
-                          className="text-sm"
+                          className="text-sm h-9"
                         />
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex justify-end gap-2 pt-2">
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 pt-3">
                     <Button 
                       type="button" 
                       variant="outline" 
                       onClick={resetForm}
-                      className="text-xs h-8"
+                      className="text-xs h-9 w-full sm:w-auto order-2 sm:order-1"
                     >
                       Limpar
                     </Button>
                     <Button 
                       type="submit" 
                       disabled={isLoading || isFetchingCNPJ} 
-                      className="bg-blue-700 hover:bg-blue-800 text-xs h-8"
+                      className="bg-blue-700 hover:bg-blue-800 text-xs h-9 w-full sm:w-auto order-1 sm:order-2"
                     >
                       {isLoading ? "Cadastrando..." : "Cadastrar"}
                     </Button>
@@ -724,67 +726,125 @@ const SupplierPage = () => {
           </Card>
         </div>
         
-        <div className="w-full lg:w-8/12">
+        {/* Lista de Fornecedores */}
+        <div className="w-full xl:w-7/12 2xl:w-8/12">
           <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="text-xl text-white">Lista de Fornecedores</CardTitle>
-              <CardDescription>Fornecedores cadastrados no sistema</CardDescription>
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <CardTitle className="text-lg sm:text-xl text-white">Lista de Fornecedores</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Fornecedores cadastrados no sistema</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[180px]">Razão Social</TableHead>
-                      <TableHead className="hidden md:table-cell min-w-[150px]">CNPJ</TableHead>
-                      <TableHead className="hidden lg:table-cell min-w-[150px]">Cidade/Estado</TableHead>
-                      <TableHead className="hidden sm:table-cell min-w-[120px]">Telefone</TableHead>
-                      <TableHead className="hidden xl:table-cell min-w-[180px]">Email</TableHead>
-                      <TableHead className="hidden lg:table-cell min-w-[120px]">Cond. Pagamento</TableHead>
-                      <TableHead className="hidden md:table-cell min-w-[100px]">Prazo Entrega</TableHead>
-                      <TableHead className="text-right min-w-[80px]">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {suppliers.length > 0 ? (
-                      suppliers.map((supplier, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            <div>{supplier.razaoSocial}</div>
-                            <div className="text-xs text-muted-foreground md:hidden mt-1">
-                              {supplier.cnpj}
-                            </div>
-                            <div className="text-xs text-muted-foreground sm:hidden mt-1">
-                              {supplier.telefone}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">{supplier.cnpj}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{`${supplier.endereco.cidade}/${supplier.endereco.estado}`}</TableCell>
-                          <TableCell className="hidden sm:table-cell">{supplier.telefone}</TableCell>
-                          <TableCell className="hidden xl:table-cell">{supplier.email}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{supplier.condicoesPagamento}</TableCell>
-                          <TableCell className="hidden md:table-cell">{supplier.prazoEntrega} dias</TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => abrirModal(supplier)}
-                              className="text-gray-500 hover:text-blue-600"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+            <CardContent className="px-2 sm:px-4 md:px-6 py-2 sm:py-4">
+              {/* Mobile: Cards compactos */}
+              <div className="block lg:hidden space-y-3">
+                {suppliers.length > 0 ? (
+                  suppliers.map((supplier, index) => (
+                    <div 
+                      key={index} 
+                      className="bg-card border border-border rounded-lg p-3 sm:p-4 space-y-2 hover:border-primary/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-sm sm:text-base text-foreground line-clamp-2">
+                            {supplier.razaoSocial}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {supplier.cnpj}
+                          </p>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => abrirModal(supplier)}
+                          className="text-muted-foreground hover:text-primary h-8 w-8 p-0 flex-shrink-0"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground block">Cidade/UF:</span>
+                          <p className="font-medium text-foreground truncate">
+                            {supplier.endereco.cidade}/{supplier.endereco.estado}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Telefone:</span>
+                          <p className="font-medium text-foreground">{supplier.telefone}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Pagamento:</span>
+                          <p className="font-medium text-foreground">{supplier.condicoesPagamento}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Prazo:</span>
+                          <p className="font-medium text-foreground">{supplier.prazoEntrega} dias</p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs pt-1 border-t border-border/50">
+                        <span className="text-muted-foreground">Email:</span>
+                        <p className="font-medium text-foreground truncate">{supplier.email}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    Nenhum fornecedor cadastrado
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop/Tablet: Table with horizontal scroll */}
+              <div className="hidden lg:block">
+                <ScrollArea className="w-full">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[200px] text-xs whitespace-nowrap">Razão Social</TableHead>
+                        <TableHead className="min-w-[160px] text-xs whitespace-nowrap">CNPJ</TableHead>
+                        <TableHead className="min-w-[140px] text-xs whitespace-nowrap">Cidade/Estado</TableHead>
+                        <TableHead className="min-w-[130px] text-xs whitespace-nowrap">Telefone</TableHead>
+                        <TableHead className="min-w-[200px] text-xs whitespace-nowrap">Email</TableHead>
+                        <TableHead className="min-w-[110px] text-xs whitespace-nowrap">Pagamento</TableHead>
+                        <TableHead className="min-w-[80px] text-xs whitespace-nowrap">Prazo</TableHead>
+                        <TableHead className="text-right min-w-[70px] text-xs whitespace-nowrap">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {suppliers.length > 0 ? (
+                        suppliers.map((supplier, index) => (
+                          <TableRow key={index} className="hover:bg-muted/50">
+                            <TableCell className="font-medium text-xs max-w-[200px] truncate">{supplier.razaoSocial}</TableCell>
+                            <TableCell className="text-xs">{supplier.cnpj}</TableCell>
+                            <TableCell className="text-xs">{`${supplier.endereco.cidade}/${supplier.endereco.estado}`}</TableCell>
+                            <TableCell className="text-xs">{supplier.telefone}</TableCell>
+                            <TableCell className="text-xs max-w-[200px] truncate">{supplier.email}</TableCell>
+                            <TableCell className="text-xs">{supplier.condicoesPagamento}</TableCell>
+                            <TableCell className="text-xs">{supplier.prazoEntrega} dias</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => abrirModal(supplier)}
+                                className="text-muted-foreground hover:text-primary h-8 w-8 p-0"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground text-sm">
+                            Nenhum fornecedor cadastrado
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-4 text-gray-500">
-                          Nenhum fornecedor cadastrado
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
               </div>
             </CardContent>
           </Card>

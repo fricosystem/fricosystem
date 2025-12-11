@@ -111,6 +111,11 @@ const AppSidebar = () => {
       label: "Inventário",
       permission: "inventario"
     }, {
+      to: "/inventario-ciclico",
+      icon: ListChecks,
+      label: "Inventário Cíclico",
+      permission: "inventario_ciclico"
+    }, {
       to: "/entrada-manual",
       icon: PackagePlus,
       label: "Entrada Manual",
@@ -203,6 +208,26 @@ const AppSidebar = () => {
       icon: Building,
       label: "Fornecedores",
       permission: "fornecedores"
+    }, {
+      to: "/cotacoes-orcamentos",
+      icon: Receipt,
+      label: "Cotações e Orçamentos",
+      permission: "cotacoes_orcamentos"
+    }, {
+      to: "/rastreamento-entregas",
+      icon: Truck,
+      label: "Rastreamento de Entregas",
+      permission: "rastreamento_entregas"
+    }, {
+      to: "/calendario-recebimento",
+      icon: CalendarCheck,
+      label: "Calendário de Recebimento",
+      permission: "calendario_recebimento"
+    }, {
+      to: "/ordens-servico",
+      icon: ClipboardList,
+      label: "Ordens de Serviço",
+      permission: "ordens_servico"
     }]
   }, {
     label: "Financeiro",
@@ -217,6 +242,16 @@ const AppSidebar = () => {
       icon: PieChart,
       label: "Centro de Custo",
       permission: "centro_custo"
+    }, {
+      to: "/precificacao",
+      icon: DollarSign,
+      label: "Precificação",
+      permission: "precificacao"
+    }, {
+      to: "/relatorios-financeiros",
+      icon: TrendingUp,
+      label: "Relatórios Financeiros",
+      permission: "relatorios_financeiros"
     }]
   }, {
     label: "Utilitários",
@@ -226,6 +261,16 @@ const AppSidebar = () => {
       icon: Upload,
       label: "Importar dados",
       permission: "importar_dados"
+    }, {
+      to: "/exportar-dados",
+      icon: Download,
+      label: "Exportar dados",
+      permission: "exportar_dados"
+    }, {
+      to: "/backup-dados",
+      icon: Database,
+      label: "Backup/Restauração",
+      permission: "backup_dados"
     }]
   }, {
     label: "Produção",

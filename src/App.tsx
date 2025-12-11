@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ManutencaoAlertsProvider } from "@/contexts/ManutencaoAlertsContext";
@@ -69,7 +69,8 @@ import Manuais from "./pages/Manuais";
 const queryClient = new QueryClient();
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, userData, loading } = useAuth();
+  const location = useLocation();
   
   // Show loading when auth state is being determined
   if (loading) {
@@ -84,11 +85,24 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/" replace />;
   }
 
+  // Verifica se o usuário está ativo - se não, redireciona para página de aguardar aprovação
+  const isActive = userData?.ativo === "sim";
+  const isWelcomePage = location.pathname === "/bem-vindo";
+
+  if (!isActive && !isWelcomePage) {
+    return <Navigate to="/bem-vindo" replace />;
+  }
+
+  // Se está ativo e tentando acessar a página de bem-vindo, redireciona para dashboard
+  if (isActive && isWelcomePage) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <>{children}</>;
 };
 
 const NoAuthGuard = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, userData, loading } = useAuth();
 
   // Show loading when auth state is being determined
   if (loading) {
@@ -100,7 +114,9 @@ const NoAuthGuard = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    // Verifica se o usuário está ativo antes de redirecionar
+    const isActive = userData?.ativo === "sim";
+    return <Navigate to={isActive ? "/dashboard" : "/bem-vindo"} replace />;
   }
 
   return <>{children}</>;
