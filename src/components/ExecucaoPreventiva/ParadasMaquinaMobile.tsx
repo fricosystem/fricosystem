@@ -14,7 +14,7 @@ import { useParadaMaquina } from "@/hooks/useParadaMaquina";
 import { ParadaMaquina, podeIniciarExecucao } from "@/types/typesParadaMaquina";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-
+import { TempoInicioIndicator } from "@/components/ParadaMaquina/TempoInicioIndicator";
 export function ParadasMaquinaMobile() {
   const { 
     paradasParaManutentor, 
@@ -163,8 +163,11 @@ export function ParadasMaquinaMobile() {
                   </div>
                 )}
                 
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                  <span>{parada.tipoManutencao || "Não informado"}</span>
+                <div className="flex justify-between items-center text-xs text-muted-foreground flex-wrap gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>{parada.tipoManutencao || "Não informado"}</span>
+                    <TempoInicioIndicator hrInicial={parada.hrInicial} hrFinal={parada.hrFinal} status={parada.status} />
+                  </div>
                   <span>Tentativa {parada.tentativaAtual || 1}</span>
                 </div>
               </CardContent>

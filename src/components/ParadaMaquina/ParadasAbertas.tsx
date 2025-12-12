@@ -10,7 +10,7 @@ import { ParadaMaquina } from "@/types/typesParadaMaquina";
 import RelatorioParadaDetalhado from "./RelatorioParadaDetalhado";
 import { useParadaAlerts } from "@/hooks/useParadaAlerts";
 import { TempoRestanteIndicator } from "./TempoRestanteIndicator";
-
+import { TempoInicioIndicator } from "./TempoInicioIndicator";
 interface ParadasAbertasProps {
   onCountChange?: (count: number) => void;
   onStatsChange?: (stats: { abertas: number; emAndamento: number; concluidas: number; total: number }) => void;
@@ -140,9 +140,10 @@ const ParadasAbertas = ({ onCountChange, onStatsChange }: ParadasAbertasProps) =
                     </div>
 
                     <div className="flex justify-between items-center pt-1 gap-2 flex-wrap">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {getStatusBadge(parada.status)}
                         <TempoRestanteIndicator hrFinal={parada.hrFinal} status={parada.status} />
+                        <TempoInicioIndicator hrInicial={parada.hrInicial} hrFinal={parada.hrFinal} status={parada.status} />
                       </div>
                       <span className="text-sm text-muted-foreground">
                         {parada.criadoEm && format(parada.criadoEm.toDate(), "dd/MM/yy HH:mm")}

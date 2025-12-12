@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2 } from "lucide-react";
 import { HistoricoAcao } from "@/types/typesParadaMaquina";
 import { v4 as uuidv4 } from "uuid";
@@ -99,13 +100,7 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
     }
   }, [initialData, loadingEquipamentos, equipamentos]);
 
-  const [origemParada, setOrigemParada] = useState({
-    automatizacao: false,
-    terceiros: false,
-    eletrica: false,
-    mecanica: false,
-    outro: false
-  });
+  const [origemParada, setOrigemParada] = useState("");
 
   useEffect(() => {
     const checkCollection = async () => {
@@ -248,11 +243,8 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
     }));
   };
 
-  const handleOrigemChange = (origem: string, checked: boolean) => {
-    setOrigemParada(prev => ({
-      ...prev,
-      [origem]: checked
-    }));
+  const handleOrigemChange = (value: string) => {
+    setOrigemParada(value);
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -348,13 +340,7 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
         tipoManutencao: "",
       });
       
-      setOrigemParada({
-        automatizacao: false,
-        terceiros: false,
-        eletrica: false,
-        mecanica: false,
-        outro: false
-      });
+      setOrigemParada("");
       
       onSuccess?.();
       
@@ -518,7 +504,11 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
           {/* Origem da Parada */}
           <div className="space-y-2">
             <Label className="text-xs sm:text-sm">Origem da Parada</Label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <RadioGroup
+              value={origemParada}
+              onValueChange={handleOrigemChange}
+              className="flex flex-wrap gap-3"
+            >
               {[
                 { key: "automatizacao", label: "Automação" },
                 { key: "terceiros", label: "Terceiros" },
@@ -527,17 +517,13 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                 { key: "outro", label: "Outro" },
               ].map((item) => (
                 <div key={item.key} className="flex items-center space-x-1.5">
-                  <Checkbox
-                    id={item.key}
-                    checked={origemParada[item.key as keyof typeof origemParada]}
-                    onCheckedChange={(checked) => handleOrigemChange(item.key, checked as boolean)}
-                  />
+                  <RadioGroupItem value={item.key} id={item.key} />
                   <label htmlFor={item.key} className="text-[10px] sm:text-xs cursor-pointer">
                     {item.label}
                   </label>
                 </div>
               ))}
-            </div>
+            </RadioGroup>
           </div>
 
           {/* Observação */}
