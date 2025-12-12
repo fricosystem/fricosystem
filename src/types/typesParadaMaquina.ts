@@ -11,7 +11,8 @@ export type StatusParada =
   | "concluido_1"          // Segunda tentativa aprovada
   | "aguardando_verificacao_2" // Terceira tentativa
   | "concluido_2"          // Terceira tentativa aprovada
-  | "cancelado";           // Parada cancelada
+  | "cancelado"            // Parada cancelada
+  | "nao_executada";       // Parada não foi executada no tempo previsto
 
 // Tipos de ação para o histórico
 export type TipoAcaoHistorico = 
@@ -114,7 +115,8 @@ export const getStatusLabel = (status: StatusParada): string => {
     concluido_1: "Concluído (2ª)",
     aguardando_verificacao_2: "Aguardando Verificação (3ª)",
     concluido_2: "Concluído (3ª)",
-    cancelado: "Cancelado"
+    cancelado: "Cancelado",
+    nao_executada: "Não Executada"
   };
   return labels[status] || status;
 };
@@ -172,6 +174,11 @@ export const getStatusConcluido = (tentativaAtual: number): StatusParada => {
 // Verifica se um status indica conclusão
 export const isStatusConcluido = (status: StatusParada): boolean => {
   return ["concluido", "concluido_1", "concluido_2"].includes(status);
+};
+
+// Verifica se um status indica finalização (concluído ou não executada)
+export const isStatusFinalizado = (status: StatusParada): boolean => {
+  return ["concluido", "concluido_1", "concluido_2", "nao_executada", "cancelado"].includes(status);
 };
 
 // Verifica se um status indica aguardando verificação

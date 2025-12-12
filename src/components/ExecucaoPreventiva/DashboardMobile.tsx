@@ -258,18 +258,19 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
             <CardDescription>Distribuição por status</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[200px]">
+            <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={statusTarefasData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={40}
-                    outerRadius={70}
-                    paddingAngle={2}
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={3}
                     dataKey="value"
-                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                    nameKey="name"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
                     {statusTarefasData.map((entry, index) => (
@@ -281,7 +282,10 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
                       borderRadius: 'var(--radius)'
-                    }} 
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--success))' }}
+                    formatter={(value, name, props) => [`${value} tarefas`, props.payload.name]}
                   />
                   <Legend />
                 </PieChart>
@@ -301,7 +305,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
           <CardDescription>Manutenções concluídas por dia</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[200px]">
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={execucoesPorDiaData()}>
                 <defs>
@@ -345,7 +349,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
             <CardDescription>Tarefas por tipo</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[200px]">
+          <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={tiposManutencaoData()} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -378,7 +382,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
             <CardDescription>Distribuição de paradas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[200px]">
+          <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={paradasPorSetorData()}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -411,7 +415,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
             <CardDescription>Por tipo de origem</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[200px]">
+            <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie

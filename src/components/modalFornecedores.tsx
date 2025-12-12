@@ -6,10 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Truck } from "lucide-react";
+import { Truck, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Produto {
   id: string;
@@ -43,9 +54,10 @@ interface ModalFornecedorProps {
     prazoEntrega: string;
   };
   onClose: () => void;
+  onDelete?: (cnpj: string) => void;
 }
 
-const ModalFornecedor = ({ fornecedor, onClose }: ModalFornecedorProps) => {
+const ModalFornecedor = ({ fornecedor, onClose, onDelete }: ModalFornecedorProps) => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [produtosProximoVencimento, setProdutosProximoVencimento] = useState<Produto[]>([]);
@@ -121,13 +133,39 @@ const ModalFornecedor = ({ fornecedor, onClose }: ModalFornecedorProps) => {
               <CardTitle className="text-xl">{fornecedor.razaoSocial}</CardTitle>
               <p className="text-sm text-gray-600 mt-1">CNPJ: {fornecedor.cnpj}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              ✕
-            </Button>
+            <div className="flex items-center gap-2">
+              {onDelete && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Excluir
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir o fornecedor "{fornecedor.razaoSocial}"? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => onDelete(fornecedor.cnpj)} className="bg-destructive hover:bg-destructive/90">
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                ✕
+              </Button>
+            </div>
           </div>
         </CardHeader>
         
-        <CardContent className="overflow-y-auto p-0">
+        <CardContent className="overflow-y-auto max-h-[calc(90vh-120px)] p-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
             <div>
               <h3 className="font-medium mb-3">Informações do Fornecedor</h3>
@@ -167,7 +205,7 @@ const ModalFornecedor = ({ fornecedor, onClose }: ModalFornecedorProps) => {
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
               </div>
             ) : produtos.length > 0 ? (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-auto max-h-[300px]">
                 <Table>
                   <TableHeader>
                     <TableRow>

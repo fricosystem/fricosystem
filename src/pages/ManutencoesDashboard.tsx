@@ -1,74 +1,562 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect, useMemo } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AppLayout from "@/layouts/AppLayout";
-import { executarManutencaoManual } from "@/services/gerarOrdensManutencao";
-import { toast } from "sonner";
-import { Calendar, RefreshCw } from "lucide-react";
+import { 
+  Clock, 
+  Calendar, 
+  Layers, 
+  BarChart2, 
+  Wrench, 
+  AlertTriangle, 
+  CheckCircle, 
+  Timer,
+  StopCircle,
+  TrendingUp,
+  PieChart as PieChartIcon,
+  Loader2
+} from "lucide-react";
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
+import { db } from "@/firebase/firebase";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  AreaChart, 
+  Area,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar
+} from "recharts";
+import StatsCard from "@/components/StatsCard";
+import { isStatusConcluido, isStatusFinalizado } from "@/types/typesParadaMaquina";
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#A4DE6C', '#D0ED57', '#FFC658'];
 
 const ManutencoesDashboard = () => {
-  const [loading, setLoading] = useState(false);
+  const [period, setPeriod] = useState<"hoje" | "semana" | "mes" | "ano">("mes");
+  const [loading, setLoading] = useState(true);
 
-  const handleGerarOrdens = async () => {
-    setLoading(true);
-    try {
-      const resultado = await executarManutencaoManual();
-      if (resultado.success) {
-        toast.success(
-          `Verificação concluída! ${resultado.osGeradas} ordem(ns) gerada(s) de ${resultado.tarefasVerificadas} tarefa(s) verificada(s).`
-        );
-      } else {
-        toast.error("Erro ao gerar ordens: " + resultado.error);
+  // Estados para dados
+  const [tarefasManutencao, setTarefasManutencao] = useState<any[]>([]);
+  const [historicoExecucoes, setHistoricoExecucoes] = useState<any[]>([]);
+  const [paradasMaquina, setParadasMaquina] = useState<any[]>([]);
+  const [manutentores, setManutentores] = useState<any[]>([]);
+
+  // Carregar dados do Firestore
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [tarefasSnap, historicoSnap, paradasSnap, manutentoresSnap] = await Promise.all([
+          getDocs(collection(db, "tarefas_manutencao")),
+          getDocs(collection(db, "historico_execucoes")),
+          getDocs(collection(db, "paradas_maquina")),
+          getDocs(collection(db, "manutentores"))
+        ]);
+
+        setTarefasManutencao(tarefasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setHistoricoExecucoes(historicoSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setParadasMaquina(paradasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setManutentores(manutentoresSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao executar geração de ordens");
-    } finally {
-      setLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  // Converter timestamp Firebase
+  const convertTimestamp = (timestamp: any): Date => {
+    if (!timestamp) return new Date();
+    if (timestamp instanceof Date) return timestamp;
+    if (timestamp?.seconds) return new Date(timestamp.seconds * 1000);
+    if (typeof timestamp === 'string') return new Date(timestamp);
+    return new Date();
+  };
+
+  // Filtrar por período
+  const filterByPeriod = (date: Date) => {
+    const now = new Date();
+    switch (period) {
+      case "hoje":
+        return date.toDateString() === now.toDateString();
+      case "semana":
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        return date >= startOfWeek;
+      case "mes":
+        return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+      case "ano":
+        return date.getFullYear() === now.getFullYear();
+      default:
+        return true;
     }
   };
 
-  return (
-    <AppLayout title="Dashboard de Manutenções">
-      <div className="p-6 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Manutenção Preventiva Automática
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground">
-              Este sistema verifica automaticamente as peças configuradas para manutenção preventiva
-              e gera ordens de serviço quando estão próximas da data agendada.
-            </p>
-            
-            <div className="p-4 bg-primary/5 rounded-lg border">
-              <h3 className="font-semibold mb-2">Como funciona:</h3>
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Configure intervalos de manutenção nas peças e sub-peças</li>
-                <li>Ative a geração automática de ordens</li>
-                <li>O sistema verifica diariamente e cria ordens pendentes</li>
-                <li>Quando concluída, a próxima manutenção é calculada automaticamente</li>
-              </ul>
-            </div>
+  // Estatísticas calculadas
+  const stats = useMemo(() => {
+    const hoje = new Date().toISOString().split('T')[0];
+    
+    // Tarefas preventivas
+    const tarefasPendentes = tarefasManutencao.filter(t => t.status === "pendente");
+    const tarefasAtrasadas = tarefasPendentes.filter(t => t.proximaExecucao < hoje);
+    const tarefasHoje = tarefasPendentes.filter(t => t.proximaExecucao === hoje);
+    const tarefasConcluidas = tarefasManutencao.filter(t => t.status === "concluida");
 
-            <Button 
-              onClick={handleGerarOrdens} 
-              disabled={loading}
-              className="w-full"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              {loading ? "Verificando..." : "Executar Verificação Manual"}
-            </Button>
-            
-            <p className="text-xs text-muted-foreground">
-              Em produção, esta verificação deve rodar automaticamente via cron job diário.
-            </p>
-          </CardContent>
-        </Card>
+    // Paradas de máquina
+    const paradasAguardando = paradasMaquina.filter(p => p.status === "aguardando");
+    const paradasEmAndamento = paradasMaquina.filter(p => p.status === "em_andamento");
+    const paradasConcluidas = paradasMaquina.filter(p => isStatusConcluido(p.status));
+    const paradasNaoExecutadas = paradasMaquina.filter(p => p.status === "nao_executada");
+
+    return {
+      // Preventivas
+      totalTarefas: tarefasManutencao.length,
+      tarefasPendentes: tarefasPendentes.length,
+      tarefasAtrasadas: tarefasAtrasadas.length,
+      tarefasHoje: tarefasHoje.length,
+      tarefasConcluidas: tarefasConcluidas.length,
+      execucoesRealizadas: historicoExecucoes.length,
+      
+      // Paradas
+      totalParadas: paradasMaquina.length,
+      paradasAguardando: paradasAguardando.length,
+      paradasEmAndamento: paradasEmAndamento.length,
+      paradasConcluidas: paradasConcluidas.length,
+      paradasNaoExecutadas: paradasNaoExecutadas.length,
+      
+      // Manutentores
+      totalManutentores: manutentores.length,
+      manutentoresAtivos: manutentores.filter(m => m.ativo).length
+    };
+  }, [tarefasManutencao, historicoExecucoes, paradasMaquina, manutentores]);
+
+  // Dados para gráfico de status das preventivas
+  const dadosStatusPreventivas = useMemo(() => {
+    return [
+      { name: 'Pendentes', value: stats.tarefasPendentes, fill: COLORS[0] },
+      { name: 'Atrasadas', value: stats.tarefasAtrasadas, fill: COLORS[3] },
+      { name: 'Concluídas', value: stats.tarefasConcluidas, fill: COLORS[1] }
+    ];
+  }, [stats]);
+
+  // Dados para gráfico de status das paradas
+  const dadosStatusParadas = useMemo(() => {
+    return [
+      { name: 'Aguardando', value: stats.paradasAguardando, fill: COLORS[0] },
+      { name: 'Em Andamento', value: stats.paradasEmAndamento, fill: COLORS[4] },
+      { name: 'Concluídas', value: stats.paradasConcluidas, fill: COLORS[1] },
+      { name: 'Não Executadas', value: stats.paradasNaoExecutadas, fill: COLORS[3] }
+    ];
+  }, [stats]);
+
+  // Dados para gráfico de execuções por período
+  const dadosExecucoesPorPeriodo = useMemo(() => {
+    const now = new Date();
+    let labels: string[] = [];
+    
+    if (period === "hoje") {
+      labels = Array.from({ length: 24 }, (_, i) => `${i}h`);
+    } else if (period === "semana") {
+      labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    } else if (period === "mes") {
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      labels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`);
+    } else {
+      labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    }
+
+    return labels.map((label, index) => {
+      let preventivas = 0;
+      let paradas = 0;
+
+      historicoExecucoes.forEach(exec => {
+        const data = convertTimestamp(exec.dataExecucao);
+        if (!filterByPeriod(data)) return;
+        
+        let matches = false;
+        if (period === "hoje") matches = data.getHours() === index;
+        else if (period === "semana") matches = data.getDay() === index;
+        else if (period === "mes") matches = data.getDate() === index + 1;
+        else if (period === "ano") matches = data.getMonth() === index;
+        
+        if (matches) preventivas++;
+      });
+
+      paradasMaquina.filter(p => isStatusConcluido(p.status)).forEach(parada => {
+        const data = convertTimestamp(parada.criadoEm);
+        if (!filterByPeriod(data)) return;
+        
+        let matches = false;
+        if (period === "hoje") matches = data.getHours() === index;
+        else if (period === "semana") matches = data.getDay() === index;
+        else if (period === "mes") matches = data.getDate() === index + 1;
+        else if (period === "ano") matches = data.getMonth() === index;
+        
+        if (matches) paradas++;
+      });
+
+      return { name: label, preventivas, paradas };
+    });
+  }, [historicoExecucoes, paradasMaquina, period]);
+
+  // Dados para gráfico de execuções por manutentor
+  const dadosExecucoesPorManutentor = useMemo(() => {
+    const contagem: Record<string, { preventivas: number; paradas: number }> = {};
+    
+    historicoExecucoes.forEach(exec => {
+      const nome = exec.manutentorNome || 'Não atribuído';
+      if (!contagem[nome]) contagem[nome] = { preventivas: 0, paradas: 0 };
+      contagem[nome].preventivas++;
+    });
+
+    paradasMaquina.filter(p => isStatusConcluido(p.status)).forEach(parada => {
+      const nome = parada.manutentorNome || 'Não atribuído';
+      if (!contagem[nome]) contagem[nome] = { preventivas: 0, paradas: 0 };
+      contagem[nome].paradas++;
+    });
+
+    return Object.entries(contagem)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => (b.preventivas + b.paradas) - (a.preventivas + a.paradas))
+      .slice(0, 10);
+  }, [historicoExecucoes, paradasMaquina]);
+
+  // Dados para gráfico de radar - saúde da manutenção
+  const dadosSaudeManutencao = useMemo(() => {
+    const taxaConclusao = stats.totalTarefas > 0 
+      ? Math.min((stats.tarefasConcluidas / stats.totalTarefas) * 100, 100) 
+      : 0;
+    const taxaPontualidade = stats.totalTarefas > 0 
+      ? Math.min(((stats.totalTarefas - stats.tarefasAtrasadas) / stats.totalTarefas) * 100, 100) 
+      : 100;
+    const taxaParadasConcluidas = stats.totalParadas > 0 
+      ? Math.min((stats.paradasConcluidas / stats.totalParadas) * 100, 100) 
+      : 0;
+    const eficienciaEquipe = stats.totalManutentores > 0 
+      ? Math.min((stats.manutentoresAtivos / stats.totalManutentores) * 100, 100) 
+      : 0;
+    const disponibilidade = 100 - (stats.paradasEmAndamento * 10);
+
+    return [
+      { subject: 'Conclusão', A: taxaConclusao, fullMark: 100 },
+      { subject: 'Pontualidade', A: taxaPontualidade, fullMark: 100 },
+      { subject: 'Paradas OK', A: taxaParadasConcluidas, fullMark: 100 },
+      { subject: 'Equipe', A: eficienciaEquipe, fullMark: 100 },
+      { subject: 'Disponibilidade', A: Math.max(disponibilidade, 0), fullMark: 100 }
+    ];
+  }, [stats]);
+
+  // Dados para gráfico de tarefas por máquina
+  const dadosTarefasPorMaquina = useMemo(() => {
+    const contagem: Record<string, number> = {};
+    
+    tarefasManutencao.forEach(tarefa => {
+      const maquina = tarefa.maquinaNome || 'Não definida';
+      contagem[maquina] = (contagem[maquina] || 0) + 1;
+    });
+
+    return Object.entries(contagem)
+      .map(([name, value], index) => ({ name, value, fill: COLORS[index % COLORS.length] }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [tarefasManutencao]);
+
+  const tooltipStyle = {
+    contentStyle: {
+      background: 'hsl(var(--background))',
+      borderColor: 'hsl(var(--border))',
+      borderRadius: 'var(--radius)'
+    },
+    labelStyle: { color: 'hsl(var(--foreground))' },
+    itemStyle: { color: '#82ca9d' }
+  };
+
+  return (
+    <AppLayout title="Dashboard de Manutenção">
+      {/* Seletor de período */}
+      <div className="mb-6">
+        <Tabs defaultValue="mes" value={period} onValueChange={v => setPeriod(v as typeof period)}>
+          <TabsList className="grid w-full grid-cols-4 bg-muted rounded-lg">
+            <TabsTrigger value="hoje" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Hoje
+            </TabsTrigger>
+            <TabsTrigger value="semana" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" /> Semana
+            </TabsTrigger>
+            <TabsTrigger value="mes" className="flex items-center gap-2">
+              <Layers className="h-4 w-4" /> Mês
+            </TabsTrigger>
+            <TabsTrigger value="ano" className="flex items-center gap-2">
+              <BarChart2 className="h-4 w-4" /> Ano
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
+
+      {loading ? (
+        <Card className="mb-6">
+          <div className="flex flex-col items-center justify-center p-8 space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-lg font-medium">Carregando dados...</p>
+          </div>
+        </Card>
+      ) : (
+        <>
+          {/* Cards de estatísticas */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            <StatsCard 
+              title="Preventivas Pendentes" 
+              value={stats.tarefasPendentes.toString()} 
+              icon={<Wrench className="h-5 w-5" />}
+              trend={{
+                value: stats.tarefasHoje,
+                positive: stats.tarefasHoje === 0,
+                label: `${stats.tarefasHoje} para hoje`
+              }}
+              description="Tarefas agendadas"
+              className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10"
+            />
+            <StatsCard 
+              title="Preventivas Atrasadas" 
+              value={stats.tarefasAtrasadas.toString()} 
+              icon={<AlertTriangle className="h-5 w-5 text-destructive" />}
+              trend={{
+                value: stats.tarefasAtrasadas,
+                positive: stats.tarefasAtrasadas === 0,
+                label: stats.tarefasAtrasadas === 0 ? 'Tudo em dia!' : 'Requer atenção'
+              }}
+              description="Precisam de ação urgente"
+              className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-900/10"
+            />
+            <StatsCard 
+              title="Paradas em Andamento" 
+              value={stats.paradasEmAndamento.toString()} 
+              icon={<StopCircle className="h-5 w-5 text-orange-500" />}
+              trend={{
+                value: stats.paradasAguardando,
+                positive: stats.paradasAguardando === 0,
+                label: `${stats.paradasAguardando} aguardando`
+              }}
+              description="Máquinas em manutenção"
+              className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10"
+            />
+            <StatsCard 
+              title="Execuções Realizadas" 
+              value={stats.execucoesRealizadas.toString()} 
+              icon={<CheckCircle className="h-5 w-5 text-green-500" />}
+              trend={{
+                value: stats.paradasConcluidas,
+                positive: true,
+                label: `${stats.paradasConcluidas} paradas concluídas`
+              }}
+              description="Total de manutenções"
+              className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10"
+            />
+          </div>
+
+          {/* Primeira linha de gráficos */}
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
+            {/* Execuções por período - Área */}
+            <Card className="col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" /> Execuções por Período
+                </CardTitle>
+                <CardDescription>
+                  {period === "hoje" ? "Hoje por hora" : period === "semana" ? "Esta semana por dia" : period === "mes" ? "Este mês por dia" : "Este ano por mês"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={dadosExecucoesPorPeriodo}>
+                      <defs>
+                        <linearGradient id="colorPreventivas" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#0088FE" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#0088FE" stopOpacity={0.1}/>
+                        </linearGradient>
+                        <linearGradient id="colorParadas" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#00C49F" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#00C49F" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip {...tooltipStyle} />
+                      <Legend />
+                      <Area type="monotone" dataKey="preventivas" name="Preventivas" stroke="#0088FE" fillOpacity={1} fill="url(#colorPreventivas)" />
+                      <Area type="monotone" dataKey="paradas" name="Paradas" stroke="#00C49F" fillOpacity={1} fill="url(#colorParadas)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Saúde da manutenção - Radar */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5" /> Saúde da Manutenção
+                </CardTitle>
+                <CardDescription>Indicadores de performance</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={dadosSaudeManutencao}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="subject" />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                      <Tooltip {...tooltipStyle} formatter={value => [`${Number(value).toFixed(0)}%`, 'Índice']} />
+                      <Radar name="Performance" dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Segunda linha de gráficos */}
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
+            {/* Status Preventivas - Pizza */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChartIcon className="h-5 w-5" /> Status Preventivas
+                </CardTitle>
+                <CardDescription>Distribuição das tarefas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie 
+                        data={dadosStatusPreventivas} 
+                        cx="50%" 
+                        cy="50%" 
+                        labelLine={false}
+                        outerRadius={80} 
+                        innerRadius={40}
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {dadosStatusPreventivas.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip {...tooltipStyle} formatter={value => [`${value} tarefas`, 'Quantidade']} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Status Paradas - Pizza */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <StopCircle className="h-5 w-5" /> Status Paradas
+                </CardTitle>
+                <CardDescription>Distribuição das paradas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie 
+                        data={dadosStatusParadas} 
+                        cx="50%" 
+                        cy="50%" 
+                        labelLine={false}
+                        outerRadius={80} 
+                        innerRadius={40}
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {dadosStatusParadas.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip {...tooltipStyle} formatter={value => [`${value} paradas`, 'Quantidade']} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tarefas por Máquina - Barras */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart2 className="h-5 w-5" /> Tarefas por Máquina
+                </CardTitle>
+                <CardDescription>Distribuição de tarefas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart layout="vertical" data={dadosTarefasPorMaquina} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis type="number" />
+                      <YAxis dataKey="name" type="category" width={100} />
+                      <Tooltip {...tooltipStyle} formatter={value => [`${value} tarefas`, 'Quantidade']} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Terceira linha - Execuções por Manutentor */}
+          <div className="grid gap-6 mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5" /> Execuções por Manutentor
+                </CardTitle>
+                <CardDescription>Performance da equipe de manutenção</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dadosExecucoesPorManutentor}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} interval={0} />
+                      <YAxis />
+                      <Tooltip {...tooltipStyle} />
+                      <Legend />
+                      <Bar dataKey="preventivas" name="Preventivas" fill="#0088FE" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="paradas" name="Paradas" fill="#00C49F" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </AppLayout>
   );
 };

@@ -167,7 +167,7 @@ const AppSidebar = () => {
     }, {
       to: "/execucao-preventiva",
       icon: ClipboardCheck,
-      label: "Execução Preventiva",
+      label: "Execução de Parada",
       permission: "execucao_preventiva"
     }, {
       to: "/parada-maquina",

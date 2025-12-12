@@ -9,6 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,6 +88,8 @@ const AddParadaModal = ({ open, onOpenChange, onSuccess }: AddParadaModalProps) 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   const [responsavelPopoverOpen, setResponsavelPopoverOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   const { toast } = useToast();
 
   // Initialize react-hook-form
@@ -181,34 +193,43 @@ const AddParadaModal = ({ open, onOpenChange, onSuccess }: AddParadaModalProps) 
     return selectedUsuario ? `${selectedUsuario.nome} (${selectedUsuario.cargo})` : null;
   };
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleFormSubmit = (formData: FormData) => {
+    // Validação básica
+    if (!formData.equipamento || !formData.origemParada || !formData.descricaoProblema ||
+        !formData.horaInicial || !formData.horaFinal || !formData.responsavelManutencao ||
+        !formData.tipoManutencao || !formData.solucaoAplicada) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Armazena os dados e abre o modal de confirmação
+    setPendingFormData(formData);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (!pendingFormData) return;
+    
     setLoading(true);
+    setConfirmDialogOpen(false);
+    
     try {
-      // Validação básica
-      if (!formData.equipamento || !formData.origemParada || !formData.descricaoProblema ||
-          !formData.horaInicial || !formData.horaFinal || !formData.responsavelManutencao ||
-          !formData.tipoManutencao || !formData.solucaoAplicada) {
-        toast({
-          title: "Campos obrigatórios",
-          description: "Por favor, preencha todos os campos obrigatórios.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-      
       // Prepare data for Firestore
       const paradaData = {
-        equipamento: formData.equipamento,
-        origem_parada: formData.origemParada,
-        descricao_problema: formData.descricaoProblema,
-        hora_inicial: formData.horaInicial,
-        hora_final: formData.horaFinal,
-        tempo_parada: formData.tempoParada,
-        responsavel_manutencao: formData.responsavelManutencao,
-        tipo_manutencao: formData.tipoManutencao,
-        solucao_aplicada: formData.solucaoAplicada,
-        observacoes: formData.observacoes,
+        equipamento: pendingFormData.equipamento,
+        origem_parada: pendingFormData.origemParada,
+        descricao_problema: pendingFormData.descricaoProblema,
+        hora_inicial: pendingFormData.horaInicial,
+        hora_final: pendingFormData.horaFinal,
+        tempo_parada: pendingFormData.tempoParada,
+        responsavel_manutencao: pendingFormData.responsavelManutencao,
+        tipo_manutencao: pendingFormData.tipoManutencao,
+        solucao_aplicada: pendingFormData.solucaoAplicada,
+        observacoes: pendingFormData.observacoes,
         data_registro: new Date().toISOString(),
       };
 
@@ -225,6 +246,7 @@ const AddParadaModal = ({ open, onOpenChange, onSuccess }: AddParadaModalProps) 
       onOpenChange(false);
       onSuccess();
       form.reset();
+      setPendingFormData(null);
     } catch (error) {
       console.error("Erro ao adicionar registro de parada:", error);
       toast({
@@ -238,6 +260,7 @@ const AddParadaModal = ({ open, onOpenChange, onSuccess }: AddParadaModalProps) 
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -247,7 +270,7 @@ const AddParadaModal = ({ open, onOpenChange, onSuccess }: AddParadaModalProps) 
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
             <FormField
               control={form.control}
               name="equipamento"
@@ -546,6 +569,33 @@ const AddParadaModal = ({ open, onOpenChange, onSuccess }: AddParadaModalProps) 
         </Form>
       </DialogContent>
     </Dialog>
+
+    {/* Modal de Confirmação */}
+    <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirmar Registro de Parada</AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2">
+            <p>A parada será registrada e iniciada na data e horário programado:</p>
+            {pendingFormData && (
+              <div className="mt-3 p-3 bg-muted rounded-md space-y-1">
+                <p><strong>Equipamento:</strong> {pendingFormData.equipamento}</p>
+                <p><strong>Horário:</strong> {pendingFormData.horaInicial} às {pendingFormData.horaFinal}</p>
+                <p><strong>Duração:</strong> {pendingFormData.tempoParada}</p>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground mt-2">Deseja continuar?</p>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmSubmit}>
+            Confirmar Registro
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 };
 

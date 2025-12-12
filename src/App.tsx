@@ -159,7 +159,7 @@ const AppContent = () => {
           <Route path="/gestao-manutencao" element={<AuthGuard><GestaoSetores /></AuthGuard>} />
           <Route path="/maquinas" element={<AuthGuard><Maquinas /></AuthGuard>} />
           <Route path="/maquinas/:id" element={<AuthGuard><MaquinaDetalhes /></AuthGuard>} />
-          <Route path="/manutencoes-dashboard" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
+          <Route path="/dashboard-manutencao" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
           <Route path="/manutencao-preventiva" element={<AuthGuard><ManutencaoPreventiva /></AuthGuard>} />
           <Route path="/execucao-preventiva" element={<AuthGuard><ManutentorGuard><ExecucaoPreventiva /></ManutentorGuard></AuthGuard>} />
           <Route path="/gestao-tarefas" element={<AuthGuard><GestaoTarefas /></AuthGuard>} />

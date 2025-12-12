@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "@/firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
 import AppLayout from "@/layouts/AppLayout";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -253,7 +253,9 @@ const SupplierPage = () => {
   const fetchSuppliers = async () => {
     try {
       const suppliersSnapshot = await getDocs(collection(db, "fornecedores"));
-      const suppliersData = suppliersSnapshot.docs.map(doc => doc.data() as Supplier);
+      const suppliersData = suppliersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Supplier & { id: string }));
+      // Ordenar alfabeticamente por Razão Social (A-Z)
+      suppliersData.sort((a, b) => a.razaoSocial.localeCompare(b.razaoSocial, 'pt-BR'));
       setSuppliers(suppliersData);
     } catch (error) {
       console.error("Erro ao buscar fornecedores:", error);
@@ -348,6 +350,17 @@ const SupplierPage = () => {
       return;
     }
     
+    // Verificar se já existe fornecedor com o mesmo CNPJ
+    const cnpjQuery = query(
+      collection(db, "fornecedores"),
+      where("cnpj", "==", formData.cnpj)
+    );
+    const cnpjSnapshot = await getDocs(cnpjQuery);
+    if (!cnpjSnapshot.empty) {
+      toast.error("Já existe um fornecedor cadastrado com este CNPJ");
+      return;
+    }
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       toast.error("Email inválido");
@@ -429,7 +442,7 @@ const SupplierPage = () => {
     <AppLayout title="Gerenciamento de Fornecedores">
       <div className="flex flex-col xl:flex-row gap-4 md:gap-6 p-2 sm:p-0">
         {/* Formulário de Cadastro */}
-        <div className="w-full xl:w-5/12 2xl:w-4/12">
+        <div className="w-full xl:w-[320px] xl:min-w-[320px] xl:max-w-[320px]">
           <Card className="shadow-md">
             <CardHeader className="pb-2 px-3 sm:px-6">
               <CardTitle className="text-lg sm:text-xl text-white">Cadastro de Fornecedor</CardTitle>
@@ -727,7 +740,7 @@ const SupplierPage = () => {
         </div>
         
         {/* Lista de Fornecedores */}
-        <div className="w-full xl:w-7/12 2xl:w-8/12">
+        <div className="w-full xl:flex-1">
           <Card className="shadow-md">
             <CardHeader className="pb-2 px-3 sm:px-6">
               <CardTitle className="text-lg sm:text-xl text-white">Lista de Fornecedores</CardTitle>
@@ -803,11 +816,7 @@ const SupplierPage = () => {
                       <TableRow>
                         <TableHead className="min-w-[200px] text-xs whitespace-nowrap">Razão Social</TableHead>
                         <TableHead className="min-w-[160px] text-xs whitespace-nowrap">CNPJ</TableHead>
-                        <TableHead className="min-w-[140px] text-xs whitespace-nowrap">Cidade/Estado</TableHead>
                         <TableHead className="min-w-[130px] text-xs whitespace-nowrap">Telefone</TableHead>
-                        <TableHead className="min-w-[200px] text-xs whitespace-nowrap">Email</TableHead>
-                        <TableHead className="min-w-[110px] text-xs whitespace-nowrap">Pagamento</TableHead>
-                        <TableHead className="min-w-[80px] text-xs whitespace-nowrap">Prazo</TableHead>
                         <TableHead className="text-right min-w-[70px] text-xs whitespace-nowrap">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -817,11 +826,7 @@ const SupplierPage = () => {
                           <TableRow key={index} className="hover:bg-muted/50">
                             <TableCell className="font-medium text-xs max-w-[200px] truncate">{supplier.razaoSocial}</TableCell>
                             <TableCell className="text-xs">{supplier.cnpj}</TableCell>
-                            <TableCell className="text-xs">{`${supplier.endereco.cidade}/${supplier.endereco.estado}`}</TableCell>
                             <TableCell className="text-xs">{supplier.telefone}</TableCell>
-                            <TableCell className="text-xs max-w-[200px] truncate">{supplier.email}</TableCell>
-                            <TableCell className="text-xs">{supplier.condicoesPagamento}</TableCell>
-                            <TableCell className="text-xs">{supplier.prazoEntrega} dias</TableCell>
                             <TableCell className="text-right">
                               <Button 
                                 variant="ghost" 
@@ -836,7 +841,7 @@ const SupplierPage = () => {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground text-sm">
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground text-sm">
                             Nenhum fornecedor cadastrado
                           </TableCell>
                         </TableRow>
@@ -854,7 +859,22 @@ const SupplierPage = () => {
       {modalAberto && fornecedorSelecionado && (
         <ModalFornecedor 
           fornecedor={fornecedorSelecionado} 
-          onClose={fecharModal} 
+          onClose={fecharModal}
+          onDelete={async (cnpj: string) => {
+            try {
+              const q = query(collection(db, "fornecedores"), where("cnpj", "==", cnpj));
+              const snapshot = await getDocs(q);
+              if (!snapshot.empty) {
+                await deleteDoc(doc(db, "fornecedores", snapshot.docs[0].id));
+                toast.success("Fornecedor excluído com sucesso");
+                fetchSuppliers();
+                fecharModal();
+              }
+            } catch (error) {
+              console.error("Erro ao excluir fornecedor:", error);
+              toast.error("Erro ao excluir fornecedor");
+            }
+          }}
         />
       )}
     </AppLayout>

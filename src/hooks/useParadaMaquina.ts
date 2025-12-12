@@ -21,7 +21,8 @@ import {
   getProximoStatusVerificacao,
   getStatusConcluido,
   isStatusConcluido,
-  isStatusAguardandoVerificacao
+  isStatusAguardandoVerificacao,
+  isStatusFinalizado
 } from "@/types/typesParadaMaquina";
 import { calcularProximaManutencao } from "@/utils/manutencaoUtils";
 import { v4 as uuidv4 } from "uuid";
@@ -53,6 +54,55 @@ export const useParadaMaquina = () => {
 
     return () => unsubscribe();
   }, []);
+
+  // Verificar paradas expiradas automaticamente
+  useEffect(() => {
+    const verificarParadasExpiradas = async () => {
+      const agora = new Date();
+      const horaAtual = agora.getHours().toString().padStart(2, '0') + ':' + agora.getMinutes().toString().padStart(2, '0');
+      
+      for (const parada of paradas) {
+        // Só verifica paradas aguardando
+        if (parada.status !== "aguardando") continue;
+        
+        const hrFinal = parada.hrFinal;
+        if (!hrFinal) continue;
+        
+        // Se a hora atual passou da hora final, marcar como não executada
+        if (horaAtual >= hrFinal) {
+          try {
+            const paradaRef = doc(db, "paradas_maquina", parada.id);
+            const novoHistorico: HistoricoAcao = {
+              id: uuidv4(),
+              acao: "cancelado",
+              userId: "sistema",
+              userName: "Sistema Automático",
+              timestamp: Timestamp.now(),
+              observacao: "Parada não foi iniciada dentro do horário previsto",
+              statusAnterior: parada.status,
+              statusNovo: "nao_executada"
+            };
+            
+            await updateDoc(paradaRef, {
+              status: "nao_executada",
+              historicoAcoes: [...(parada.historicoAcoes || []), novoHistorico]
+            });
+          } catch (error) {
+            console.error("Erro ao marcar parada como não executada:", error);
+          }
+        }
+      }
+    };
+
+    // Verificar a cada minuto
+    const interval = setInterval(verificarParadasExpiradas, 60000);
+    // Verificar imediatamente ao carregar
+    if (paradas.length > 0) {
+      verificarParadasExpiradas();
+    }
+    
+    return () => clearInterval(interval);
+  }, [paradas]);
 
   // Criar nova entrada no histórico
   const criarHistorico = (

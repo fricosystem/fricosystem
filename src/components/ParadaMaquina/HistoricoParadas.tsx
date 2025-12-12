@@ -4,13 +4,14 @@ import { db } from "@/firebase/firebase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, Search, ChevronRight, Clock, Wrench, CheckCircle2 } from "lucide-react";
+import { Loader2, Search, ChevronRight, Clock, Wrench, CheckCircle2, XCircle, Timer } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import RelatorioParadaDetalhado from "./RelatorioParadaDetalhado";
-import { ParadaMaquina } from "@/types/typesParadaMaquina";
+import { ParadaMaquina, isStatusConcluido, isStatusFinalizado } from "@/types/typesParadaMaquina";
+import { StatusBadgeParada } from "./StatusBadgeParada";
 
 interface Usuario {
   id: string;
@@ -18,11 +19,14 @@ interface Usuario {
   cargo: string;
 }
 
+type FiltroStatus = "todos" | "concluidas" | "nao_executadas";
+
 const HistoricoParadas = () => {
   const [paradas, setParadas] = useState<ParadaMaquina[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todos");
   const [selectedParada, setSelectedParada] = useState<ParadaMaquina | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
@@ -56,8 +60,8 @@ const HistoricoParadas = () => {
       const fetchedParadas: ParadaMaquina[] = [];
       querySnapshot.forEach(doc => {
         const data = doc.data();
-        // Filtra apenas paradas concluídas
-        if (data.status === "concluido") {
+        // Filtra paradas concluídas e não executadas (finalizadas)
+        if (isStatusConcluido(data.status) || data.status === "nao_executada") {
           fetchedParadas.push({
             id: doc.id,
             ...data
@@ -84,6 +88,11 @@ const HistoricoParadas = () => {
   }, []);
 
   const filteredParadas = paradas.filter(parada => {
+    // Filtrar por status
+    if (filtroStatus === "concluidas" && !isStatusConcluido(parada.status)) return false;
+    if (filtroStatus === "nao_executadas" && parada.status !== "nao_executada") return false;
+    
+    // Filtrar por busca
     const searchValue = searchTerm.toLowerCase();
     return (
       parada.setor?.toLowerCase().includes(searchValue) ||
@@ -92,6 +101,10 @@ const HistoricoParadas = () => {
       getResponsavelNome(parada.responsavelManutencao)?.toLowerCase().includes(searchValue)
     );
   });
+
+  // Contagem para os badges dos filtros
+  const countConcluidas = paradas.filter(p => isStatusConcluido(p.status)).length;
+  const countNaoExecutadas = paradas.filter(p => p.status === "nao_executada").length;
 
   const getResponsavelNome = (responsavelId: string) => {
     const usuario = usuarios.find(u => u.id === responsavelId);
@@ -119,7 +132,7 @@ const HistoricoParadas = () => {
   return (
     <>
       <Card className="border-0 shadow-none flex flex-col h-full">
-        <CardHeader className="px-0 py-3 sticky top-0 bg-background z-10">
+        <CardHeader className="px-0 py-3 sticky top-0 bg-background z-10 space-y-3">
           <div className="relative w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
@@ -128,6 +141,45 @@ const HistoricoParadas = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-12 w-full text-base h-14 rounded-xl"
             />
+          </div>
+          
+          {/* Filtros por status */}
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            <button
+              onClick={() => setFiltroStatus("todos")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                filtroStatus === "todos"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Todos
+              <Badge variant="secondary" className="text-xs">{paradas.length}</Badge>
+            </button>
+            <button
+              onClick={() => setFiltroStatus("concluidas")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                filtroStatus === "concluidas"
+                  ? "bg-emerald-500 text-white"
+                  : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20"
+              }`}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Concluídas
+              <Badge variant="secondary" className="text-xs bg-emerald-500/20">{countConcluidas}</Badge>
+            </button>
+            <button
+              onClick={() => setFiltroStatus("nao_executadas")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                filtroStatus === "nao_executadas"
+                  ? "bg-rose-500 text-white"
+                  : "bg-rose-500/10 text-rose-700 hover:bg-rose-500/20"
+              }`}
+            >
+              <XCircle className="h-4 w-4" />
+              Não Executadas
+              <Badge variant="secondary" className="text-xs bg-rose-500/20">{countNaoExecutadas}</Badge>
+            </button>
           </div>
         </CardHeader>
 
@@ -140,7 +192,7 @@ const HistoricoParadas = () => {
           ) : filteredParadas.length === 0 ? (
             <div className="text-center py-16">
               <CheckCircle2 className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-              <p className="text-muted-foreground text-lg">Nenhuma parada concluída</p>
+              <p className="text-muted-foreground text-lg">Nenhuma parada no histórico</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -164,7 +216,15 @@ const HistoricoParadas = () => {
                       <ChevronRight className="h-6 w-6 text-muted-foreground flex-shrink-0 mt-1" />
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                      {(parada.hrInicial || parada.hrFinal) && (
+                        <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded-lg">
+                          <Timer className="h-4 w-4" />
+                          <span>
+                            {parada.hrInicial || "--:--"} - {parada.hrFinal || "--:--"}
+                          </span>
+                        </div>
+                      )}
                       {parada.tipoManutencao && (
                         <div className="flex items-center gap-1.5">
                           <Wrench className="h-4 w-4" />
@@ -180,9 +240,7 @@ const HistoricoParadas = () => {
                     </div>
 
                     <div className="flex justify-between items-center pt-1">
-                      <Badge className="bg-emerald-500/20 text-emerald-700 border-emerald-500/30 text-sm px-3 py-1">
-                        Concluído
-                      </Badge>
+                      <StatusBadgeParada status={parada.status} />
                       <span className="text-sm text-muted-foreground">
                         {parada.criadoEm && format(parada.criadoEm.toDate(), "dd/MM/yy HH:mm")}
                       </span>

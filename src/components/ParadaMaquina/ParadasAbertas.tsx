@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search, ChevronRight, Clock, Wrench, AlertTriangle } from "lucide-react";
+import { Loader2, Search, ChevronRight, Clock, Wrench, AlertTriangle, Timer } from "lucide-react";
 import { format } from "date-fns";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useParadaMaquina } from "@/hooks/useParadaMaquina";
 import { StatusBadgeParada } from "./StatusBadgeParada";
 import { ParadaMaquina } from "@/types/typesParadaMaquina";
 import RelatorioParadaDetalhado from "./RelatorioParadaDetalhado";
+import { useParadaAlerts } from "@/hooks/useParadaAlerts";
+import { TempoRestanteIndicator } from "./TempoRestanteIndicator";
 
 interface ParadasAbertasProps {
   onCountChange?: (count: number) => void;
@@ -19,6 +21,9 @@ const ParadasAbertas = ({ onCountChange, onStatsChange }: ParadasAbertasProps) =
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedParada, setSelectedParada] = useState<ParadaMaquina | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Hook para alertas de paradas prestes a expirar
+  useParadaAlerts(paradasAbertas);
 
   // Atualizar contagens
   React.useEffect(() => {
@@ -111,7 +116,15 @@ const ParadasAbertas = ({ onCountChange, onStatsChange }: ParadasAbertasProps) =
                       <ChevronRight className="h-6 w-6 text-muted-foreground flex-shrink-0 mt-1" />
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                      {(parada.hrInicial || parada.hrFinal) && (
+                        <div className="flex items-center gap-1.5 bg-primary/10 px-2 py-1 rounded-lg">
+                          <Timer className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-primary">
+                            {parada.hrInicial || "--:--"} - {parada.hrFinal || "--:--"}
+                          </span>
+                        </div>
+                      )}
                       {parada.tipoManutencao && (
                         <div className="flex items-center gap-1.5">
                           <Wrench className="h-4 w-4" />
@@ -126,8 +139,11 @@ const ParadasAbertas = ({ onCountChange, onStatsChange }: ParadasAbertasProps) =
                       )}
                     </div>
 
-                    <div className="flex justify-between items-center pt-1">
-                      {getStatusBadge(parada.status)}
+                    <div className="flex justify-between items-center pt-1 gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(parada.status)}
+                        <TempoRestanteIndicator hrFinal={parada.hrFinal} status={parada.status} />
+                      </div>
                       <span className="text-sm text-muted-foreground">
                         {parada.criadoEm && format(parada.criadoEm.toDate(), "dd/MM/yy HH:mm")}
                       </span>
