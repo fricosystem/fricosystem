@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { HistoricoAcao } from "@/types/typesParadaMaquina";
+import { v4 as uuidv4 } from "uuid";
 
 interface Equipamento {
   id: string;
@@ -25,6 +27,11 @@ interface Setor {
 }
 
 interface TipoFalha {
+  id: string;
+  nome: string;
+}
+
+interface TipoManutencao {
   id: string;
   nome: string;
 }
@@ -45,21 +52,26 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
   const [tiposFalhas, setTiposFalhas] = useState<TipoFalha[]>([]);
+  const [tiposManutencao, setTiposManutencao] = useState<TipoManutencao[]>([]);
   const [loadingSetores, setLoadingSetores] = useState(false);
   const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
   const [loadingTiposFalhas, setLoadingTiposFalhas] = useState(false);
+  const [loadingTiposManutencao, setLoadingTiposManutencao] = useState(false);
   const [collectionChecked, setCollectionChecked] = useState(false);
+  
+  const hoje = new Date();
+  const dataAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
   
   const [formData, setFormData] = useState({
     setor: "",
     equipamento: "",
-    hrInicial: "",
-    hrFinal: "",
-    linhaParada: "",
+    dataProgramada: dataAtual,
+    horaInicio: "",
+    horaFinal: "",
     descricaoMotivo: "",
     observacao: "",
+    tipoFalha: "",
     tipoManutencao: "",
-    solucaoAplicada: "",
   });
 
   // Apply initial data from QR scan - aguarda equipamentos carregarem
@@ -200,6 +212,34 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
     fetchTiposFalhas();
   }, []);
 
+  useEffect(() => {
+    const fetchTiposManutencao = async () => {
+      try {
+        setLoadingTiposManutencao(true);
+        const tiposManutencaoRef = collection(db, "tipos_manutencao");
+        const querySnapshot = await getDocs(tiposManutencaoRef);
+        
+        const tiposManutencaoData: TipoManutencao[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          tiposManutencaoData.push({
+            id: doc.id,
+            nome: data.nome || "",
+          });
+        });
+        
+        setTiposManutencao(tiposManutencaoData);
+      } catch (error) {
+        console.error("Erro ao buscar tipos de manutenção:", error);
+        toast.error("Não foi possível carregar a lista de tipos de manutenção.");
+      } finally {
+        setLoadingTiposManutencao(false);
+      }
+    };
+
+    fetchTiposManutencao();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -236,20 +276,57 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
       
       const batch = writeBatch(db);
       
+      // Criar horário de início programado
+      let horarioInicio: Timestamp | null = null;
+      if (formData.dataProgramada && formData.horaInicio) {
+        const [ano, mes, dia] = formData.dataProgramada.split('-').map(Number);
+        const [hora, minuto] = formData.horaInicio.split(':').map(Number);
+        const dataHora = new Date(ano, mes - 1, dia, hora, minuto);
+        horarioInicio = Timestamp.fromDate(dataHora);
+      }
+
+      // Criar horário final programado
+      let horarioFinal: Timestamp | null = null;
+      if (formData.dataProgramada && formData.horaFinal) {
+        const [ano, mes, dia] = formData.dataProgramada.split('-').map(Number);
+        const [hora, minuto] = formData.horaFinal.split(':').map(Number);
+        const dataHora = new Date(ano, mes - 1, dia, hora, minuto);
+        horarioFinal = Timestamp.fromDate(dataHora);
+      }
+
+      // Criar primeiro registro do histórico
+      const primeiroHistorico: HistoricoAcao = {
+        id: uuidv4(),
+        acao: "criado",
+        userId: user?.uid || "",
+        userName: userData?.nome || "Usuário",
+        timestamp: Timestamp.now(),
+        observacao: formData.descricaoMotivo,
+        tentativa: 1,
+        statusAnterior: "aguardando" as any,
+        statusNovo: "aguardando"
+      };
+      
       const paradaData = {
         setor: formData.setor,
         equipamento: formData.equipamento,
-        hrInicial: formData.hrInicial,
-        hrFinal: formData.hrFinal,
-        linhaParada: formData.linhaParada,
+        hrInicial: "",
+        hrFinal: "",
         descricaoMotivo: formData.descricaoMotivo,
         observacao: formData.observacao,
         origemParada: origemParada,
+        tipoFalha: formData.tipoFalha,
         tipoManutencao: formData.tipoManutencao,
-        solucaoAplicada: formData.solucaoAplicada,
+        solucaoAplicada: "",
         criadoPor: user?.uid || "",
         criadoEm: Timestamp.now(),
-        status: "pendente"
+        status: "aguardando",
+        encarregadoId: user?.uid || "",
+        encarregadoNome: userData?.nome || "",
+        horarioInicio: horarioInicio,
+        horarioFinal: horarioFinal,
+        tentativaAtual: 1,
+        historicoAcoes: [primeiroHistorico]
       };
       
       const paradaRef = doc(collection(db, "paradas_maquina"));
@@ -262,13 +339,13 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
       setFormData({
         setor: "",
         equipamento: "",
-        hrInicial: "",
-        hrFinal: "",
-        linhaParada: "",
+        dataProgramada: "",
+        horaInicio: "",
+        horaFinal: "",
         descricaoMotivo: "",
         observacao: "",
+        tipoFalha: "",
         tipoManutencao: "",
-        solucaoAplicada: "",
       });
       
       setOrigemParada({
@@ -333,65 +410,63 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                   <SelectValue placeholder={loadingEquipamentos ? "Carregando..." : "Selecione o equipamento"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] bg-background z-50">
-                  {equipamentos.map((equipamento) => (
-                    <SelectItem key={equipamento.id} value={equipamento.equipamento} className="text-xs sm:text-sm">
-                      {equipamento.patrimonio} - {equipamento.equipamento}
-                    </SelectItem>
-                  ))}
+                  {equipamentos
+                    .filter((e) => !formData.setor || e.setor === formData.setor)
+                    .map((equipamento) => (
+                      <SelectItem key={equipamento.id} value={equipamento.equipamento} className="text-xs sm:text-sm">
+                        {equipamento.patrimonio} - {equipamento.equipamento}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Hora Inicial e Hora Final */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Data, Hora Início e Hora Final */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="hrInicial" className="text-xs sm:text-sm">Hora Inicial</Label>
+              <Label htmlFor="dataProgramada" className="text-xs sm:text-sm">Data Programada*</Label>
               <Input
-                id="hrInicial"
-                name="hrInicial"
+                id="dataProgramada"
+                name="dataProgramada"
+                type="date"
+                value={formData.dataProgramada}
+                onChange={handleChange}
+                className="h-9 text-xs sm:text-sm"
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="horaInicio" className="text-xs sm:text-sm">Hora Início*</Label>
+              <Input
+                id="horaInicio"
+                name="horaInicio"
                 type="time"
-                value={formData.hrInicial}
+                value={formData.horaInicio}
                 onChange={handleChange}
                 className="h-9 text-xs sm:text-sm"
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="hrFinal" className="text-xs sm:text-sm">Hora Fim</Label>
+              <Label htmlFor="horaFinal" className="text-xs sm:text-sm">Hora Final</Label>
               <Input
-                id="hrFinal"
-                name="hrFinal"
+                id="horaFinal"
+                name="horaFinal"
                 type="time"
-                value={formData.hrFinal}
+                value={formData.horaFinal}
                 onChange={handleChange}
                 className="h-9 text-xs sm:text-sm"
               />
             </div>
           </div>
 
-          {/* Linha Parada e Tipo Manutenção */}
+          {/* Tipo de Falha e Tipo de Manutenção */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="linhaParada" className="text-xs sm:text-sm">Linha Parada</Label>
+              <Label htmlFor="tipoFalha" className="text-xs sm:text-sm">Tipo de Falha</Label>
               <Select 
-                value={formData.linhaParada} 
-                onValueChange={(value) => handleSelectChange("linhaParada", value)}
-              >
-                <SelectTrigger className="h-9 text-xs sm:text-sm">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Sim">Sim</SelectItem>
-                  <SelectItem value="Não">Não</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="tipoManutencao" className="text-xs sm:text-sm">Tipo de Falha</Label>
-              <Select 
-                value={formData.tipoManutencao} 
-                onValueChange={(value) => handleSelectChange("tipoManutencao", value)}
+                value={formData.tipoFalha} 
+                onValueChange={(value) => handleSelectChange("tipoFalha", value)}
                 disabled={loadingTiposFalhas}
               >
                 <SelectTrigger className="h-9 text-xs sm:text-sm">
@@ -399,6 +474,26 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] bg-background z-50">
                   {tiposFalhas.map((tipo) => (
+                    <SelectItem key={tipo.id} value={tipo.nome} className="text-xs sm:text-sm">
+                      {tipo.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="tipoManutencao" className="text-xs sm:text-sm">Tipo de Manutenção</Label>
+              <Select 
+                value={formData.tipoManutencao} 
+                onValueChange={(value) => handleSelectChange("tipoManutencao", value)}
+                disabled={loadingTiposManutencao}
+              >
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder={loadingTiposManutencao ? "Carregando..." : "Selecione"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px] bg-background z-50">
+                  {tiposManutencao.map((tipo) => (
                     <SelectItem key={tipo.id} value={tipo.nome} className="text-xs sm:text-sm">
                       {tipo.nome}
                     </SelectItem>
@@ -415,19 +510,6 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
               name="descricaoMotivo"
               placeholder="Descreva o motivo da parada..."
               value={formData.descricaoMotivo}
-              onChange={handleChange}
-              className="min-h-[60px] text-xs sm:text-sm resize-none"
-            />
-          </div>
-
-          {/* Solução */}
-          <div className="space-y-1">
-            <Label htmlFor="solucaoAplicada" className="text-xs sm:text-sm">Solução Aplicada</Label>
-            <Textarea
-              id="solucaoAplicada"
-              name="solucaoAplicada"
-              placeholder="Descreva a solução aplicada..."
-              value={formData.solucaoAplicada}
               onChange={handleChange}
               className="min-h-[60px] text-xs sm:text-sm resize-none"
             />

@@ -371,7 +371,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/q_100,f_png/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">
@@ -449,7 +449,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/q_100,f_png/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">

@@ -1,59 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { collection, query, getDocs, Timestamp, orderBy, where, doc, updateDoc, getDoc } from "firebase/firestore";
-import { db } from "@/firebase/firebase";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 import { Loader2, Search, ChevronRight, Clock, Wrench, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { calcularProximaManutencao } from "@/utils/manutencaoUtils";
+import { useParadaMaquina } from "@/hooks/useParadaMaquina";
+import { StatusBadgeParada } from "./StatusBadgeParada";
+import { ParadaMaquina } from "@/types/typesParadaMaquina";
 import RelatorioParadaDetalhado from "./RelatorioParadaDetalhado";
-
-interface ProdutoUtilizado {
-  produtoId: string;
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
-  valorTotal: number;
-}
-
-interface ParadaMaquina {
-  id: string;
-  setor: string;
-  equipamento: string;
-  hrInicial: string;
-  hrFinal: string;
-  linhaParada: string;
-  descricaoMotivo: string;
-  observacao: string;
-  origemParada: {
-    automatizacao: boolean;
-    terceiros: boolean;
-    eletrica: boolean;
-    mecanica: boolean;
-    outro: boolean;
-  };
-  responsavelManutencao: string;
-  tipoManutencao: string;
-  solucaoAplicada: string;
-  produtosUtilizados: ProdutoUtilizado[];
-  valorTotalProdutos: number;
-  criadoPor: string;
-  criadoEm: Timestamp;
-  status: string;
-  pecaId?: string;
-  subPecaId?: string;
-  equipamentoId?: string;
-  sistemaId?: string;
-}
-
-interface Usuario {
-  id: string;
-  nome: string;
-  cargo: string;
-}
 
 interface ParadasAbertasProps {
   onCountChange?: (count: number) => void;
@@ -61,201 +15,36 @@ interface ParadasAbertasProps {
 }
 
 const ParadasAbertas = ({ onCountChange, onStatsChange }: ParadasAbertasProps) => {
-  const [paradas, setParadas] = useState<ParadaMaquina[]>([]);
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { paradasAbertas, loading, stats } = useParadaMaquina();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedParada, setSelectedParada] = useState<ParadaMaquina | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchUsuarios = async () => {
-      try {
-        const usuariosRef = collection(db, "usuarios");
-        const querySnapshot = await getDocs(usuariosRef);
-        const usuariosData: Usuario[] = [];
-        querySnapshot.forEach(doc => {
-          const data = doc.data();
-          usuariosData.push({
-            id: doc.id,
-            nome: data.nome || "",
-            cargo: data.cargo || ""
-          });
-        });
-        setUsuarios(usuariosData);
-      } catch (error) {
-        console.error("Erro ao buscar usuários:", error);
-      }
-    };
-    fetchUsuarios();
-  }, []);
+  // Atualizar contagens
+  React.useEffect(() => {
+    onCountChange?.(paradasAbertas.length);
+    onStatsChange?.({
+      abertas: stats.aguardando,
+      emAndamento: stats.emAndamento,
+      concluidas: stats.concluidas,
+      total: stats.total
+    });
+  }, [paradasAbertas, stats, onCountChange, onStatsChange]);
 
-  const fetchParadas = async () => {
-    setLoading(true);
-    try {
-      // Buscar todas as paradas para estatísticas
-      const allQuery = query(collection(db, "paradas_maquina"), orderBy("criadoEm", "desc"));
-      const allSnapshot = await getDocs(allQuery);
-      
-      const allParadas: ParadaMaquina[] = [];
-      allSnapshot.forEach(doc => {
-        allParadas.push({ id: doc.id, ...doc.data() } as ParadaMaquina);
-      });
-
-      // Calcular estatísticas
-      const abertas = allParadas.filter(p => p.status === "pendente").length;
-      const emAndamento = allParadas.filter(p => p.status === "em_andamento").length;
-      const concluidas = allParadas.filter(p => p.status === "concluido").length;
-      
-      onStatsChange?.({
-        abertas,
-        emAndamento,
-        concluidas,
-        total: allParadas.length
-      });
-
-      // Filtrar apenas não concluídas
-      const openParadas = allParadas.filter(p => p.status !== "concluido");
-      setParadas(openParadas);
-      onCountChange?.(openParadas.length);
-    } catch (error: any) {
-      console.error("Erro ao buscar paradas:", error);
-      toast.error("Erro ao carregar paradas");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchParadas();
-  }, []);
-
-  const filteredParadas = paradas.filter(parada => {
+  const filteredParadas = paradasAbertas.filter(parada => {
     const searchValue = searchTerm.toLowerCase();
     return (
       parada.setor?.toLowerCase().includes(searchValue) ||
       parada.equipamento?.toLowerCase().includes(searchValue) ||
-      parada.descricaoMotivo?.toLowerCase().includes(searchValue) ||
-      getResponsavelNome(parada.responsavelManutencao)?.toLowerCase().includes(searchValue)
+      parada.descricaoMotivo?.toLowerCase().includes(searchValue)
     );
   });
 
-  const handleStatusChange = async (paradaId: string, newStatus: string) => {
-    try {
-      const paradaRef = doc(db, "paradas_maquina", paradaId);
-      const paradaDoc = await getDoc(paradaRef);
-      if (!paradaDoc.exists()) {
-        toast.error("Parada não encontrada");
-        return;
-      }
-      const parada = paradaDoc.data() as ParadaMaquina;
-      await updateDoc(paradaRef, { status: newStatus });
-      
-      if (newStatus === "concluido" && (parada.pecaId || parada.subPecaId)) {
-        await atualizarManutencaoPeca(parada, paradaId);
-      }
-      
-      // Recarregar dados
-      fetchParadas();
-      toast.success(`Status atualizado para ${newStatus}`);
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-      toast.error("Erro ao atualizar o status");
-    }
-  };
-
-  const atualizarManutencaoPeca = async (parada: ParadaMaquina, paradaId: string) => {
-    try {
-      if (!parada.equipamentoId) return;
-      const equipamentoRef = doc(db, "equipamentos", parada.equipamentoId);
-      const equipamentoDoc = await getDoc(equipamentoRef);
-      if (!equipamentoDoc.exists()) return;
-
-      const equipamento = equipamentoDoc.data();
-      const sistemas = equipamento.sistemas || [];
-      const novosSistemas = sistemas.map((sistema: any) => {
-        if (sistema.id !== parada.sistemaId) return sistema;
-        const pecas = (sistema.pecas || []).map((peca: any) => {
-          if (peca.id === parada.pecaId) {
-            const config = peca.configuracaoManutencao;
-            const dataAtual = new Date().toISOString().split("T")[0];
-            let proximaManutencao = peca.proximaManutencao;
-            if (config?.intervaloManutencao) {
-              proximaManutencao = calcularProximaManutencao(
-                config.intervaloManutencao,
-                config.tipoIntervalo || "dias"
-              );
-            }
-            return {
-              ...peca,
-              ultimaManutencao: dataAtual,
-              proximaManutencao,
-              vidaUtilRestante: peca.vidaUtil || peca.vidaUtilRestante,
-              status: "Normal",
-              historicoManutencoes: [...(peca.historicoManutencoes || []), paradaId]
-            };
-          }
-          if (peca.subPecas && Array.isArray(peca.subPecas)) {
-            const subPecas = peca.subPecas.map((subPeca: any) => {
-              if (subPeca.id === parada.subPecaId) {
-                const config = subPeca.configuracaoManutencao;
-                const dataAtual = new Date().toISOString().split("T")[0];
-                let proximaManutencao = subPeca.proximaManutencao;
-                if (config?.intervaloManutencao) {
-                  proximaManutencao = calcularProximaManutencao(
-                    config.intervaloManutencao,
-                    config.tipoIntervalo || "dias"
-                  );
-                }
-                return {
-                  ...subPeca,
-                  ultimaManutencao: dataAtual,
-                  proximaManutencao,
-                  vidaUtilRestante: subPeca.vidaUtil || subPeca.vidaUtilRestante,
-                  status: "Normal",
-                  historicoManutencoes: [...(subPeca.historicoManutencoes || []), paradaId]
-                };
-              }
-              return subPeca;
-            });
-            return { ...peca, subPecas };
-          }
-          return peca;
-        });
-        return { ...sistema, pecas };
-      });
-      await updateDoc(equipamentoRef, { sistemas: novosSistemas });
-      toast.success("Manutenção da peça registrada!");
-    } catch (error) {
-      console.error("Erro ao atualizar manutenção:", error);
-    }
-  };
-
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pendente":
-        return (
-          <Badge className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-sm px-3 py-1.5">
-            Pendente
-          </Badge>
-        );
-      case "em_andamento":
-        return (
-          <Badge className="bg-blue-500/20 text-blue-700 border-blue-500/30 text-sm px-3 py-1.5">
-            Em andamento
-          </Badge>
-        );
-      default:
-        return <Badge className="text-sm px-3 py-1.5">{status}</Badge>;
-    }
+    return <StatusBadgeParada status={status} />;
   };
 
-  const getResponsavelNome = (responsavelId: string) => {
-    const usuario = usuarios.find(u => u.id === responsavelId);
-    return usuario ? `${usuario.nome} (${usuario.cargo})` : responsavelId || "Não informado";
-  };
-
-  const calcularTempoParada = (hrInicial: string, hrFinal: string) => {
+  const calcularTempoParada = (hrInicial?: string, hrFinal?: string) => {
     if (!hrInicial || !hrFinal) return null;
     const [hI, mI] = hrInicial.split(":").map(Number);
     const [hF, mF] = hrFinal.split(":").map(Number);
@@ -361,7 +150,6 @@ const ParadasAbertas = ({ onCountChange, onStatsChange }: ParadasAbertasProps) =
             {selectedParada && (
               <RelatorioParadaDetalhado
                 parada={selectedParada}
-                responsavelNome={getResponsavelNome(selectedParada.responsavelManutencao)}
               />
             )}
           </div>

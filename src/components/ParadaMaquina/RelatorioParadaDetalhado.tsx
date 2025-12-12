@@ -4,44 +4,12 @@ import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Clock, Wrench, User, Calendar, MapPin, AlertTriangle, Package, FileText, CheckCircle2 } from "lucide-react";
-
-interface ProdutoUtilizado {
-  produtoId: string;
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
-  valorTotal: number;
-}
-
-interface ParadaMaquina {
-  id: string;
-  setor: string;
-  equipamento: string;
-  hrInicial: string;
-  hrFinal: string;
-  linhaParada: string;
-  descricaoMotivo: string;
-  observacao: string;
-  origemParada: {
-    automatizacao: boolean;
-    terceiros: boolean;
-    eletrica: boolean;
-    mecanica: boolean;
-    outro: boolean;
-  };
-  responsavelManutencao: string;
-  tipoManutencao: string;
-  solucaoAplicada: string;
-  produtosUtilizados: ProdutoUtilizado[];
-  valorTotalProdutos: number;
-  criadoPor: string;
-  criadoEm: any;
-  status: string;
-}
+import { ParadaMaquina } from "@/types/typesParadaMaquina";
+import { Timestamp } from "firebase/firestore";
 
 interface RelatorioParadaDetalhadoProps {
   parada: ParadaMaquina;
-  responsavelNome: string;
+  responsavelNome?: string;
 }
 
 const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
@@ -67,32 +35,73 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
 
   const getStatusConfig = (status: string) => {
     switch (status) {
+      case "aguardando":
+        return { label: "Aguardando", className: "bg-amber-500/20 text-amber-700 border-amber-500/30" };
       case "pendente":
         return { label: "Pendente", className: "bg-amber-500/20 text-amber-700 border-amber-500/30" };
       case "em_andamento":
         return { label: "Em Andamento", className: "bg-blue-500/20 text-blue-700 border-blue-500/30" };
       case "concluido":
         return { label: "Concluído", className: "bg-emerald-500/20 text-emerald-700 border-emerald-500/30" };
+      case "aguardando_verificacao":
+        return { label: "Aguardando Verificação", className: "bg-purple-500/20 text-purple-700 border-purple-500/30" };
+      case "nao_concluido":
+        return { label: "Não Concluído", className: "bg-red-500/20 text-red-700 border-red-500/30" };
       default:
         return { label: status, className: "" };
     }
   };
 
-  const calcularTempoParada = () => {
-    if (!parada.hrInicial || !parada.hrFinal) return null;
-    const [hI, mI] = parada.hrInicial.split(":").map(Number);
-    const [hF, mF] = parada.hrFinal.split(":").map(Number);
-    const inicioMin = hI * 60 + mI;
-    const fimMin = hF * 60 + mF;
-    const diffMin = fimMin - inicioMin;
-    if (diffMin <= 0) return null;
-    const horas = Math.floor(diffMin / 60);
-    const minutos = diffMin % 60;
-    return horas > 0 ? `${horas}h ${minutos}min` : `${minutos}min`;
+  // Formatar horário do Timestamp
+  const formatarHorario = (timestamp: Timestamp | null | undefined): string => {
+    if (!timestamp) return "--:--";
+    try {
+      return format(timestamp.toDate(), "HH:mm");
+    } catch {
+      return "--:--";
+    }
+  };
+
+  // Formatar data do Timestamp
+  const formatarData = (timestamp: Timestamp | null | undefined): string => {
+    if (!timestamp) return "-";
+    try {
+      return format(timestamp.toDate(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR });
+    } catch {
+      return "-";
+    }
+  };
+
+  // Período da parada - usa horarioInicio e horarioFinal (Timestamps) ou hrInicial/hrFinal (strings)
+  const getPeriodoParada = (): string => {
+    // Primeiro tenta usar os campos Timestamp
+    const horarioInicioField = (parada as any).horarioInicio;
+    const horarioFinalField = (parada as any).horarioFinal;
+    
+    if (horarioInicioField && horarioFinalField) {
+      return `${formatarHorario(horarioInicioField)} até ${formatarHorario(horarioFinalField)}`;
+    }
+    
+    // Fallback para campos string
+    return `${parada.hrInicial || "--:--"} até ${parada.hrFinal || "--:--"}`;
+  };
+
+  // Nome do responsável (quem criou a parada)
+  const getNomeResponsavel = (): string => {
+    // Prioridade: encarregadoNome > responsavelNome (prop) > responsavelManutencao
+    if (parada.encarregadoNome) return parada.encarregadoNome;
+    if (responsavelNome) return responsavelNome;
+    if (parada.responsavelManutencao) return parada.responsavelManutencao;
+    return "Não informado";
+  };
+
+  // Tipo de falha
+  const getTipoFalha = (): string => {
+    const tipoFalha = (parada as any).tipoFalha;
+    return tipoFalha || "-";
   };
 
   const statusConfig = getStatusConfig(parada.status);
-  const tempoParada = calcularTempoParada();
   const origensParada = getOrigensParada(parada.origemParada);
 
   return (
@@ -103,12 +112,6 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
           <Badge className={`text-sm px-4 py-1.5 font-semibold ${statusConfig.className}`}>
             {statusConfig.label}
           </Badge>
-          {tempoParada && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span className="text-sm font-medium">{tempoParada}</span>
-            </div>
-          )}
         </div>
         <h2 className="text-xl font-bold leading-tight">{parada.equipamento}</h2>
         <p className="text-base text-muted-foreground">{parada.setor}</p>
@@ -127,17 +130,12 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
           <InfoRow 
             icon={<Calendar className="h-5 w-5" />}
             label="Data/Hora do Registro"
-            value={parada.criadoEm ? format(parada.criadoEm.toDate(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR }) : "-"}
+            value={formatarData(parada.criadoEm)}
           />
           <InfoRow 
             icon={<Clock className="h-5 w-5" />}
-            label="Período da Parada"
-            value={`${parada.hrInicial || "--:--"} até ${parada.hrFinal || "--:--"}`}
-          />
-          <InfoRow 
-            icon={<MapPin className="h-5 w-5" />}
-            label="Linha Parada"
-            value={parada.linhaParada || "Não informada"}
+            label="Período Programado"
+            value={getPeriodoParada()}
           />
           <InfoRow 
             icon={<Wrench className="h-5 w-5" />}
@@ -145,9 +143,14 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
             value={parada.tipoManutencao || "Não informado"}
           />
           <InfoRow 
+            icon={<AlertTriangle className="h-5 w-5" />}
+            label="Tipo de Falha"
+            value={getTipoFalha()}
+          />
+          <InfoRow 
             icon={<User className="h-5 w-5" />}
-            label="Responsável"
-            value={responsavelNome}
+            label="Responsável (Criador)"
+            value={getNomeResponsavel()}
           />
         </div>
       </div>
@@ -273,7 +276,7 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
           </div>
           <div>
             <span className="text-muted-foreground">Criado por:</span>
-            <p className="mt-0.5">{parada.criadoPor || "Sistema"}</p>
+            <p className="mt-0.5">{getNomeResponsavel()}</p>
           </div>
         </div>
       </div>

@@ -1,124 +1,36 @@
-import React, { useState, useEffect } from "react";
-import { collection, query, getDocs, orderBy, doc, updateDoc, getDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/firebase/firebase";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Search, Play, CheckCircle, Clock } from "lucide-react";
+import { Loader2, Search, Play, CheckCircle, Clock, AlertTriangle, Timer, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { StatusBadgeParada } from "@/components/ParadaMaquina/StatusBadgeParada";
+import { HistoricoAcoesTimeline } from "@/components/ParadaMaquina/HistoricoAcoesTimeline";
+import { useParadaMaquina } from "@/hooks/useParadaMaquina";
+import { ParadaMaquina, podeIniciarExecucao } from "@/types/typesParadaMaquina";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { calcularProximaManutencao } from "@/utils/manutencaoUtils";
-
-interface ProdutoUtilizado {
-  produtoId: string;
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
-  valorTotal: number;
-}
-
-interface ParadaMaquina {
-  id: string;
-  setor: string;
-  equipamento: string;
-  hrInicial: string;
-  hrFinal: string;
-  linhaParada: string;
-  descricaoMotivo: string;
-  observacao: string;
-  origemParada: {
-    automatizacao: boolean;
-    terceiros: boolean;
-    eletrica: boolean;
-    mecanica: boolean;
-    outro: boolean;
-  };
-  responsavelManutencao: string;
-  tipoManutencao: string;
-  solucaoAplicada: string;
-  produtosUtilizados: ProdutoUtilizado[];
-  valorTotalProdutos: number;
-  criadoPor: string;
-  criadoEm: Timestamp;
-  status: string;
-  pecaId?: string;
-  subPecaId?: string;
-  equipamentoId?: string;
-  sistemaId?: string;
-}
-
-interface Usuario {
-  id: string;
-  nome: string;
-  cargo: string;
-}
 
 export function ParadasMaquinaMobile() {
-  const [paradas, setParadas] = useState<ParadaMaquina[]>([]);
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    paradasParaManutentor, 
+    loading, 
+    iniciarExecucao, 
+    finalizarExecucao 
+  } = useParadaMaquina();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedParada, setSelectedParada] = useState<ParadaMaquina | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isFinalizando, setIsFinalizando] = useState(false);
+  const [solucaoAplicada, setSolucaoAplicada] = useState("");
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchUsuarios = async () => {
-      try {
-        const usuariosRef = collection(db, "usuarios");
-        const querySnapshot = await getDocs(usuariosRef);
-        
-        const usuariosData: Usuario[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          usuariosData.push({
-            id: doc.id,
-            nome: data.nome || "",
-            cargo: data.cargo || "",
-          });
-        });
-        
-        setUsuarios(usuariosData);
-      } catch (error) {
-        console.error("Erro ao buscar usuários:", error);
-      }
-    };
-
-    fetchUsuarios();
-  }, []);
-
-  const fetchParadas = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, "paradas_maquina"), orderBy("criadoEm", "desc"));
-      const querySnapshot = await getDocs(q);
-      
-      const fetchedParadas: ParadaMaquina[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        // Filtrar apenas paradas pendentes ou em andamento
-        if (data.status === "pendente" || data.status === "em_andamento") {
-          fetchedParadas.push({
-            id: doc.id,
-            ...data
-          } as ParadaMaquina);
-        }
-      });
-      
-      setParadas(fetchedParadas);
-    } catch (error) {
-      console.error("Erro ao buscar paradas:", error);
-      toast.error("Erro ao carregar as paradas de máquina");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchParadas();
-  }, []);
-
-  const filteredParadas = paradas.filter((parada) => {
+  const filteredParadas = paradasParaManutentor.filter((parada) => {
     const searchValue = searchTerm.toLowerCase();
     return (
       parada.setor?.toLowerCase().includes(searchValue) ||
@@ -127,141 +39,40 @@ export function ParadasMaquinaMobile() {
     );
   });
 
-  const handleStatusChange = async (paradaId: string, newStatus: string) => {
-    try {
-      const paradaRef = doc(db, "paradas_maquina", paradaId);
-      const paradaDoc = await getDoc(paradaRef);
-      
-      if (!paradaDoc.exists()) {
-        toast.error("Parada não encontrada");
-        return;
-      }
-      
-      const parada = paradaDoc.data() as ParadaMaquina;
-      
-      await updateDoc(paradaRef, {
-        status: newStatus
-      });
-      
-      if (newStatus === "concluido" && (parada.pecaId || parada.subPecaId)) {
-        await atualizarManutencaoPeca(parada, paradaId);
-      }
-      
-      // Remover da lista se concluído
-      if (newStatus === "concluido") {
-        setParadas(prev => prev.filter(p => p.id !== paradaId));
-      } else {
-        setParadas(prev => 
-          prev.map(p => 
-            p.id === paradaId ? { ...p, status: newStatus } : p
-          )
-        );
-      }
-      
-      toast.success(`Status atualizado para ${newStatus === "em_andamento" ? "Em andamento" : "Concluído"}`);
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-      toast.error("Erro ao atualizar o status");
+  const handleIniciar = async (parada: ParadaMaquina) => {
+    // Verificar regra dos 5 minutos
+    const { pode, mensagem } = podeIniciarExecucao(parada.horarioProgramado);
+    if (!pode) {
+      toast.error(mensagem);
+      return;
+    }
+
+    setProcessingId(parada.id);
+    const success = await iniciarExecucao(parada.id);
+    setProcessingId(null);
+    
+    if (success) {
+      setIsDetailOpen(false);
     }
   };
 
-  const atualizarManutencaoPeca = async (parada: ParadaMaquina, paradaId: string) => {
-    try {
-      if (!parada.equipamentoId) return;
-      
-      const equipamentoRef = doc(db, "equipamentos", parada.equipamentoId);
-      const equipamentoDoc = await getDoc(equipamentoRef);
-      
-      if (!equipamentoDoc.exists()) return;
-      
-      const equipamento = equipamentoDoc.data();
-      const sistemas = equipamento.sistemas || [];
-      
-      const novosSistemas = sistemas.map((sistema: any) => {
-        if (sistema.id !== parada.sistemaId) return sistema;
-        
-        const pecas = (sistema.pecas || []).map((peca: any) => {
-          if (peca.id === parada.pecaId) {
-            const config = peca.configuracaoManutencao;
-            const dataAtual = new Date().toISOString().split('T')[0];
-            
-            let proximaManutencao = peca.proximaManutencao;
-            if (config?.intervaloManutencao) {
-              proximaManutencao = calcularProximaManutencao(
-                config.intervaloManutencao,
-                config.tipoIntervalo || "dias"
-              );
-            }
-            
-            return {
-              ...peca,
-              ultimaManutencao: dataAtual,
-              proximaManutencao,
-              vidaUtilRestante: peca.vidaUtil || peca.vidaUtilRestante,
-              status: "Normal",
-              historicoManutencoes: [...(peca.historicoManutencoes || []), paradaId]
-            };
-          }
-          
-          if (peca.subPecas && Array.isArray(peca.subPecas)) {
-            const subPecas = peca.subPecas.map((subPeca: any) => {
-              if (subPeca.id === parada.subPecaId) {
-                const config = subPeca.configuracaoManutencao;
-                const dataAtual = new Date().toISOString().split('T')[0];
-                
-                let proximaManutencao = subPeca.proximaManutencao;
-                if (config?.intervaloManutencao) {
-                  proximaManutencao = calcularProximaManutencao(
-                    config.intervaloManutencao,
-                    config.tipoIntervalo || "dias"
-                  );
-                }
-                
-                return {
-                  ...subPeca,
-                  ultimaManutencao: dataAtual,
-                  proximaManutencao,
-                  vidaUtilRestante: subPeca.vidaUtil || subPeca.vidaUtilRestante,
-                  status: "Normal",
-                  historicoManutencoes: [...(subPeca.historicoManutencoes || []), paradaId]
-                };
-              }
-              return subPeca;
-            });
-            
-            return { ...peca, subPecas };
-          }
-          
-          return peca;
-        });
-        
-        return { ...sistema, pecas };
-      });
-      
-      await updateDoc(equipamentoRef, {
-        sistemas: novosSistemas
-      });
-      
-      toast.success("Manutenção da peça registrada!");
-    } catch (error) {
-      console.error("Erro ao atualizar manutenção da peça:", error);
+  const handleFinalizar = async () => {
+    if (!selectedParada) return;
+    
+    if (!solucaoAplicada.trim()) {
+      toast.error("Informe a solução aplicada");
+      return;
     }
-  };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pendente":
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 text-[10px]">Pendente</Badge>;
-      case "em_andamento":
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800 text-[10px]">Em andamento</Badge>;
-      default:
-        return <Badge variant="outline" className="text-[10px]">{status}</Badge>;
+    setProcessingId(selectedParada.id);
+    const success = await finalizarExecucao(selectedParada.id, solucaoAplicada);
+    setProcessingId(null);
+    
+    if (success) {
+      setIsFinalizando(false);
+      setSolucaoAplicada("");
+      setIsDetailOpen(false);
     }
-  };
-
-  const getResponsavelNome = (responsavelId: string) => {
-    const usuario = usuarios.find(u => u.id === responsavelId);
-    return usuario ? usuario.nome : responsavelId || "Não informado";
   };
 
   const getOrigensParada = (origens: ParadaMaquina["origemParada"]) => {
@@ -273,6 +84,16 @@ export function ParadasMaquinaMobile() {
     if (origens.mecanica) tipos.push("Mecânica");
     if (origens.outro) tipos.push("Outro");
     return tipos;
+  };
+
+  const formatHorarioProgramado = (parada: ParadaMaquina) => {
+    if (!parada.horarioProgramado) return "Não definido";
+    return format(parada.horarioProgramado.toDate(), "dd/MM/yy 'às' HH:mm", { locale: ptBR });
+  };
+
+  const openDetail = (parada: ParadaMaquina) => {
+    setSelectedParada(parada);
+    setIsDetailOpen(true);
   };
 
   if (loading) {
@@ -298,111 +119,209 @@ export function ParadasMaquinaMobile() {
       {filteredParadas.length === 0 ? (
         <div className="text-center py-12">
           <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Nenhuma parada pendente</p>
+          <p className="text-muted-foreground">Nenhuma parada para executar</p>
         </div>
       ) : (
         <div className="space-y-3">
           {filteredParadas.map((parada) => (
-            <Card key={parada.id} className="overflow-hidden">
+            <Card 
+              key={parada.id} 
+              className={`overflow-hidden cursor-pointer transition-all ${
+                parada.status === "nao_concluido" ? "border-red-500/50 bg-red-500/5" : ""
+              }`}
+              onClick={() => openDetail(parada)}
+            >
               <CardContent className="p-4 space-y-3">
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{parada.equipamento}</div>
                     <div className="text-sm text-muted-foreground">{parada.setor}</div>
                   </div>
-                  {getStatusBadge(parada.status)}
+                  <StatusBadgeParada status={parada.status} />
                 </div>
+
+                {parada.status === "nao_concluido" && parada.observacaoVerificacao && (
+                  <div className="p-2 bg-red-500/10 rounded-lg text-sm text-red-700">
+                    <AlertTriangle className="h-4 w-4 inline mr-1" />
+                    {parada.observacaoVerificacao}
+                  </div>
+                )}
                 
                 <div className="text-sm text-muted-foreground line-clamp-2">
                   {parada.descricaoMotivo}
                 </div>
+
+                {/* Horário programado */}
+                {parada.horarioProgramado && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="text-muted-foreground">Programado:</span>
+                    <span className="font-medium">{formatHorarioProgramado(parada)}</span>
+                    {parada.atrasado && (
+                      <Badge variant="destructive" className="text-xs">Atrasado</Badge>
+                    )}
+                  </div>
+                )}
                 
                 <div className="flex justify-between items-center text-xs text-muted-foreground">
                   <span>{parada.tipoManutencao || "Não informado"}</span>
-                  <span>{parada.criadoEm && format(parada.criadoEm.toDate(), "dd/MM HH:mm")}</span>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => setSelectedParada(parada)}
-                      >
-                        Detalhes
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Detalhes da Parada</DialogTitle>
-                      </DialogHeader>
-                      {selectedParada && (
-                        <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Setor</h4>
-                            <p>{selectedParada.setor}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Equipamento</h4>
-                            <p>{selectedParada.equipamento}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Tipo</h4>
-                            <p>{selectedParada.tipoManutencao || "-"}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Responsável</h4>
-                            <p>{getResponsavelNome(selectedParada.responsavelManutencao)}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <h4 className="font-semibold text-xs text-muted-foreground">Descrição</h4>
-                            <p>{selectedParada.descricaoMotivo}</p>
-                          </div>
-                          {selectedParada.origemParada && getOrigensParada(selectedParada.origemParada).length > 0 && (
-                            <div className="col-span-2">
-                              <h4 className="font-semibold text-xs text-muted-foreground">Origem</h4>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {getOrigensParada(selectedParada.origemParada).map((origem, index) => (
-                                  <Badge key={index} variant="secondary" className="text-xs">{origem}</Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-
-                  {parada.status === "pendente" && (
-                    <Button 
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleStatusChange(parada.id, "em_andamento")}
-                    >
-                      <Play className="h-4 w-4 mr-1" />
-                      Iniciar
-                    </Button>
-                  )}
-
-                  {parada.status === "em_andamento" && (
-                    <Button 
-                      size="sm"
-                      variant="default"
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      onClick={() => handleStatusChange(parada.id, "concluido")}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Concluir
-                    </Button>
-                  )}
+                  <span>Tentativa {parada.tentativaAtual || 1}</span>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Modal de Detalhes */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Parada</DialogTitle>
+          </DialogHeader>
+          
+          {selectedParada && (
+            <Tabs defaultValue="info" className="flex-1 overflow-hidden">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="info">Informações</TabsTrigger>
+                <TabsTrigger value="historico">Histórico</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="info" className="overflow-y-auto max-h-[60vh] mt-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <h4 className="font-semibold text-xs text-muted-foreground">Setor</h4>
+                    <p>{selectedParada.setor}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-xs text-muted-foreground">Equipamento</h4>
+                    <p>{selectedParada.equipamento}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-xs text-muted-foreground">Tipo</h4>
+                    <p>{selectedParada.tipoManutencao || "-"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-xs text-muted-foreground">Status</h4>
+                    <StatusBadgeParada status={selectedParada.status} />
+                  </div>
+                  <div className="col-span-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground">Horário Programado</h4>
+                    <p className="flex items-center gap-2">
+                      <Timer className="h-4 w-4" />
+                      {formatHorarioProgramado(selectedParada)}
+                      {selectedParada.atrasado && (
+                        <Badge variant="destructive" className="text-xs">Atrasado</Badge>
+                      )}
+                    </p>
+                  </div>
+                  {selectedParada.horarioExecucaoInicio && (
+                    <div className="col-span-2">
+                      <h4 className="font-semibold text-xs text-muted-foreground">Início da Execução</h4>
+                      <p>{format(selectedParada.horarioExecucaoInicio.toDate(), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}</p>
+                    </div>
+                  )}
+                  <div className="col-span-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground">Descrição</h4>
+                    <p>{selectedParada.descricaoMotivo}</p>
+                  </div>
+                  {selectedParada.origemParada && getOrigensParada(selectedParada.origemParada).length > 0 && (
+                    <div className="col-span-2">
+                      <h4 className="font-semibold text-xs text-muted-foreground">Origem</h4>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {getOrigensParada(selectedParada.origemParada).map((origem, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">{origem}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedParada.status === "nao_concluido" && selectedParada.observacaoVerificacao && (
+                    <div className="col-span-2">
+                      <h4 className="font-semibold text-xs text-red-600">Motivo da Reprovação</h4>
+                      <p className="p-2 bg-red-500/10 rounded-lg text-red-700">
+                        {selectedParada.observacaoVerificacao}
+                      </p>
+                    </div>
+                  )}
+                  <div className="col-span-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground">Tentativa</h4>
+                    <p>{selectedParada.tentativaAtual || 1}ª tentativa</p>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="historico" className="overflow-y-auto max-h-[60vh] mt-4">
+                <HistoricoAcoesTimeline historico={selectedParada.historicoAcoes || []} />
+              </TabsContent>
+            </Tabs>
+          )}
+
+          <DialogFooter className="mt-4 gap-2">
+            {selectedParada?.status === "aguardando" || selectedParada?.status === "nao_concluido" ? (
+              <Button 
+                className="flex-1"
+                onClick={() => handleIniciar(selectedParada)}
+                disabled={processingId === selectedParada?.id}
+              >
+                {processingId === selectedParada?.id ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4 mr-2" />
+                )}
+                {selectedParada?.status === "nao_concluido" ? "Reiniciar Execução" : "Iniciar Execução"}
+              </Button>
+            ) : selectedParada?.status === "em_andamento" ? (
+              <Button 
+                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                onClick={() => setIsFinalizando(true)}
+                disabled={processingId === selectedParada?.id}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Finalizar Execução
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Finalização */}
+      <Dialog open={isFinalizando} onOpenChange={setIsFinalizando}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Finalizar Execução</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Solução Aplicada *</label>
+              <Textarea
+                placeholder="Descreva a solução aplicada..."
+                value={solucaoAplicada}
+                onChange={(e) => setSolucaoAplicada(e.target.value)}
+                className="mt-2"
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsFinalizando(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleFinalizar}
+              disabled={processingId !== null || !solucaoAplicada.trim()}
+            >
+              {processingId ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              )}
+              Confirmar Finalização
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

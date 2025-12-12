@@ -704,7 +704,11 @@ const AppSidebar = () => {
         <div className="flex flex-col h-full">
           {/* Logo - fixo no topo */}
           <div className="logo-container flex-shrink-0">
-            <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó Alimentos Logo" className="w-24 h-24 object-contain mx-auto" />
+            <img 
+              src="/IconeFrico3D.png" 
+              alt="Fricó Alimentos Logo" 
+              className="w-24 h-24 object-contain mx-auto"
+            />
           </div>
           
           {/* Área de navegação - scrollável */}

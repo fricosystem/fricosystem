@@ -182,7 +182,7 @@ const WelcomePage = () => {
           {/* Ícone da Fricó fixo no centro */}
           <div className="mx-auto mb-8 flex justify-center">
             <img 
-              src="https://res.cloudinary.com/diomtgcvb/image/upload/v1758851478/IconeFrico3D_oasnj7.png" 
+              src="https://res.cloudinary.com/diomtgcvb/image/upload/q_100,f_png/v1758851478/IconeFrico3D_oasnj7.png" 
               alt="Fricó Alimentos Logo" 
               className="w-40 h-40 object-scale-down" 
             />

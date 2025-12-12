@@ -10,44 +10,7 @@ import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import RelatorioParadaDetalhado from "./RelatorioParadaDetalhado";
-
-interface ProdutoUtilizado {
-  produtoId: string;
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
-  valorTotal: number;
-}
-
-interface ParadaMaquina {
-  id: string;
-  setor: string;
-  equipamento: string;
-  hrInicial: string;
-  hrFinal: string;
-  linhaParada: string;
-  descricaoMotivo: string;
-  observacao: string;
-  origemParada: {
-    automatizacao: boolean;
-    terceiros: boolean;
-    eletrica: boolean;
-    mecanica: boolean;
-    outro: boolean;
-  };
-  responsavelManutencao: string;
-  tipoManutencao: string;
-  solucaoAplicada: string;
-  produtosUtilizados: ProdutoUtilizado[];
-  valorTotalProdutos: number;
-  criadoPor: string;
-  criadoEm: Timestamp;
-  status: string;
-  pecaId?: string;
-  subPecaId?: string;
-  equipamentoId?: string;
-  sistemaId?: string;
-}
+import { ParadaMaquina } from "@/types/typesParadaMaquina";
 
 interface Usuario {
   id: string;
@@ -242,7 +205,7 @@ const HistoricoParadas = () => {
             {selectedParada && (
               <RelatorioParadaDetalhado
                 parada={selectedParada}
-                responsavelNome={getResponsavelNome(selectedParada.responsavelManutencao)}
+                responsavelNome={getResponsavelNome(selectedParada.responsavelManutencao || "")}
               />
             )}
           </div>
