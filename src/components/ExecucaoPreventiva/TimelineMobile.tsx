@@ -1,18 +1,27 @@
 import { useState } from "react";
 import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
 import { TarefaCardMobile } from "./TarefaCardMobile";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { IniciarTarefaModal } from "./IniciarTarefaModal";
 import { ConcluirTarefaModal } from "./ConcluirTarefaModal";
+import { CalendarioMobile } from "./CalendarioMobile";
+import { HistoricoMobile } from "./HistoricoMobile";
+import { HistoricoExecucao } from "@/services/historicoExecucoes";
+import { cn } from "@/lib/utils";
 
 interface TimelineMobileProps {
   tarefas: TarefaManutencao[];
   execucoesPorTarefa?: Record<string, number>;
+  historicoExecucoes?: HistoricoExecucao[];
 }
 
-export function TimelineMobile({ tarefas, execucoesPorTarefa = {} }: TimelineMobileProps) {
+type ViewType = "lista" | "calendario" | "historico";
+type FilterType = "hoje" | "semana" | "todas";
+
+export function TimelineMobile({ tarefas, execucoesPorTarefa = {}, historicoExecucoes = [] }: TimelineMobileProps) {
   const [selectedTarefa, setSelectedTarefa] = useState<TarefaManutencao | null>(null);
   const [modalType, setModalType] = useState<"iniciar" | "concluir" | null>(null);
+  const [activeView, setActiveView] = useState<ViewType>("lista");
+  const [activeFilter, setActiveFilter] = useState<FilterType>("hoje");
 
   const hoje = new Date().toISOString().split("T")[0];
 
@@ -51,66 +60,147 @@ export function TimelineMobile({ tarefas, execucoesPorTarefa = {} }: TimelineMob
     setModalType(null);
   };
 
+  const getFilteredTarefas = () => {
+    switch (activeFilter) {
+      case "hoje":
+        return tarefasHoje;
+      case "semana":
+        return tarefasSemana;
+      case "todas":
+        return todasTarefas;
+      default:
+        return tarefasHoje;
+    }
+  };
+
+  const viewTabs = [
+    { id: "lista" as ViewType, label: "Lista" },
+    { id: "calendario" as ViewType, label: "Calendário" },
+    { id: "historico" as ViewType, label: "Histórico" },
+  ];
+
+  const filterTabs = [
+    { id: "hoje" as FilterType, label: "Hoje", count: tarefasHoje.length },
+    { id: "semana" as FilterType, label: "Semana", count: tarefasSemana.length },
+    { id: "todas" as FilterType, label: "Todas", count: todasTarefas.length },
+  ];
+
+  // Render view based on activeView
+  if (activeView === "calendario") {
+    return (
+      <div className="pb-20">
+      {/* Abas de visualização */}
+        <div className="flex justify-center py-3 mb-4">
+          <div className="inline-flex items-center bg-muted/30 rounded-xl p-1 backdrop-blur-sm border border-border/50">
+            {viewTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveView(tab.id)}
+                className={cn(
+                  "px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                  activeView === tab.id
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <CalendarioMobile tarefas={tarefas} execucoesPorTarefa={execucoesPorTarefa} />
+      </div>
+    );
+  }
+
+  if (activeView === "historico") {
+    return (
+      <div className="pb-20">
+        {/* Abas de visualização */}
+        <div className="flex justify-center py-3 mb-4">
+          <div className="inline-flex items-center bg-muted/30 rounded-xl p-1 backdrop-blur-sm border border-border/50">
+            {viewTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveView(tab.id)}
+                className={cn(
+                  "px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                  activeView === tab.id
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <HistoricoMobile historicoExecucoes={historicoExecucoes} />
+      </div>
+    );
+  }
+
   return (
     <div className="pb-20">
-      <Tabs defaultValue="hoje" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="hoje">Hoje ({tarefasHoje.length})</TabsTrigger>
-          <TabsTrigger value="semana">Semana ({tarefasSemana.length})</TabsTrigger>
-          <TabsTrigger value="todas">Todas ({todasTarefas.length})</TabsTrigger>
-        </TabsList>
+      {/* Abas de visualização (Lista, Calendário, Histórico) */}
+      <div className="flex justify-center py-3 mb-2">
+        <div className="inline-flex items-center bg-muted/30 rounded-xl p-1 backdrop-blur-sm border border-border/50">
+          {viewTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveView(tab.id)}
+              className={cn(
+                "px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                activeView === tab.id
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <TabsContent value="hoje" className="space-y-3 mt-4">
-          {tarefasHoje.length > 0 ? (
-            tarefasHoje.map((tarefa) => (
-              <TarefaCardMobile
-                key={tarefa.id}
-                tarefa={tarefa}
-                onClick={() => handleCardClick(tarefa)}
-                execucoesAnteriores={execucoesPorTarefa[tarefa.id] || 0}
-              />
-            ))
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhuma tarefa para hoje
-            </div>
-          )}
-        </TabsContent>
+      {/* Filtro de período (Hoje, Semana, Todas) */}
+      <div className="flex justify-center py-2 mb-4">
+        <div className="inline-flex items-center gap-1">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveFilter(tab.id)}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border",
+                activeFilter === tab.id
+                  ? "bg-primary/10 text-primary border-primary/50"
+                  : "text-muted-foreground border-transparent hover:text-foreground hover:border-border"
+              )}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <TabsContent value="semana" className="space-y-3 mt-4">
-          {tarefasSemana.length > 0 ? (
-            tarefasSemana.map((tarefa) => (
-              <TarefaCardMobile
-                key={tarefa.id}
-                tarefa={tarefa}
-                onClick={() => handleCardClick(tarefa)}
-                execucoesAnteriores={execucoesPorTarefa[tarefa.id] || 0}
-              />
-            ))
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhuma tarefa para esta semana
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="todas" className="space-y-3 mt-4">
-          {todasTarefas.length > 0 ? (
-            todasTarefas.map((tarefa) => (
-              <TarefaCardMobile
-                key={tarefa.id}
-                tarefa={tarefa}
-                onClick={() => handleCardClick(tarefa)}
-                execucoesAnteriores={execucoesPorTarefa[tarefa.id] || 0}
-              />
-            ))
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhuma tarefa disponível
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Lista de tarefas filtradas */}
+      <div className="space-y-3">
+        {getFilteredTarefas().length > 0 ? (
+          getFilteredTarefas().map((tarefa) => (
+            <TarefaCardMobile
+              key={tarefa.id}
+              tarefa={tarefa}
+              onClick={() => handleCardClick(tarefa)}
+              execucoesAnteriores={execucoesPorTarefa[tarefa.id] || 0}
+            />
+          ))
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            {activeFilter === "hoje" && "Nenhuma tarefa para hoje"}
+            {activeFilter === "semana" && "Nenhuma tarefa para esta semana"}
+            {activeFilter === "todas" && "Nenhuma tarefa disponível"}
+          </div>
+        )}
+      </div>
 
       {/* Modais */}
       {selectedTarefa && modalType === "iniciar" && (

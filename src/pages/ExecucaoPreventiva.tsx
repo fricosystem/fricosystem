@@ -105,11 +105,7 @@ export default function ExecucaoPreventiva() {
           />
         )}
 
-        {activeTab === "timeline" && <TimelineMobile tarefas={tarefas} execucoesPorTarefa={execucoesPorTarefa} />}
-
-        {activeTab === "calendario" && <CalendarioMobile tarefas={tarefas} execucoesPorTarefa={execucoesPorTarefa} />}
-
-        {activeTab === "historico" && <HistoricoMobile historicoExecucoes={historicoExecucoes} />}
+        {activeTab === "timeline" && <TimelineMobile tarefas={tarefas} execucoesPorTarefa={execucoesPorTarefa} historicoExecucoes={historicoExecucoes} />}
 
         {activeTab === "perfil" && <PerfilManutentor stats={stats} />}
 

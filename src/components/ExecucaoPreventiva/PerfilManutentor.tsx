@@ -1,8 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, CheckCircle2, Clock, TrendingUp } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { LogOut, CheckCircle2, Clock, TrendingUp, Moon, Sun } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface PerfilManutentorProps {
@@ -18,6 +20,7 @@ interface PerfilManutentorProps {
 export function PerfilManutentor({ stats }: PerfilManutentorProps) {
   const { userData, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = async () => {
     try {
@@ -50,6 +53,35 @@ export function PerfilManutentor({ stats }: PerfilManutentorProps) {
               <p className="text-sm text-muted-foreground">{userData?.email}</p>
               <p className="text-xs text-muted-foreground mt-1">{userData?.cargo}</p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Configuração de Tema */}
+      <Card className="rounded-2xl">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">Aparência</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-xl">
+            <div className="flex items-center gap-3">
+              {theme === "dark" ? (
+                <Moon className="h-5 w-5 text-primary" />
+              ) : (
+                <Sun className="h-5 w-5 text-amber-500" />
+              )}
+              <div>
+                <span className="text-sm font-medium">Tema Escuro</span>
+                <p className="text-xs text-muted-foreground">
+                  {theme === "dark" ? "Ativado" : "Desativado"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={theme === "dark"}
+              onCheckedChange={toggleTheme}
+              className="scale-110"
+            />
           </div>
         </CardContent>
       </Card>
