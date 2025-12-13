@@ -1,21 +1,57 @@
-import React from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Wrench, User, Calendar, MapPin, AlertTriangle, Package, FileText, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Clock, Wrench, User, Calendar, MapPin, AlertTriangle, Package, FileText, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { ParadaMaquina } from "@/types/typesParadaMaquina";
 import { Timestamp } from "firebase/firestore";
 
 interface RelatorioParadaDetalhadoProps {
   parada: ParadaMaquina;
   responsavelNome?: string;
+  onMarcarCorrigido?: (paradaId: string) => Promise<void>;
+  onMarcarNaoCorrigido?: (paradaId: string) => Promise<void>;
+  showVerificacaoButtons?: boolean;
 }
 
 const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
   parada,
   responsavelNome,
+  onMarcarCorrigido,
+  onMarcarNaoCorrigido,
+  showVerificacaoButtons = false,
 }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingAction, setProcessingAction] = useState<'corrigido' | 'nao_corrigido' | null>(null);
+
+  // Verifica se o status é aguardando verificação (incluindo variações)
+  const isAguardandoVerificacao = parada.status?.startsWith('aguardando_verificacao');
+
+  const handleCorrigido = async () => {
+    if (!onMarcarCorrigido) return;
+    setIsProcessing(true);
+    setProcessingAction('corrigido');
+    try {
+      await onMarcarCorrigido(parada.id);
+    } finally {
+      setIsProcessing(false);
+      setProcessingAction(null);
+    }
+  };
+
+  const handleNaoCorrigido = async () => {
+    if (!onMarcarNaoCorrigido) return;
+    setIsProcessing(true);
+    setProcessingAction('nao_corrigido');
+    try {
+      await onMarcarNaoCorrigido(parada.id);
+    } finally {
+      setIsProcessing(false);
+      setProcessingAction(null);
+    }
+  };
   const getOrigensParada = (origens: ParadaMaquina["origemParada"]) => {
     const tipos = [];
     if (origens?.automatizacao) tipos.push("Automatização");
@@ -280,6 +316,54 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Botões de Verificação - apenas para status aguardando_verificacao */}
+      {showVerificacaoButtons && isAguardandoVerificacao && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-purple-600" />
+              Verificação do Reparo
+              {parada.tentativaAtual && parada.tentativaAtual > 1 && (
+                <Badge variant="secondary" className="ml-2">
+                  Tentativa {parada.tentativaAtual}
+                </Badge>
+              )}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              O manutentor indicou que o reparo foi concluído. Verifique se o problema foi resolvido.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={handleCorrigido}
+                disabled={isProcessing}
+                className="flex-1 h-14 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {processingAction === 'corrigido' ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5 mr-2" />
+                )}
+                Corrigido
+              </Button>
+              <Button
+                onClick={handleNaoCorrigido}
+                disabled={isProcessing}
+                variant="destructive"
+                className="flex-1 h-14 text-base font-semibold"
+              >
+                {processingAction === 'nao_corrigido' ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <XCircle className="h-5 w-5 mr-2" />
+                )}
+                Não Corrigido
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

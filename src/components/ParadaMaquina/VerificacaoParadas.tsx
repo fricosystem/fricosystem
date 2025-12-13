@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { StatusBadgeParada } from "@/components/ParadaMaquina/StatusBadgeParada";
 import { HistoricoAcoesTimeline } from "@/components/ParadaMaquina/HistoricoAcoesTimeline";
 import { useParadaMaquina } from "@/hooks/useParadaMaquina";
-import { ParadaMaquina } from "@/types/typesParadaMaquina";
+import { ParadaMaquina, isStatusAguardandoVerificacao } from "@/types/typesParadaMaquina";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -19,7 +19,9 @@ const VerificacaoParadas = () => {
     paradasParaEncarregado, 
     loading, 
     verificarConcluido, 
-    verificarNaoConcluido 
+    verificarNaoConcluido,
+    marcarCorrigido,
+    marcarNaoCorrigido
   } = useParadaMaquina();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -66,6 +68,26 @@ const VerificacaoParadas = () => {
       setObservacaoReprovacao("");
       setIsDetailOpen(false);
     }
+  };
+
+  const handleCorrigido = async () => {
+    if (!selectedParada) return;
+    
+    setProcessingId(selectedParada.id);
+    const success = await marcarCorrigido(selectedParada.id);
+    setProcessingId(null);
+    
+    if (success) {
+      setIsDetailOpen(false);
+    }
+  };
+
+  const handleNaoCorrigido = async () => {
+    if (!selectedParada) return;
+    
+    setProcessingId(selectedParada.id);
+    await marcarNaoCorrigido(selectedParada.id);
+    setProcessingId(null);
   };
 
   const openDetail = (parada: ParadaMaquina) => {
@@ -263,27 +285,58 @@ const VerificacaoParadas = () => {
           )}
 
           <DialogFooter className="mt-4 gap-2 flex-col sm:flex-row">
-            <Button 
-              variant="destructive"
-              className="flex-1"
-              onClick={() => setIsReprovando(true)}
-              disabled={processingId !== null}
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Não Concluído
-            </Button>
-            <Button 
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-              onClick={handleAprovar}
-              disabled={processingId !== null}
-            >
-              {processingId === selectedParada?.id ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-              )}
-              Concluído
-            </Button>
+            {selectedParada && isStatusAguardandoVerificacao(selectedParada.status) ? (
+              <>
+                <Button 
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                  onClick={handleNaoCorrigido}
+                  disabled={processingId !== null}
+                >
+                  {processingId === selectedParada?.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Não Corrigido
+                </Button>
+                <Button 
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  onClick={handleCorrigido}
+                  disabled={processingId !== null}
+                >
+                  {processingId === selectedParada?.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                  )}
+                  Corrigido
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => setIsReprovando(true)}
+                  disabled={processingId !== null}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Não Concluído
+                </Button>
+                <Button 
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  onClick={handleAprovar}
+                  disabled={processingId !== null}
+                >
+                  {processingId === selectedParada?.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                  )}
+                  Concluído
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

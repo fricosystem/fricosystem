@@ -86,6 +86,9 @@ export interface ParadaMaquina {
   horarioExecucaoInicio?: Timestamp;    // Quando o manutentor iniciou
   horarioExecucaoFim?: Timestamp;       // Quando o manutentor finalizou
   
+  // Métricas de tempo
+  tempoTotalDecorrido?: number;         // Tempo total em segundos desde início até fim da execução
+  
   // Controle de tentativas
   tentativaAtual: number;               // Número da tentativa atual (1, 2, 3...)
   atrasado?: boolean;                   // Se a execução começou após o horário programado

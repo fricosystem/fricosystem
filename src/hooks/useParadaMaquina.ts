@@ -131,14 +131,17 @@ export const useParadaMaquina = () => {
       return false;
     }
 
+    // Usar horarioInicio se horarioProgramado não existir (compatibilidade com dados antigos)
+    const horarioParaVerificacao = parada.horarioProgramado || (parada as any).horarioInicio;
+
     // Verificar regra dos 5 minutos
-    const { pode, mensagem } = podeIniciarExecucao(parada.horarioProgramado);
+    const { pode, mensagem } = podeIniciarExecucao(horarioParaVerificacao);
     if (!pode) {
       toast.error(mensagem);
       return false;
     }
 
-    const atrasado = verificarAtraso(parada.horarioProgramado);
+    const atrasado = verificarAtraso(horarioParaVerificacao);
     const novoHistorico = criarHistorico(
       "iniciado",
       parada.status,
@@ -149,14 +152,19 @@ export const useParadaMaquina = () => {
 
     try {
       const paradaRef = doc(db, "paradas_maquina", paradaId);
-      await updateDoc(paradaRef, {
+      
+      // Filtrar campos undefined para evitar erro do Firestore
+      const updateData: Record<string, any> = {
         status: "em_andamento",
-        manutentorId: user?.uid,
-        manutentorNome: userData?.nome,
         horarioExecucaoInicio: Timestamp.now(),
-        atrasado,
         historicoAcoes: [...(parada.historicoAcoes || []), novoHistorico]
-      });
+      };
+      
+      if (user?.uid) updateData.manutentorId = user.uid;
+      if (userData?.nome) updateData.manutentorNome = userData.nome;
+      if (atrasado !== undefined) updateData.atrasado = atrasado;
+      
+      await updateDoc(paradaRef, updateData);
 
       toast.success("Execução iniciada!");
       return true;
@@ -189,14 +197,28 @@ export const useParadaMaquina = () => {
       parada.tentativaAtual
     );
 
+    // Calcular tempo total decorrido em segundos
+    let tempoTotalDecorrido: number | undefined;
+    if (parada.horarioExecucaoInicio) {
+      const inicio = parada.horarioExecucaoInicio.toDate();
+      const fim = new Date();
+      tempoTotalDecorrido = Math.floor((fim.getTime() - inicio.getTime()) / 1000);
+    }
+
     try {
       const paradaRef = doc(db, "paradas_maquina", paradaId);
-      await updateDoc(paradaRef, {
+      const updateData: Record<string, any> = {
         status: proximoStatus,
         horarioExecucaoFim: Timestamp.now(),
         solucaoAplicada,
         historicoAcoes: [...(parada.historicoAcoes || []), novoHistorico]
-      });
+      };
+
+      if (tempoTotalDecorrido !== undefined) {
+        updateData.tempoTotalDecorrido = tempoTotalDecorrido;
+      }
+
+      await updateDoc(paradaRef, updateData);
 
       toast.success("Execução finalizada! Aguardando verificação do encarregado.");
       return true;
@@ -385,10 +407,12 @@ export const useParadaMaquina = () => {
     // 1. Paradas aguardando execução
     // 2. Paradas em andamento que ele iniciou
     // 3. Paradas não concluídas que ele iniciou
+    // 4. Paradas aguardando verificação que ele iniciou (para marcar corrigido/não corrigido)
     return paradas.filter(p => 
       p.status === "aguardando" ||
       (p.status === "em_andamento" && p.manutentorId === user.uid) ||
-      (p.status === "nao_concluido" && p.manutentorId === user.uid)
+      (p.status === "nao_concluido" && p.manutentorId === user.uid) ||
+      (isStatusAguardandoVerificacao(p.status) && p.manutentorId === user.uid)
     );
   }, [paradas, user]);
 
@@ -412,6 +436,80 @@ export const useParadaMaquina = () => {
     naoConcluidas: paradas.filter(p => p.status === "nao_concluido").length
   }), [paradas]);
 
+  // Manutentor marca como corrigido (vai para concluído)
+  const marcarCorrigido = async (paradaId: string) => {
+    const parada = paradas.find(p => p.id === paradaId);
+    if (!parada) {
+      toast.error("Parada não encontrada");
+      return false;
+    }
+
+    const statusConcluido = getStatusConcluido(parada.tentativaAtual);
+    const novoHistorico = criarHistorico(
+      "verificado_ok",
+      parada.status,
+      statusConcluido,
+      "Manutentor confirmou correção",
+      parada.tentativaAtual
+    );
+
+    try {
+      const paradaRef = doc(db, "paradas_maquina", paradaId);
+      await updateDoc(paradaRef, {
+        status: statusConcluido,
+        historicoAcoes: [...(parada.historicoAcoes || []), novoHistorico]
+      });
+
+      // Atualizar peça se necessário
+      if (parada.pecaId || parada.subPecaId) {
+        await atualizarManutencaoPeca(parada, paradaId);
+      }
+
+      toast.success("Parada marcada como corrigida e concluída!");
+      return true;
+    } catch (error) {
+      console.error("Erro ao marcar como corrigido:", error);
+      toast.error("Erro ao marcar como corrigido");
+      return false;
+    }
+  };
+
+  // Manutentor marca como não corrigido (incrementa tentativa e continua)
+  const marcarNaoCorrigido = async (paradaId: string) => {
+    const parada = paradas.find(p => p.id === paradaId);
+    if (!parada) {
+      toast.error("Parada não encontrada");
+      return false;
+    }
+
+    const novaTentativa = (parada.tentativaAtual || 1) + 1;
+    const novoHistorico = criarHistorico(
+      "reaberto",
+      parada.status,
+      "em_andamento",
+      `Não corrigido na tentativa ${parada.tentativaAtual}. Iniciando tentativa ${novaTentativa}`,
+      parada.tentativaAtual
+    );
+
+    try {
+      const paradaRef = doc(db, "paradas_maquina", paradaId);
+      
+      // Mantém o horarioExecucaoInicio original para continuar contando o tempo
+      await updateDoc(paradaRef, {
+        status: "em_andamento",
+        tentativaAtual: novaTentativa,
+        historicoAcoes: [...(parada.historicoAcoes || []), novoHistorico]
+      });
+
+      toast.success(`Iniciando tentativa ${novaTentativa}. Continue a execução.`);
+      return true;
+    } catch (error) {
+      console.error("Erro ao marcar como não corrigido:", error);
+      toast.error("Erro ao marcar como não corrigido");
+      return false;
+    }
+  };
+
   return {
     paradas,
     paradasAbertas,
@@ -423,6 +521,8 @@ export const useParadaMaquina = () => {
     iniciarExecucao,
     finalizarExecucao,
     verificarConcluido,
-    verificarNaoConcluido
+    verificarNaoConcluido,
+    marcarCorrigido,
+    marcarNaoCorrigido
   };
 };

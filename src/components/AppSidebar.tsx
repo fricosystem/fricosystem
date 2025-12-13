@@ -150,10 +150,10 @@ const AppSidebar = () => {
     label: "Manutenção",
     icon: Wrench,
     items: [{
-      to: "/manutencoes-dashboard",
+      to: "/dashboard-manutencao",
       icon: BarChart3,
       label: "Dashboard",
-      permission: "manutencoes_dashboard"
+      permission: "dashboard_manutencao"
     }, {
       to: "/maquinas",
       icon: WashingMachine,

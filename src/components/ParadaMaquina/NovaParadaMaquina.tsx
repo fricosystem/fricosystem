@@ -37,6 +37,12 @@ interface TipoManutencao {
   nome: string;
 }
 
+interface OrigemParada {
+  id: string;
+  nome: string;
+  status: string;
+}
+
 interface InitialData {
   setor: string;
   equipamento: string;
@@ -54,10 +60,12 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
   const [setores, setSetores] = useState<Setor[]>([]);
   const [tiposFalhas, setTiposFalhas] = useState<TipoFalha[]>([]);
   const [tiposManutencao, setTiposManutencao] = useState<TipoManutencao[]>([]);
+  const [origensParada, setOrigensParada] = useState<OrigemParada[]>([]);
   const [loadingSetores, setLoadingSetores] = useState(false);
   const [loadingEquipamentos, setLoadingEquipamentos] = useState(false);
   const [loadingTiposFalhas, setLoadingTiposFalhas] = useState(false);
   const [loadingTiposManutencao, setLoadingTiposManutencao] = useState(false);
+  const [loadingOrigensParada, setLoadingOrigensParada] = useState(false);
   const [collectionChecked, setCollectionChecked] = useState(false);
   
   const hoje = new Date();
@@ -233,6 +241,37 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
     };
 
     fetchTiposManutencao();
+  }, []);
+
+  useEffect(() => {
+    const fetchOrigensParada = async () => {
+      try {
+        setLoadingOrigensParada(true);
+        const origensRef = collection(db, "origens_parada");
+        const querySnapshot = await getDocs(origensRef);
+        
+        const origensData: OrigemParada[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.status === "Ativo") {
+            origensData.push({
+              id: doc.id,
+              nome: data.nome || "",
+              status: data.status || "Ativo",
+            });
+          }
+        });
+        
+        setOrigensParada(origensData);
+      } catch (error) {
+        console.error("Erro ao buscar origens de parada:", error);
+        toast.error("Não foi possível carregar a lista de origens de parada.");
+      } finally {
+        setLoadingOrigensParada(false);
+      }
+    };
+
+    fetchOrigensParada();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -504,26 +543,29 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
           {/* Origem da Parada */}
           <div className="space-y-2">
             <Label className="text-xs sm:text-sm">Origem da Parada</Label>
-            <RadioGroup
-              value={origemParada}
-              onValueChange={handleOrigemChange}
-              className="flex flex-wrap gap-3"
-            >
-              {[
-                { key: "automatizacao", label: "Automação" },
-                { key: "terceiros", label: "Terceiros" },
-                { key: "eletrica", label: "Elétrica" },
-                { key: "mecanica", label: "Mecânica" },
-                { key: "outro", label: "Outro" },
-              ].map((item) => (
-                <div key={item.key} className="flex items-center space-x-1.5">
-                  <RadioGroupItem value={item.key} id={item.key} />
-                  <label htmlFor={item.key} className="text-[10px] sm:text-xs cursor-pointer">
-                    {item.label}
-                  </label>
-                </div>
-              ))}
-            </RadioGroup>
+            {loadingOrigensParada ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Carregando...
+              </div>
+            ) : origensParada.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nenhuma origem cadastrada.</p>
+            ) : (
+              <RadioGroup
+                value={origemParada}
+                onValueChange={handleOrigemChange}
+                className="flex flex-wrap gap-3"
+              >
+                {origensParada.map((item) => (
+                  <div key={item.id} className="flex items-center space-x-1.5">
+                    <RadioGroupItem value={item.nome} id={`origem-${item.id}`} />
+                    <label htmlFor={`origem-${item.id}`} className="text-[10px] sm:text-xs cursor-pointer">
+                      {item.nome}
+                    </label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
           </div>
 
           {/* Observação */}
