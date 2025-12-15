@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Plus, ScanQrCode } from "lucide-react";
+import { Plus, ScanQrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NovaParadaMaquina from "@/components/ParadaMaquina/NovaParadaMaquina";
 import ParadasAbertas from "@/components/ParadaMaquina/ParadasAbertas";
@@ -87,13 +87,26 @@ export default function ParadaMaquina() {
   const getPageTitle = () => {
     switch (activeTab) {
       case "paradas":
-        return "Paradas em Aberto";
+        return "Paradas de Máquina";
       case "historico":
-        return "Histórico";
+        return "Histórico de Paradas";
       case "perfil":
         return "Perfil";
       default:
         return "Parada de Máquina";
+    }
+  };
+
+  const getPageSubtitle = () => {
+    switch (activeTab) {
+      case "paradas":
+        return "Paradas em Aberto";
+      case "historico":
+        return "Paradas Concluídas";
+      case "perfil":
+        return "Configurações";
+      default:
+        return "";
     }
   };
 
@@ -103,18 +116,11 @@ export default function ParadaMaquina() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header Fixo */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto py-4 px-6 flex items-center">
           <div>
             <h1 className="text-lg sm:text-xl font-bold">{getPageTitle()}</h1>
-            <p className="text-xs text-muted-foreground">
-              {activeTab === "paradas" && openCount > 0 && `${openCount} parada${openCount > 1 ? 's' : ''} pendente${openCount > 1 ? 's' : ''}`}
-              {activeTab === "historico" && "Paradas concluídas"}
-              {activeTab === "perfil" && "Configurações"}
-            </p>
+            <p className="text-xs text-muted-foreground">{getPageSubtitle()}</p>
           </div>
-          <Button variant="ghost" size="icon" className="relative h-10 w-10">
-            <Bell className="h-5 w-5" />
-          </Button>
         </div>
       </header>
 

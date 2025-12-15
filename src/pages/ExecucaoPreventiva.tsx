@@ -8,9 +8,6 @@ import { PerfilManutentor } from "@/components/ExecucaoPreventiva/PerfilManutent
 import { ParadasMaquinaMobile } from "@/components/ExecucaoPreventiva/ParadasMaquinaMobile";
 import { HistoricoParadasMobile } from "@/components/ExecucaoPreventiva/HistoricoParadasMobile";
 import { useMinhasTarefas } from "@/hooks/useMinhasTarefas";
-import { Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 
@@ -49,6 +46,10 @@ export default function ExecucaoPreventiva() {
 
   const getPageTitle = () => {
     switch (activeTab) {
+      case "dashboard":
+        return "Dashboard";
+      case "perfil":
+        return "Perfil";
       case "paradas":
         return "Paradas de Máquina";
       case "historico-paradas":
@@ -60,6 +61,10 @@ export default function ExecucaoPreventiva() {
 
   const getPageSubtitle = () => {
     switch (activeTab) {
+      case "dashboard":
+        return "Visão Geral";
+      case "perfil":
+        return "Minhas Configurações";
       case "paradas":
         return "Execução de Paradas";
       case "historico-paradas":
@@ -73,22 +78,11 @@ export default function ExecucaoPreventiva() {
     <div className="min-h-screen bg-background">
       {/* Header Fixo */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto py-4 px-6 flex items-center">
           <div>
             <h1 className="text-lg sm:text-xl font-bold">{getPageTitle()}</h1>
             <p className="text-xs text-muted-foreground">{getPageSubtitle()}</p>
           </div>
-          <Button variant="ghost" size="icon" className="relative h-10 w-10">
-            <Bell className="h-5 w-5" />
-            {alertasTotal > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-              >
-                {alertasTotal}
-              </Badge>
-            )}
-          </Button>
         </div>
       </header>
 
