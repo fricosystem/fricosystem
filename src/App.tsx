@@ -53,6 +53,7 @@ import ManutencaoPreventiva from "./pages/ManutencaoPreventiva";
 import GestaoTarefas from "./pages/GestaoTarefas";
 import ExecucaoPreventiva from "./pages/ExecucaoPreventiva";
 import { ManutentorGuard } from "./guards/ManutentorGuard";
+import { EncarregadoGuard } from "./guards/EncarregadoGuard";
 
 // Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
@@ -67,6 +68,21 @@ import Manuais from "./pages/Manuais";
 
 // Create a client
 const queryClient = new QueryClient();
+
+// Função para obter a rota inicial baseada no perfil do usuário
+const getInitialRouteByProfile = (perfil: string | undefined): string => {
+  switch (perfil) {
+    case "MANUTENTOR":
+      return "/execucao-preventiva";
+    case "ENCARREGADO":
+    case "LIDER":
+      return "/parada-maquina";
+    case "DESENVOLVEDOR":
+      return "/dashboard"; // Desenvolvedor vai para dashboard por padrão
+    default:
+      return "/dashboard";
+  }
+};
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, userData, loading } = useAuth();
@@ -93,9 +109,10 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/bem-vindo" replace />;
   }
 
-  // Se está ativo e tentando acessar a página de bem-vindo, redireciona para dashboard
+  // Se está ativo e tentando acessar a página de bem-vindo, redireciona para página inicial do perfil
   if (isActive && isWelcomePage) {
-    return <Navigate to="/dashboard" replace />;
+    const initialRoute = getInitialRouteByProfile(userData?.perfil);
+    return <Navigate to={initialRoute} replace />;
   }
 
   return <>{children}</>;
@@ -116,7 +133,12 @@ const NoAuthGuard = ({ children }: { children: React.ReactNode }) => {
   if (user) {
     // Verifica se o usuário está ativo antes de redirecionar
     const isActive = userData?.ativo === "sim";
-    return <Navigate to={isActive ? "/dashboard" : "/bem-vindo"} replace />;
+    if (!isActive) {
+      return <Navigate to="/bem-vindo" replace />;
+    }
+    // Redireciona para a rota inicial baseada no perfil
+    const initialRoute = getInitialRouteByProfile(userData?.perfil);
+    return <Navigate to={initialRoute} replace />;
   }
 
   return <>{children}</>;
@@ -144,7 +166,7 @@ const AppContent = () => {
           <Route path="/requisicoes" element={<AuthGuard><Requisicoes /></AuthGuard>} />
           <Route path="/devolucao" element={<AuthGuard><DevolucaoMateriais /></AuthGuard>} />
           <Route path="/enderecamento" element={<AuthGuard><Enderecamento /></AuthGuard>} />
-          <Route path="/parada-maquina" element={<AuthGuard><ParadaMaquina /></AuthGuard>} />
+          <Route path="/parada-maquina" element={<AuthGuard><EncarregadoGuard><ParadaMaquina /></EncarregadoGuard></AuthGuard>} />
           <Route path="/fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
           <Route path="/importar-planilha" element={<AuthGuard><ImportarPlanilha /></AuthGuard>} />
           <Route path="/medida-de-lenha" element={<AuthGuard><MedidaLenha /></AuthGuard>} />

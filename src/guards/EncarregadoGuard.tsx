@@ -3,22 +3,25 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
-interface ManutentorGuardProps {
+interface EncarregadoGuardProps {
   children: React.ReactNode;
 }
 
-export function ManutentorGuard({ children }: ManutentorGuardProps) {
+export function EncarregadoGuard({ children }: EncarregadoGuardProps) {
   const { userData, loading } = useAuth();
   const { toast } = useToast();
 
-  const perfilPermitido = userData?.perfil === "MANUTENTOR" || userData?.perfil === "DESENVOLVEDOR";
+  const perfilPermitido = 
+    userData?.perfil === "ENCARREGADO" || 
+    userData?.perfil === "LIDER" || 
+    userData?.perfil === "DESENVOLVEDOR";
 
   useEffect(() => {
     if (!loading && userData && !perfilPermitido) {
       toast({
         variant: "destructive",
         title: "Acesso Negado",
-        description: "Esta área é exclusiva para manutentores e desenvolvedores.",
+        description: "Esta área é exclusiva para encarregados, líderes e desenvolvedores.",
       });
     }
   }, [loading, userData, perfilPermitido, toast]);

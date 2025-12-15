@@ -35,8 +35,10 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         title: "Login realizado com sucesso",
         description: `Bem-vindo de volta!`,
       });
-      
-      navigate('/dashboard');
+
+      // Não força /dashboard aqui: o NoAuthGuard (rota "/") redireciona
+      // para a página inicial correta baseada no perfil do usuário.
+      navigate('/');
       onSuccess();
     } catch (error: any) {
       console.error(error);
