@@ -9,9 +9,11 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RelatorioParadaDetalhado from "./RelatorioParadaDetalhado";
 import { ParadaMaquina, isStatusConcluido, isStatusFinalizado } from "@/types/typesParadaMaquina";
 import { StatusBadgeParada } from "./StatusBadgeParada";
+import { HistoricoAcoesTimeline } from "./HistoricoAcoesTimeline";
 
 interface Usuario {
   id: string;
@@ -259,14 +261,23 @@ const HistoricoParadas = () => {
           <SheetHeader className="mb-4">
             <SheetTitle className="text-xl">Detalhes da Parada</SheetTitle>
           </SheetHeader>
-          <div className="overflow-y-auto h-[calc(100%-80px)]">
-            {selectedParada && (
-              <RelatorioParadaDetalhado
-                parada={selectedParada}
-                responsavelNome={getResponsavelNome(selectedParada.responsavelManutencao || "")}
-              />
-            )}
-          </div>
+          {selectedParada && (
+            <Tabs defaultValue="info" className="h-[calc(100%-80px)]">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="info">Informações</TabsTrigger>
+                <TabsTrigger value="historico">Histórico</TabsTrigger>
+              </TabsList>
+              <TabsContent value="info" className="overflow-y-auto h-[calc(100%-60px)]">
+                <RelatorioParadaDetalhado
+                  parada={selectedParada}
+                  responsavelNome={getResponsavelNome(selectedParada.responsavelManutencao || "")}
+                />
+              </TabsContent>
+              <TabsContent value="historico" className="overflow-y-auto h-[calc(100%-60px)]">
+                <HistoricoAcoesTimeline historico={(selectedParada as any).historicoAcoes || []} />
+              </TabsContent>
+            </Tabs>
+          )}
         </SheetContent>
       </Sheet>
     </>

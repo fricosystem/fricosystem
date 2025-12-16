@@ -105,8 +105,8 @@ export const HistoricoAcoesTimeline = ({ historico }: HistoricoAcoesTimelineProp
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{getAcaoLabel(item.acao)}</span>
               {item.tentativa && item.tentativa > 1 && (
-                <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                  {item.tentativa}ª tentativa
+                <span className="text-xs text-muted-foreground">
+                  ({item.tentativa}ª tentativa)
                 </span>
               )}
             </div>

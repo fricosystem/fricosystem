@@ -8,12 +8,14 @@ import { PerfilManutentor } from "@/components/ExecucaoPreventiva/PerfilManutent
 import { ParadasMaquinaMobile } from "@/components/ExecucaoPreventiva/ParadasMaquinaMobile";
 import { HistoricoParadasMobile } from "@/components/ExecucaoPreventiva/HistoricoParadasMobile";
 import { useMinhasTarefas } from "@/hooks/useMinhasTarefas";
+import { useBlockBackNavigation } from "@/hooks/useBlockBackNavigation";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 
 type TabType = "dashboard" | "timeline" | "calendario" | "historico" | "perfil" | "paradas" | "historico-paradas";
 
 export default function ExecucaoPreventiva() {
+  useBlockBackNavigation();
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const { tarefas, loading, stats, tarefasHoje, tarefasAtrasadas, historicoExecucoes, execucoesPorTarefa } = useMinhasTarefas();
   const [paradasPendentes, setParadasPendentes] = useState(0);

@@ -7,6 +7,7 @@ import HistoricoParadas from "@/components/ParadaMaquina/HistoricoParadas";
 import { PerfilParada } from "@/components/ParadaMaquina/PerfilParada";
 import { BottomNavigationParada } from "@/components/ParadaMaquina/BottomNavigationParada";
 import QrScannerModal from "@/components/ParadaMaquina/QrScannerModal";
+import { useBlockBackNavigation } from "@/hooks/useBlockBackNavigation";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ interface ScannedData {
 type TabType = "paradas" | "historico" | "perfil";
 
 export default function ParadaMaquina() {
+  useBlockBackNavigation();
   const [activeTab, setActiveTab] = useState<TabType>("paradas");
   const [isNovaParadaOpen, setIsNovaParadaOpen] = useState(false);
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);

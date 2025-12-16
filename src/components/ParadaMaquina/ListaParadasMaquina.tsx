@@ -11,6 +11,8 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HistoricoAcoesTimeline } from "./HistoricoAcoesTimeline";
 import { calcularProximaManutencao } from "@/utils/manutencaoUtils";
 interface ProdutoUtilizado {
   produtoId: string;
@@ -294,75 +296,98 @@ const ListaParadasMaquina = () => {
                         Detalhes
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-y-auto p-3 sm:p-6">
+                    <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-3 sm:p-6">
                       <DialogHeader>
                         <DialogTitle className="text-base sm:text-lg">Detalhes da Parada</DialogTitle>
                       </DialogHeader>
-                      {selectedParada && <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Setor</h4>
-                            <p className="text-sm">{selectedParada.setor}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Equipamento</h4>
-                            <p className="text-sm">{selectedParada.equipamento}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Tipo</h4>
-                            <p className="text-sm">{selectedParada.tipoManutencao || "-"}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Linha Parada</h4>
-                            <p className="text-sm">{selectedParada.linhaParada || "-"}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Hora Inicial</h4>
-                            <p className="text-sm">{selectedParada.hrInicial || "-"}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Hora Fim</h4>
-                            <p className="text-sm">{selectedParada.hrFinal || "-"}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Criado Em</h4>
-                            <p className="text-sm">{selectedParada.criadoEm && format(selectedParada.criadoEm.toDate(), "dd/MM/yy HH:mm")}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground">Responsável</h4>
-                            <p className="text-sm truncate">{getResponsavelNome(selectedParada.responsavelManutencao)}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <h4 className="font-semibold text-xs text-muted-foreground">Descrição</h4>
-                            <p className="text-sm">{selectedParada.descricaoMotivo}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <h4 className="font-semibold text-xs text-muted-foreground">Solução</h4>
-                            <p className="text-sm">{selectedParada.solucaoAplicada || "-"}</p>
-                          </div>
-                          {selectedParada.origemParada && getOrigensParada(selectedParada.origemParada).length > 0 && <div className="col-span-2">
-                              <h4 className="font-semibold text-xs text-muted-foreground">Origem</h4>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {getOrigensParada(selectedParada.origemParada).map((origem, index) => <Badge key={index} variant="secondary" className="text-[10px]">{origem}</Badge>)}
+                      {selectedParada && (
+                        <Tabs defaultValue="info" className="flex-1 overflow-hidden">
+                          <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="info">Informações</TabsTrigger>
+                            <TabsTrigger value="historico">Histórico</TabsTrigger>
+                          </TabsList>
+                          
+                          <TabsContent value="info" className="overflow-y-auto max-h-[60vh] mt-4">
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <h4 className="font-semibold text-xs text-muted-foreground">Setor</h4>
+                                <p className="text-sm">{selectedParada.setor}</p>
                               </div>
-                            </div>}
-                          {selectedParada.produtosUtilizados && selectedParada.produtosUtilizados.length > 0 && <div className="col-span-2 border-t pt-2">
-                              <h4 className="font-semibold text-xs text-muted-foreground mb-2">Produtos</h4>
-                              <div className="space-y-1">
-                                {selectedParada.produtosUtilizados.map((produto: ProdutoUtilizado, index: number) => <div key={index} className="flex justify-between text-xs">
-                                    <span>{produto.nome} x{produto.quantidade}</span>
-                                    <span>{formatCurrency(produto.valorTotal)}</span>
-                                  </div>)}
-                                <div className="flex justify-between font-semibold text-xs pt-1 border-t">
-                                  <span>Total</span>
-                                  <span>{formatCurrency(selectedParada.valorTotalProdutos || 0)}</span>
+                              <div>
+                                <h4 className="font-semibold text-xs text-muted-foreground">Equipamento</h4>
+                                <p className="text-sm">{selectedParada.equipamento}</p>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-xs text-muted-foreground">Tipo</h4>
+                                <p className="text-sm">{selectedParada.tipoManutencao || "-"}</p>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-xs text-muted-foreground">Linha Parada</h4>
+                                <p className="text-sm">{selectedParada.linhaParada || "-"}</p>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-xs text-muted-foreground">Hora Inicial</h4>
+                                <p className="text-sm">{selectedParada.hrInicial || "-"}</p>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-xs text-muted-foreground">Hora Fim</h4>
+                                <p className="text-sm">{selectedParada.hrFinal || "-"}</p>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-xs text-muted-foreground">Criado Em</h4>
+                                <p className="text-sm">{selectedParada.criadoEm && format(selectedParada.criadoEm.toDate(), "dd/MM/yy HH:mm")}</p>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-xs text-muted-foreground">Responsável</h4>
+                                <p className="text-sm truncate">{getResponsavelNome(selectedParada.responsavelManutencao)}</p>
+                              </div>
+                              <div className="col-span-2">
+                                <h4 className="font-semibold text-xs text-muted-foreground">Descrição</h4>
+                                <p className="text-sm">{selectedParada.descricaoMotivo}</p>
+                              </div>
+                              <div className="col-span-2">
+                                <h4 className="font-semibold text-xs text-muted-foreground">Solução</h4>
+                                <p className="text-sm">{selectedParada.solucaoAplicada || "-"}</p>
+                              </div>
+                              {selectedParada.origemParada && getOrigensParada(selectedParada.origemParada).length > 0 && (
+                                <div className="col-span-2">
+                                  <h4 className="font-semibold text-xs text-muted-foreground">Origem</h4>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {getOrigensParada(selectedParada.origemParada).map((origem, index) => (
+                                      <Badge key={index} variant="secondary" className="text-[10px]">{origem}</Badge>
+                                    ))}
+                                  </div>
                                 </div>
+                              )}
+                              {selectedParada.produtosUtilizados && selectedParada.produtosUtilizados.length > 0 && (
+                                <div className="col-span-2 border-t pt-2">
+                                  <h4 className="font-semibold text-xs text-muted-foreground mb-2">Produtos</h4>
+                                  <div className="space-y-1">
+                                    {selectedParada.produtosUtilizados.map((produto: ProdutoUtilizado, index: number) => (
+                                      <div key={index} className="flex justify-between text-xs">
+                                        <span>{produto.nome} x{produto.quantidade}</span>
+                                        <span>{formatCurrency(produto.valorTotal)}</span>
+                                      </div>
+                                    ))}
+                                    <div className="flex justify-between font-semibold text-xs pt-1 border-t">
+                                      <span>Total</span>
+                                      <span>{formatCurrency(selectedParada.valorTotalProdutos || 0)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              <div className="col-span-2 pt-2 border-t">
+                                <h4 className="font-semibold text-xs text-muted-foreground mb-2">Status Atual</h4>
+                                {getStatusBadge(selectedParada.status)}
                               </div>
-                            </div>}
-                          <div className="col-span-2 pt-2 border-t">
-                            <h4 className="font-semibold text-xs text-muted-foreground mb-2">Status Atual</h4>
-                            {getStatusBadge(selectedParada.status)}
-                          </div>
-                        </div>}
+                            </div>
+                          </TabsContent>
+                          
+                          <TabsContent value="historico" className="overflow-y-auto max-h-[60vh] mt-4">
+                            <HistoricoAcoesTimeline historico={(selectedParada as any).historicoAcoes || []} />
+                          </TabsContent>
+                        </Tabs>
+                      )}
                     </DialogContent>
                   </Dialog>
                 </div>

@@ -406,7 +406,7 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                   <SelectValue placeholder={loadingSetores ? "Carregando..." : "Selecione o setor"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] bg-background z-50">
-                  {setores.map((setor) => (
+                  {[...setores].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((setor) => (
                     <SelectItem key={setor.id} value={setor.nome} className="text-xs sm:text-sm">
                       {setor.nome}
                     </SelectItem>
@@ -437,6 +437,7 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                 <SelectContent className="max-h-[200px] bg-background z-50">
                   {equipamentos
                     .filter((e) => !formData.setor || e.setor === formData.setor)
+                    .sort((a, b) => a.equipamento.localeCompare(b.equipamento, 'pt-BR'))
                     .map((equipamento) => (
                       <SelectItem key={equipamento.id} value={equipamento.equipamento} className="text-xs sm:text-sm">
                         {equipamento.patrimonio} - {equipamento.equipamento}
@@ -498,7 +499,7 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                   <SelectValue placeholder={loadingTiposFalhas ? "Carregando..." : "Selecione"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] bg-background z-50">
-                  {tiposFalhas.map((tipo) => (
+                  {[...tiposFalhas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((tipo) => (
                     <SelectItem key={tipo.id} value={tipo.nome} className="text-xs sm:text-sm">
                       {tipo.nome}
                     </SelectItem>
@@ -518,7 +519,7 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                   <SelectValue placeholder={loadingTiposManutencao ? "Carregando..." : "Selecione"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] bg-background z-50">
-                  {tiposManutencao.map((tipo) => (
+                  {[...tiposManutencao].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((tipo) => (
                     <SelectItem key={tipo.id} value={tipo.nome} className="text-xs sm:text-sm">
                       {tipo.nome}
                     </SelectItem>
@@ -556,7 +557,7 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                 onValueChange={handleOrigemChange}
                 className="flex flex-wrap gap-3"
               >
-                {origensParada.map((item) => (
+                {[...origensParada].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((item) => (
                   <div key={item.id} className="flex items-center space-x-1.5">
                     <RadioGroupItem value={item.nome} id={`origem-${item.id}`} />
                     <label htmlFor={`origem-${item.id}`} className="text-[10px] sm:text-xs cursor-pointer">

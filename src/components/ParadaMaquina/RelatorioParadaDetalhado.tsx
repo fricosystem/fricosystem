@@ -70,7 +70,11 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
   };
 
   const getStatusConfig = (status: string) => {
-    switch (status) {
+    const attemptMatch = status?.match(/_(\d+)$/);
+    const tentativa = attemptMatch ? Number(attemptMatch[1]) + 1 : 1;
+    const baseStatus = status?.replace(/_\d+$/, "");
+
+    switch (baseStatus) {
       case "aguardando":
         return { label: "Aguardando", className: "bg-amber-500/20 text-amber-700 border-amber-500/30" };
       case "pendente":
@@ -78,9 +82,15 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
       case "em_andamento":
         return { label: "Em Andamento", className: "bg-blue-500/20 text-blue-700 border-blue-500/30" };
       case "concluido":
-        return { label: "Concluído", className: "bg-emerald-500/20 text-emerald-700 border-emerald-500/30" };
+        return {
+          label: `Concluído na ${tentativa}ª tentativa`,
+          className: "bg-emerald-500/20 text-emerald-700 border-emerald-500/30",
+        };
       case "aguardando_verificacao":
-        return { label: "Aguardando Verificação", className: "bg-purple-500/20 text-purple-700 border-purple-500/30" };
+        return {
+          label: `Aguardando Verificação na ${tentativa}ª tentativa`,
+          className: "bg-purple-500/20 text-purple-700 border-purple-500/30",
+        };
       case "nao_concluido":
         return { label: "Não Concluído", className: "bg-red-500/20 text-red-700 border-red-500/30" };
       default:
@@ -325,12 +335,13 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
             <h3 className="text-base font-semibold flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-purple-600" />
               Verificação do Reparo
-              {parada.tentativaAtual && parada.tentativaAtual > 1 && (
-                <Badge variant="secondary" className="ml-2">
-                  Tentativa {parada.tentativaAtual}
-                </Badge>
-              )}
             </h3>
+            {parada.tentativaAtual && (
+              <div>
+                <span className="text-muted-foreground">Tentativa:</span>
+                <p className="mt-0.5">{parada.tentativaAtual}ª tentativa</p>
+              </div>
+            )}
             <p className="text-sm text-muted-foreground">
               O manutentor indicou que o reparo foi concluído. Verifique se o problema foi resolvido.
             </p>
