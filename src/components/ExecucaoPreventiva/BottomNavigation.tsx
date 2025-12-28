@@ -45,7 +45,7 @@ export function BottomNavigation({ activeTab, onTabChange, badgeCounts }: Bottom
   // Sub-abas de preventiva removidas - agora estão dentro do TimelineMobile
 
   const paradasSubTabs: { id: SubTabType; label: string; tabValue: TabType }[] = [
-    { id: "criadas", label: "Criadas", tabValue: "paradas" },
+    { id: "criadas", label: "Abertas", tabValue: "paradas" },
     { id: "historico-paradas", label: "Histórico", tabValue: "historico-paradas" },
   ];
 

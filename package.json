@@ -59,6 +59,7 @@
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
+    "idb": "^8.0.3",
     "input-otp": "^1.2.4",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
@@ -89,6 +90,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
     "vaul": "^1.1.2",
+    "vite-plugin-pwa": "^1.2.0",
     "xlsx": "^0.18.5",
     "xml2js": "^0.6.2",
     "zod": "^3.23.8"

@@ -76,7 +76,6 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
     equipamento: "",
     dataProgramada: dataAtual,
     horaInicio: "",
-    horaFinal: "",
     descricaoMotivo: "",
     observacao: "",
     tipoFalha: "",
@@ -305,74 +304,14 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
         return;
       }
       
-      const batch = writeBatch(db);
-      
-      // Criar horário de início programado
-      let horarioInicio: Timestamp | null = null;
-      if (formData.dataProgramada && formData.horaInicio) {
-        const [ano, mes, dia] = formData.dataProgramada.split('-').map(Number);
-        const [hora, minuto] = formData.horaInicio.split(':').map(Number);
-        const dataHora = new Date(ano, mes - 1, dia, hora, minuto);
-        horarioInicio = Timestamp.fromDate(dataHora);
-      }
-
-      // Criar horário final programado
-      let horarioFinal: Timestamp | null = null;
-      if (formData.dataProgramada && formData.horaFinal) {
-        const [ano, mes, dia] = formData.dataProgramada.split('-').map(Number);
-        const [hora, minuto] = formData.horaFinal.split(':').map(Number);
-        const dataHora = new Date(ano, mes - 1, dia, hora, minuto);
-        horarioFinal = Timestamp.fromDate(dataHora);
-      }
-
-      // Criar primeiro registro do histórico
-      const primeiroHistorico: HistoricoAcao = {
-        id: uuidv4(),
-        acao: "criado",
-        userId: user?.uid || "",
-        userName: userData?.nome || "Usuário",
-        timestamp: Timestamp.now(),
-        observacao: formData.descricaoMotivo,
-        tentativa: 1,
-        statusAnterior: "aguardando" as any,
-        statusNovo: "aguardando"
-      };
-      
-      const paradaData = {
-        setor: formData.setor,
-        equipamento: formData.equipamento,
-        hrInicial: "",
-        hrFinal: "",
-        descricaoMotivo: formData.descricaoMotivo,
-        observacao: formData.observacao,
-        origemParada: origemParada,
-        tipoFalha: formData.tipoFalha,
-        tipoManutencao: formData.tipoManutencao,
-        solucaoAplicada: "",
-        criadoPor: user?.uid || "",
-        criadoEm: Timestamp.now(),
-        status: "aguardando",
-        encarregadoId: user?.uid || "",
-        encarregadoNome: userData?.nome || "",
-        horarioInicio: horarioInicio,
-        horarioFinal: horarioFinal,
-        tentativaAtual: 1,
-        historicoAcoes: [primeiroHistorico]
-      };
-      
-      const paradaRef = doc(collection(db, "paradas_maquina"));
-      batch.set(paradaRef, paradaData);
-      
-      await batch.commit();
-      
-      toast.success("Parada de máquina registrada com sucesso!");
+      // Envio ao Firestore desabilitado
+      toast.info("Funcionalidade de registro temporariamente desabilitada");
       
       setFormData({
         setor: "",
         equipamento: "",
         dataProgramada: "",
         horaInicio: "",
-        horaFinal: "",
         descricaoMotivo: "",
         observacao: "",
         tipoFalha: "",
@@ -448,8 +387,8 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
             </div>
           </div>
 
-          {/* Data, Hora Início e Hora Final */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Data e Hora Início */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="dataProgramada" className="text-xs sm:text-sm">Data Programada*</Label>
               <Input
@@ -469,17 +408,6 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                 name="horaInicio"
                 type="time"
                 value={formData.horaInicio}
-                onChange={handleChange}
-                className="h-9 text-xs sm:text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="horaFinal" className="text-xs sm:text-sm">Hora Final</Label>
-              <Input
-                id="horaFinal"
-                name="horaFinal"
-                type="time"
-                value={formData.horaFinal}
                 onChange={handleChange}
                 className="h-9 text-xs sm:text-sm"
               />

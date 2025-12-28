@@ -12,10 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
-import { registrarExecucaoTarefa } from "@/firebase/manutencaoPreventiva";
+import { registrarExecucaoTarefaOffline } from "@/services/offlineManutencao";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock } from "lucide-react";
+import { Clock, WifiOff } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 
 interface ConcluirTarefaModalProps {
@@ -35,6 +35,7 @@ export function ConcluirTarefaModal({ tarefa, open, onOpenChange }: ConcluirTare
   const [checklist, setChecklist] = useState(
     tarefa.checklist?.map((item) => ({ ...item, concluido: false })) || []
   );
+  const isOffline = !navigator.onLine;
 
   // Calcular tempo decorrido desde o início da tarefa
   useEffect(() => {
@@ -86,20 +87,23 @@ export function ConcluirTarefaModal({ tarefa, open, onOpenChange }: ConcluirTare
 
     setLoading(true);
     try {
-      await registrarExecucaoTarefa(
+      await registrarExecucaoTarefaOffline(
         tarefa.id,
+        tarefa,
         tempoDecorrido,
         observacoes || undefined,
         checklist.length > 0 ? checklist : undefined,
-        undefined, // materiais - pode ser expandido posteriormente
+        undefined, // materiais
         problemasEncontrados || undefined,
         requerAcompanhamento,
         observacoesAcompanhamento || undefined
       );
 
       toast({
-        title: "Tarefa Concluída",
-        description: `Manutenção registrada com ${formatarTempo(tempoDecorrido)}.`,
+        title: isOffline ? "Tarefa Concluída (Offline)" : "Tarefa Concluída",
+        description: isOffline 
+          ? `Registrada com ${formatarTempo(tempoDecorrido)}. Será sincronizada quando voltar online.`
+          : `Manutenção registrada com ${formatarTempo(tempoDecorrido)}.`,
       });
       onOpenChange(false);
     } catch (error) {
@@ -118,9 +122,15 @@ export function ConcluirTarefaModal({ tarefa, open, onOpenChange }: ConcluirTare
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Concluir Manutenção</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Concluir Manutenção
+            {isOffline && <WifiOff className="h-4 w-4 text-amber-500" />}
+          </DialogTitle>
           <DialogDescription>
-            Registre os detalhes da execução da manutenção
+            {isOffline 
+              ? "Você está offline. Os dados serão sincronizados quando voltar online."
+              : "Registre os detalhes da execução da manutenção"
+            }
           </DialogDescription>
         </DialogHeader>
 

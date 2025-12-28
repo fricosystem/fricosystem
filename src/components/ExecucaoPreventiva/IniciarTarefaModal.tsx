@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
-import { iniciarTarefa } from "@/firebase/manutencaoPreventiva";
+import { iniciarTarefaOffline } from "@/services/offlineManutencao";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Wrench, Calendar } from "lucide-react";
+import { Wrench, Calendar, WifiOff } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -26,16 +26,19 @@ export function IniciarTarefaModal({ tarefa, open, onOpenChange }: IniciarTarefa
   const { userData } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const isOffline = !navigator.onLine;
 
   const handleIniciar = async () => {
     if (!userData?.email) return;
 
     setLoading(true);
     try {
-      await iniciarTarefa(tarefa.id, userData.email);
+      await iniciarTarefaOffline(tarefa.id, userData.email);
       toast({
-        title: "Tarefa Iniciada",
-        description: "A manutenção foi iniciada com sucesso.",
+        title: isOffline ? "Tarefa Iniciada (Offline)" : "Tarefa Iniciada",
+        description: isOffline 
+          ? "Será sincronizada quando voltar online." 
+          : "A manutenção foi iniciada com sucesso.",
       });
       onOpenChange(false);
     } catch (error) {
@@ -54,9 +57,15 @@ export function IniciarTarefaModal({ tarefa, open, onOpenChange }: IniciarTarefa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Iniciar Manutenção</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Iniciar Manutenção
+            {isOffline && <WifiOff className="h-4 w-4 text-amber-500" />}
+          </DialogTitle>
           <DialogDescription>
-            Confirme o início da manutenção preventiva
+            {isOffline 
+              ? "Você está offline. A tarefa será sincronizada quando voltar online."
+              : "Confirme o início da manutenção preventiva"
+            }
           </DialogDescription>
         </DialogHeader>
 

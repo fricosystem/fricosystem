@@ -7,6 +7,8 @@ import { HistoricoMobile } from "@/components/ExecucaoPreventiva/HistoricoMobile
 import { PerfilManutentor } from "@/components/ExecucaoPreventiva/PerfilManutentor";
 import { ParadasMaquinaMobile } from "@/components/ExecucaoPreventiva/ParadasMaquinaMobile";
 import { HistoricoParadasMobile } from "@/components/ExecucaoPreventiva/HistoricoParadasMobile";
+import { OfflineStatusBar } from "@/components/ExecucaoPreventiva/OfflineStatusBar";
+import { OfflineSyncProvider } from "@/contexts/OfflineSyncContext";
 import { useMinhasTarefas } from "@/hooks/useMinhasTarefas";
 import { useBlockBackNavigation } from "@/hooks/useBlockBackNavigation";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -77,49 +79,54 @@ export default function ExecucaoPreventiva() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header Fixo */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
-        <div className="container mx-auto py-4 px-6 flex items-center gap-3">
-          <img src="https://res.cloudinary.com/diomtgcvb/image/upload/q_100,f_png/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó" className="h-10 w-10 object-contain" />
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold">{getPageTitle()}</h1>
-            <p className="text-xs text-muted-foreground">{getPageSubtitle()}</p>
+    <OfflineSyncProvider>
+      <div className="min-h-screen bg-background">
+        {/* Barra de Status Offline */}
+        <OfflineStatusBar />
+
+        {/* Header Fixo */}
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
+          <div className="container mx-auto py-4 px-6 flex items-center gap-3">
+            <img src="https://res.cloudinary.com/diomtgcvb/image/upload/q_100,f_png/v1758851478/IconeFrico3D_oasnj7.png" alt="Fricó" className="h-10 w-10 object-contain" />
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold">{getPageTitle()}</h1>
+              <p className="text-xs text-muted-foreground">{getPageSubtitle()}</p>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Conteúdo Principal */}
-      <main className="container mx-auto px-4 py-4">
-        {activeTab === "dashboard" && (
-          <DashboardMobile
-            stats={stats}
-            tarefasHoje={tarefasHoje}
-            tarefasAtrasadas={tarefasAtrasadas}
-            execucoesPorTarefa={execucoesPorTarefa}
-            tarefas={tarefas}
-            historicoExecucoes={historicoExecucoes}
-          />
-        )}
+        {/* Conteúdo Principal */}
+        <main className="container mx-auto px-4 py-4">
+          {activeTab === "dashboard" && (
+            <DashboardMobile
+              stats={stats}
+              tarefasHoje={tarefasHoje}
+              tarefasAtrasadas={tarefasAtrasadas}
+              execucoesPorTarefa={execucoesPorTarefa}
+              tarefas={tarefas}
+              historicoExecucoes={historicoExecucoes}
+            />
+          )}
 
-        {activeTab === "timeline" && <TimelineMobile tarefas={tarefas} execucoesPorTarefa={execucoesPorTarefa} historicoExecucoes={historicoExecucoes} />}
+          {activeTab === "timeline" && <TimelineMobile tarefas={tarefas} execucoesPorTarefa={execucoesPorTarefa} historicoExecucoes={historicoExecucoes} />}
 
-        {activeTab === "perfil" && <PerfilManutentor stats={stats} />}
+          {activeTab === "perfil" && <PerfilManutentor stats={stats} />}
 
-        {activeTab === "paradas" && <ParadasMaquinaMobile />}
+          {activeTab === "paradas" && <ParadasMaquinaMobile />}
 
-        {activeTab === "historico-paradas" && <HistoricoParadasMobile />}
-      </main>
+          {activeTab === "historico-paradas" && <HistoricoParadasMobile />}
+        </main>
 
-      {/* Bottom Navigation */}
-      <BottomNavigation 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
-        badgeCounts={{
-          preventivas: preventivasPendentes,
-          paradas: paradasPendentes
-        }}
-      />
-    </div>
+        {/* Bottom Navigation */}
+        <BottomNavigation 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab} 
+          badgeCounts={{
+            preventivas: preventivasPendentes,
+            paradas: paradasPendentes
+          }}
+        />
+      </div>
+    </OfflineSyncProvider>
   );
 }

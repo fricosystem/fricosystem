@@ -26,20 +26,58 @@ import {
 } from "@/types/typesParadaMaquina";
 import { calcularProximaManutencao } from "@/utils/manutencaoUtils";
 import { v4 as uuidv4 } from "uuid";
+import { cacheBatchData, getCachedCollection, addPendingAction } from "@/lib/offlineDB";
 
 export const useParadaMaquina = () => {
   const { user, userData } = useAuth();
   const [paradas, setParadas] = useState<ParadaMaquina[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  // Detectar status online/offline
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Carregar dados do cache quando offline
+  useEffect(() => {
+    const loadCachedData = async () => {
+      try {
+        const cachedParadas = await getCachedCollection('paradas_maquina');
+        if (cachedParadas.length > 0) {
+          setParadas(cachedParadas as ParadaMaquina[]);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro ao carregar cache:', error);
+        setLoading(false);
+      }
+    };
+
+    if (isOffline) {
+      loadCachedData();
+    }
+  }, [isOffline]);
 
   // Buscar paradas em tempo real
   useEffect(() => {
+    if (isOffline) return;
+
     const q = query(
       collection(db, "paradas_maquina"),
       orderBy("criadoEm", "desc")
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -47,13 +85,23 @@ export const useParadaMaquina = () => {
       
       setParadas(data);
       setLoading(false);
+
+      // Salvar no cache para uso offline
+      try {
+        await cacheBatchData(
+          'paradas_maquina',
+          data.map(p => ({ id: p.id, data: p }))
+        );
+      } catch (error) {
+        console.error('Erro ao cachear paradas:', error);
+      }
     }, (error) => {
       console.error("Erro ao buscar paradas:", error);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isOffline]);
 
   // Verificar paradas expiradas automaticamente
   useEffect(() => {
