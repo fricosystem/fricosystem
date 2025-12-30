@@ -89,14 +89,6 @@ const ProdutoCard: React.FC<ProdutoCardProps> = ({ produto, onEdit, onDelete, on
       </CardContent>
 
       <CardFooter className="p-2 bg-gray-50 flex justify-between">
-        <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={onEdit} className="h-8 w-8 p-0">
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onDelete} className="h-8 w-8 p-0 text-red-500">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
         <Button size="sm" onClick={onAddToCart} className="h-8">
           <ShoppingCart className="h-4 w-4 mr-1" />
           <span className="hidden sm:inline">Adicionar</span>
