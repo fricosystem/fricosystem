@@ -286,6 +286,7 @@ const FuturisticFloatingMenu = () => {
         { id: "manutencao-preventiva", icon: <Calendar size={20} />, label: "Manutenção Preventiva", path: "/manutencao-preventiva", permission: "manutencao_preventiva" },
         { id: "execucao-preventiva", icon: <ClipboardCheck size={20} />, label: "Execução de Parada", path: "/execucao-preventiva", permission: "execucao_preventiva" },
         { id: "parada-maquina", icon: <Wrench size={20} />, label: "Parada de Máquina", path: "/parada-maquina", permission: "parada_maquina" },
+        { id: "ordens-servico", icon: <ClipboardList size={20} />, label: "Ordens de Serviço", path: "/ordens-servico", permission: "ordens_servico" },
       ]),
     },
     {
