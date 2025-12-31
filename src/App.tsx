@@ -54,6 +54,7 @@ import GestaoTarefas from "./pages/GestaoTarefas";
 import ExecucaoPreventiva from "./pages/ExecucaoPreventiva";
 import { ManutentorGuard } from "./guards/ManutentorGuard";
 import { EncarregadoGuard } from "./guards/EncarregadoGuard";
+import { OrdensServicoGuard } from "./guards/OrdensServicoGuard";
 
 // Páginas de comunicação
 import ChatPage from "./pages/ChatPage";
@@ -65,6 +66,9 @@ import Inventario from "./pages/Inventario";
 
 // Página de Manuais
 import Manuais from "./pages/Manuais";
+
+// Página de Ordens de Serviço
+import OrdensServico from "./pages/OrdensServico";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -204,6 +208,9 @@ const AppContent = () => {
           
           {/* Manuais */}
           <Route path="/manuais" element={<AuthGuard><Manuais /></AuthGuard>} />
+          
+          {/* Ordens de Serviço */}
+          <Route path="/ordens-servico" element={<AuthGuard><OrdensServicoGuard><OrdensServico /></OrdensServicoGuard></AuthGuard>} />
           
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />
