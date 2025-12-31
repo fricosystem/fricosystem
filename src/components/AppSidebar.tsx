@@ -174,6 +174,11 @@ const AppSidebar = () => {
       icon: Wrench,
       label: "Parada de Máquina",
       permission: "parada_maquina"
+    }, {
+      to: "/ordens-servico",
+      icon: ClipboardList,
+      label: "Ordens de Serviço",
+      permission: "ordens_servico"
     }]
   }, {
     label: "Requisições",
