@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Package, DollarSign, TrendingUp, AlertTriangle, ShoppingCart, FileText, Loader2, Users, Warehouse, Truck, Boxes, ClipboardList, BarChart2, PieChart as PieChartIcon, Map, Calendar, Clock, Layers, Wrench } from "lucide-react";
+import { Package, DollarSign, TrendingUp, AlertTriangle, ShoppingCart, FileText, Loader2, Users, Warehouse, Truck, Boxes, ClipboardList, BarChart2, PieChart as PieChartIcon, Map, Calendar, Clock, Layers, Wrench, Factory } from "lucide-react";
 import { ManutencaoCharts } from "@/components/Dashboard/ManutencaoCharts";
+import { PCPCharts } from "@/components/Dashboard/PCPCharts";
 import AppLayout from "@/layouts/AppLayout";
 import StatsCard from "@/components/StatsCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,7 +105,6 @@ const Dashboard = () => {
   usePostMessageFix();
 
   const [period, setPeriod] = useState<"hoje" | "semana" | "mes" | "ano" | "personalizado">("hoje");
-  const [dashboardTab, setDashboardTab] = useState<"estoque" | "manutencao">("estoque");
   const [customStartDate, setCustomStartDate] = useState<Date>();
   const [customEndDate, setCustomEndDate] = useState<Date>();
   const [loading, setLoading] = useState(false);
@@ -1005,7 +1005,8 @@ const Dashboard = () => {
     
     return result;
   };
-  return <AppLayout title="Dashboard Geral">
+  return (
+    <AppLayout title="Dashboard Geral">
       {/* Seletor de período */}
       <div className="mb-6">
         <Tabs defaultValue="hoje" value={period} onValueChange={v => setPeriod(v as "hoje" | "semana" | "mes" | "ano" | "personalizado")}>
@@ -1097,20 +1098,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Tabs para tipo de dashboard */}
-      <div className="mb-6">
-        <Tabs defaultValue="estoque" value={dashboardTab} onValueChange={v => setDashboardTab(v as typeof dashboardTab)}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="estoque" className="flex items-center gap-2">
-              <Package className="h-4 w-4" /> Estoque
-            </TabsTrigger>
-            <TabsTrigger value="manutencao" className="flex items-center gap-2">
-              <Wrench className="h-4 w-4" /> Manutenção
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
       {loading ? (
         <Card className="mb-6">
           <div className="flex flex-col items-center justify-center p-8 space-y-4">
@@ -1120,14 +1107,11 @@ const Dashboard = () => {
         </Card>
       ) : (
         <>
-        
-        {/* Aba de Manutenção */}
-        {dashboardTab === "manutencao" && (
-          <ManutencaoCharts period={period === "personalizado" ? "mes" : period} />
-        )}
-
-        {/* Aba de Estoque */}
-        {dashboardTab === "estoque" && (<>
+          {/* ===== SEÇÃO DE ESTOQUE ===== */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Package className="h-5 w-5" /> Estoque
+            </h2>
           {/* Cards de estatísticas */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
             <StatsCard title="Usuários Ativos" value={`${usuariosAtivos}/${totalUsuarios}`} icon={<Users className="h-5 w-5" />} trend={{
@@ -1489,8 +1473,31 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           </div>
-        </>)}
-      </>)}
+          </div>
+
+          {/* ===== DIVISÓRIA ===== */}
+          <div className="my-8 border-t border-border" />
+
+          {/* ===== SEÇÃO DE MANUTENÇÃO ===== */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Wrench className="h-5 w-5" /> Manutenção
+            </h2>
+            <ManutencaoCharts period={period === "personalizado" ? "mes" : period} />
+          </div>
+
+          {/* ===== DIVISÓRIA ===== */}
+          <div className="my-8 border-t border-border" />
+
+          {/* ===== SEÇÃO DE PCP ===== */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Factory className="h-5 w-5" /> Planejamento e Controle de Produção (PCP)
+            </h2>
+            <PCPCharts period={period === "personalizado" ? "mes" : period} />
+          </div>
+        </>
+      )}
     </AppLayout>
   );
 };

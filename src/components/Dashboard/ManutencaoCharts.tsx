@@ -30,10 +30,14 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  Radar
+  Radar,
+  LineChart,
+  Line,
+  ComposedChart
 } from "recharts";
 import StatsCard from "@/components/StatsCard";
 import { isStatusConcluido } from "@/types/typesParadaMaquina";
+import { Factory, Zap, Settings } from "lucide-react";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#A4DE6C', '#D0ED57', '#FFC658'];
 
@@ -256,6 +260,135 @@ export function ManutencaoCharts({ period }: ManutencaoChartsProps) {
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
   }, [tarefasManutencao]);
+
+  // Evolução mensal de paradas (últimos 6 meses)
+  const dadosEvolucaoMensalParadas = useMemo(() => {
+    const now = new Date();
+    const meses: Record<string, number> = {};
+    
+    for (let i = 5; i >= 0; i--) {
+      const mes = new Date(now);
+      mes.setMonth(mes.getMonth() - i);
+      const key = mes.toLocaleDateString('pt-BR', { month: 'short' });
+      meses[key] = 0;
+    }
+
+    paradasMaquina.forEach(parada => {
+      const data = convertTimestamp(parada.criadoEm);
+      if (data) {
+        const diffTime = now.getTime() - data.getTime();
+        const diffMonths = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 30));
+        
+        if (diffMonths >= 0 && diffMonths < 6) {
+          const key = data.toLocaleDateString('pt-BR', { month: 'short' });
+          if (meses[key] !== undefined) {
+            meses[key]++;
+          }
+        }
+      }
+    });
+
+    return Object.entries(meses).map(([name, value]) => ({ name, paradas: value }));
+  }, [paradasMaquina]);
+
+  // Comparativo Preventivas vs Paradas (últimos 6 meses)
+  const dadosComparativoPreventivasParadas = useMemo(() => {
+    const now = new Date();
+    const meses: Record<string, { preventivas: number; paradas: number }> = {};
+    
+    for (let i = 5; i >= 0; i--) {
+      const mes = new Date(now);
+      mes.setMonth(mes.getMonth() - i);
+      const key = mes.toLocaleDateString('pt-BR', { month: 'short' });
+      meses[key] = { preventivas: 0, paradas: 0 };
+    }
+
+    historicoExecucoes.forEach(exec => {
+      const data = convertTimestamp(exec.dataExecucao);
+      if (data) {
+        const key = data.toLocaleDateString('pt-BR', { month: 'short' });
+        if (meses[key] !== undefined) {
+          meses[key].preventivas++;
+        }
+      }
+    });
+
+    paradasMaquina.forEach(parada => {
+      const data = convertTimestamp(parada.criadoEm);
+      if (data) {
+        const key = data.toLocaleDateString('pt-BR', { month: 'short' });
+        if (meses[key] !== undefined) {
+          meses[key].paradas++;
+        }
+      }
+    });
+
+    return Object.entries(meses).map(([name, data]) => ({ name, ...data }));
+  }, [historicoExecucoes, paradasMaquina]);
+
+  // Origem das Paradas
+  const dadosOrigemParadas = useMemo(() => {
+    const origemCount: Record<string, number> = {
+      "Elétrica": 0,
+      "Mecânica": 0,
+      "Automatização": 0,
+      "Terceiros": 0,
+      "Outro": 0
+    };
+    paradasMaquina.forEach(parada => {
+      if (parada.origemParada) {
+        if (parada.origemParada.eletrica) origemCount["Elétrica"]++;
+        if (parada.origemParada.mecanica) origemCount["Mecânica"]++;
+        if (parada.origemParada.automatizacao) origemCount["Automatização"]++;
+        if (parada.origemParada.terceiros) origemCount["Terceiros"]++;
+        if (parada.origemParada.outro) origemCount["Outro"]++;
+      }
+    });
+    return Object.entries(origemCount)
+      .filter(([_, value]) => value > 0)
+      .map(([name, value], index) => ({ name, value, fill: COLORS[index % COLORS.length] }));
+  }, [paradasMaquina]);
+
+  // Prioridades das tarefas pendentes
+  const dadosPrioridadesPendentes = useMemo(() => {
+    const prioridadeCount: Record<string, number> = { "critica": 0, "alta": 0, "media": 0, "baixa": 0 };
+    tarefasManutencao.filter(t => t.status === "pendente").forEach(t => {
+      const prioridade = t.prioridade || "baixa";
+      prioridadeCount[prioridade]++;
+    });
+    return [
+      { name: "Crítica", value: prioridadeCount["critica"], fill: '#FF0000' },
+      { name: "Alta", value: prioridadeCount["alta"], fill: '#FF8042' },
+      { name: "Média", value: prioridadeCount["media"], fill: '#FFBB28' },
+      { name: "Baixa", value: prioridadeCount["baixa"], fill: '#00C49F' },
+    ].filter(item => item.value > 0);
+  }, [tarefasManutencao]);
+
+  // Paradas por Setor
+  const dadosParadasPorSetor = useMemo(() => {
+    const setorCount: Record<string, number> = {};
+    paradasMaquina.forEach(parada => {
+      const setor = parada.setor || "Outros";
+      setorCount[setor] = (setorCount[setor] || 0) + 1;
+    });
+    return Object.entries(setorCount)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  }, [paradasMaquina]);
+
+  // Paradas por Equipamento (Top 10)
+  const dadosParadasPorEquipamento = useMemo(() => {
+    const equipCount: Record<string, number> = {};
+    paradasMaquina.forEach(p => {
+      const equip = p.equipamento || "Outros";
+      equipCount[equip] = (equipCount[equip] || 0) + 1;
+    });
+    return Object.entries(equipCount)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [paradasMaquina]);
 
   const tooltipStyle = {
     contentStyle: {
@@ -511,6 +644,179 @@ export function ManutencaoCharts({ period }: ManutencaoChartsProps) {
                   <Legend />
                   <Bar dataKey="preventivas" name="Preventivas" fill="#0088FE" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="paradas" name="Paradas" fill="#00C49F" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quarta linha - Evolução e Comparativo */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-6">
+        {/* Evolução Mensal de Paradas */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" /> Evolução Mensal de Paradas
+            </CardTitle>
+            <CardDescription>Últimos 6 meses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dadosEvolucaoMensalParadas}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip {...tooltipStyle} formatter={value => [`${value} paradas`, 'Quantidade']} />
+                  <Legend />
+                  <Line type="monotone" dataKey="paradas" name="Paradas" stroke="#FF8042" strokeWidth={2} dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Comparativo Preventivas vs Paradas */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart2 className="h-5 w-5" /> Preventivas vs Paradas
+            </CardTitle>
+            <CardDescription>Comparativo últimos 6 meses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dadosComparativoPreventivasParadas}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip {...tooltipStyle} />
+                  <Legend />
+                  <Bar dataKey="preventivas" name="Preventivas" fill="#0088FE" radius={[4, 4, 0, 0]} />
+                  <Line type="monotone" dataKey="paradas" name="Paradas" stroke="#FF8042" strokeWidth={2} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quinta linha - Origem e Prioridades */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
+        {/* Origem das Paradas */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" /> Origem das Paradas
+            </CardTitle>
+            <CardDescription>Tipo de falha</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie 
+                    data={dadosOrigemParadas} 
+                    cx="50%" 
+                    cy="50%" 
+                    labelLine={false}
+                    outerRadius={80} 
+                    innerRadius={40}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {dadosOrigemParadas.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip {...tooltipStyle} formatter={value => [`${value} paradas`, 'Quantidade']} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Prioridades Pendentes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" /> Prioridades Pendentes
+            </CardTitle>
+            <CardDescription>Tarefas por prioridade</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie 
+                    data={dadosPrioridadesPendentes} 
+                    cx="50%" 
+                    cy="50%" 
+                    labelLine={false}
+                    outerRadius={80} 
+                    innerRadius={40}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {dadosPrioridadesPendentes.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip {...tooltipStyle} formatter={value => [`${value} tarefas`, 'Quantidade']} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Paradas por Setor */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Factory className="h-5 w-5" /> Paradas por Setor
+            </CardTitle>
+            <CardDescription>Distribuição por área</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart layout="vertical" data={dadosParadasPorSetor} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis type="number" />
+                  <YAxis dataKey="name" type="category" width={100} />
+                  <Tooltip {...tooltipStyle} formatter={value => [`${value} paradas`, 'Quantidade']} />
+                  <Bar dataKey="value" fill="#FF8042" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sexta linha - Equipamentos problemáticos */}
+      <div className="grid grid-cols-1 gap-6 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" /> Equipamentos com Mais Paradas
+            </CardTitle>
+            <CardDescription>Top 8 equipamentos que mais pararam</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dadosParadasPorEquipamento}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} interval={0} />
+                  <YAxis />
+                  <Tooltip {...tooltipStyle} formatter={value => [`${value} paradas`, 'Quantidade']} />
+                  <Bar dataKey="value" name="Paradas" fill="#FF8042" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -153,7 +153,7 @@ const AppContent = () => {
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* Rotas públicas */}
           <Route path="/" element={<NoAuthGuard><Login /></NoAuthGuard>} />
