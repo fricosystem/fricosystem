@@ -2,14 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, Timestamp, getDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardList, Play, Clock, Package, Plus, Minus, X, Check, AlertCircle, Search } from "lucide-react";
+import { ClipboardList, Play, Clock, Package, Plus, Minus, X, Check, AlertCircle, Search, ChevronRight, FileText, User, Calendar, Wrench, Timer } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -22,6 +25,7 @@ interface OrdemServico {
   origensParada: string[];
   status: string;
   criadoEm: Timestamp;
+  tipoManutencao?: string;
 }
 
 interface Produto {
@@ -42,14 +46,31 @@ interface ProdutoSelecionado {
   quantidadeUsada: number;
 }
 
+// Componente InfoRow para informações
+interface InfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}
+
+const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => (
+  <div className="flex items-start gap-3">
+    <div className="text-muted-foreground mt-0.5">{icon}</div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-base font-medium mt-0.5">{value}</p>
+    </div>
+  </div>
+);
+
 export function OSAbertasMobile() {
   const { user, userData } = useAuth();
   const { toast } = useToast();
   const [ordensAbertas, setOrdensAbertas] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOS, setSelectedOS] = useState<OrdemServico | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showExecutionModal, setShowExecutionModal] = useState(false);
+  const [showDetailsSheet, setShowDetailsSheet] = useState(false);
+  const [showExecutionSheet, setShowExecutionSheet] = useState(false);
   const [showProductsModal, setShowProductsModal] = useState(false);
   
   // Execution state
@@ -70,7 +91,6 @@ export function OSAbertasMobile() {
   // Fetch open orders
   useEffect(() => {
     const ordensRef = collection(db, "ordens_servicos");
-    // Query para buscar OS que não estão concluídas (aberta ou em_execucao)
     const q = query(
       ordensRef,
       where("status", "in", ["aberta", "em_execucao"])
@@ -83,7 +103,6 @@ export function OSAbertasMobile() {
           id: doc.id,
           ...doc.data()
         })) as OrdemServico[];
-        // Ordenar no cliente por criadoEm (mais recentes primeiro)
         ordens.sort((a, b) => {
           const dateA = a.criadoEm?.toDate?.() || new Date(0);
           const dateB = b.criadoEm?.toDate?.() || new Date(0);
@@ -119,7 +138,6 @@ export function OSAbertasMobile() {
     setLoadingProdutos(true);
     try {
       const produtosRef = collection(db, "produtos");
-      // Query simples sem orderBy para evitar necessidade de índice composto
       const q = query(produtosRef, where("ativo", "==", "sim"));
       
       const unsubscribe = onSnapshot(
@@ -129,7 +147,6 @@ export function OSAbertasMobile() {
             id: doc.id,
             ...doc.data()
           })) as Produto[];
-          // Ordenar no cliente por nome
           prods.sort((a, b) => a.nome.localeCompare(b.nome));
           setProdutos(prods);
           setLoadingProdutos(false);
@@ -155,15 +172,17 @@ export function OSAbertasMobile() {
   };
 
   const handleOpenDetails = async (os: OrdemServico) => {
-    setSelectedOS(os);
-    
-    // Se status for em_execucao, abrir modal de execução diretamente
     if (os.status === "em_execucao") {
-      // Buscar dados de execução para recuperar o tempo
       try {
         const osRef = doc(db, "ordens_servicos", os.id);
         const osDoc = await getDoc(osRef);
         const osData = osDoc.data();
+        
+        // Atualizar selectedOS com dados completos do Firestore
+        setSelectedOS({
+          ...os,
+          descricao: osData?.descricao || os.descricao
+        });
         
         if (osData?.inicioExecucao) {
           const inicio = osData.inicioExecucao.toDate();
@@ -178,13 +197,13 @@ export function OSAbertasMobile() {
         
         setObservacoes(osData?.observacoes || "");
         setSolucaoAplicada(osData?.solucaoAplicada || "");
-        setShowExecutionModal(true);
+        setShowExecutionSheet(true);
       } catch (error) {
         console.error("Erro ao recuperar dados de execução:", error);
-        setShowExecutionModal(true);
+        setShowExecutionSheet(true);
       }
     } else {
-      setShowDetailsModal(true);
+      setShowDetailsSheet(true);
     }
   };
 
@@ -192,7 +211,6 @@ export function OSAbertasMobile() {
     if (!selectedOS || !user) return;
 
     try {
-      // Update OS status to em_execucao
       const osRef = doc(db, "ordens_servicos", selectedOS.id);
       await updateDoc(osRef, {
         status: "em_execucao",
@@ -206,8 +224,8 @@ export function OSAbertasMobile() {
       setObservacoes("");
       setSolucaoAplicada("");
       setProdutosSelecionados([]);
-      setShowDetailsModal(false);
-      setShowExecutionModal(true);
+      setShowDetailsSheet(false);
+      setShowExecutionSheet(true);
       
       toast({
         title: "Execução iniciada",
@@ -221,6 +239,10 @@ export function OSAbertasMobile() {
         variant: "destructive"
       });
     }
+  };
+
+  const handleCloseExecutionSheet = () => {
+    setShowExecutionSheet(false);
   };
 
   const handleOpenProducts = async () => {
@@ -292,12 +314,10 @@ export function OSAbertasMobile() {
       const fimExecucao = new Date();
       const tempoTotal = Math.floor((fimExecucao.getTime() - executionStartTime.getTime()) / 1000);
 
-      // Get the original OS data
       const osRef = doc(db, "ordens_servicos", selectedOS.id);
       const osDoc = await getDoc(osRef);
       const osData = osDoc.data();
 
-      // Create finished order in ordens_servico_finalizada
       await addDoc(collection(db, "ordens_servico_finalizada"), {
         ...osData,
         ordemServicoId: selectedOS.id,
@@ -320,7 +340,6 @@ export function OSAbertasMobile() {
         finalizadoEm: serverTimestamp()
       });
 
-      // Update product quantities
       for (const produto of produtosSelecionados) {
         const produtoRef = doc(db, "produtos", produto.id);
         const produtoDoc = await getDoc(produtoRef);
@@ -334,7 +353,6 @@ export function OSAbertasMobile() {
         }
       }
 
-      // Update original OS status to concluida
       await updateDoc(osRef, {
         status: "concluida",
         fimExecucao: serverTimestamp(),
@@ -344,7 +362,7 @@ export function OSAbertasMobile() {
         atualizadoEm: serverTimestamp()
       });
 
-      setShowExecutionModal(false);
+      setShowExecutionSheet(false);
       setSelectedOS(null);
       setExecutionStartTime(null);
       setElapsedTime(0);
@@ -379,6 +397,21 @@ export function OSAbertasMobile() {
     );
   });
 
+  const getStatusBadge = (status: string) => {
+    if (status === "em_execucao") {
+      return (
+        <Badge className="bg-blue-500/20 text-blue-700 border-blue-500/30">
+          Em Execução
+        </Badge>
+      );
+    }
+    return (
+      <Badge className="bg-amber-500/20 text-amber-700 border-amber-500/30">
+        Aberta
+      </Badge>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -389,168 +422,246 @@ export function OSAbertasMobile() {
 
   return (
     <div className="space-y-4 pb-20">
-      <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar ordens de serviço..."
-          value={searchOS}
-          onChange={(e) => setSearchOS(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* Barra de Busca Aprimorada */}
+      <Card className="border-0 shadow-none">
+        <CardHeader className="px-0 py-3">
+          <div className="relative w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar ordem de serviço..."
+              value={searchOS}
+              onChange={(e) => setSearchOS(e.target.value)}
+              className="pl-12 w-full text-base h-14 rounded-xl"
+            />
+          </div>
+        </CardHeader>
+      </Card>
 
       {filteredOS.length === 0 ? (
-        <div className="text-center py-12">
-          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Nenhuma ordem de serviço aberta</p>
+        <div className="text-center py-16">
+          <ClipboardList className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+          <p className="text-muted-foreground text-lg">Nenhuma ordem de serviço aberta</p>
+          <p className="text-muted-foreground text-sm mt-1">Não há OS para executar no momento</p>
         </div>
       ) : (
         <div className="space-y-3">
           {filteredOS.map((os) => (
-            <Card 
-              key={os.id} 
-              className="overflow-hidden cursor-pointer transition-all"
+            <button
+              key={os.id}
               onClick={() => handleOpenDetails(os)}
+              className="w-full text-left bg-card border rounded-2xl p-4 space-y-3 active:scale-[0.98] transition-transform"
             >
-              <CardContent className="p-4 space-y-3">
-                <div className="flex justify-between items-start gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{os.equipamento}</div>
-                    <div className="text-sm text-muted-foreground">{os.setor}</div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {os.status === "em_execucao" ? (
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200">
-                        Em Execução
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
-                        Aberta
-                      </Badge>
-                    )}
-                  </div>
+              <div className="flex justify-between items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg leading-tight truncate">
+                    {os.equipamento}
+                  </h3>
+                  <p className="text-base text-muted-foreground mt-1">
+                    {os.setor}
+                  </p>
                 </div>
+                <ChevronRight className="h-6 w-6 text-muted-foreground flex-shrink-0 mt-1" />
+              </div>
 
-                <div className="text-sm text-muted-foreground line-clamp-2">
-                  {os.descricao}
-                </div>
-
-                <div className="flex justify-between items-center text-xs text-muted-foreground flex-wrap gap-2">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                {os.tipoManutencao && (
+                  <div className="flex items-center gap-1.5">
+                    <Wrench className="h-4 w-4" />
+                    <span>{os.tipoManutencao}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <User className="h-4 w-4" />
                   <span>{os.responsavelChamado || "Não informado"}</span>
-                  <span>{os.criadoEm && format(os.criadoEm.toDate(), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}</span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <div className="flex justify-between items-center pt-1 gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {getStatusBadge(os.status)}
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {os.criadoEm && format(os.criadoEm.toDate(), "dd/MM/yy HH:mm")}
+                </span>
+              </div>
+            </button>
           ))}
         </div>
       )}
 
-      {/* Details Modal */}
-      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Detalhes da OS</DialogTitle>
-          </DialogHeader>
+      {/* Modal de Detalhes - Sheet Bottom */}
+      <Sheet open={showDetailsSheet} onOpenChange={setShowDetailsSheet}>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl px-4 pt-2 pb-6">
+          <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+          <SheetHeader className="mb-4">
+            <SheetTitle className="text-xl">Detalhes da OS</SheetTitle>
+          </SheetHeader>
           
           {selectedOS && (
-            <div className="overflow-y-auto max-h-[60vh]">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <h4 className="font-semibold text-xs text-muted-foreground">Setor</h4>
-                  <p>{selectedOS.setor}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs text-muted-foreground">Equipamento</h4>
-                  <p>{selectedOS.equipamento}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs text-muted-foreground">Status</h4>
-                  {selectedOS.status === "em_execucao" ? (
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200">
-                      Em Execução
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
-                      Aberta
-                    </Badge>
-                  )}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs text-muted-foreground">Solicitante</h4>
-                  <p>{selectedOS.responsavelChamado || "-"}</p>
-                </div>
-                <div className="col-span-2">
-                  <h4 className="font-semibold text-xs text-muted-foreground">Descrição</h4>
-                  <p>{selectedOS.descricao}</p>
-                </div>
-                {selectedOS.origensParada && selectedOS.origensParada.length > 0 && (
-                  <div className="col-span-2">
-                    <h4 className="font-semibold text-xs text-muted-foreground">Origens da Parada</h4>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {selectedOS.origensParada.map((origem, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">{origem}</Badge>
-                      ))}
+            <div className="overflow-y-auto h-[calc(100%-80px)]">
+              <Tabs defaultValue="info" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="info">Informações</TabsTrigger>
+                  <TabsTrigger value="origem">Origem</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="info" className="space-y-5 pb-4">
+                  {/* Header com Status */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      {getStatusBadge(selectedOS.status)}
+                    </div>
+                    <h2 className="text-xl font-bold leading-tight">{selectedOS.equipamento}</h2>
+                    <p className="text-base text-muted-foreground">{selectedOS.setor}</p>
+                  </div>
+
+                  <Separator />
+
+                  {/* Informações Gerais */}
+                  <div className="space-y-4">
+                    <h3 className="text-base font-semibold flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      Informações Gerais
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                      <InfoRow 
+                        icon={<Calendar className="h-5 w-5" />}
+                        label="Data/Hora do Registro"
+                        value={selectedOS.criadoEm ? format(selectedOS.criadoEm.toDate(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR }) : "-"}
+                      />
+                      <InfoRow 
+                        icon={<User className="h-5 w-5" />}
+                        label="Solicitante"
+                        value={selectedOS.responsavelChamado || "Não informado"}
+                      />
+                      {selectedOS.tipoManutencao && (
+                        <InfoRow 
+                          icon={<Wrench className="h-5 w-5" />}
+                          label="Tipo de Manutenção"
+                          value={selectedOS.tipoManutencao}
+                        />
+                      )}
                     </div>
                   </div>
-                )}
-                <div className="col-span-2">
-                  <h4 className="font-semibold text-xs text-muted-foreground">Criado em</h4>
-                  <p>{selectedOS.criadoEm && format(selectedOS.criadoEm.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
-                </div>
-              </div>
+
+                  <Separator />
+
+                  {/* Descrição */}
+                  <div className="space-y-3">
+                    <h3 className="text-base font-semibold">Descrição do Problema</h3>
+                    <div className="bg-muted/50 rounded-xl p-4">
+                      <p className="text-base leading-relaxed">
+                        {selectedOS.descricao || "Nenhuma descrição fornecida"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Informações de Auditoria */}
+                  <Separator />
+                  <div className="bg-muted/30 rounded-xl p-4 space-y-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                      Informações de Auditoria
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">ID do Registro:</span>
+                        <p className="font-mono text-xs mt-0.5 break-all">{selectedOS.id}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botão de Ação */}
+                  <Separator />
+                  <div className="pb-6">
+                    <Button 
+                      className="w-full h-14 text-base font-semibold"
+                      onClick={handleStartExecution}
+                    >
+                      <Play className="h-5 w-5 mr-2" />
+                      Iniciar Execução
+                    </Button>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="origem" className="pb-4">
+                  {selectedOS.origensParada && selectedOS.origensParada.length > 0 ? (
+                    <div className="space-y-3">
+                      <h3 className="text-base font-semibold flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-primary" />
+                        Origens da Parada
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedOS.origensParada.map((origem, index) => (
+                          <Badge 
+                            key={index} 
+                            variant="secondary" 
+                            className="text-sm px-3 py-1.5"
+                          >
+                            {origem}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <AlertCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                      <p className="text-muted-foreground">Nenhuma origem especificada</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
           )}
+        </SheetContent>
+      </Sheet>
 
-          <DialogFooter className="mt-4 gap-2 flex-col">
-            <Button 
-              className="flex-1 w-full"
-              onClick={handleStartExecution}
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Iniciar Execução
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Execution Modal */}
-      <Dialog open={showExecutionModal} onOpenChange={() => {}}>
-        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col" hideCloseButton>
-          <DialogHeader>
-            <DialogTitle>Executando OS</DialogTitle>
-          </DialogHeader>
+      {/* Modal de Execução - Sheet Bottom */}
+      <Sheet open={showExecutionSheet} onOpenChange={setShowExecutionSheet}>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl px-4 pt-2 pb-6">
+          <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+          <SheetHeader className="mb-4">
+            <SheetTitle className="text-xl">Executando OS</SheetTitle>
+          </SheetHeader>
           
           {selectedOS && (
-            <div className="overflow-y-auto max-h-[60vh] space-y-4">
+            <div className="overflow-y-auto h-[calc(100%-80px)] space-y-5">
               {/* Timer */}
-              <div className="flex flex-col items-center text-center py-2">
-                <span className="text-xs text-muted-foreground">Tempo em execução</span>
-                <span className="text-xl font-bold font-mono text-primary">{formatTime(elapsedTime)}</span>
+              <div className="bg-primary/10 rounded-xl p-4">
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-sm text-muted-foreground">Tempo em execução</span>
+                  <span className="text-3xl font-bold font-mono text-primary">{formatTime(elapsedTime)}</span>
+                </div>
               </div>
 
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <h4 className="font-semibold text-xs text-muted-foreground">Setor</h4>
-                  <p>{selectedOS.setor}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs text-muted-foreground">Equipamento</h4>
-                  <p>{selectedOS.equipamento}</p>
-                </div>
-                <div className="col-span-2">
-                  <h4 className="font-semibold text-xs text-muted-foreground">Descrição</h4>
-                  <p>{selectedOS.descricao}</p>
+              {/* Header com Status */}
+              <div className="flex flex-col gap-2">
+                <Badge className="bg-blue-500/20 text-blue-700 border-blue-500/30 w-fit">
+                  Em Execução
+                </Badge>
+                <h2 className="text-xl font-bold leading-tight">{selectedOS.equipamento}</h2>
+                <p className="text-base text-muted-foreground">{selectedOS.setor}</p>
+              </div>
+
+              <Separator />
+
+              {/* Descrição */}
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold">Descrição do Problema</h3>
+                <div className="bg-muted/50 rounded-xl p-4">
+                  <p className="text-base leading-relaxed">{selectedOS.descricao}</p>
                 </div>
               </div>
+
+              <Separator />
 
               {/* Products section */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-xs text-muted-foreground flex items-center gap-2">
-                    <Package className="h-4 w-4" />
+                  <h3 className="text-base font-semibold flex items-center gap-2">
+                    <Package className="h-5 w-5 text-primary" />
                     Produtos Utilizados
-                  </h4>
+                  </h3>
                   <Button size="sm" variant="outline" onClick={handleOpenProducts}>
                     <Plus className="h-4 w-4 mr-1" />
                     Adicionar
@@ -558,27 +669,27 @@ export function OSAbertasMobile() {
                 </div>
                 
                 {produtosSelecionados.length > 0 && (
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                  <div className="space-y-2">
                     {produtosSelecionados.map((p) => (
-                      <div key={p.id} className="flex items-center gap-2 bg-muted/50 rounded-lg p-2 overflow-hidden">
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                          <p className="text-sm font-medium truncate">{p.nome}</p>
+                      <div key={p.id} className="flex items-center gap-2 bg-muted/50 rounded-xl p-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{p.nome}</p>
                           <p className="text-xs text-muted-foreground truncate">{p.codigo_estoque}</p>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-7 w-7"
+                            className="h-8 w-8"
                             onClick={() => handleRemoveProduct(p.id)}
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
-                          <span className="w-6 text-center font-medium text-sm">{p.quantidadeUsada}</span>
+                          <span className="w-8 text-center font-medium">{p.quantidadeUsada}</span>
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-7 w-7"
+                            className="h-8 w-8"
                             onClick={() => handleAddProduct({ ...p, quantidade: p.quantidade } as Produto)}
                           >
                             <Plus className="h-4 w-4" />
@@ -590,42 +701,48 @@ export function OSAbertasMobile() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <label className="font-semibold text-xs text-muted-foreground">
-                  Solução Aplicada *
-                </label>
-                <Textarea
-                  value={solucaoAplicada}
-                  onChange={(e) => setSolucaoAplicada(e.target.value)}
-                  placeholder="Descreva a solução aplicada..."
-                  rows={3}
-                />
+              <Separator />
+
+              {/* Solução e Observações */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-base font-semibold">Solução Aplicada *</label>
+                  <Textarea
+                    value={solucaoAplicada}
+                    onChange={(e) => setSolucaoAplicada(e.target.value)}
+                    placeholder="Descreva a solução aplicada..."
+                    rows={3}
+                    className="rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-base font-semibold">Observações</label>
+                  <Textarea
+                    value={observacoes}
+                    onChange={(e) => setObservacoes(e.target.value)}
+                    placeholder="Observações adicionais..."
+                    rows={2}
+                    className="rounded-xl"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="font-semibold text-xs text-muted-foreground">Observações</label>
-                <Textarea
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Observações adicionais..."
-                  rows={2}
-                />
+              {/* Botão Finalizar */}
+              <div className="pb-6">
+                <Button 
+                  className="w-full h-14 text-base font-semibold bg-orange-600 hover:bg-orange-700"
+                  onClick={handleFinishExecution}
+                  disabled={!solucaoAplicada.trim()}
+                >
+                  <Check className="h-5 w-5 mr-2" />
+                  Finalizar Execução
+                </Button>
               </div>
             </div>
           )}
-
-          <DialogFooter className="mt-4 gap-2 flex-col">
-            <Button 
-              className="flex-1 w-full bg-orange-600 hover:bg-orange-700"
-              onClick={handleFinishExecution}
-              disabled={!solucaoAplicada.trim()}
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Finalizar Execução
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Products Selection Modal */}
       <Dialog open={showProductsModal} onOpenChange={setShowProductsModal}>
