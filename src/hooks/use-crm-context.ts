@@ -222,12 +222,8 @@ export const useCRMContext = (): CRMContextState => {
     const title = `${companyName} - ${moduleNames[moduleName] || moduleName}`;
     
     try {
-      return await printData(
-        data.items,
-        title,
-        data.columns || Object.keys(data.items[0]).map(key => ({ key, header: key })),
-        options
-      );
+      printData(data.items, title);
+      return true;
     } catch (error) {
       console.error(`Error printing ${moduleName} data:`, error);
       return false;

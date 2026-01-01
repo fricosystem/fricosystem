@@ -236,8 +236,8 @@ export default function ManutencaoPreventiva() {
                       maquinaId: t.maquinaId,
                       data: t.proximaExecucao,
                       diasRestantes: diasParaManutencao(t.proximaExecucao),
-                      urgencia: determinarStatusPorManutencao(t.proximaExecucao) === "Crítico" ? "critico" :
-                               determinarStatusPorManutencao(t.proximaExecucao) === "Atenção" ? "alto" : "baixo"
+                      urgencia: determinarStatusPorManutencao(t.proximaExecucao) === "atrasada" ? "critico" :
+                               determinarStatusPorManutencao(t.proximaExecucao) === "hoje" ? "alto" : "baixo"
                     }))
                   }
                   todasTarefas={tarefas}

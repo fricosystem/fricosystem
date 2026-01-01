@@ -1,285 +1,295 @@
-import { toast } from 'sonner';
-import { exportToCSV, exportToExcel, exportToPDF, importFromCSV } from './crm-data-operations';
+/**
+ * Operações utilitárias para CRM
+ */
 
 /**
- * Format date to localized string
+ * Formata valor como moeda
  */
-export const formatDate = (date: Date | string): string => {
-  if (!date) return '';
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-/**
- * Format currency with euro symbol
- */
-export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('fr-FR', {
+export function formatCurrency(value: number, locale: string = 'pt-BR', currency: string = 'BRL'): string {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2
-  }).format(amount);
-};
+    currency
+  }).format(value);
+}
 
 /**
- * Calculate percentage change between two values
+ * Formata data
  */
-export const calculatePercentChange = (current: number, previous: number): number => {
-  if (previous === 0) return 0;
-  return ((current - previous) / previous) * 100;
-};
+export function formatDate(date: Date | string | null | undefined, locale: string = 'pt-BR'): string {
+  if (!date) return '-';
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString(locale);
+}
 
 /**
- * Format percentage with symbol
+ * Formata percentual
  */
-export const formatPercent = (value: number): string => {
-  return `${value.toFixed(1)}%`;
-};
+export function formatPercent(value: number, decimals: number = 1): string {
+  return `${value.toFixed(decimals)}%`;
+}
 
 /**
- * Calculate total from array of objects
+ * Valida email
  */
-export const calculateTotal = (items: any[], field: string): number => {
-  return items.reduce((sum, item) => sum + (Number(item[field]) || 0), 0);
-};
-
-/**
- * General search function for filtering data
- */
-export const searchInData = (data: any[], searchTerm: string, fields: string[] = []): any[] => {
-  if (!searchTerm || searchTerm.trim() === '') return data;
-  
-  const term = searchTerm.toLowerCase().trim();
-  return data.filter(item => {
-    // If specific fields are provided, search only in those fields
-    if (fields.length > 0) {
-      return fields.some(field => {
-        const value = item[field];
-        return value && String(value).toLowerCase().includes(term);
-      });
-    }
-    
-    // Otherwise search in all fields
-    return Object.values(item).some(value => 
-      value && String(value).toLowerCase().includes(term)
-    );
-  });
-};
-
-/**
- * Filter data by date range
- */
-export const filterByDateRange = (
-  data: any[], 
-  startDate?: Date | null, 
-  endDate?: Date | null, 
-  dateField: string = 'date'
-): any[] => {
-  if (!startDate && !endDate) return data;
-  
-  return data.filter(item => {
-    if (!item[dateField]) return false;
-    
-    const itemDate = new Date(item[dateField]);
-    if (startDate && endDate) {
-      return itemDate >= startDate && itemDate <= endDate;
-    } else if (startDate) {
-      return itemDate >= startDate;
-    } else if (endDate) {
-      return itemDate <= endDate;
-    }
-    
-    return true;
-  });
-};
-
-/**
- * Generate unique ID for new items
- */
-export const generateUniqueId = (): number => {
-  return Math.floor(Date.now() + Math.random() * 1000);
-};
-
-/**
- * Group data by field
- */
-export const groupByField = (data: any[], field: string): Record<string, any[]> => {
-  return data.reduce((groups, item) => {
-    const key = item[field] || 'undefined';
-    if (!groups[key]) {
-      groups[key] = [];
-    }
-    groups[key].push(item);
-    return groups;
-  }, {});
-};
-
-/**
- * Get status color based on status value
- */
-export const getStatusColor = (status: string): string => {
-  const statusColors: Record<string, string> = {
-    'active': 'bg-green-100 text-green-800',
-    'inactive': 'bg-gray-100 text-gray-800',
-    'pending': 'bg-yellow-100 text-yellow-800',
-    'completed': 'bg-blue-100 text-blue-800',
-    'cancelled': 'bg-red-100 text-red-800',
-    'En culture': 'bg-green-100 text-green-800',
-    'En récolte': 'bg-blue-100 text-blue-800',
-    'En préparation': 'bg-yellow-100 text-yellow-800',
-    'Atteint': 'bg-green-100 text-green-800',
-    'En progrès': 'bg-blue-100 text-blue-800',
-    'En retard': 'bg-red-100 text-red-800'
-  };
-  
-  return statusColors[status.toLowerCase()] || 'bg-gray-100 text-gray-800';
-};
-
-/**
- * Validate email format
- */
-export const isValidEmail = (email: string): boolean => {
+export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
-};
+}
 
 /**
- * Format phone number for French format
+ * Gera ID único
  */
-export const formatPhoneNumber = (phoneNumber: string): string => {
-  // Remove all non-digits
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  
-  // Format as XX XX XX XX XX (French format)
-  if (cleaned.length === 10) {
-    return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5');
-  }
-  
-  return phoneNumber;
-};
+export function generateUniqueId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 
 /**
- * Enhanced data export with feedback
+ * Busca em dados
  */
-export const enhancedExport = async (
-  data: any[], 
-  format: 'csv' | 'excel' | 'pdf',
-  fileName: string,
-  options = {}
-): Promise<boolean> => {
-  if (!data || data.length === 0) {
-    toast.error("Aucune donnée à exporter");
-    return false;
-  }
+export function searchInData<T extends Record<string, any>>(
+  data: T[],
+  searchTerm: string,
+  fields: string[]
+): T[] {
+  if (!searchTerm.trim()) return data;
   
-  toast.info(`Préparation de l'export au format ${format.toUpperCase()}...`);
-  
-  try {
-    let success = false;
-    
-    switch (format) {
-      case 'csv':
-        success = exportToCSV(data, fileName);
-        break;
-      case 'excel':
-        success = exportToExcel(data, fileName);
-        break;
-      case 'pdf':
-        success = await exportToPDF(data, fileName, options);
-        break;
-    }
-    
-    if (success) {
-      toast.success(`Export ${format.toUpperCase()} réussi`);
-    }
-    
-    return success;
-  } catch (error) {
-    console.error(`Error exporting data:`, error);
-    toast.error(`Erreur lors de l'export au format ${format.toUpperCase()}`);
-    return false;
-  }
-};
-
-/**
- * Enhanced data import with validation
- */
-export const enhancedImport = async (
-  file: File,
-  onComplete: (data: any[]) => void,
-  requiredFields: string[] = [],
-  validateRow?: (row: any) => boolean
-): Promise<boolean> => {
-  if (!file) {
-    toast.error("Aucun fichier sélectionné");
-    return false;
-  }
-  
-  toast.info("Importation en cours...");
-  
-  try {
-    const data = await importFromCSV(file);
-    
-    if (!data || data.length === 0) {
-      toast.error("Aucune donnée valide trouvée dans le fichier");
-      return false;
-    }
-    
-    // Validate required fields
-    if (requiredFields.length > 0) {
-      const invalidRows = data.filter(row => 
-        !requiredFields.every(field => row[field] !== undefined && row[field] !== null && row[field] !== '')
-      );
-      
-      if (invalidRows.length > 0) {
-        toast.warning(`${invalidRows.length} ligne(s) ignorée(s) car des champs obligatoires sont manquants`);
+  const term = searchTerm.toLowerCase();
+  return data.filter(item =>
+    fields.some(field => {
+      const value = item[field];
+      if (typeof value === 'string') {
+        return value.toLowerCase().includes(term);
       }
-    }
-    
-    // Apply custom validation
-    let validData = data;
-    if (validateRow) {
-      validData = data.filter(validateRow);
-      if (validData.length < data.length) {
-        toast.warning(`${data.length - validData.length} ligne(s) ignorée(s) suite à la validation personnalisée`);
+      if (typeof value === 'number') {
+        return value.toString().includes(term);
       }
-    }
-    
-    if (validData.length === 0) {
-      toast.error("Aucune donnée valide après validation");
       return false;
-    }
+    })
+  );
+}
+
+/**
+ * Filtra por intervalo de datas
+ */
+export function filterByDateRange<T extends Record<string, any>>(
+  data: T[],
+  from: Date | null | undefined,
+  to: Date | null | undefined,
+  dateField: string
+): T[] {
+  if (!from && !to) return data;
+  
+  return data.filter(item => {
+    const itemDate = item[dateField];
+    if (!itemDate) return false;
     
-    onComplete(validData);
-    toast.success(`${validData.length} enregistrement(s) importé(s) avec succès`);
+    const date = itemDate instanceof Date ? itemDate : new Date(itemDate);
+    if (isNaN(date.getTime())) return false;
+    
+    if (from && date < from) return false;
+    if (to && date > to) return false;
+    
+    return true;
+  });
+}
+
+interface ExportOptions {
+  title?: string;
+  landscape?: boolean;
+  template?: string;
+}
+
+/**
+ * Exportação para CSV
+ */
+export function exportToCSV(data: any[], filename: string): boolean {
+  try {
+    if (data.length === 0) return false;
+    
+    const headers = Object.keys(data[0]);
+    const csvRows = [
+      headers.join(','),
+      ...data.map(row =>
+        headers.map(header => {
+          const value = row[header];
+          const escaped = String(value ?? '').replace(/"/g, '""');
+          return `"${escaped}"`;
+        }).join(',')
+      )
+    ];
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    downloadBlob(blob, `${filename}.csv`);
     return true;
   } catch (error) {
-    console.error("Import error:", error);
-    toast.error("Erreur lors de l'importation des données");
+    console.error('Export CSV error:', error);
     return false;
   }
-};
+}
 
 /**
- * Debounce function for search inputs
+ * Exportação para Excel
  */
-export const debounce = <F extends (...args: any[]) => any>(
-  fn: F,
-  delay: number
-): ((...args: Parameters<F>) => void) => {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  
-  return function(...args: Parameters<F>) {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
+export function exportToExcel(data: any[], filename: string): boolean {
+  try {
+    if (data.length === 0) return false;
     
-    timeoutId = setTimeout(() => {
-      fn(...args);
-    }, delay);
-  };
-};
+    const headers = Object.keys(data[0]);
+    const csvRows = [
+      headers.join('\t'),
+      ...data.map(row =>
+        headers.map(header => String(row[header] ?? '')).join('\t')
+      )
+    ];
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvRows.join('\n')], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    downloadBlob(blob, `${filename}.xls`);
+    return true;
+  } catch (error) {
+    console.error('Export Excel error:', error);
+    return false;
+  }
+}
+
+/**
+ * Exportação para PDF
+ */
+export async function exportToPDF(data: any[], filename: string, options?: ExportOptions): Promise<boolean> {
+  try {
+    if (data.length === 0) return false;
+    
+    const headers = Object.keys(data[0]);
+    const title = options?.title || filename;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          body { font-family: Arial, sans-serif; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #4a5568; color: white; }
+          tr:nth-child(even) { background-color: #f2f2f2; }
+        </style>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <table>
+          <thead>
+            <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+          </thead>
+          <tbody>
+            ${data.map(row => 
+              `<tr>${headers.map(h => `<td>${row[h] ?? ''}</td>`).join('')}</tr>`
+            ).join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
+    }
+    return true;
+  } catch (error) {
+    console.error('Export PDF error:', error);
+    return false;
+  }
+}
+
+/**
+ * Exportação aprimorada
+ */
+export async function enhancedExport(
+  data: any[],
+  format: 'csv' | 'excel' | 'pdf',
+  filename: string,
+  options?: ExportOptions
+): Promise<boolean> {
+  try {
+    switch (format) {
+      case 'csv':
+        return exportToCSV(data, filename);
+      case 'excel':
+        return exportToExcel(data, filename);
+      case 'pdf':
+        return await exportToPDF(data, filename, options);
+      default:
+        return false;
+    }
+  } catch (error) {
+    console.error('Enhanced export error:', error);
+    return false;
+  }
+}
+
+/**
+ * Importação aprimorada
+ */
+export async function enhancedImport(
+  file: File,
+  onSuccess?: (data: any[]) => void,
+  requiredFields?: string[],
+  customValidation?: (row: any) => boolean
+): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+        if (lines.length < 2) {
+          resolve([]);
+          return;
+        }
+
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        let data = lines.slice(1).map(line => {
+          const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const obj: Record<string, string> = {};
+          headers.forEach((header, i) => {
+            obj[header] = values[i] || '';
+          });
+          return obj;
+        });
+
+        // Apply custom validation if provided
+        if (customValidation) {
+          data = data.filter(customValidation);
+        }
+
+        if (onSuccess) {
+          onSuccess(data);
+        }
+        
+        resolve(data);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
+/**
+ * Helper para download de blob
+ */
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}

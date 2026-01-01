@@ -1,81 +1,207 @@
+/**
+ * Gerador de preview HTML para impressão e exportação
+ */
 
-import { useAppSettings } from '@/contexts/AppSettingsContext';
+interface PreviewOptions {
+  title?: string;
+  columns?: { key: string; header: string }[];
+  companyName?: string;
+  logo?: string;
+  showDate?: boolean;
+  locale?: string;
+}
 
 /**
- * Generate HTML content for preview based on data and columns
+ * Gera HTML para preview de dados
  */
-export const generatePreviewHTML = (
-  data: any[], 
-  moduleName: string,
+export function generatePreviewHTML(
+  data: any[],
+  moduleName?: string,
   title?: string,
-  columns?: { key: string, header: string }[],
+  columns?: { key: string; header: string }[],
   locale?: string
-): string => {
-  if (!data || data.length === 0) {
-    return '<div class="p-4 text-center">Aucune donnée disponible pour l\'aperçu</div>';
-  }
+): string {
+  const options: PreviewOptions = {
+    title: title || moduleName || 'Relatório',
+    columns,
+    showDate: true,
+    locale: locale || 'pt-BR'
+  };
 
-  const tableHeaders = (columns || Object.keys(data[0]).map(key => ({ key, header: key }))).map(
-    col => `<th class="px-4 py-2 bg-gray-100 border-b dark:bg-gray-700 dark:border-gray-600 dark:text-white">${col.header}</th>`
-  ).join('');
-
-  const tableRows = data.map(row => {
-    const cells = (columns || Object.keys(row).map(key => ({ key, header: key }))).map(
-      col => {
-        const value = row[col.key] || '';
-        // Check if the value is a URL or could be a link
-        const isLink = typeof value === 'string' && (
-          value.startsWith('http') || 
-          value.startsWith('/') || 
-          value.includes('@')
-        );
-        
-        if (isLink) {
-          if (value.includes('@')) {
-            return `<td class="px-4 py-2 border-b dark:border-gray-600"><a href="mailto:${value}" class="text-blue-600 dark:text-blue-400 hover:underline">${value}</a></td>`;
-          } else if (value.startsWith('/')) {
-            return `<td class="px-4 py-2 border-b dark:border-gray-600"><a href="${value}" class="text-blue-600 dark:text-blue-400 hover:underline">Voir détails</a></td>`;
-          } else {
-            return `<td class="px-4 py-2 border-b dark:border-gray-600"><a href="${value}" target="_blank" rel="noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">Lien externe</a></td>`;
-          }
-        }
-        
-        // For other values, just show them as text
-        return `<td class="px-4 py-2 border-b dark:border-gray-600">${value}</td>`;
-      }
-    ).join('');
-    return `<tr>${cells}</tr>`;
-  }).join('');
+  const headers = options.columns 
+    ? options.columns.map(c => c.header)
+    : data.length > 0 ? Object.keys(data[0]) : [];
   
-  // Navigation buttons for the preview
-  const navigationButtons = `
-    <div class="mt-6 flex justify-between">
-      <button onclick="window.history.back()" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded">
-        ← Retour
-      </button>
-      <button onclick="window.print()" class="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded">
-        Imprimer
-      </button>
-    </div>
-  `;
+  const keys = options.columns 
+    ? options.columns.map(c => c.key)
+    : headers;
+
+  const formatValue = (value: any): string => {
+    if (value === null || value === undefined) return '-';
+    if (value instanceof Date) return value.toLocaleDateString(options.locale);
+    if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
+    if (typeof value === 'number') {
+      return value.toLocaleString(options.locale);
+    }
+    return String(value);
+  };
 
   return `
-    <div class="p-6 dark:bg-gray-800 dark:text-gray-100">
-      <h2 class="text-xl font-bold mb-4">${title || `Aperçu - ${moduleName}`}</h2>
-      <div class="overflow-x-auto">
-        <table class="min-w-full border-collapse">
-          <thead>
-            <tr>${tableHeaders}</tr>
-          </thead>
-          <tbody class="dark:text-gray-300">
-            ${tableRows}
-          </tbody>
-        </table>
+    <!DOCTYPE html>
+    <html lang="${options.locale}">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${options.title}</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          padding: 20px;
+          color: #333;
+          line-height: 1.6;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 30px;
+          padding-bottom: 20px;
+          border-bottom: 2px solid #3b82f6;
+        }
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+        }
+        .header-logo {
+          max-height: 50px;
+          max-width: 150px;
+        }
+        .header-title {
+          font-size: 24px;
+          font-weight: bold;
+          color: #1e40af;
+        }
+        .header-date {
+          color: #666;
+          font-size: 14px;
+        }
+        .company-name {
+          font-size: 12px;
+          color: #666;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th {
+          background-color: #3b82f6;
+          color: white;
+          padding: 12px 8px;
+          text-align: left;
+          font-weight: 600;
+          font-size: 13px;
+          text-transform: uppercase;
+        }
+        td {
+          padding: 10px 8px;
+          border-bottom: 1px solid #e5e7eb;
+          font-size: 13px;
+        }
+        tr:nth-child(even) {
+          background-color: #f9fafb;
+        }
+        tr:hover {
+          background-color: #f3f4f6;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #e5e7eb;
+          text-align: center;
+          color: #666;
+          font-size: 12px;
+        }
+        .total-rows {
+          margin-top: 15px;
+          font-size: 14px;
+          color: #666;
+        }
+        @media print {
+          body {
+            padding: 10px;
+          }
+          .header {
+            margin-bottom: 20px;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="header-left">
+          ${options.logo ? `<img src="${options.logo}" alt="Logo" class="header-logo">` : ''}
+          <div>
+            <h1 class="header-title">${options.title}</h1>
+            ${options.companyName ? `<p class="company-name">${options.companyName}</p>` : ''}
+          </div>
+        </div>
+        ${options.showDate ? `<div class="header-date">Gerado em: ${new Date().toLocaleDateString(options.locale)} às ${new Date().toLocaleTimeString(options.locale)}</div>` : ''}
       </div>
-      <div class="mt-6 text-sm text-gray-500 dark:text-gray-400 text-right">
-        <p>Date: ${new Date().toLocaleDateString(locale || 'fr-FR')}</p>
+      
+      <table>
+        <thead>
+          <tr>
+            ${headers.map(h => `<th>${h}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(row => `
+            <tr>
+              ${keys.map(key => `<td>${formatValue(row[key])}</td>`).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      
+      <div class="total-rows">
+        Total de registros: ${data.length}
       </div>
-      ${navigationButtons}
-    </div>
+      
+      <div class="footer">
+        Documento gerado automaticamente pelo sistema
+      </div>
+    </body>
+    </html>
   `;
-};
+}
+
+/**
+ * Abre preview em nova janela
+ */
+export function openPreviewWindow(html: string): Window | null {
+  const previewWindow = window.open('', '_blank');
+  if (previewWindow) {
+    previewWindow.document.write(html);
+    previewWindow.document.close();
+  }
+  return previewWindow;
+}
+
+/**
+ * Imprime preview
+ */
+export function printPreview(html: string): void {
+  const previewWindow = openPreviewWindow(html);
+  if (previewWindow) {
+    previewWindow.onload = () => {
+      previewWindow.print();
+    };
+  }
+}

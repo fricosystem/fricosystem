@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCarrinho } from "@/hooks/useCarrinho";
@@ -471,117 +472,282 @@ const FuturisticFloatingMenu = () => {
     );
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: 20,
+      scale: 0.95
+    },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: 0.3,
+        ease: [0.4, 0, 0.2, 1] as const,
+        staggerChildren: 0.03
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      y: 20,
+      scale: 0.95,
+      transition: {
+        duration: 0.2,
+        ease: [0.4, 0, 1, 1] as const
+      }
+    }
+  };
+
+  const iconVariants = {
+    hidden: { 
+      opacity: 0, 
+      scale: 0.5,
+      y: 10
+    },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      y: 0,
+      transition: {
+        type: "spring" as const,
+        stiffness: 400,
+        damping: 20
+      }
+    }
+  };
+
+  const submenuVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: 10,
+      scale: 0.95
+    },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: 0.2,
+        ease: [0.4, 0, 0.2, 1] as const
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      y: 10,
+      scale: 0.95,
+      transition: {
+        duration: 0.15
+      }
+    }
+  };
+
   return (
     <>
-      {isVisible && !minimized && (
-        <div id="floating-menu-container" className={`fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-[95vw] md:w-auto px-2 md:px-0 ${theme === "dark" ? "dark" : ""}`}>
-          {activeMenu && (
-            <div className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 mx-auto overflow-hidden transition-all duration-300 ease-in-out">
-              <div className="flex justify-between items-center p-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-bold text-gray-800 dark:text-gray-100">
-                  {menuCategories.find(cat => cat.id === activeMenu)?.label}
-                </h3>
-                <button 
-                  onClick={() => setActiveMenu(null)}
-                  className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+      <AnimatePresence mode="wait">
+        {isVisible && !minimized && (
+          <motion.div 
+            id="floating-menu-container" 
+            className={`fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-[95vw] md:w-auto px-2 md:px-0 ${theme === "dark" ? "dark" : ""}`}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={containerVariants}
+          >
+            <AnimatePresence mode="wait">
+              {activeMenu && (
+                <motion.div 
+                  className="bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-2xl shadow-xl mb-4 border border-blue-200 dark:border-blue-900 min-w-72 max-w-80 mx-auto overflow-hidden"
+                  variants={submenuVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
                 >
-                  <X size={16} />
-                </button>
-              </div>
-              
-              {activeMenu === "sistema" && (
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center space-x-3">
-                    {userData?.imagem_perfil ? (
-                      <div className="w-12 h-12 rounded-full overflow-hidden">
-                        <img 
-                          src={userData.imagem_perfil} 
-                          alt="Profile" 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-xl font-bold">
-                        {getUserInitial()}
-                      </div>
-                    )}
-                    <div className="flex flex-col">
-                      <span className="font-bold text-gray-800 dark:text-gray-100">{getDisplayName()}</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ""}</span>
-                      {getUserCargo() && (
-                        <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          <Briefcase className="h-3 w-3 mr-1" />
-                          {getUserCargo()}
-                        </div>
-                      )}
-                      {getUserUnidade() && (
-                        <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          {getUserUnidade()}
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex justify-between items-center p-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100">
+                      {menuCategories.find(cat => cat.id === activeMenu)?.label}
+                    </h3>
+                    <motion.button 
+                      onClick={() => setActiveMenu(null)}
+                      className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <X size={16} />
+                    </motion.button>
                   </div>
-                </div>
+                  
+                  {activeMenu === "sistema" && (
+                    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center space-x-3">
+                        {userData?.imagem_perfil ? (
+                          <div className="w-12 h-12 rounded-full overflow-hidden">
+                            <img 
+                              src={userData.imagem_perfil} 
+                              alt="Profile" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-xl font-bold">
+                            {getUserInitial()}
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-800 dark:text-gray-100">{getDisplayName()}</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ""}</span>
+                          {getUserCargo() && (
+                            <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              <Briefcase className="h-3 w-3 mr-1" />
+                              {getUserCargo()}
+                            </div>
+                          )}
+                          {getUserUnidade() && (
+                            <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              <Building2 className="h-3 w-3 mr-1" />
+                              {getUserUnidade()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="p-2 max-h-96 overflow-y-auto">
+                    {menuCategories.find(cat => cat.id === activeMenu)?.items.map((item, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                      >
+                        <SubMenuItem 
+                          icon={item.icon}
+                          label={item.label}
+                          badge={item.badge}
+                          className={item.className}
+                          onClick={item.onClick}
+                          path={item.path}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
               )}
-              
-              <div className="p-2 max-h-96 overflow-y-auto">
-                {menuCategories.find(cat => cat.id === activeMenu)?.items.map((item, idx) => (
-                  <SubMenuItem 
-                    key={idx}
-                    icon={item.icon}
-                    label={item.label}
-                    badge={item.badge}
-                    className={item.className}
-                    onClick={item.onClick}
-                    path={item.path}
-                  />
-                ))}
+            </AnimatePresence>
+
+            <div className="relative w-full max-w-md mx-auto">
+              <motion.div 
+                className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur-sm opacity-75"
+                animate={{ 
+                  opacity: [0.5, 0.75, 0.5],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+              <div className="relative bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-2xl shadow-lg p-3">
+                {/* Top row - Main categories */}
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  {menuCategories.slice(0, Math.ceil(menuCategories.length / 2)).map((category, idx) => {
+                    const isCategoryActive = category.items?.some(item => 
+                      item.path && location.pathname === item.path
+                    );
+                    
+                    return (
+                      <motion.button
+                        key={idx}
+                        onClick={() => toggleSubmenu(category.id)}
+                        className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-colors duration-200 ${
+                          activeMenu === category.id || isCategoryActive
+                            ? "bg-blue-600 text-white" 
+                            : "text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                        }`}
+                        title={category.label}
+                        variants={iconVariants}
+                        whileHover={{ scale: 1.15, y: -2 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        {category.id === "requisicoes" && pendingRequestsCount > 0 && (
+                          <motion.span 
+                            className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500 }}
+                          >
+                            {pendingRequestsCount}
+                          </motion.span>
+                        )}
+                        {category.id === "carrinho" && totalItens > 0 && (
+                          <motion.span 
+                            className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-blue-600 rounded-full"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500 }}
+                          >
+                            {totalItens}
+                          </motion.span>
+                        )}
+                        {React.cloneElement(category.icon as React.ReactElement, { size: 20 })}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                
+                {/* Bottom row - Secondary categories */}
+                <div className="flex items-center justify-center gap-2">
+                  {menuCategories.slice(Math.ceil(menuCategories.length / 2)).map((category, idx) => {
+                    const isCategoryActive = category.items?.some(item => 
+                      item.path && location.pathname === item.path
+                    );
+                    
+                    return (
+                      <motion.button
+                        key={idx}
+                        onClick={() => toggleSubmenu(category.id)}
+                        className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-colors duration-200 ${
+                          activeMenu === category.id || isCategoryActive
+                            ? "bg-blue-600 text-white" 
+                            : "text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                        }`}
+                        title={category.label}
+                        variants={iconVariants}
+                        whileHover={{ scale: 1.15, y: -2 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        {category.id === "requisicoes" && pendingRequestsCount > 0 && (
+                          <motion.span 
+                            className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500 }}
+                          >
+                            {pendingRequestsCount}
+                          </motion.span>
+                        )}
+                        {category.id === "carrinho" && totalItens > 0 && (
+                          <motion.span 
+                            className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-blue-600 rounded-full"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500 }}
+                          >
+                            {totalItens}
+                          </motion.span>
+                        )}
+                        {React.cloneElement(category.icon as React.ReactElement, { size: 20 })}
+                      </motion.button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          )}
-
-          <div className="relative w-full">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl md:rounded-full blur-sm opacity-75"></div>
-            <div className="relative bg-white dark:bg-gray-900 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 rounded-3xl md:rounded-full shadow-lg px-2 py-2 flex flex-wrap md:flex-nowrap items-center justify-center gap-1">
-              {menuCategories.map((category, idx) => {
-                const isCategoryActive = category.items?.some(item => 
-                  item.path && location.pathname === item.path
-                );
-                
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => toggleSubmenu(category.id)}
-                    className={`p-2 md:p-3 rounded-full transition-all duration-300 relative group ${
-                      activeMenu === category.id || isCategoryActive
-                        ? "bg-blue-600 text-white" 
-                        : "text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
-                    }`}
-                    aria-label={category.label}
-                  >
-                    {category.id === "requisicoes" && pendingRequestsCount > 0 && (
-                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-                        {pendingRequestsCount}
-                      </span>
-                    )}
-                    {category.id === "carrinho" && totalItens > 0 && (
-                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
-                        {totalItens}
-                      </span>
-                    )}
-                    {category.icon}
-                    
-                    <span className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                      {category.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <button
         onClick={toggleMinimize}

@@ -1,239 +1,144 @@
-import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
-import { Timestamp } from "firebase/firestore";
+import { TarefaManutencao, EficienciaManutentor, MaquinaCritica } from "@/types/typesManutencaoPreventiva";
 
 /**
- * Calcula MTBF (Mean Time Between Failures) - Tempo médio entre falhas
- * Formula: Total de horas operacionais / Número de falhas
- */
-export function calcularMTBF(
-  horasOperacionaisTotal: number,
-  numeroFalhas: number
-): number {
-  if (numeroFalhas === 0) return horasOperacionaisTotal;
-  return Math.round(horasOperacionaisTotal / numeroFalhas);
-}
-
-/**
- * Calcula MTTR (Mean Time To Repair) - Tempo médio de reparo
- * Formula: Total de tempo de reparo / Número de reparos
+ * Calcula o MTTR (Mean Time To Repair) em minutos
  */
 export function calcularMTTR(tarefas: TarefaManutencao[]): number {
   const tarefasConcluidas = tarefas.filter(t => t.status === "concluida" && t.tempoRealizado);
-  
   if (tarefasConcluidas.length === 0) return 0;
   
-  const tempoTotal = tarefasConcluidas.reduce(
-    (acc, t) => acc + (t.tempoRealizado || 0),
-    0
-  );
-  
-  return Math.round(tempoTotal / tarefasConcluidas.length);
+  const totalMinutos = tarefasConcluidas.reduce((acc, t) => acc + (t.tempoRealizado || 0), 0);
+  return Math.round(totalMinutos / tarefasConcluidas.length);
 }
 
 /**
- * Calcula taxa de conclusão no prazo
+ * Calcula a taxa de conclusão das tarefas
  */
 export function calcularTaxaConclusao(tarefas: TarefaManutencao[]): number {
-  if (tarefas.length === 0) return 100;
-  
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  
-  const tarefasVencidas = tarefas.filter(t => {
-    if (t.status === "concluida") return false;
-    const dataExecucao = new Date(t.proximaExecucao);
-    return dataExecucao < hoje;
-  });
-  
-  const noPrazo = tarefas.length - tarefasVencidas.length;
-  return Math.round((noPrazo / tarefas.length) * 100);
+  if (tarefas.length === 0) return 0;
+  const concluidas = tarefas.filter(t => t.status === "concluida").length;
+  return Math.round((concluidas / tarefas.length) * 100);
 }
 
 /**
- * Calcula custos totais de manutenção
+ * Calcula o custo total das manutenções
  */
 export function calcularCustosTotal(tarefas: TarefaManutencao[]): number {
-  return tarefas.reduce((acc, tarefa) => {
-    const custoMateriais = tarefa.materiaisUtilizados?.reduce(
-      (sum, mat) => sum + (mat.quantidade * (mat.valorUnitario || 0)),
-      0
-    ) || 0;
-    
+  return tarefas.reduce((acc, t) => {
+    const custoMateriais = t.materiaisUtilizados?.reduce((sum, m) => 
+      sum + (m.quantidade * (m.valorUnitario || 0)), 0) || 0;
     return acc + custoMateriais;
   }, 0);
 }
 
 /**
- * Calcula custos por máquina
+ * Identifica as máquinas mais críticas
  */
-export function calcularCustosPorMaquina(
-  tarefas: TarefaManutencao[]
-): { [maquinaId: string]: number } {
-  const custos: { [maquinaId: string]: number } = {};
+export function identificarMaquinasCriticas(tarefas: TarefaManutencao[], limite: number = 5): MaquinaCritica[] {
+  const maquinas: Record<string, MaquinaCritica> = {};
   
-  tarefas.forEach(tarefa => {
-    const custoMateriais = tarefa.materiaisUtilizados?.reduce(
-      (sum, mat) => sum + (mat.quantidade * (mat.valorUnitario || 0)),
-      0
-    ) || 0;
-    
-    if (!custos[tarefa.maquinaId]) {
-      custos[tarefa.maquinaId] = 0;
-    }
-    
-    custos[tarefa.maquinaId] += custoMateriais;
-  });
-  
-  return custos;
-}
-
-/**
- * Identifica máquinas críticas (mais problemas)
- */
-export function identificarMaquinasCriticas(
-  tarefas: TarefaManutencao[],
-  limite: number = 5
-): Array<{
-  maquinaId: string;
-  maquinaNome: string;
-  numeroFalhas: number;
-  tempoParadaTotal: number;
-  custoTotal: number;
-}> {
-  const maquinasMap = new Map<string, {
-    maquinaId: string;
-    maquinaNome: string;
-    numeroFalhas: number;
-    tempoParadaTotal: number;
-    custoTotal: number;
-  }>();
-  
-  tarefas.forEach(tarefa => {
-    if (!maquinasMap.has(tarefa.maquinaId)) {
-      maquinasMap.set(tarefa.maquinaId, {
-        maquinaId: tarefa.maquinaId,
-        maquinaNome: tarefa.maquinaNome,
+  tarefas.forEach(t => {
+    const id = t.maquinaId;
+    if (!maquinas[id]) {
+      maquinas[id] = {
+        maquinaId: id,
+        maquinaNome: t.maquinaNome,
         numeroFalhas: 0,
         tempoParadaTotal: 0,
         custoTotal: 0
-      });
+      };
     }
     
-    const maquina = maquinasMap.get(tarefa.maquinaId)!;
+    maquinas[id].numeroFalhas++;
+    maquinas[id].tempoParadaTotal += t.tempoRealizado || 0;
     
-    if (tarefa.status === "concluida") {
-      maquina.numeroFalhas++;
-      maquina.tempoParadaTotal += tarefa.tempoRealizado || 0;
-      
-      const custoMateriais = tarefa.materiaisUtilizados?.reduce(
-        (sum, mat) => sum + (mat.quantidade * (mat.valorUnitario || 0)),
-        0
-      ) || 0;
-      
-      maquina.custoTotal += custoMateriais;
-    }
+    const custoMateriais = t.materiaisUtilizados?.reduce((sum, m) => 
+      sum + (m.quantidade * (m.valorUnitario || 0)), 0) || 0;
+    maquinas[id].custoTotal += custoMateriais;
   });
   
-  return Array.from(maquinasMap.values())
+  return Object.values(maquinas)
     .sort((a, b) => b.numeroFalhas - a.numeroFalhas)
     .slice(0, limite);
 }
 
 /**
- * Calcula eficiência dos manutentores
+ * Calcula a eficiência dos manutentores
  */
-export function calcularEficienciaManutentores(
-  tarefas: TarefaManutencao[]
-): Array<{
-  manutentorId: string;
-  manutentorNome: string;
-  tarefasConcluidas: number;
-  tempoMedioExecucao: number;
-  desvioTempoEstimado: number;
-  taxaSucesso: number;
-}> {
-  const manutentoresMap = new Map<string, {
-    manutentorId: string;
-    manutentorNome: string;
-    tarefasConcluidas: number;
+export function calcularEficienciaManutentores(tarefas: TarefaManutencao[]): EficienciaManutentor[] {
+  const manutentores: Record<string, {
+    id: string;
+    nome: string;
+    concluidas: number;
+    total: number;
     tempoTotal: number;
     desvioTotal: number;
-    tarefasComProblemas: number;
-    tarefasTotal: number;
-  }>();
+    sucessos: number;
+  }> = {};
   
-  tarefas.forEach(tarefa => {
-    if (!manutentoresMap.has(tarefa.manutentorId)) {
-      manutentoresMap.set(tarefa.manutentorId, {
-        manutentorId: tarefa.manutentorId,
-        manutentorNome: tarefa.manutentorNome,
-        tarefasConcluidas: 0,
+  tarefas.forEach(t => {
+    const id = t.manutentorId;
+    if (!id) return;
+    
+    if (!manutentores[id]) {
+      manutentores[id] = {
+        id,
+        nome: t.manutentorNome,
+        concluidas: 0,
+        total: 0,
         tempoTotal: 0,
         desvioTotal: 0,
-        tarefasComProblemas: 0,
-        tarefasTotal: 0
-      });
+        sucessos: 0
+      };
     }
     
-    const manutentor = manutentoresMap.get(tarefa.manutentorId)!;
-    manutentor.tarefasTotal++;
+    manutentores[id].total++;
     
-    if (tarefa.status === "concluida" && tarefa.tempoRealizado) {
-      manutentor.tarefasConcluidas++;
-      manutentor.tempoTotal += tarefa.tempoRealizado;
+    if (t.status === "concluida") {
+      manutentores[id].concluidas++;
+      manutentores[id].tempoTotal += t.tempoRealizado || 0;
+      manutentores[id].sucessos++;
       
-      const desvio = Math.abs(tarefa.tempoRealizado - tarefa.tempoEstimado);
-      manutentor.desvioTotal += (desvio / tarefa.tempoEstimado) * 100;
-      
-      if (tarefa.requerAcompanhamento) {
-        manutentor.tarefasComProblemas++;
+      if (t.tempoEstimado && t.tempoRealizado) {
+        const desvio = Math.abs(((t.tempoRealizado - t.tempoEstimado) / t.tempoEstimado) * 100);
+        manutentores[id].desvioTotal += desvio;
       }
     }
   });
   
-  return Array.from(manutentoresMap.values()).map(m => ({
-    manutentorId: m.manutentorId,
-    manutentorNome: m.manutentorNome,
-    tarefasConcluidas: m.tarefasConcluidas,
-    tempoMedioExecucao: m.tarefasConcluidas > 0 
-      ? Math.round(m.tempoTotal / m.tarefasConcluidas)
-      : 0,
-    desvioTempoEstimado: m.tarefasConcluidas > 0
-      ? Math.round(m.desvioTotal / m.tarefasConcluidas)
-      : 0,
-    taxaSucesso: m.tarefasTotal > 0
-      ? Math.round(((m.tarefasTotal - m.tarefasComProblemas) / m.tarefasTotal) * 100)
-      : 100
-  }));
+  return Object.values(manutentores)
+    .map(m => ({
+      manutentorId: m.id,
+      manutentorNome: m.nome,
+      tarefasConcluidas: m.concluidas,
+      tempoMedioExecucao: m.concluidas > 0 ? Math.round(m.tempoTotal / m.concluidas) : 0,
+      desvioTempoEstimado: m.concluidas > 0 ? Math.round(m.desvioTotal / m.concluidas) : 0,
+      taxaSucesso: m.total > 0 ? Math.round((m.sucessos / m.total) * 100) : 0
+    }))
+    .sort((a, b) => b.taxaSucesso - a.taxaSucesso);
 }
 
 /**
- * Calcula tendência de manutenções ao longo do tempo
+ * Calcula a tendência mensal de manutenções
  */
-export function calcularTendenciaMensal(
-  tarefas: TarefaManutencao[],
-  meses: number = 6
-): Array<{ mes: string; total: number; concluidas: number; atrasadas: number }> {
-  const hoje = new Date();
-  const resultado = [];
+export function calcularTendenciaMensal(tarefas: TarefaManutencao[], meses: number = 6): { mes: string; concluidas: number; pendentes: number }[] {
+  const resultado: { mes: string; concluidas: number; pendentes: number }[] = [];
+  const agora = new Date();
   
   for (let i = meses - 1; i >= 0; i--) {
-    const mesData = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-    const mesProximo = new Date(hoje.getFullYear(), hoje.getMonth() - i + 1, 1);
+    const data = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+    const mesAno = data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
     
-    const tarefasMes = tarefas.filter(t => {
-      const dataExecucao = new Date(t.proximaExecucao);
-      return dataExecucao >= mesData && dataExecucao < mesProximo;
+    const tarefasDoMes = tarefas.filter(t => {
+      if (!t.proximaExecucao) return false;
+      const dataExec = new Date(t.proximaExecucao);
+      return dataExec.getMonth() === data.getMonth() && dataExec.getFullYear() === data.getFullYear();
     });
     
     resultado.push({
-      mes: mesData.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
-      total: tarefasMes.length,
-      concluidas: tarefasMes.filter(t => t.status === "concluida").length,
-      atrasadas: tarefasMes.filter(t => {
-        if (t.status === "concluida") return false;
-        return new Date(t.proximaExecucao) < hoje;
-      }).length
+      mes: mesAno,
+      concluidas: tarefasDoMes.filter(t => t.status === "concluida").length,
+      pendentes: tarefasDoMes.filter(t => t.status !== "concluida").length
     });
   }
   
