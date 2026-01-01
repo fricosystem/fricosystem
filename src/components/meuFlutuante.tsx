@@ -547,14 +547,16 @@ const FuturisticFloatingMenu = () => {
     <>
       <AnimatePresence mode="wait">
         {isVisible && !minimized && (
-          <motion.div 
-            id="floating-menu-container" 
-            className={`fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-[95vw] md:w-auto px-2 md:px-0 ${theme === "dark" ? "dark" : ""}`}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={containerVariants}
+          <div
+            id="floating-menu-container"
+            className={`fixed bottom-20 left-1/2 -translate-x-1/2 transform z-50 w-full max-w-[95vw] md:w-auto px-2 md:px-0 ${theme === "dark" ? "dark" : ""}`}
           >
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={containerVariants}
+            >
             <AnimatePresence mode="wait">
               {activeMenu && (
                 <motion.div 
@@ -745,7 +747,8 @@ const FuturisticFloatingMenu = () => {
                 </div>
               </div>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

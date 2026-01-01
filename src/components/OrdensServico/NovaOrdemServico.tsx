@@ -5,26 +5,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Save, RotateCcw, Loader2 } from "lucide-react";
+import { Save, RotateCcw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { Combobox } from "@/components/ui/combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { toast } from "@/hooks/use-toast";
 
-interface SetorOption {
-  value: string;
-  label: string;
+interface Setor {
+  id: string;
+  nome: string;
 }
 
-interface EquipamentoOption {
-  value: string;
-  label: string;
+interface Equipamento {
+  id: string;
+  patrimonio: string;
+  equipamento: string;
+  setor: string;
 }
 
 interface OrigemParadaItem {
@@ -40,18 +39,23 @@ interface NovaOrdemServicoProps {
 export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
   const { userData } = useAuth();
   
+  // Gerar data/hora atual formatada
+  const getDataHoraAtual = () => {
+    const agora = new Date();
+    return format(agora, "dd/MM/yyyy HH:mm", { locale: ptBR });
+  };
+  
   const [setor, setSetor] = useState("");
   const [equipamento, setEquipamento] = useState("");
   const [linha, setLinha] = useState("");
-  const [dataAberturaOS, setDataAberturaOS] = useState<Date | undefined>(new Date());
+  const [dataAberturaOS, setDataAberturaOS] = useState(getDataHoraAtual());
   const [descricaoOS, setDescricaoOS] = useState("");
   const [observacaoManutencao, setObservacaoManutencao] = useState("");
-  const [outroOrigem, setOutroOrigem] = useState("");
   const [saving, setSaving] = useState(false);
   
   // Dados das coleções
-  const [setores, setSetores] = useState<SetorOption[]>([]);
-  const [equipamentos, setEquipamentos] = useState<EquipamentoOption[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]);
+  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [origensParada, setOrigensParada] = useState<OrigemParadaItem[]>([]);
   const [loadingSetores, setLoadingSetores] = useState(true);
   const [loadingEquipamentos, setLoadingEquipamentos] = useState(true);
@@ -70,14 +74,14 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
         setLoadingSetores(true);
         const setoresRef = collection(db, "setores");
         const snapshot = await getDocs(setoresRef);
-        const setoresData: SetorOption[] = [];
+        const setoresData: Setor[] = [];
         
         snapshot.forEach((doc) => {
           const data = doc.data();
           if (data.nome) {
             setoresData.push({
-              value: data.nome,
-              label: data.nome
+              id: doc.id,
+              nome: data.nome
             });
           }
         });
@@ -100,14 +104,16 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
         setLoadingEquipamentos(true);
         const equipamentosRef = collection(db, "equipamentos");
         const snapshot = await getDocs(equipamentosRef);
-        const equipamentosData: EquipamentoOption[] = [];
+        const equipamentosData: Equipamento[] = [];
         
         snapshot.forEach((doc) => {
           const data = doc.data();
           if (data.equipamento) {
             equipamentosData.push({
-              value: data.equipamento,
-              label: data.equipamento
+              id: doc.id,
+              patrimonio: data.patrimonio || "",
+              equipamento: data.equipamento,
+              setor: data.setor || ""
             });
           }
         });
@@ -122,6 +128,30 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
 
     fetchEquipamentos();
   }, []);
+
+  // Handler para seleção de setor
+  const handleSetorChange = (value: string) => {
+    setSetor(value);
+    // Limpar equipamento se o novo setor for diferente do setor do equipamento atual
+    const equipamentoAtual = equipamentos.find(e => e.equipamento === equipamento);
+    if (equipamentoAtual && equipamentoAtual.setor !== value) {
+      setEquipamento("");
+    }
+  };
+
+  // Handler para seleção de equipamento - auto seleciona o setor
+  const handleEquipamentoChange = (value: string) => {
+    const equipamentoSelecionado = equipamentos.find(e => e.equipamento === value);
+    if (equipamentoSelecionado) {
+      setEquipamento(equipamentoSelecionado.equipamento);
+      setSetor(equipamentoSelecionado.setor);
+    }
+  };
+
+  // Filtrar equipamentos pelo setor selecionado
+  const equipamentosFiltrados = setor 
+    ? equipamentos.filter(e => e.setor === setor)
+    : equipamentos;
 
   // Buscar origens de parada
   useEffect(() => {
@@ -164,10 +194,9 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
     setSetor("");
     setEquipamento("");
     setLinha("");
-    setDataAberturaOS(new Date());
+    setDataAberturaOS(getDataHoraAtual());
     setDescricaoOS("");
     setObservacaoManutencao("");
-    setOutroOrigem("");
     setOrigensSelecionadas({});
   };
 
@@ -193,10 +222,9 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
         setor,
         equipamento,
         linha,
-        dataAberturaOS: dataAberturaOS ? dataAberturaOS.toISOString() : null,
+        dataAberturaOS: new Date().toISOString(),
         descricaoOS,
         origensParada: origensArray,
-        outroOrigem,
         observacaoManutencao,
         responsavelChamado,
         status: "aberta",
@@ -232,30 +260,49 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
           <CardTitle className="text-lg font-semibold">Controle de OS</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Setor */}
-          <div className="space-y-2">
-            <Label htmlFor="setor">Setor</Label>
-            <Combobox
-              options={setores}
-              value={setor}
-              onChange={setSetor}
-              placeholder="Selecione o setor"
-              searchPlaceholder="Buscar setor..."
-              loading={loadingSetores}
-            />
-          </div>
+          {/* Setor e Equipamento */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="setor">Setor</Label>
+              <Select
+                value={setor}
+                onValueChange={handleSetorChange}
+                disabled={loadingSetores}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingSetores ? "Carregando..." : "Selecione o setor"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px] bg-background z-50">
+                  {[...setores].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((s) => (
+                    <SelectItem key={s.id} value={s.nome}>
+                      {s.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Equipamento */}
-          <div className="space-y-2">
-            <Label htmlFor="equipamento">Equipamento</Label>
-            <Combobox
-              options={equipamentos}
-              value={equipamento}
-              onChange={setEquipamento}
-              placeholder="Selecione o equipamento"
-              searchPlaceholder="Buscar equipamento..."
-              loading={loadingEquipamentos}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="equipamento">Equipamento</Label>
+              <Select
+                value={equipamento}
+                onValueChange={handleEquipamentoChange}
+                disabled={loadingEquipamentos}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingEquipamentos ? "Carregando..." : "Selecione o equipamento"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px] bg-background z-50">
+                  {equipamentosFiltrados
+                    .sort((a, b) => a.equipamento.localeCompare(b.equipamento, 'pt-BR'))
+                    .map((e) => (
+                      <SelectItem key={e.id} value={e.equipamento}>
+                        {e.patrimonio ? `${e.patrimonio} - ${e.equipamento}` : e.equipamento}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Linha */}
@@ -272,28 +319,11 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
           {/* Data Abertura OS */}
           <div className="space-y-2">
             <Label>Data Abertura OS</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !dataAberturaOS && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dataAberturaOS ? format(dataAberturaOS, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={dataAberturaOS}
-                  onSelect={setDataAberturaOS}
-                  locale={ptBR}
-                />
-              </PopoverContent>
-            </Popover>
+            <Input
+              value={dataAberturaOS}
+              disabled
+              className="bg-muted"
+            />
           </div>
 
           {/* Responsável Pelo Chamado */}
@@ -349,18 +379,6 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
                   ))}
                 </div>
               )}
-              
-              {/* Campo "Outro" */}
-              <div className="mt-3 pt-3 border-t border-border space-y-2">
-                <Label htmlFor="outroOrigem" className="text-xs">Outro (especifique):</Label>
-                <Input
-                  id="outroOrigem"
-                  value={outroOrigem}
-                  onChange={(e) => setOutroOrigem(e.target.value)}
-                  placeholder="Especifique outra origem..."
-                  className="text-sm"
-                />
-              </div>
             </div>
           </div>
 

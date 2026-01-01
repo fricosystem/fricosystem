@@ -62,6 +62,8 @@ export function HistoricoOS() {
         return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">Aberta</Badge>;
       case "em_andamento":
         return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Em Andamento</Badge>;
+      case "em_execucao":
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Em Execução</Badge>;
       case "concluida":
         return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Concluída</Badge>;
       default:
