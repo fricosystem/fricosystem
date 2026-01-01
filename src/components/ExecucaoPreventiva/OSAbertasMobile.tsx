@@ -63,6 +63,9 @@ export function OSAbertasMobile() {
   const [produtosSelecionados, setProdutosSelecionados] = useState<ProdutoSelecionado[]>([]);
   const [searchProduto, setSearchProduto] = useState("");
   const [loadingProdutos, setLoadingProdutos] = useState(false);
+  
+  // Search state
+  const [searchOS, setSearchOS] = useState("");
 
   // Fetch open orders
   useEffect(() => {
@@ -151,9 +154,38 @@ export function OSAbertasMobile() {
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleOpenDetails = (os: OrdemServico) => {
+  const handleOpenDetails = async (os: OrdemServico) => {
     setSelectedOS(os);
-    setShowDetailsModal(true);
+    
+    // Se status for em_execucao, abrir modal de execução diretamente
+    if (os.status === "em_execucao") {
+      // Buscar dados de execução para recuperar o tempo
+      try {
+        const osRef = doc(db, "ordens_servicos", os.id);
+        const osDoc = await getDoc(osRef);
+        const osData = osDoc.data();
+        
+        if (osData?.inicioExecucao) {
+          const inicio = osData.inicioExecucao.toDate();
+          setExecutionStartTime(inicio);
+          const now = new Date();
+          const diff = Math.floor((now.getTime() - inicio.getTime()) / 1000);
+          setElapsedTime(diff);
+        } else {
+          setExecutionStartTime(new Date());
+          setElapsedTime(0);
+        }
+        
+        setObservacoes(osData?.observacoes || "");
+        setSolucaoAplicada(osData?.solucaoAplicada || "");
+        setShowExecutionModal(true);
+      } catch (error) {
+        console.error("Erro ao recuperar dados de execução:", error);
+        setShowExecutionModal(true);
+      }
+    } else {
+      setShowDetailsModal(true);
+    }
   };
 
   const handleStartExecution = async () => {
@@ -337,6 +369,16 @@ export function OSAbertasMobile() {
     p.codigo_estoque.toLowerCase().includes(searchProduto.toLowerCase())
   );
 
+  const filteredOS = ordensAbertas.filter((os) => {
+    const searchValue = searchOS.toLowerCase();
+    return (
+      os.setor?.toLowerCase().includes(searchValue) ||
+      os.equipamento?.toLowerCase().includes(searchValue) ||
+      os.descricao?.toLowerCase().includes(searchValue) ||
+      os.responsavelChamado?.toLowerCase().includes(searchValue)
+    );
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -346,43 +388,56 @@ export function OSAbertasMobile() {
   }
 
   return (
-    <div className="space-y-4 pb-32">
-      <div className="flex items-center gap-2 mb-4">
-        <ClipboardList className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">Ordens de Serviço Abertas</h2>
-        <Badge variant="secondary">{ordensAbertas.length}</Badge>
+    <div className="space-y-4 pb-20">
+      <div className="relative">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar ordens de serviço..."
+          value={searchOS}
+          onChange={(e) => setSearchOS(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
-      {ordensAbertas.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Nenhuma ordem de serviço aberta</p>
-          </CardContent>
-        </Card>
+      {filteredOS.length === 0 ? (
+        <div className="text-center py-12">
+          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Nenhuma ordem de serviço aberta</p>
+        </div>
       ) : (
         <div className="space-y-3">
-          {ordensAbertas.map((os) => (
+          {filteredOS.map((os) => (
             <Card 
               key={os.id} 
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              className="overflow-hidden cursor-pointer transition-all"
               onClick={() => handleOpenDetails(os)}
             >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex justify-between items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{os.equipamento}</p>
-                    <p className="text-sm text-muted-foreground truncate">{os.setor}</p>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{os.descricao}</p>
+                    <div className="font-medium truncate">{os.equipamento}</div>
+                    <div className="text-sm text-muted-foreground">{os.setor}</div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
-                      Aberta
-                    </Badge>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {os.criadoEm && format(os.criadoEm.toDate(), "dd/MM HH:mm", { locale: ptBR })}
-                    </p>
+                  <div className="flex flex-col items-end gap-1">
+                    {os.status === "em_execucao" ? (
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200">
+                        Em Execução
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
+                        Aberta
+                      </Badge>
+                    )}
                   </div>
+                </div>
+
+                <div className="text-sm text-muted-foreground line-clamp-2">
+                  {os.descricao}
+                </div>
+
+                <div className="flex justify-between items-center text-xs text-muted-foreground flex-wrap gap-2">
+                  <span>{os.responsavelChamado || "Não informado"}</span>
+                  <span>{os.criadoEm && format(os.criadoEm.toDate(), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}</span>
                 </div>
               </CardContent>
             </Card>
@@ -392,64 +447,67 @@ export function OSAbertasMobile() {
 
       {/* Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              Detalhes da OS
-            </DialogTitle>
+            <DialogTitle>Detalhes da OS</DialogTitle>
           </DialogHeader>
           
           {selectedOS && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="overflow-y-auto max-h-[60vh]">
+              <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-sm text-muted-foreground">Setor</p>
-                  <p className="font-medium">{selectedOS.setor}</p>
+                  <h4 className="font-semibold text-xs text-muted-foreground">Setor</h4>
+                  <p>{selectedOS.setor}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Equipamento</p>
-                  <p className="font-medium">{selectedOS.equipamento}</p>
+                  <h4 className="font-semibold text-xs text-muted-foreground">Equipamento</h4>
+                  <p>{selectedOS.equipamento}</p>
                 </div>
-              </div>
-              
-              <div>
-                <p className="text-sm text-muted-foreground">Descrição</p>
-                <p className="font-medium">{selectedOS.descricao}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-muted-foreground">Solicitante</p>
-                <p className="font-medium">{selectedOS.responsavelChamado}</p>
-              </div>
-
-              {selectedOS.origensParada && selectedOS.origensParada.length > 0 && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Origens da Parada</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedOS.origensParada.map((origem, idx) => (
-                      <Badge key={idx} variant="outline">{origem}</Badge>
-                    ))}
+                  <h4 className="font-semibold text-xs text-muted-foreground">Status</h4>
+                  {selectedOS.status === "em_execucao" ? (
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200">
+                      Em Execução
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
+                      Aberta
+                    </Badge>
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-semibold text-xs text-muted-foreground">Solicitante</h4>
+                  <p>{selectedOS.responsavelChamado || "-"}</p>
+                </div>
+                <div className="col-span-2">
+                  <h4 className="font-semibold text-xs text-muted-foreground">Descrição</h4>
+                  <p>{selectedOS.descricao}</p>
+                </div>
+                {selectedOS.origensParada && selectedOS.origensParada.length > 0 && (
+                  <div className="col-span-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground">Origens da Parada</h4>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedOS.origensParada.map((origem, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">{origem}</Badge>
+                      ))}
+                    </div>
                   </div>
+                )}
+                <div className="col-span-2">
+                  <h4 className="font-semibold text-xs text-muted-foreground">Criado em</h4>
+                  <p>{selectedOS.criadoEm && format(selectedOS.criadoEm.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
                 </div>
-              )}
-
-              <div>
-                <p className="text-sm text-muted-foreground">Criado em</p>
-                <p className="font-medium">
-                  {selectedOS.criadoEm && format(selectedOS.criadoEm.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                </p>
               </div>
             </div>
           )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleStartExecution} className="gap-2">
-              <Play className="h-4 w-4" />
-              Executar
+
+          <DialogFooter className="mt-4 gap-2 flex-col">
+            <Button 
+              className="flex-1 w-full"
+              onClick={handleStartExecution}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Iniciar Execução
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -457,35 +515,42 @@ export function OSAbertasMobile() {
 
       {/* Execution Modal */}
       <Dialog open={showExecutionModal} onOpenChange={() => {}}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" hideCloseButton>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col" hideCloseButton>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              Executando OS
-            </DialogTitle>
+            <DialogTitle>Executando OS</DialogTitle>
           </DialogHeader>
           
           {selectedOS && (
-            <div className="space-y-4">
-              <div className="text-center py-4">
-                <p className="text-sm text-muted-foreground mb-2">Tempo de Execução</p>
-                <div className="text-4xl font-mono font-bold text-primary">
-                  {formatTime(elapsedTime)}
-                </div>
+            <div className="overflow-y-auto max-h-[60vh] space-y-4">
+              {/* Timer */}
+              <div className="flex flex-col items-center text-center py-2">
+                <span className="text-xs text-muted-foreground">Tempo em execução</span>
+                <span className="text-xl font-bold font-mono text-primary">{formatTime(elapsedTime)}</span>
               </div>
 
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="font-medium">{selectedOS.equipamento}</p>
-                <p className="text-sm text-muted-foreground">{selectedOS.setor}</p>
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <h4 className="font-semibold text-xs text-muted-foreground">Setor</h4>
+                  <p>{selectedOS.setor}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-xs text-muted-foreground">Equipamento</h4>
+                  <p>{selectedOS.equipamento}</p>
+                </div>
+                <div className="col-span-2">
+                  <h4 className="font-semibold text-xs text-muted-foreground">Descrição</h4>
+                  <p>{selectedOS.descricao}</p>
+                </div>
               </div>
 
               {/* Products section */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium flex items-center gap-2">
+                  <h4 className="font-semibold text-xs text-muted-foreground flex items-center gap-2">
                     <Package className="h-4 w-4" />
                     Produtos Utilizados
-                  </p>
+                  </h4>
                   <Button size="sm" variant="outline" onClick={handleOpenProducts}>
                     <Plus className="h-4 w-4 mr-1" />
                     Adicionar
@@ -493,14 +558,14 @@ export function OSAbertasMobile() {
                 </div>
                 
                 {produtosSelecionados.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
                     {produtosSelecionados.map((p) => (
-                      <div key={p.id} className="flex items-center justify-between bg-muted/50 rounded-lg p-2">
-                        <div className="flex-1 min-w-0">
+                      <div key={p.id} className="flex items-center gap-2 bg-muted/50 rounded-lg p-2 overflow-hidden">
+                        <div className="flex-1 min-w-0 overflow-hidden">
                           <p className="text-sm font-medium truncate">{p.nome}</p>
-                          <p className="text-xs text-muted-foreground">{p.codigo_estoque}</p>
+                          <p className="text-xs text-muted-foreground truncate">{p.codigo_estoque}</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           <Button
                             size="icon"
                             variant="ghost"
@@ -509,7 +574,7 @@ export function OSAbertasMobile() {
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
-                          <span className="w-8 text-center font-medium">{p.quantidadeUsada}</span>
+                          <span className="w-6 text-center font-medium text-sm">{p.quantidadeUsada}</span>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -526,8 +591,8 @@ export function OSAbertasMobile() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Solução Aplicada <span className="text-destructive">*</span>
+                <label className="font-semibold text-xs text-muted-foreground">
+                  Solução Aplicada *
                 </label>
                 <Textarea
                   value={solucaoAplicada}
@@ -538,7 +603,7 @@ export function OSAbertasMobile() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Observações</label>
+                <label className="font-semibold text-xs text-muted-foreground">Observações</label>
                 <Textarea
                   value={observacoes}
                   onChange={(e) => setObservacoes(e.target.value)}
@@ -548,10 +613,14 @@ export function OSAbertasMobile() {
               </div>
             </div>
           )}
-          
-          <DialogFooter>
-            <Button onClick={handleFinishExecution} className="w-full gap-2" size="lg">
-              <Check className="h-5 w-5" />
+
+          <DialogFooter className="mt-4 gap-2 flex-col">
+            <Button 
+              className="flex-1 w-full bg-orange-600 hover:bg-orange-700"
+              onClick={handleFinishExecution}
+              disabled={!solucaoAplicada.trim()}
+            >
+              <Check className="h-4 w-4 mr-2" />
               Finalizar Execução
             </Button>
           </DialogFooter>
@@ -560,16 +629,13 @@ export function OSAbertasMobile() {
 
       {/* Products Selection Modal */}
       <Dialog open={showProductsModal} onOpenChange={setShowProductsModal}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[95vw] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Adicionar Produtos
-            </DialogTitle>
+            <DialogTitle>Adicionar Produtos</DialogTitle>
           </DialogHeader>
           
           <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               value={searchProduto}
               onChange={(e) => setSearchProduto(e.target.value)}
@@ -584,33 +650,42 @@ export function OSAbertasMobile() {
                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
               </div>
             ) : filteredProdutos.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Nenhum produto encontrado</p>
+              <div className="text-center py-12">
+                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Nenhum produto encontrado</p>
+              </div>
             ) : (
               filteredProdutos.map((produto) => {
                 const selecionado = produtosSelecionados.find(p => p.id === produto.id);
+                const semEstoque = produto.quantidade <= 0;
                 return (
                   <div
                     key={produto.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
-                    onClick={() => handleAddProduct(produto)}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      semEstoque 
+                        ? "opacity-50 cursor-not-allowed bg-muted/30" 
+                        : "hover:bg-muted/50 cursor-pointer"
+                    }`}
+                    onClick={() => !semEstoque && handleAddProduct(produto)}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{produto.nome}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className={`text-xs ${semEstoque ? "text-destructive" : "text-muted-foreground"}`}>
                         {produto.codigo_estoque} • Estoque: {produto.quantidade} {produto.unidade_de_medida}
+                        {semEstoque && " (Indisponível)"}
                       </p>
                     </div>
                     {selecionado && (
-                      <Badge className="ml-2">{selecionado.quantidadeUsada}</Badge>
+                      <Badge variant="secondary" className="ml-2 text-xs">{selecionado.quantidadeUsada}</Badge>
                     )}
                   </div>
                 );
               })
             )}
           </div>
-          
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowProductsModal(false)}>
+
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" onClick={() => setShowProductsModal(false)} className="flex-1">
               Fechar
             </Button>
           </DialogFooter>
