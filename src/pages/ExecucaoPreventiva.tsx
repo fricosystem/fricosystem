@@ -7,6 +7,8 @@ import { HistoricoMobile } from "@/components/ExecucaoPreventiva/HistoricoMobile
 import { PerfilManutentor } from "@/components/ExecucaoPreventiva/PerfilManutentor";
 import { ParadasMaquinaMobile } from "@/components/ExecucaoPreventiva/ParadasMaquinaMobile";
 import { HistoricoParadasMobile } from "@/components/ExecucaoPreventiva/HistoricoParadasMobile";
+import { OSAbertasMobile } from "@/components/ExecucaoPreventiva/OSAbertasMobile";
+import { OSHistoricoMobile } from "@/components/ExecucaoPreventiva/OSHistoricoMobile";
 import { OfflineStatusBar } from "@/components/ExecucaoPreventiva/OfflineStatusBar";
 import { OfflineSyncProvider } from "@/contexts/OfflineSyncContext";
 import { useMinhasTarefas } from "@/hooks/useMinhasTarefas";
@@ -14,13 +16,14 @@ import { useBlockBackNavigation } from "@/hooks/useBlockBackNavigation";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 
-type TabType = "dashboard" | "timeline" | "calendario" | "historico" | "perfil" | "paradas" | "historico-paradas";
+type TabType = "dashboard" | "timeline" | "calendario" | "historico" | "perfil" | "paradas" | "historico-paradas" | "os-abertas" | "os-historico";
 
 export default function ExecucaoPreventiva() {
   useBlockBackNavigation();
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const { tarefas, loading, stats, tarefasHoje, tarefasAtrasadas, historicoExecucoes, execucoesPorTarefa } = useMinhasTarefas();
   const [paradasPendentes, setParadasPendentes] = useState(0);
+  const [osPendentes, setOsPendentes] = useState(0);
 
   useEffect(() => {
     const fetchParadasPendentes = async () => {
@@ -33,7 +36,20 @@ export default function ExecucaoPreventiva() {
         console.error("Erro ao buscar paradas pendentes:", error);
       }
     };
+
+    const fetchOsPendentes = async () => {
+      try {
+        const osRef = collection(db, "ordens_servicos");
+        const q = query(osRef, where("status", "==", "aberta"));
+        const snapshot = await getDocs(q);
+        setOsPendentes(snapshot.size);
+      } catch (error) {
+        console.error("Erro ao buscar OS pendentes:", error);
+      }
+    };
+
     fetchParadasPendentes();
+    fetchOsPendentes();
   }, []);
 
   const preventivasPendentes = tarefas.filter(t => t.status !== "concluida").length;
@@ -58,6 +74,10 @@ export default function ExecucaoPreventiva() {
         return "Paradas de Máquina";
       case "historico-paradas":
         return "Histórico de Paradas";
+      case "os-abertas":
+        return "Ordens de Serviço";
+      case "os-historico":
+        return "Histórico de OS";
       default:
         return "Execução Preventiva";
     }
@@ -73,6 +93,10 @@ export default function ExecucaoPreventiva() {
         return "Execução de Paradas";
       case "historico-paradas":
         return "Paradas Concluídas";
+      case "os-abertas":
+        return "Abertas para Execução";
+      case "os-historico":
+        return "OS Concluídas";
       default:
         return "Minhas Manutenções";
     }
@@ -115,6 +139,10 @@ export default function ExecucaoPreventiva() {
           {activeTab === "paradas" && <ParadasMaquinaMobile />}
 
           {activeTab === "historico-paradas" && <HistoricoParadasMobile />}
+
+          {activeTab === "os-abertas" && <OSAbertasMobile />}
+
+          {activeTab === "os-historico" && <OSHistoricoMobile />}
         </main>
 
         {/* Bottom Navigation */}
@@ -123,7 +151,8 @@ export default function ExecucaoPreventiva() {
           onTabChange={setActiveTab} 
           badgeCounts={{
             preventivas: preventivasPendentes,
-            paradas: paradasPendentes
+            paradas: paradasPendentes,
+            os: osPendentes
           }}
         />
       </div>

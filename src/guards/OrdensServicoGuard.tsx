@@ -11,20 +11,20 @@ export function OrdensServicoGuard({ children }: OrdensServicoGuardProps) {
   const { userData, loading } = useAuth();
   const { toast } = useToast();
 
-  const perfilPermitido = 
-    userData?.perfil === "ENCARREGADO" || 
-    userData?.perfil === "LIDER" || 
-    userData?.perfil === "DESENVOLVEDOR";
+  // Verifica se tem permissão "tudo" ou "ordens_servico"
+  const temPermissao = 
+    userData?.permissoes?.includes("tudo") || 
+    userData?.permissoes?.includes("ordens_servico");
 
   useEffect(() => {
-    if (!loading && userData && !perfilPermitido) {
+    if (!loading && userData && !temPermissao) {
       toast({
         variant: "destructive",
         title: "Acesso Negado",
-        description: "Esta área é exclusiva para encarregados, líderes e desenvolvedores.",
+        description: "Você não tem permissão para acessar Ordens de Serviço.",
       });
     }
-  }, [loading, userData, perfilPermitido, toast]);
+  }, [loading, userData, temPermissao, toast]);
 
   // Aguarda carregamento do auth E dos dados do usuário
   if (loading || !userData) {
@@ -35,7 +35,7 @@ export function OrdensServicoGuard({ children }: OrdensServicoGuardProps) {
     );
   }
 
-  if (!perfilPermitido) {
+  if (!temPermissao) {
     return <Navigate to="/dashboard" replace />;
   }
 
