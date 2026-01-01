@@ -77,7 +77,7 @@ const queryClient = new QueryClient();
 const getInitialRouteByProfile = (perfil: string | undefined): string => {
   switch (perfil) {
     case "MANUTENTOR":
-      return "/execucao-preventiva";
+      return "/execucao-manutencao";
     case "ENCARREGADO":
     case "LIDER":
       return "/parada-maquina";
@@ -187,7 +187,7 @@ const AppContent = () => {
           <Route path="/maquinas/:id" element={<AuthGuard><MaquinaDetalhes /></AuthGuard>} />
           <Route path="/dashboard-manutencao" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
           <Route path="/manutencao-preventiva" element={<AuthGuard><ManutencaoPreventiva /></AuthGuard>} />
-          <Route path="/execucao-preventiva" element={<AuthGuard><ManutentorGuard><ExecucaoPreventiva /></ManutentorGuard></AuthGuard>} />
+          <Route path="/execucao-manutencao" element={<AuthGuard><ManutentorGuard><ExecucaoPreventiva /></ManutentorGuard></AuthGuard>} />
           <Route path="/gestao-tarefas" element={<AuthGuard><GestaoTarefas /></AuthGuard>} />
            <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
            <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
