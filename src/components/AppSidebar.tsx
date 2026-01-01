@@ -165,9 +165,9 @@ const AppSidebar = () => {
       label: "Manutenção Preventiva",
       permission: "manutencao_preventiva"
     }, {
-      to: "/execucao-preventiva",
+      to: "/execucao-manutencao",
       icon: ClipboardCheck,
-      label: "Execução de Parada",
+      label: "Execução de Manutenção",
       permission: "execucao_preventiva"
     }, {
       to: "/parada-maquina",
