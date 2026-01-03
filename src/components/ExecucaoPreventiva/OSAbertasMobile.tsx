@@ -20,12 +20,15 @@ interface OrdemServico {
   id: string;
   setor: string;
   equipamento: string;
-  descricao: string;
+  descricaoOS: string;
   responsavelChamado: string;
   origensParada: string[];
   status: string;
   criadoEm: Timestamp;
   tipoManutencao?: string;
+  linha?: string;
+  dataAberturaOS?: string;
+  observacaoManutencao?: string;
 }
 
 interface Produto {
@@ -181,7 +184,7 @@ export function OSAbertasMobile() {
         // Atualizar selectedOS com dados completos do Firestore
         setSelectedOS({
           ...os,
-          descricao: osData?.descricao || os.descricao
+          descricaoOS: osData?.descricaoOS || os.descricaoOS
         });
         
         if (osData?.inicioExecucao) {
@@ -392,7 +395,7 @@ export function OSAbertasMobile() {
     return (
       os.setor?.toLowerCase().includes(searchValue) ||
       os.equipamento?.toLowerCase().includes(searchValue) ||
-      os.descricao?.toLowerCase().includes(searchValue) ||
+      os.descricaoOS?.toLowerCase().includes(searchValue) ||
       os.responsavelChamado?.toLowerCase().includes(searchValue)
     );
   });
@@ -552,7 +555,7 @@ export function OSAbertasMobile() {
                     <h3 className="text-base font-semibold">Descrição do Problema</h3>
                     <div className="bg-muted/50 rounded-xl p-4">
                       <p className="text-base leading-relaxed">
-                        {selectedOS.descricao || "Nenhuma descrição fornecida"}
+                        {selectedOS.descricaoOS || "Nenhuma descrição fornecida"}
                       </p>
                     </div>
                   </div>
@@ -649,7 +652,7 @@ export function OSAbertasMobile() {
               <div className="space-y-3">
                 <h3 className="text-base font-semibold">Descrição do Problema</h3>
                 <div className="bg-muted/50 rounded-xl p-4">
-                  <p className="text-base leading-relaxed">{selectedOS.descricao}</p>
+                  <p className="text-base leading-relaxed">{selectedOS.descricaoOS}</p>
                 </div>
               </div>
 

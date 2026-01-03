@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Wrench, Factory, Cog, AlertTriangle, Activity, Settings, XCircle, Users, ClipboardList, MapPin } from "lucide-react";
+import { Wrench, Factory, Cog, AlertTriangle, Activity, Settings, XCircle, Users, ClipboardList, MapPin, FileText } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SetoresTab from "@/components/GestaoManutencao/SetoresTab";
@@ -56,6 +56,10 @@ const GestaoSetores = () => {
             <TabsTrigger value="origens-parada" className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               <span className="hidden sm:inline">Origens de Parada</span>
+            </TabsTrigger>
+            <TabsTrigger value="motivos-os" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Motivos OS</span>
             </TabsTrigger>
             <TabsTrigger value="configuracoes" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -136,6 +140,16 @@ const GestaoSetores = () => {
               singularTitle="Origem de Parada"
               icon={MapPin}
               placeholder="Ex: Mecânica, Elétrica, Operacional..."
+            />
+          </TabsContent>
+
+          <TabsContent value="motivos-os" className="mt-6">
+            <GenericManutencaoTab
+              collectionName="motivos_os"
+              title="Motivos de OS"
+              singularTitle="Motivo de OS"
+              icon={FileText}
+              placeholder="Ex: Manutenção Preventiva, Reparo Urgente, Inspeção..."
             />
           </TabsContent>
 
