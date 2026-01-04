@@ -338,7 +338,7 @@ const AppSidebar = () => {
       permission: "gestao_unidades"
     }, {
       to: "/gestao-manutencao",
-      icon: Factory,
+      icon: Wrench,
       label: "Gestão de Manutenção",
       permission: "gestao_manutencao"
     }, {
