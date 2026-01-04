@@ -303,14 +303,64 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
         setIsSubmitting(false);
         return;
       }
+
+      if (!formData.dataProgramada || !formData.horaInicio) {
+        toast.error("Por favor, preencha a data e hora programada");
+        setIsSubmitting(false);
+        return;
+      }
       
-      // Envio ao Firestore desabilitado
-      toast.info("Funcionalidade de registro temporariamente desabilitada");
+      const batch = writeBatch(db);
+      const paradaId = uuidv4();
+      const paradaRef = doc(db, "paradasMaquina", paradaId);
+      
+      // Criar timestamp do horário programado
+      const [ano, mes, dia] = formData.dataProgramada.split('-').map(Number);
+      const [hora, minuto] = formData.horaInicio.split(':').map(Number);
+      const horarioProgramado = new Date(ano, mes - 1, dia, hora, minuto);
+      
+      // Primeira ação do histórico
+      const primeiraAcao: HistoricoAcao = {
+        id: uuidv4(),
+        acao: "criado",
+        userId: user?.uid || "",
+        userName: userData?.nome || user?.email || "Sistema",
+        timestamp: Timestamp.now(),
+        observacao: "Parada de máquina registrada",
+        tentativa: 1,
+      };
+      
+      const paradaData = {
+        id: paradaId,
+        setor: formData.setor,
+        equipamento: formData.equipamento,
+        dataProgramada: formData.dataProgramada,
+        horarioProgramado: Timestamp.fromDate(horarioProgramado),
+        hrInicial: formData.horaInicio,
+        hrFinal: "",
+        descricaoMotivo: formData.descricaoMotivo,
+        observacao: formData.observacao || "",
+        tipoFalha: formData.tipoFalha || "",
+        tipoManutencao: formData.tipoManutencao || "",
+        origemParada: origemParada || "",
+        status: "pendente",
+        criadoEm: Timestamp.now(),
+        criadoPor: user?.uid || "",
+        encarregadoNome: userData?.nome || user?.email || "",
+        encarregadoId: user?.uid || "",
+        tentativaAtual: 1,
+        historicoAcoes: [primeiraAcao],
+      };
+      
+      batch.set(paradaRef, paradaData);
+      await batch.commit();
+      
+      toast.success("Parada de máquina registrada com sucesso!");
       
       setFormData({
         setor: "",
         equipamento: "",
-        dataProgramada: "",
+        dataProgramada: dataAtual,
         horaInicio: "",
         descricaoMotivo: "",
         observacao: "",

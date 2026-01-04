@@ -1,9 +1,8 @@
 import { useState } from "react";
 import ParadasAbertas from "@/components/ParadaMaquina/ParadasAbertas";
 import HistoricoParadas from "@/components/ParadaMaquina/HistoricoParadas";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type TabType = "abertas" | "historico";
 
@@ -16,36 +15,49 @@ interface ParadasTabProps {
 export function ParadasTab({ onCountChange, onStatsChange, openCount = 0 }: ParadasTabProps) {
   const [activeTab, setActiveTab] = useState<TabType>("abertas");
 
+  const tabs = [
+    { id: "abertas" as TabType, label: "Abertas" },
+    { id: "historico" as TabType, label: "Histórico" },
+  ];
+
   return (
     <div className="flex flex-col h-full">
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="abertas" className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Abertas
-            {openCount > 0 && (
-              <Badge variant="destructive" className="ml-1 h-5 min-w-[20px] flex items-center justify-center p-0 text-xs font-bold">
-                {openCount > 99 ? "99+" : openCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="historico" className="flex items-center gap-2">
-            <History className="h-4 w-4" />
-            Histórico
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="abertas" className="mt-0">
-          <ParadasAbertas 
-            onCountChange={onCountChange}
-            onStatsChange={onStatsChange}
-          />
-        </TabsContent>
-        
-        <TabsContent value="historico" className="mt-0">
-          <HistoricoParadas />
-        </TabsContent>
-      </Tabs>
+      {/* Tabs estilizadas */}
+      <div className="flex justify-center mb-4">
+        <div className="inline-flex items-center bg-muted/30 rounded-xl p-1 backdrop-blur-sm border border-border/50">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2",
+                activeTab === tab.id
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {tab.label}
+              {tab.id === "abertas" && openCount > 0 && (
+                <Badge variant="destructive" className="h-5 min-w-[20px] flex items-center justify-center p-0 text-xs font-bold">
+                  {openCount > 99 ? "99+" : openCount}
+                </Badge>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {/* Conteúdo das Tabs */}
+      {activeTab === "abertas" && (
+        <ParadasAbertas 
+          onCountChange={onCountChange}
+          onStatsChange={onStatsChange}
+        />
+      )}
+      
+      {activeTab === "historico" && (
+        <HistoricoParadas />
+      )}
     </div>
   );
 }

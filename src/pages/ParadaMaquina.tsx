@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { Plus, Scan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NovaParadaMaquina from "@/components/ParadaMaquina/NovaParadaMaquina";
-import { ParadasTab } from "@/components/ParadaMaquina/ParadasTab";
+import ParadasAbertas from "@/components/ParadaMaquina/ParadasAbertas";
+import HistoricoParadas from "@/components/ParadaMaquina/HistoricoParadas";
 import { PerfilParada } from "@/components/ParadaMaquina/PerfilParada";
 import { BottomNavigationParada } from "@/components/ParadaMaquina/BottomNavigationParada";
-import { OrdensServicoTab } from "@/components/ParadaMaquina/OrdensServicoTab";
+import { NovaOrdemServico } from "@/components/OrdensServico/NovaOrdemServico";
+import { HistoricoOS } from "@/components/OrdensServico/HistoricoOS";
 import QrScannerModal from "@/components/ParadaMaquina/QrScannerModal";
 import { OfflineStatusBar } from "@/components/ExecucaoPreventiva/OfflineStatusBar";
 import { OfflineSyncProvider } from "@/contexts/OfflineSyncContext";
@@ -21,21 +23,55 @@ interface ScannedData {
   equipamento: string;
 }
 
-type TabType = "paradas" | "os" | "perfil";
+type MainTabType = "paradas" | "os" | "perfil";
+type SubTabType = "abertas" | "historico" | "nova-os" | "historico-os";
 
 export default function ParadaMaquina() {
   useBlockBackNavigation();
-  const [activeTab, setActiveTab] = useState<TabType>("paradas");
+  const [activeTab, setActiveTab] = useState<MainTabType>("paradas");
+  const [subTab, setSubTab] = useState<SubTabType>("abertas");
   const [isNovaParadaOpen, setIsNovaParadaOpen] = useState(false);
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
   const [scannedData, setScannedData] = useState<ScannedData | null>(null);
   const [openCount, setOpenCount] = useState(0);
+  const [osBadgeCount, setOsBadgeCount] = useState(0);
   const [stats, setStats] = useState({
     abertas: 0,
     emAndamento: 0,
     concluidas: 0,
     total: 0
   });
+
+  // Carregar contagem de OS abertas
+  useEffect(() => {
+    const fetchOsStats = async () => {
+      try {
+        const ordensRef = collection(db, "ordens_servicos");
+        const snapshot = await getDocs(ordensRef);
+        
+        let abertas = 0;
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.status === "aberta") abertas++;
+        });
+        
+        setOsBadgeCount(abertas);
+      } catch (error) {
+        console.error("Erro ao buscar estatísticas de OS:", error);
+      }
+    };
+
+    fetchOsStats();
+  }, [activeTab, subTab]);
+
+  // Sincronizar sub-aba quando mudar a aba principal
+  useEffect(() => {
+    if (activeTab === "paradas") {
+      setSubTab("abertas");
+    } else if (activeTab === "os") {
+      setSubTab("nova-os");
+    }
+  }, [activeTab]);
   
   const handleQrCodeScanned = async (code: string) => {
     const isOffline = !navigator.onLine;
@@ -51,7 +87,6 @@ export default function ParadaMaquina() {
       let foundEquipamento: { equipamento: string; setor: string } | null = null;
 
       if (isOffline) {
-        // Buscar do cache quando offline
         const cachedEquipamentos = await getCachedCollection('equipamentos');
         for (const data of cachedEquipamentos) {
           const equipNome = data.equipamento?.toLowerCase() || "";
@@ -73,7 +108,6 @@ export default function ParadaMaquina() {
           }
         }
       } else {
-        // Buscar do Firestore quando online
         const equipamentosRef = collection(db, "equipamentos");
         const snapshot = await getDocs(equipamentosRef);
         
@@ -143,7 +177,7 @@ export default function ParadaMaquina() {
     }
   };
 
-  const showFloatingButtons = activeTab === "paradas";
+  const showFloatingButtons = activeTab === "paradas" && subTab === "abertas";
 
   return (
     <OfflineSyncProvider>
@@ -163,35 +197,47 @@ export default function ParadaMaquina() {
         </header>
 
         {/* Conteúdo Principal */}
-        <main className="flex-1 container mx-auto px-4 py-4 overflow-y-auto min-h-0">
-          {activeTab === "paradas" && (
-            <ParadasTab 
+        <main className="flex-1 container mx-auto px-4 py-4 overflow-y-auto min-h-0 pb-36">
+          {/* Paradas */}
+          {activeTab === "paradas" && subTab === "abertas" && (
+            <ParadasAbertas 
               onCountChange={setOpenCount}
               onStatsChange={setStats}
-              openCount={openCount}
             />
           )}
-          {activeTab === "os" && <OrdensServicoTab />}
+          {activeTab === "paradas" && subTab === "historico" && (
+            <HistoricoParadas />
+          )}
+          
+          {/* OS */}
+          {activeTab === "os" && subTab === "nova-os" && (
+            <NovaOrdemServico />
+          )}
+          {activeTab === "os" && subTab === "historico-os" && (
+            <HistoricoOS />
+          )}
+          
+          {/* Perfil */}
           {activeTab === "perfil" && <PerfilParada stats={stats} />}
         </main>
 
-        {/* Botões Flutuantes - Apenas na aba Paradas */}
+        {/* Botões Flutuantes - Apenas na aba Paradas/Abertas */}
         {showFloatingButtons && (
-          <div className="fixed bottom-24 right-4 z-30 flex flex-col gap-3">
+          <div className="fixed bottom-44 right-4 z-30 flex flex-col gap-3">
             <Button 
               onClick={() => setIsQrScannerOpen(true)} 
               variant="outline" 
-              className="h-16 w-16 rounded-full shadow-xl bg-background border-2" 
+              className="h-14 w-14 rounded-full shadow-xl bg-background border-2" 
               size="icon"
             >
-              <Scan className="h-8 w-8" />
+              <Scan className="h-7 w-7" />
             </Button>
             <Button 
               onClick={() => setIsNovaParadaOpen(true)} 
-              className="h-16 w-16 rounded-full shadow-xl" 
+              className="h-14 w-14 rounded-full shadow-xl" 
               size="icon"
             >
-              <Plus className="h-8 w-8" />
+              <Plus className="h-7 w-7" />
             </Button>
           </div>
         )}
@@ -201,6 +247,9 @@ export default function ParadaMaquina() {
           activeTab={activeTab} 
           onTabChange={setActiveTab}
           badgeCount={openCount}
+          subTab={subTab}
+          onSubTabChange={setSubTab}
+          osBadgeCount={osBadgeCount}
         />
 
         {/* Modal Deslizante - Nova Parada */}
