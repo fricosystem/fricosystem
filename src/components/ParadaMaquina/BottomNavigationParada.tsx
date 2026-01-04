@@ -1,8 +1,8 @@
-import { AlertTriangle, History, User } from "lucide-react";
+import { AlertTriangle, User, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-type TabType = "paradas" | "historico" | "perfil";
+type TabType = "paradas" | "os" | "perfil";
 
 interface BottomNavigationParadaProps {
   activeTab: TabType;
@@ -13,7 +13,7 @@ interface BottomNavigationParadaProps {
 export function BottomNavigationParada({ activeTab, onTabChange, badgeCount }: BottomNavigationParadaProps) {
   const tabs = [
     { id: "paradas" as const, label: "Paradas", icon: AlertTriangle, hasBadge: true },
-    { id: "historico" as const, label: "Histórico", icon: History, hasBadge: false },
+    { id: "os" as const, label: "OS", icon: ClipboardList, hasBadge: false },
     { id: "perfil" as const, label: "Perfil", icon: User, hasBadge: false },
   ];
 

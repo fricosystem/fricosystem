@@ -299,17 +299,6 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
 
   return (
     <div className="space-y-5 pb-6">
-      {/* Cabeçalho da seção */}
-      <div className="flex items-center gap-3 pb-2 border-b border-border">
-        <div className="p-2 rounded-lg bg-primary/10">
-          <ClipboardPlus className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-base font-semibold">Registrar Nova OS</h2>
-          <p className="text-xs text-muted-foreground">Preencha os dados para abrir uma ordem de serviço</p>
-        </div>
-      </div>
-
       {/* Setor e Equipamento */}
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-1.5">

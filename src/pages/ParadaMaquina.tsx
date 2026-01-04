@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { Plus, Scan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NovaParadaMaquina from "@/components/ParadaMaquina/NovaParadaMaquina";
-import ParadasAbertas from "@/components/ParadaMaquina/ParadasAbertas";
-import HistoricoParadas from "@/components/ParadaMaquina/HistoricoParadas";
+import { ParadasTab } from "@/components/ParadaMaquina/ParadasTab";
 import { PerfilParada } from "@/components/ParadaMaquina/PerfilParada";
 import { BottomNavigationParada } from "@/components/ParadaMaquina/BottomNavigationParada";
+import { OrdensServicoTab } from "@/components/ParadaMaquina/OrdensServicoTab";
 import QrScannerModal from "@/components/ParadaMaquina/QrScannerModal";
 import { OfflineStatusBar } from "@/components/ExecucaoPreventiva/OfflineStatusBar";
 import { OfflineSyncProvider } from "@/contexts/OfflineSyncContext";
@@ -21,7 +21,7 @@ interface ScannedData {
   equipamento: string;
 }
 
-type TabType = "paradas" | "historico" | "perfil";
+type TabType = "paradas" | "os" | "perfil";
 
 export default function ParadaMaquina() {
   useBlockBackNavigation();
@@ -121,8 +121,8 @@ export default function ParadaMaquina() {
     switch (activeTab) {
       case "paradas":
         return "Paradas de Máquina";
-      case "historico":
-        return "Histórico de Paradas";
+      case "os":
+        return "Ordens de Serviço";
       case "perfil":
         return "Perfil";
       default:
@@ -133,9 +133,9 @@ export default function ParadaMaquina() {
   const getPageSubtitle = () => {
     switch (activeTab) {
       case "paradas":
-        return "Paradas em Aberto";
-      case "historico":
-        return "Paradas Concluídas";
+        return "Gestão de Paradas";
+      case "os":
+        return "Ordens de Serviço";
       case "perfil":
         return "Configurações";
       default:
@@ -165,12 +165,13 @@ export default function ParadaMaquina() {
         {/* Conteúdo Principal */}
         <main className="flex-1 container mx-auto px-4 py-4 overflow-y-auto min-h-0">
           {activeTab === "paradas" && (
-            <ParadasAbertas 
+            <ParadasTab 
               onCountChange={setOpenCount}
               onStatsChange={setStats}
+              openCount={openCount}
             />
           )}
-          {activeTab === "historico" && <HistoricoParadas />}
+          {activeTab === "os" && <OrdensServicoTab />}
           {activeTab === "perfil" && <PerfilParada stats={stats} />}
         </main>
 
