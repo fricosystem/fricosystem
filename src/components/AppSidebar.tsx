@@ -91,12 +91,7 @@ const AppSidebar = () => {
       icon: BarChart3,
       label: "Dashboard Geral",
       permission: "dashboard"
-    }, {
-      to: "/fornecedor-produtos",
-      icon: ShoppingBasket,
-      label: "Ordens de Compra",
-      permission: "ordens_compra"
-    }]
+    },]
   }, {
     label: "Estoque",
     icon: Boxes,
@@ -200,7 +195,16 @@ const AppSidebar = () => {
       label: "Devoluções",
       permission: "devolucoes"
     }]
-  }, {
+    }, {
+    label: "Fornecedores",
+    icon: Building,
+    items: [{
+      to: "/fornecedor-produtos",
+      icon: ShoppingBasket,
+      label: "Ordens de Compra",
+      permission: "ordens_compra"
+    }]
+    }, {
     label: "Compras",
     icon: ShoppingCart,
     items: [{
@@ -208,11 +212,6 @@ const AppSidebar = () => {
       icon: ShoppingBag,
       label: "Compras",
       permission: "compras"
-    }, {
-      to: "/fornecedores",
-      icon: Building,
-      label: "Fornecedores",
-      permission: "fornecedores"
     }, {
       to: "/cotacoes-orcamentos",
       icon: Receipt,
@@ -342,6 +341,11 @@ const AppSidebar = () => {
       icon: Factory,
       label: "Gestão de Manutenção",
       permission: "gestao_manutencao"
+    }, {
+      to: "/gestao-fornecedores",
+      icon: Building,
+      label: "Gestao de Fornecedores",
+      permission: "fornecedores"
     }, {
       to: "/gestao-tarefas",
       icon: ClipboardCheck,
