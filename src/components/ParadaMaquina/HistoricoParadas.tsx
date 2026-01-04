@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, Timestamp } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 import { Loader2, Search, ChevronRight, Clock, Wrench, CheckCircle2, XCircle, Timer } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +12,7 @@ import RelatorioParadaDetalhado from "./RelatorioParadaDetalhado";
 import { ParadaMaquina, isStatusConcluido, isStatusFinalizado } from "@/types/typesParadaMaquina";
 import { StatusBadgeParada } from "./StatusBadgeParada";
 import { HistoricoAcoesTimeline } from "./HistoricoAcoesTimeline";
+import { useParadaMaquina } from "@/hooks/useParadaMaquina";
 
 interface Usuario {
   id: string;
@@ -21,16 +20,20 @@ interface Usuario {
   cargo: string;
 }
 
-type FiltroStatus = "todos" | "concluidas" | "nao_executadas";
+type FiltroStatus = "todos" | "concluidas" | "nao_executadas" | "canceladas";
 
 const HistoricoParadas = () => {
-  const [paradas, setParadas] = useState<ParadaMaquina[]>([]);
+  const { paradas: todasParadas, loading } = useParadaMaquina();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todos");
   const [selectedParada, setSelectedParada] = useState<ParadaMaquina | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Filtra apenas paradas finalizadas (concluídas, canceladas ou não executadas) para o histórico
+  const paradas = React.useMemo(() => {
+    return todasParadas.filter(p => isStatusFinalizado(p.status));
+  }, [todasParadas]);
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -54,45 +57,11 @@ const HistoricoParadas = () => {
     fetchUsuarios();
   }, []);
 
-  const fetchParadas = async () => {
-    setLoading(true);
-    try {
-      const paradasRef = collection(db, "paradas_maquina");
-      const querySnapshot = await getDocs(paradasRef);
-      const fetchedParadas: ParadaMaquina[] = [];
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
-        // Filtra paradas concluídas e não executadas (finalizadas)
-        if (isStatusConcluido(data.status) || data.status === "nao_executada") {
-          fetchedParadas.push({
-            id: doc.id,
-            ...data
-          } as ParadaMaquina);
-        }
-      });
-      // Ordena por data de criação (mais recente primeiro)
-      fetchedParadas.sort((a, b) => {
-        const dateA = a.criadoEm?.toMillis?.() || 0;
-        const dateB = b.criadoEm?.toMillis?.() || 0;
-        return dateB - dateA;
-      });
-      setParadas(fetchedParadas);
-    } catch (error: any) {
-      console.error("Erro ao buscar histórico:", error);
-      toast.error("Erro ao carregar histórico de paradas");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchParadas();
-  }, []);
-
   const filteredParadas = paradas.filter(parada => {
     // Filtrar por status
     if (filtroStatus === "concluidas" && !isStatusConcluido(parada.status)) return false;
     if (filtroStatus === "nao_executadas" && parada.status !== "nao_executada") return false;
+    if (filtroStatus === "canceladas" && parada.status !== "cancelado") return false;
     
     // Filtrar por busca
     const searchValue = searchTerm.toLowerCase();
@@ -107,6 +76,7 @@ const HistoricoParadas = () => {
   // Contagem para os badges dos filtros
   const countConcluidas = paradas.filter(p => isStatusConcluido(p.status)).length;
   const countNaoExecutadas = paradas.filter(p => p.status === "nao_executada").length;
+  const countCanceladas = paradas.filter(p => p.status === "cancelado").length;
 
   const getResponsavelNome = (responsavelId: string) => {
     const usuario = usuarios.find(u => u.id === responsavelId);
@@ -181,6 +151,18 @@ const HistoricoParadas = () => {
               <XCircle className="h-4 w-4" />
               Não Executadas
               <Badge variant="secondary" className="text-xs bg-rose-500/20">{countNaoExecutadas}</Badge>
+            </button>
+            <button
+              onClick={() => setFiltroStatus("canceladas")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                filtroStatus === "canceladas"
+                  ? "bg-amber-500 text-white"
+                  : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20"
+              }`}
+            >
+              <XCircle className="h-4 w-4" />
+              Canceladas
+              <Badge variant="secondary" className="text-xs bg-amber-500/20">{countCanceladas}</Badge>
             </button>
           </div>
         </CardHeader>

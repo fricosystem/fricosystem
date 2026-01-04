@@ -90,7 +90,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       
       <Button 
         type="submit" 
-        className="w-full bg-frico-600 hover:bg-frico-700"
+        className="w-full bg-primary hover:bg-primary/90"
         disabled={loading}
       >
         {loading ? "Entrando..." : "Entrar"}

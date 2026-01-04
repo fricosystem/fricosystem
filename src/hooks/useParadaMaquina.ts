@@ -464,9 +464,9 @@ export const useParadaMaquina = () => {
     );
   }, [paradas, user]);
 
-  // Paradas abertas (não concluídas)
+  // Paradas abertas (não finalizadas - exclui concluídas, canceladas e não executadas)
   const paradasAbertas = useMemo(() => {
-    return paradas.filter(p => !isStatusConcluido(p.status) && p.status !== "cancelado");
+    return paradas.filter(p => !isStatusFinalizado(p.status));
   }, [paradas]);
 
   // Paradas concluídas (histórico)

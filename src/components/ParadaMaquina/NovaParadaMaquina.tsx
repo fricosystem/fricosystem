@@ -312,7 +312,7 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
       
       const batch = writeBatch(db);
       const paradaId = uuidv4();
-      const paradaRef = doc(db, "paradasMaquina", paradaId);
+      const paradaRef = doc(db, "paradas_maquina", paradaId);
       
       // Criar timestamp do horário programado
       const [ano, mes, dia] = formData.dataProgramada.split('-').map(Number);
@@ -343,7 +343,7 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
         tipoFalha: formData.tipoFalha || "",
         tipoManutencao: formData.tipoManutencao || "",
         origemParada: origemParada || "",
-        status: "pendente",
+        status: "aguardando",
         criadoEm: Timestamp.now(),
         criadoPor: user?.uid || "",
         encarregadoNome: userData?.nome || user?.email || "",
