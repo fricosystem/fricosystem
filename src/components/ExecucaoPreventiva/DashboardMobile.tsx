@@ -2515,6 +2515,325 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </CardContent>
       </Card>
 
+      {/* Divisória e Seção de Resumo / Disponibilidade */}
+      <Separator className="my-6" />
+      
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          Resumo / Disponibilidade
+        </h2>
+        <p className="text-sm text-muted-foreground">Indicadores detalhados por linha de produção</p>
+      </div>
+
+      {/* Tabela 1: Disponibilidade por Setor */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Gauge className="h-5 w-5 text-success" />
+            Disponibilidade por Setor
+          </CardTitle>
+          <CardDescription>Média de disponibilidade da máquina e geral</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-3 font-semibold">Setor</th>
+                  <th className="text-right p-3 font-semibold">Disp. Máquina</th>
+                  <th className="text-right p-3 font-semibold">Disp. Geral</th>
+                  <th className="text-right p-3 font-semibold">Qtd. Paradas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  // Agrupa paradas por setor
+                  const setorParadas: Record<string, { count: number; tempoTotal: number }> = {};
+                  paradasMaquina.forEach(p => {
+                    const setor = p.setor || "Outros";
+                    if (!setorParadas[setor]) {
+                      setorParadas[setor] = { count: 0, tempoTotal: 0 };
+                    }
+                    setorParadas[setor].count++;
+                    setorParadas[setor].tempoTotal += p.tempoParada || 0;
+                  });
+
+                  // Adiciona setores sem paradas
+                  setores.forEach(s => {
+                    if (!setorParadas[s.nome]) {
+                      setorParadas[s.nome] = { count: 0, tempoTotal: 0 };
+                    }
+                  });
+
+                  const totalParadasGeral = Object.values(setorParadas).reduce((acc, s) => acc + s.count, 0);
+                  const totalTempoGeral = Object.values(setorParadas).reduce((acc, s) => acc + s.tempoTotal, 0);
+
+                  // Calcula disponibilidade (assumindo 8760 horas/ano = 525600 min)
+                  const calcDisp = (tempoParada: number) => {
+                    const tempoTotal = 525600; // minutos em um ano
+                    return Math.max(0, Math.min(100, ((tempoTotal - tempoParada) / tempoTotal) * 100));
+                  };
+
+                  const sortedSetores = Object.entries(setorParadas)
+                    .sort((a, b) => b[1].count - a[1].count);
+
+                  return (
+                    <>
+                      {sortedSetores.map(([setor, data]) => {
+                        const dispMaquina = calcDisp(data.tempoTotal);
+                        const dispGeral = calcDisp(data.tempoTotal * 1.1);
+                        return (
+                          <tr key={setor} className="border-b hover:bg-muted/30">
+                            <td className="p-3">{setor}</td>
+                            <td className="text-right p-3">{dispMaquina.toFixed(2).replace('.', ',')}%</td>
+                            <td className="text-right p-3">{dispGeral.toFixed(2).replace('.', ',')}%</td>
+                            <td className="text-right p-3">{data.count}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="bg-muted/70 font-semibold">
+                        <td className="p-3">Total Geral</td>
+                        <td className="text-right p-3">{calcDisp(totalTempoGeral).toFixed(2).replace('.', ',')}%</td>
+                        <td className="text-right p-3">{calcDisp(totalTempoGeral * 1.1).toFixed(2).replace('.', ',')}%</td>
+                        <td className="text-right p-3">{totalParadasGeral}</td>
+                      </tr>
+                    </>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela 2: Tempo de Parada por Setor */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Timer className="h-5 w-5 text-warning" />
+            Tempo de Parada por Setor
+          </CardTitle>
+          <CardDescription>Soma de tempo de parada por setor</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-3 font-semibold">Setor</th>
+                  <th className="text-right p-3 font-semibold">Tempo Parada</th>
+                  <th className="text-right p-3 font-semibold">Qtd. Paradas</th>
+                  <th className="text-right p-3 font-semibold">Média/Parada</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const setorTempos: Record<string, { tempo: number; count: number }> = {};
+                  paradasMaquina.forEach(p => {
+                    const setor = p.setor || "Outros";
+                    if (!setorTempos[setor]) {
+                      setorTempos[setor] = { tempo: 0, count: 0 };
+                    }
+                    setorTempos[setor].tempo += p.tempoParada || 0;
+                    setorTempos[setor].count++;
+                  });
+
+                  const formatTempo = (minutos: number) => {
+                    const h = Math.floor(minutos / 60);
+                    const m = Math.floor(minutos % 60);
+                    return `${h}:${m.toString().padStart(2, '0')}:00`;
+                  };
+
+                  const totalTempo = Object.values(setorTempos).reduce((acc, s) => acc + s.tempo, 0);
+                  const totalCount = Object.values(setorTempos).reduce((acc, s) => acc + s.count, 0);
+
+                  const sortedSetores = Object.entries(setorTempos)
+                    .sort((a, b) => b[1].tempo - a[1].tempo);
+
+                  return (
+                    <>
+                      {sortedSetores.map(([setor, data]) => (
+                        <tr key={setor} className="border-b hover:bg-muted/30">
+                          <td className="p-3">{setor}</td>
+                          <td className="text-right p-3">{formatTempo(data.tempo)}</td>
+                          <td className="text-right p-3">{data.count}</td>
+                          <td className="text-right p-3">{formatTempo(data.count > 0 ? data.tempo / data.count : 0)}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-muted/70 font-semibold">
+                        <td className="p-3">Total Geral</td>
+                        <td className="text-right p-3">{formatTempo(totalTempo)}</td>
+                        <td className="text-right p-3">{totalCount}</td>
+                        <td className="text-right p-3">{formatTempo(totalCount > 0 ? totalTempo / totalCount : 0)}</td>
+                      </tr>
+                    </>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela 3: Tipos de Manutenção */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Wrench className="h-5 w-5 text-primary" />
+            Tipos de Manutenção
+          </CardTitle>
+          <CardDescription>Contagem e tempo gasto por tipo</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-3 font-semibold">Tipo de Manutenção</th>
+                  <th className="text-right p-3 font-semibold">Contagem</th>
+                  <th className="text-right p-3 font-semibold">Tempo Gasto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const tipoStats: Record<string, { count: number; tempo: number }> = {};
+                  paradasMaquina.forEach(p => {
+                    const tipo = p.tipoManutencao || "(vazio)";
+                    if (!tipoStats[tipo]) {
+                      tipoStats[tipo] = { count: 0, tempo: 0 };
+                    }
+                    tipoStats[tipo].count++;
+                    tipoStats[tipo].tempo += p.tempoParada || 0;
+                  });
+
+                  const formatTempo = (minutos: number) => {
+                    const h = Math.floor(minutos / 60);
+                    const m = Math.floor(minutos % 60);
+                    return `${h}:${m.toString().padStart(2, '0')}:00`;
+                  };
+
+                  const totalCount = Object.values(tipoStats).reduce((acc, s) => acc + s.count, 0);
+                  const totalTempo = Object.values(tipoStats).reduce((acc, s) => acc + s.tempo, 0);
+
+                  const sortedTipos = Object.entries(tipoStats)
+                    .sort((a, b) => b[1].count - a[1].count);
+
+                  return (
+                    <>
+                      {sortedTipos.map(([tipo, data]) => (
+                        <tr key={tipo} className="border-b hover:bg-muted/30">
+                          <td className={`p-3 ${tipo === "(vazio)" ? "text-muted-foreground italic" : ""}`}>{tipo}</td>
+                          <td className="text-right p-3">{data.count}</td>
+                          <td className="text-right p-3">{formatTempo(data.tempo)}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-muted/70 font-semibold">
+                        <td className="p-3">Total Geral</td>
+                        <td className="text-right p-3">{totalCount}</td>
+                        <td className="text-right p-3">{formatTempo(totalTempo)}</td>
+                      </tr>
+                    </>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela 4: Execuções por Dia da Semana */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            Execuções por Dia da Semana
+          </CardTitle>
+          <CardDescription>Distribuição de execuções preventivas</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-center p-3 font-semibold">Segunda</th>
+                  <th className="text-center p-3 font-semibold">Terça</th>
+                  <th className="text-center p-3 font-semibold">Quarta</th>
+                  <th className="text-center p-3 font-semibold">Quinta</th>
+                  <th className="text-center p-3 font-semibold">Sexta</th>
+                  <th className="text-center p-3 font-semibold">Sábado</th>
+                  <th className="text-center p-3 font-semibold">Domingo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const diasSemana = [0, 0, 0, 0, 0, 0, 0]; // Dom, Seg, Ter, Qua, Qui, Sex, Sab
+                  const diasParadas = [0, 0, 0, 0, 0, 0, 0];
+                  const diasTempo = [0, 0, 0, 0, 0, 0, 0];
+
+                  historicoFiltrado.forEach(exec => {
+                    if (exec.dataExecucao) {
+                      let dataExec: Date;
+                      const timestamp = exec.dataExecucao as any;
+                      if (typeof timestamp === 'object' && typeof timestamp.toDate === 'function') {
+                        dataExec = timestamp.toDate();
+                      } else if (timestamp instanceof Date) {
+                        dataExec = timestamp;
+                      } else {
+                        return;
+                      }
+                      diasSemana[dataExec.getDay()]++;
+                    }
+                  });
+
+                  paradasMaquina.forEach(p => {
+                    if (p.criadoEm) {
+                      let dataParada: Date;
+                      const timestamp = p.criadoEm as any;
+                      if (typeof timestamp === 'object' && typeof timestamp.toDate === 'function') {
+                        dataParada = timestamp.toDate();
+                      } else if (timestamp instanceof Date) {
+                        dataParada = timestamp;
+                      } else {
+                        return;
+                      }
+                      diasParadas[dataParada.getDay()]++;
+                      diasTempo[dataParada.getDay()] += p.tempoParada || 0;
+                    }
+                  });
+
+                  // Reordena: Seg, Ter, Qua, Qui, Sex, Sab, Dom
+                  const reorder = (arr: number[]) => [arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[0]];
+                  const execReord = reorder(diasSemana);
+                  const paradReord = reorder(diasParadas);
+                  const tempoReord = reorder(diasTempo);
+
+                  return (
+                    <>
+                      <tr className="border-b hover:bg-muted/30">
+                        {execReord.map((val, i) => (
+                          <td key={`exec-${i}`} className="text-center p-3 text-success font-medium">{val} exec.</td>
+                        ))}
+                      </tr>
+                      <tr className="border-b hover:bg-muted/30">
+                        {paradReord.map((val, i) => (
+                          <td key={`parada-${i}`} className="text-center p-3 text-destructive">{val} paradas</td>
+                        ))}
+                      </tr>
+                      <tr className="hover:bg-muted/30">
+                        {tempoReord.map((val, i) => (
+                          <td key={`tempo-${i}`} className="text-center p-3 text-muted-foreground text-xs">{Math.round(val)} min</td>
+                        ))}
+                      </tr>
+                    </>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
