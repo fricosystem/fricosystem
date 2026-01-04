@@ -171,7 +171,6 @@ const AppContent = () => {
           <Route path="/devolucao" element={<AuthGuard><DevolucaoMateriais /></AuthGuard>} />
           <Route path="/enderecamento" element={<AuthGuard><Enderecamento /></AuthGuard>} />
           <Route path="/parada-maquina" element={<AuthGuard><EncarregadoGuard><ParadaMaquina /></EncarregadoGuard></AuthGuard>} />
-          <Route path="/fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
           <Route path="/importar-planilha" element={<AuthGuard><ImportarPlanilha /></AuthGuard>} />
           <Route path="/medida-de-lenha" element={<AuthGuard><MedidaLenha /></AuthGuard>} />
           <Route path="/gestao-produtos" element={<AuthGuard><GestaoProdutos /></AuthGuard>} />
@@ -183,6 +182,7 @@ const AppContent = () => {
           <Route path="/unidades" element={<AuthGuard><Unidades /></AuthGuard>} />
           <Route path="/setores" element={<AuthGuard><Setores /></AuthGuard>} />
           <Route path="/gestao-manutencao" element={<AuthGuard><GestaoSetores /></AuthGuard>} />
+          <Route path="/gestao-fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
           <Route path="/maquinas" element={<AuthGuard><Maquinas /></AuthGuard>} />
           <Route path="/maquinas/:id" element={<AuthGuard><MaquinaDetalhes /></AuthGuard>} />
           <Route path="/dashboard-manutencao" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
