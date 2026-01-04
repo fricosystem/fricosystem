@@ -20,15 +20,14 @@ interface OrdemServico {
   id: string;
   setor: string;
   equipamento: string;
+  linha: string;
   descricaoOS: string;
   responsavelChamado: string;
   origensParada: string[];
+  observacaoManutencao: string;
   status: string;
   criadoEm: Timestamp;
-  tipoManutencao?: string;
-  linha?: string;
-  dataAberturaOS?: string;
-  observacaoManutencao?: string;
+  dataAberturaOS: string;
 }
 
 interface Produto {
@@ -467,10 +466,10 @@ export function OSAbertasMobile() {
               </div>
 
               <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                {os.tipoManutencao && (
+                {os.linha && (
                   <div className="flex items-center gap-1.5">
                     <Wrench className="h-4 w-4" />
-                    <span>{os.tipoManutencao}</span>
+                    <span>Linha: {os.linha}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-1.5">
@@ -538,11 +537,18 @@ export function OSAbertasMobile() {
                         label="Solicitante"
                         value={selectedOS.responsavelChamado || "Não informado"}
                       />
-                      {selectedOS.tipoManutencao && (
+                      {selectedOS.linha && (
                         <InfoRow 
                           icon={<Wrench className="h-5 w-5" />}
-                          label="Tipo de Manutenção"
-                          value={selectedOS.tipoManutencao}
+                          label="Linha"
+                          value={selectedOS.linha}
+                        />
+                      )}
+                      {selectedOS.observacaoManutencao && (
+                        <InfoRow 
+                          icon={<FileText className="h-5 w-5" />}
+                          label="Motivo da Manutenção"
+                          value={selectedOS.observacaoManutencao}
                         />
                       )}
                     </div>

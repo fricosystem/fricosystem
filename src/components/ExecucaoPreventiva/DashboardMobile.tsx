@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { AlertCircle, CheckCircle2, Clock, TrendingUp, Wrench, AlertTriangle, Calendar, Target, Timer, Activity, ListChecks, Layers, BarChart3, PieChartIcon, Settings2, Factory, Users, TrendingDown, Gauge, Zap, ShieldCheck, ArrowUpRight, ArrowDownRight, Percent, CalendarClock, Award, Cog, Building2, FileCheck, CircleDot, Ban, Play, Pause, RotateCcw, ClipboardCheck } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, TrendingUp, Wrench, AlertTriangle, Calendar, Target, Timer, Activity, ListChecks, Layers, BarChart3, PieChartIcon, Settings2, Factory, Users, TrendingDown, Gauge, Zap, ShieldCheck, ArrowUpRight, ArrowDownRight, Percent, CalendarClock, Award, Cog, Building2, FileCheck, CircleDot, Ban, Play, Pause, RotateCcw, ClipboardCheck, Check } from "lucide-react";
 import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
 import { HistoricoExecucao } from "@/services/historicoExecucoes";
 import { TemplateTarefa } from "@/types/typesTemplatesTarefas";
@@ -82,7 +82,11 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
   const [templates, setTemplates] = useState<TemplateTarefa[]>([]);
   const [loadingParadas, setLoadingParadas] = useState(true);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
-  const [filtrarPorUsuario, setFiltrarPorUsuario] = useState(false);
+
+  // Estados para Ordens de Serviço
+  const [ordensServico, setOrdensServico] = useState<{id: string; status: string; setor: string; equipamento: string; criadoEm: any; observacaoManutencao?: string}[]>([]);
+  const [ordensFinalizadas, setOrdensFinalizadas] = useState<{id: string; tempoTotal?: number; setor?: string; equipamento?: string; finalizadoEm?: any}[]>([]);
+  const [loadingOS, setLoadingOS] = useState(true);
 
   useEffect(() => {
     const fetchParadas = async () => {
@@ -161,27 +165,126 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     fetchExtras();
   }, []);
 
-  // Filtrar tarefas do usuário logado se necessário
-  const tarefasFiltradas = filtrarPorUsuario 
-    ? tarefas.filter(t => t.manutentorEmail === userData?.email)
-    : tarefas;
+  // Buscar Ordens de Serviço
+  useEffect(() => {
+    const fetchOS = async () => {
+      try {
+        const [osSnap, osFinalizadasSnap] = await Promise.all([
+          getDocs(collection(db, "ordens_servicos")),
+          getDocs(collection(db, "ordens_servico_finalizada"))
+        ]);
+        
+        setOrdensServico(osSnap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as any[]);
+        
+        setOrdensFinalizadas(osFinalizadasSnap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as any[]);
+      } catch (error) {
+        console.error("Erro ao buscar OS:", error);
+      } finally {
+        setLoadingOS(false);
+      }
+    };
+    fetchOS();
+  }, []);
 
-  const historicoFiltrado = filtrarPorUsuario
-    ? historicoExecucoes.filter(h => h.manutentorEmail === userData?.email)
-    : historicoExecucoes;
+  // Usar tarefas diretamente (sem filtro por usuário)
+  const tarefasFiltradas = tarefas;
+  const historicoFiltrado = historicoExecucoes;
 
   // Templates ativos e inativos
   const templatesAtivos = templates.filter(t => t.ativo);
   const templatesInativos = templates.filter(t => !t.ativo);
 
-  // Stats filtradas
-  const statsFiltradas = filtrarPorUsuario ? {
-    hoje: tarefasFiltradas.filter(t => t.proximaExecucao === new Date().toISOString().split("T")[0] && t.status === "pendente").length,
-    atrasadas: tarefasFiltradas.filter(t => t.proximaExecucao < new Date().toISOString().split("T")[0] && t.status === "pendente").length,
-    concluidas: historicoFiltrado.length,
-    emAndamento: tarefasFiltradas.filter(t => t.status === "em_andamento").length,
-    total: tarefasFiltradas.length
-  } : stats;
+  // Stats (usar diretamente sem filtro)
+  const statsFiltradas = stats;
+
+  // Stats de Ordens de Serviço
+  const osAbertas = ordensServico.filter(os => os.status === "aberta").length;
+  const osEmExecucao = ordensServico.filter(os => os.status === "em_execucao").length;
+  const osConcluidas = ordensFinalizadas.length;
+  const osTotalAbertas = ordensServico.length;
+
+  // Tempo médio de execução de OS
+  const tempoMedioOS = () => {
+    const osComTempo = ordensFinalizadas.filter(os => os.tempoTotal && os.tempoTotal > 0);
+    if (osComTempo.length === 0) return 0;
+    return Math.round(osComTempo.reduce((acc, os) => acc + (os.tempoTotal || 0), 0) / osComTempo.length / 60);
+  };
+
+  // OS por setor
+  const osPorSetorData = () => {
+    const setorCount: Record<string, number> = {};
+    ordensServico.forEach(os => {
+      const setor = os.setor || "Outros";
+      setorCount[setor] = (setorCount[setor] || 0) + 1;
+    });
+    return Object.entries(setorCount)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  };
+
+  // OS por equipamento (Top 5)
+  const osPorEquipamentoData = () => {
+    const equipCount: Record<string, number> = {};
+    ordensServico.forEach(os => {
+      const equip = os.equipamento || "Outros";
+      equipCount[equip] = (equipCount[equip] || 0) + 1;
+    });
+    return Object.entries(equipCount)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  };
+
+  // Evolução de OS nos últimos 7 dias
+  const osUltimos7DiasData = () => {
+    const hoje = new Date();
+    const dias: Record<string, number> = {};
+    
+    for (let i = 6; i >= 0; i--) {
+      const data = new Date(hoje);
+      data.setDate(data.getDate() - i);
+      const key = data.toLocaleDateString('pt-BR', { weekday: 'short' });
+      dias[key] = 0;
+    }
+
+    ordensFinalizadas.forEach(os => {
+      if (os.finalizadoEm) {
+        let dataOS: Date;
+        const timestamp = os.finalizadoEm as any;
+        if (typeof timestamp === 'object' && typeof timestamp.toDate === 'function') {
+          dataOS = timestamp.toDate();
+        } else if (timestamp instanceof Date) {
+          dataOS = timestamp;
+        } else {
+          return;
+        }
+        
+        const diffTime = hoje.getTime() - dataOS.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays >= 0 && diffDays < 7) {
+          const key = dataOS.toLocaleDateString('pt-BR', { weekday: 'short' });
+          if (dias[key] !== undefined) {
+            dias[key]++;
+          }
+        }
+      }
+    });
+
+    return Object.entries(dias).map(([name, value]) => ({ name, os: value }));
+  };
+
+  // Taxa de resolução de OS
+  const taxaResolucaoOS = osTotalAbertas > 0 
+    ? Math.round((osConcluidas / (osConcluidas + osTotalAbertas)) * 100) 
+    : 100;
 
   // Dados para gráfico de Status das Tarefas (Pie)
   const statusTarefasData = [
@@ -830,29 +933,14 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
   };
   return (
     <div className="space-y-4 pb-20">
-      {/* Filtro por Usuário */}
-      <Card className="bg-gradient-to-r from-primary/5 to-primary/10">
-        <CardContent className="pt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-primary" />
-              <Label htmlFor="filtro-usuario" className="text-sm font-medium">
-                Filtrar apenas minhas tarefas
-              </Label>
-            </div>
-            <Switch
-              id="filtro-usuario"
-              checked={filtrarPorUsuario}
-              onCheckedChange={setFiltrarPorUsuario}
-            />
-          </div>
-          {filtrarPorUsuario && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Mostrando apenas dados de: {userData?.nome || userData?.email}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {/* ========== SEÇÃO: MANUTENÇÕES PREVENTIVAS ========== */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <Wrench className="h-5 w-5 text-primary" />
+          Manutenções Preventivas
+        </h2>
+        <p className="text-xs text-muted-foreground">Visão geral das tarefas preventivas</p>
+      </div>
 
       {/* Cards de KPIs - Preventivas */}
       <div className="grid grid-cols-2 gap-3">
@@ -909,7 +997,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </Card>
       </div>
 
-      {/* KPIs de Produtividade */}
+      {/* KPIs de Produtividade - Preventivas */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5">
           <CardHeader className="pb-2">
@@ -965,117 +1053,6 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </CardContent>
       </Card>
 
-      {/* KPIs de Paradas */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-warning" />
-            Resumo de Paradas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-xl font-bold text-warning">{paradasPendentes}</div>
-              <p className="text-xs text-muted-foreground">Pendentes</p>
-            </div>
-            <div>
-              <div className="text-xl font-bold text-primary">{paradasEmAndamento}</div>
-              <p className="text-xs text-muted-foreground">Em Andamento</p>
-            </div>
-            <div>
-              <div className="text-xl font-bold text-success">{paradasConcluidas}</div>
-              <p className="text-xs text-muted-foreground">Concluídas</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Gráfico de Progresso Radial */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Target className="h-5 w-5 text-success" />
-            Progresso Geral
-          </CardTitle>
-          <CardDescription>Taxa de conclusão de tarefas</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px] flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadialBarChart 
-                cx="50%" 
-                cy="50%" 
-                innerRadius="60%" 
-                outerRadius="100%" 
-                barSize={20} 
-                data={progressoRadialData}
-                startAngle={90}
-                endAngle={-270}
-              >
-                <RadialBar
-                  background={{ fill: 'hsl(var(--muted))' }}
-                  dataKey="value"
-                  cornerRadius={10}
-                />
-                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
-                  <tspan x="50%" dy="-0.5em" fontSize="24" fontWeight="bold">{taxaConclusao}%</tspan>
-                  <tspan x="50%" dy="1.5em" fontSize="12" className="fill-muted-foreground">concluído</tspan>
-                </text>
-              </RadialBarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Gráfico de Status das Tarefas */}
-      {statusTarefasData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Status das Preventivas
-            </CardTitle>
-            <CardDescription>Distribuição por status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusTarefasData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={90}
-                    paddingAngle={3}
-                    dataKey="value"
-                    nameKey="name"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {statusTarefasData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      background: 'hsl(var(--background))', 
-                      borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
-                    }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--success))' }}
-                    formatter={(value, name, props) => [`${value} tarefas`, props.payload.name]}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Gráfico de Execuções nos últimos 7 dias */}
       <Card>
         <CardHeader>
@@ -1118,6 +1095,320 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
           </div>
         </CardContent>
       </Card>
+
+      {/* ========== SEÇÃO: PARADAS DE MÁQUINA ========== */}
+      <Separator className="my-6" />
+      <div className="space-y-2">
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-warning" />
+          Paradas de Máquina
+        </h2>
+        <p className="text-xs text-muted-foreground">Monitoramento de paradas e disponibilidade</p>
+      </div>
+
+      {/* KPIs de Paradas */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="bg-gradient-to-br from-warning/10 to-warning/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium flex items-center gap-1">
+              <Pause className="h-3 w-3 text-warning" />
+              Pendentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-xl font-bold text-warning">{paradasPendentes}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium flex items-center gap-1">
+              <Play className="h-3 w-3 text-primary" />
+              Em Andamento
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-xl font-bold text-primary">{paradasEmAndamento}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-success/10 to-success/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium flex items-center gap-1">
+              <Check className="h-3 w-3 text-success" />
+              Concluídas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-xl font-bold text-success">{paradasConcluidas}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* KPIs Estratégicos de Paradas */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-green-500" />
+              Resolução
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-500">{taxaResolucaoParadas}%</div>
+            <Progress value={taxaResolucaoParadas} className="h-2 mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">Paradas resolvidas</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Timer className="h-4 w-4 text-amber-500" />
+              Tempo Médio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-500">{tempoMedioParada()}<span className="text-sm">min</span></div>
+            <p className="text-xs text-muted-foreground mt-1">Por parada</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gráfico de Paradas por Setor */}
+      {paradasPorSetorData().length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-warning" />
+              Paradas por Setor
+            </CardTitle>
+            <CardDescription>Distribuição de paradas</CardDescription>
+          </CardHeader>
+          <CardContent>
+          <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={paradasPorSetorData()}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" fontSize={11} />
+                  <YAxis fontSize={12} allowDecimals={false} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      background: 'hsl(var(--background))', 
+                      borderColor: 'hsl(var(--border))',
+                      borderRadius: 'var(--radius)'
+                    }}
+                    formatter={(value) => [`${value}`, 'Paradas']}
+                  />
+                  <Bar dataKey="value" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ========== SEÇÃO: ORDENS DE SERVIÇO ========== */}
+      <Separator className="my-6" />
+      <div className="space-y-2">
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <ClipboardCheck className="h-5 w-5 text-blue-500" />
+          Ordens de Serviço
+        </h2>
+        <p className="text-xs text-muted-foreground">Acompanhamento de OS corretivas</p>
+      </div>
+
+      {/* KPIs de OS */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="bg-gradient-to-br from-orange-500/10 to-orange-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CircleDot className="h-4 w-4 text-orange-500" />
+              Abertas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-500">{osAbertas}</div>
+            <p className="text-xs text-muted-foreground">Aguardando execução</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Play className="h-4 w-4 text-blue-500" />
+              Em Execução
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-500">{osEmExecucao}</div>
+            <p className="text-xs text-muted-foreground">Sendo executadas</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-success/10 to-success/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              Finalizadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-success">{osConcluidas}</div>
+            <p className="text-xs text-muted-foreground">Total concluídas</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Timer className="h-4 w-4 text-purple-500" />
+              Tempo Médio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-500">{tempoMedioOS()}<span className="text-sm">min</span></div>
+            <p className="text-xs text-muted-foreground">Por execução</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Taxa de Resolução de OS */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-5 w-5 text-blue-500" />
+            Taxa de Resolução de OS
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="text-3xl font-bold text-blue-500">{taxaResolucaoOS}%</div>
+            <div className="flex-1">
+              <Progress value={taxaResolucaoOS} className="h-3" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* OS por Setor */}
+      {osPorSetorData().length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-blue-500" />
+              OS por Setor
+            </CardTitle>
+            <CardDescription>Distribuição de ordens de serviço</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={osPorSetorData()}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" fontSize={10} angle={-15} textAnchor="end" height={60} />
+                  <YAxis fontSize={12} allowDecimals={false} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      background: 'hsl(var(--background))', 
+                      borderColor: 'hsl(var(--border))',
+                      borderRadius: 'var(--radius)'
+                    }}
+                    formatter={(value) => [`${value}`, 'OS']}
+                  />
+                  <Bar dataKey="value" fill="hsl(142 76% 36%)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* OS por Equipamento */}
+      {osPorEquipamentoData().length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Cog className="h-5 w-5 text-blue-500" />
+              Top 5 Equipamentos com OS
+            </CardTitle>
+            <CardDescription>Equipamentos com mais ordens de serviço</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={osPorEquipamentoData()} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis type="number" fontSize={12} allowDecimals={false} />
+                  <YAxis dataKey="name" type="category" fontSize={10} width={120} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      background: 'hsl(var(--background))', 
+                      borderColor: 'hsl(var(--border))',
+                      borderRadius: 'var(--radius)'
+                    }}
+                    formatter={(value) => [`${value}`, 'OS']}
+                  />
+                  <Bar dataKey="value" fill="hsl(221 83% 53%)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* OS Finalizadas - Últimos 7 dias */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-success" />
+            OS Finalizadas - Últimos 7 Dias
+          </CardTitle>
+          <CardDescription>Ordens de serviço concluídas por dia</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={osUltimos7DiasData()}>
+                <defs>
+                  <linearGradient id="colorOS" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(221 83% 53%)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="hsl(221 83% 53%)" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis dataKey="name" fontSize={12} />
+                <YAxis fontSize={12} allowDecimals={false} />
+                <Tooltip 
+                  contentStyle={{ 
+                    background: 'hsl(var(--background))', 
+                    borderColor: 'hsl(var(--border))',
+                    borderRadius: 'var(--radius)'
+                  }}
+                  formatter={(value) => [`${value}`, 'OS']}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="os" 
+                  stroke="hsl(221 83% 53%)" 
+                  fillOpacity={1} 
+                  fill="url(#colorOS)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ========== SEÇÃO: INDICADORES GERAIS ========== */}
+      <Separator className="my-6" />
+      <div className="space-y-2">
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <Target className="h-5 w-5 text-primary" />
+          Indicadores Estratégicos
+        </h2>
+        <p className="text-xs text-muted-foreground">Metas e performance geral</p>
+      </div>
 
       {/* Gráfico de Produtividade Semanal */}
       <Card>
