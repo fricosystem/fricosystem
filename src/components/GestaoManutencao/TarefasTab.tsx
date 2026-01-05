@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, ClipboardList, RefreshCw, Loader2, Clock, CheckCircle, XCircle } from "lucide-react";
-import { NovaTarefaModal } from "@/components/ManutencaoPreventiva/NovaTarefaModal";
+import { NovaTarefaModal } from "@/pages/ManutencaoPreventiva/components/NovaTarefaModal";
 import { EditarTarefaModal } from "@/components/GestaoManutencao/EditarTarefaModal";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";

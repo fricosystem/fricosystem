@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Bell, ShoppingCart, MessageSquare, QrCode, Barcode, Scan, Mail, Calendar } from "lucide-react";
-import { NotificacoesWidget } from "@/components/ManutencaoPreventiva/NotificacoesWidget";
+import { NotificacoesWidget } from "@/pages/ManutencaoPreventiva/components/NotificacoesWidget";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
