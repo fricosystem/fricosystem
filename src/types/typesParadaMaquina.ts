@@ -65,12 +65,16 @@ export interface ParadaMaquina {
   linhaParada: string;
   descricaoMotivo: string;
   observacao: string;
-  origemParada: OrigemParada;
+  origemParada: OrigemParada | string;  // Suporta objeto (correto) ou string (legado)
   responsavelManutencao?: string;
   tipoManutencao: string;
   solucaoAplicada?: string;
   produtosUtilizados?: ProdutoUtilizado[];
   valorTotalProdutos?: number;
+  
+  // Campos adicionais de classificação
+  tipoFalha?: string;                   // Tipo de falha selecionado
+  dataProgramada?: string;              // Data programada (YYYY-MM-DD)
   
   // Campos de controle de fluxo
   status: StatusParada;
@@ -105,6 +109,25 @@ export interface ParadaMaquina {
   equipamentoId?: string;
   sistemaId?: string;
 }
+
+// Helper para extrair origens da parada (suporta string e objeto)
+export const getOrigensParadaArray = (origens: OrigemParada | string | undefined): string[] => {
+  if (!origens) return [];
+  
+  // Formato string (legado/novo)
+  if (typeof origens === "string") {
+    return origens ? [origens] : [];
+  }
+  
+  // Formato objeto com booleans
+  const tipos: string[] = [];
+  if (origens.automatizacao) tipos.push("Automatização");
+  if (origens.terceiros) tipos.push("Terceiros");
+  if (origens.eletrica) tipos.push("Elétrica");
+  if (origens.mecanica) tipos.push("Mecânica");
+  if (origens.outro) tipos.push("Outro");
+  return tipos;
+};
 
 // Helper para obter label do status
 export const getStatusLabel = (status: StatusParada): string => {

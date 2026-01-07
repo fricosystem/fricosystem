@@ -172,7 +172,14 @@ export function HistoricoParadasMobile() {
 
   const getOrigensParada = (origens: ParadaMaquina["origemParada"]) => {
     if (!origens) return [];
-    const tipos = [];
+    
+    // Formato string (legado/novo)
+    if (typeof origens === "string") {
+      return origens ? [origens] : [];
+    }
+    
+    // Formato objeto com booleans
+    const tipos: string[] = [];
     if (origens.automatizacao) tipos.push("Automatização");
     if (origens.terceiros) tipos.push("Terceiros");
     if (origens.eletrica) tipos.push("Elétrica");

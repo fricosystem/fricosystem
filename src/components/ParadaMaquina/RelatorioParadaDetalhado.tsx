@@ -53,12 +53,20 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
     }
   };
   const getOrigensParada = (origens: ParadaMaquina["origemParada"]) => {
-    const tipos = [];
-    if (origens?.automatizacao) tipos.push("Automatização");
-    if (origens?.terceiros) tipos.push("Terceiros");
-    if (origens?.eletrica) tipos.push("Elétrica");
-    if (origens?.mecanica) tipos.push("Mecânica");
-    if (origens?.outro) tipos.push("Outro");
+    if (!origens) return [];
+    
+    // Formato string (legado/novo)
+    if (typeof origens === "string") {
+      return origens ? [origens] : [];
+    }
+    
+    // Formato objeto com booleans
+    const tipos: string[] = [];
+    if (origens.automatizacao) tipos.push("Automatização");
+    if (origens.terceiros) tipos.push("Terceiros");
+    if (origens.eletrica) tipos.push("Elétrica");
+    if (origens.mecanica) tipos.push("Mecânica");
+    if (origens.outro) tipos.push("Outro");
     return tipos;
   };
 

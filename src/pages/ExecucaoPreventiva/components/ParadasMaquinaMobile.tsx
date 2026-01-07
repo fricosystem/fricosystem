@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { StatusBadgeParada } from "@/pages/ParadaMaquina/components/StatusBadgeParada";
 import { HistoricoAcoesTimeline } from "@/pages/ParadaMaquina/components/HistoricoAcoesTimeline";
 import { useParadaMaquina } from "@/hooks/useParadaMaquina";
-import { ParadaMaquina, podeIniciarExecucao } from "@/types/typesParadaMaquina";
+import { ParadaMaquina, podeIniciarExecucao, getOrigensParadaArray } from "@/types/typesParadaMaquina";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -270,14 +270,7 @@ export function ParadasMaquinaMobile() {
   };
 
   const getOrigensParada = (origens: ParadaMaquina["origemParada"]) => {
-    if (!origens) return [];
-    const tipos = [];
-    if (origens.automatizacao) tipos.push("Automatização");
-    if (origens.terceiros) tipos.push("Terceiros");
-    if (origens.eletrica) tipos.push("Elétrica");
-    if (origens.mecanica) tipos.push("Mecânica");
-    if (origens.outro) tipos.push("Outro");
-    return tipos;
+    return getOrigensParadaArray(origens);
   };
 
   const formatHorarioProgramado = (parada: ParadaMaquina) => {
@@ -353,11 +346,11 @@ export function ParadasMaquinaMobile() {
                 )}
 
                 <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                  {((parada as any).horarioInicio || (parada as any).horarioFinal || parada.hrInicial || parada.hrFinal) && (
+                  {(parada.hrInicial || parada.hrFinal) && (
                     <div className="flex items-center gap-1.5 bg-primary/10 px-2 py-1 rounded-lg">
                       <Timer className="h-4 w-4 text-primary" />
                       <span className="font-medium text-primary">
-                        {formatHorario((parada as any).horarioInicio) || parada.hrInicial || "--:--"} - {formatHorario((parada as any).horarioFinal) || parada.hrFinal || "--:--"}
+                        {parada.hrInicial || "--:--"} - {parada.hrFinal || "--:--"}
                       </span>
                     </div>
                   )}
@@ -378,7 +371,7 @@ export function ParadasMaquinaMobile() {
                 <div className="flex justify-between items-center pt-1 gap-2 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     <StatusBadgeParada status={parada.status} />
-                    <CountdownTimer horarioInicio={(parada as any).horarioInicio} />
+                    <CountdownTimer horarioInicio={parada.hrInicial} />
                     <TempoInicioIndicator hrInicial={parada.hrInicial} hrFinal={parada.hrFinal} status={parada.status} />
                   </div>
                   <span className="text-sm text-muted-foreground">
@@ -435,7 +428,7 @@ export function ParadasMaquinaMobile() {
                       <InfoRow 
                         icon={<Clock className="h-5 w-5" />}
                         label="Período Programado"
-                        value={`${formatHorario((selectedParada as any).horarioInicio) || selectedParada.hrInicial || "--:--"} até ${formatHorario((selectedParada as any).horarioFinal) || selectedParada.hrFinal || "--:--"}`}
+                        value={`${selectedParada.hrInicial || "--:--"} até ${selectedParada.hrFinal || "--:--"}`}
                       />
                       <InfoRow 
                         icon={<Wrench className="h-5 w-5" />}

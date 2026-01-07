@@ -76,6 +76,8 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
     equipamento: "",
     dataProgramada: dataAtual,
     horaInicio: "",
+    horaFinal: "",
+    linhaParada: "",
     descricaoMotivo: "",
     observacao: "",
     tipoFalha: "",
@@ -309,6 +311,19 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
         setIsSubmitting(false);
         return;
       }
+
+      if (!formData.horaFinal) {
+        toast.error("Por favor, preencha a hora final");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validar que hora final é maior que hora inicio
+      if (formData.horaFinal <= formData.horaInicio) {
+        toast.error("A hora final deve ser maior que a hora inicial");
+        setIsSubmitting(false);
+        return;
+      }
       
       const batch = writeBatch(db);
       const paradaId = uuidv4();
@@ -337,12 +352,14 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
         dataProgramada: formData.dataProgramada,
         horarioProgramado: Timestamp.fromDate(horarioProgramado),
         hrInicial: formData.horaInicio,
-        hrFinal: "",
+        hrFinal: formData.horaFinal,
+        linhaParada: formData.linhaParada || "",
         descricaoMotivo: formData.descricaoMotivo,
         observacao: formData.observacao || "",
         tipoFalha: formData.tipoFalha || "",
         tipoManutencao: formData.tipoManutencao || "",
         origemParada: origemParada || "",
+        responsavelManutencao: userData?.nome || user?.email || "",
         status: "aguardando",
         criadoEm: Timestamp.now(),
         criadoPor: user?.uid || "",
@@ -362,6 +379,8 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
         equipamento: "",
         dataProgramada: dataAtual,
         horaInicio: "",
+        horaFinal: "",
+        linhaParada: "",
         descricaoMotivo: "",
         observacao: "",
         tipoFalha: "",
@@ -437,20 +456,22 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
             </div>
           </div>
 
-          {/* Data e Hora Início */}
+          {/* Data Programada */}
+          <div className="space-y-1">
+            <Label htmlFor="dataProgramada" className="text-xs sm:text-sm">Data Programada*</Label>
+            <Input
+              id="dataProgramada"
+              name="dataProgramada"
+              type="date"
+              value={formData.dataProgramada}
+              onChange={handleChange}
+              className="h-9 text-xs sm:text-sm"
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+
+          {/* Hora Início e Hora Final */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="dataProgramada" className="text-xs sm:text-sm">Data Programada*</Label>
-              <Input
-                id="dataProgramada"
-                name="dataProgramada"
-                type="date"
-                value={formData.dataProgramada}
-                onChange={handleChange}
-                className="h-9 text-xs sm:text-sm"
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
             <div className="space-y-1">
               <Label htmlFor="horaInicio" className="text-xs sm:text-sm">Hora Início*</Label>
               <Input
@@ -458,6 +479,17 @@ const NovaParadaMaquina = ({ onSuccess, initialData }: NovaParadaMaquinaProps) =
                 name="horaInicio"
                 type="time"
                 value={formData.horaInicio}
+                onChange={handleChange}
+                className="h-9 text-xs sm:text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="horaFinal" className="text-xs sm:text-sm">Hora Final*</Label>
+              <Input
+                id="horaFinal"
+                name="horaFinal"
+                type="time"
+                value={formData.horaFinal}
                 onChange={handleChange}
                 className="h-9 text-xs sm:text-sm"
               />

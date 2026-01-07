@@ -179,17 +179,14 @@ export const useParadaMaquina = () => {
       return false;
     }
 
-    // Usar horarioInicio se horarioProgramado não existir (compatibilidade com dados antigos)
-    const horarioParaVerificacao = parada.horarioProgramado || (parada as any).horarioInicio;
-
-    // Verificar regra dos 5 minutos
-    const { pode, mensagem } = podeIniciarExecucao(horarioParaVerificacao);
+    // Verificar regra dos 5 minutos usando horarioProgramado (Timestamp)
+    const { pode, mensagem } = podeIniciarExecucao(parada.horarioProgramado);
     if (!pode) {
       toast.error(mensagem);
       return false;
     }
 
-    const atrasado = verificarAtraso(horarioParaVerificacao);
+    const atrasado = verificarAtraso(parada.horarioProgramado);
     const novoHistorico = criarHistorico(
       "iniciado",
       parada.status,

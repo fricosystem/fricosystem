@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, CheckCircle2, XCircle, Clock, AlertTriangle, Timer } from "lucide-react";
+import { Loader2, Search, CheckCircle2, XCircle, Clock, AlertTriangle, Timer, Wrench } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { StatusBadgeParada } from "./StatusBadgeParada";
 import { HistoricoAcoesTimeline } from "./HistoricoAcoesTimeline";
 import { useParadaMaquina } from "@/hooks/useParadaMaquina";
-import { ParadaMaquina, isStatusAguardandoVerificacao } from "@/types/typesParadaMaquina";
+import { ParadaMaquina, isStatusAguardandoVerificacao, getOrigensParadaArray } from "@/types/typesParadaMaquina";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -231,14 +231,54 @@ const VerificacaoParadas = () => {
                     <h4 className="font-semibold text-xs text-muted-foreground">Tentativa</h4>
                     <p>{selectedParada.tentativaAtual || 1}ª tentativa</p>
                   </div>
+
+                  {/* Período Programado */}
+                  <div className="col-span-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground">Período Programado</h4>
+                    <p className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      {selectedParada.hrInicial || "--:--"} até {selectedParada.hrFinal || "--:--"}
+                    </p>
+                  </div>
                   
                   {selectedParada.horarioProgramado && (
                     <div className="col-span-2">
-                      <h4 className="font-semibold text-xs text-muted-foreground">Horário Programado</h4>
+                      <h4 className="font-semibold text-xs text-muted-foreground">Data/Hora Programado</h4>
                       <p className="flex items-center gap-2">
                         <Timer className="h-4 w-4" />
                         {format(selectedParada.horarioProgramado.toDate(), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Tipo de Manutenção e Tipo de Falha */}
+                  {selectedParada.tipoManutencao && (
+                    <div>
+                      <h4 className="font-semibold text-xs text-muted-foreground">Tipo de Manutenção</h4>
+                      <p className="flex items-center gap-1">
+                        <Wrench className="h-3 w-3" />
+                        {selectedParada.tipoManutencao}
+                      </p>
+                    </div>
+                  )}
+                  {selectedParada.tipoFalha && (
+                    <div>
+                      <h4 className="font-semibold text-xs text-muted-foreground">Tipo de Falha</h4>
+                      <p>{selectedParada.tipoFalha}</p>
+                    </div>
+                  )}
+
+                  {/* Origem da Parada */}
+                  {getOrigensParadaArray(selectedParada.origemParada).length > 0 && (
+                    <div className="col-span-2">
+                      <h4 className="font-semibold text-xs text-muted-foreground mb-1">Origem da Parada</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {getOrigensParadaArray(selectedParada.origemParada).map((origem, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {origem}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
 
