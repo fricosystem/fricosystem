@@ -5,17 +5,45 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Database, Upload, FileText } from "lucide-react";
 import * as XLSX from 'xlsx';
-import { uploadMultipleProducts, uploadProduct } from "@/firebase/firestore";
+import { uploadMultipleProducts, uploadProduct, uploadParadaRealizada, uploadMultipleParadasRealizadas } from "@/firebase/firestore";
 import AppLayout from "@/layouts/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportTable } from "@/components/ImportTable";
 import { EquipmentTable } from "@/components/EquipamentTable";
-import { ImportedProduct, ImportedEquipment } from "@/types/typesImportarPlanilha";
+import { ParadasRealizadasTable } from "@/components/ParadasRealizadasTable";
+import { ImportedProduct, ImportedEquipment, ImportedParadaRealizada } from "@/types/typesImportarPlanilha";
 import { uploadEquipment, uploadMultipleEquipments } from "@/firebase/firestore";
+
+// Converte número serial do Excel para string de data no formato dd/MM/yyyy
+const excelDateToString = (value: any): string => {
+  if (!value) return "";
+  
+  // Se já for uma string no formato esperado, retorna diretamente
+  if (typeof value === 'string' && value.includes('/')) {
+    return value;
+  }
+  
+  // Se for um número (serial do Excel), converte para data
+  if (typeof value === 'number') {
+    // Excel usa 1/1/1900 como dia 1, mas tem um bug que considera 1900 como ano bissexto
+    // Por isso, subtraímos 25569 para converter para Unix timestamp (dias desde 1/1/1970)
+    const excelEpoch = new Date(1899, 11, 30); // 30/12/1899
+    const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+  }
+  
+  return String(value);
+};
 
 const ImportarPlanilha = () => {
   const [importedData, setImportedData] = useState<ImportedProduct[]>([]);
   const [importedEquipments, setImportedEquipments] = useState<ImportedEquipment[]>([]);
+  const [importedParadas, setImportedParadas] = useState<ImportedParadaRealizada[]>([]);
   const [fileSelected, setFileSelected] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingSingle, setIsUploadingSingle] = useState<number | null>(null);
@@ -113,6 +141,43 @@ const ImportarPlanilha = () => {
               title: "Sucesso",
               description: `${equipments.length} equipamentos importados com sucesso.`,
             });
+          } else if (activeTab === "paradas") {
+            // Lê os dados baseado nas colunas A-O (índice 0-14)
+            const rawData = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
+            
+            if (rawData.length <= 1) {
+              toast({
+                title: "Erro",
+                description: "A planilha não contém dados ou o formato está incorreto.",
+                variant: "destructive",
+              });
+              return;
+            }
+            
+            // Ignora a primeira linha (cabeçalho) e mapeia as colunas
+            const paradas: ImportedParadaRealizada[] = rawData.slice(1).map((row: any[]) => ({
+              setor: String(row[0] || ""),
+              patrimonio: String(row[1] || ""),
+              equipamento: String(row[2] || ""),
+              tipoManutencao: String(row[3] || ""),
+              dataProgramada: excelDateToString(row[4]),
+              dataConclusao: excelDateToString(row[5]),
+              hrInicial: String(row[6] || ""),
+              hrFinal: String(row[7] || ""),
+              manutentorI: String(row[8] || ""),
+              manutentorII: String(row[9] || ""),
+              manutentorIII: String(row[10] || ""),
+              manutentorIIII: String(row[11] || ""),
+              tipoFalha: String(row[12] || ""),
+              descricaoMotivo: String(row[13] || ""),
+              resolucao: String(row[14] || ""),
+            })).filter((p: ImportedParadaRealizada) => p.setor || p.patrimonio || p.equipamento);
+            
+            setImportedParadas(paradas);
+            toast({
+              title: "Sucesso",
+              description: `${paradas.length} paradas importadas com sucesso.`,
+            });
           }
         } catch (error) {
           console.error("Erro ao processar planilha:", error);
@@ -147,8 +212,10 @@ const ImportarPlanilha = () => {
   const handleClearData = () => {
     if (activeTab === "produtos") {
       setImportedData([]);
-    } else {
+    } else if (activeTab === "equipamentos") {
       setImportedEquipments([]);
+    } else if (activeTab === "paradas") {
+      setImportedParadas([]);
     }
     setFileSelected(null);
     toast({
@@ -166,7 +233,7 @@ const ImportarPlanilha = () => {
         title: "Produto removido",
         description: "O produto foi removido da lista de importação.",
       });
-    } else {
+    } else if (activeTab === "equipamentos") {
       const newData = [...importedEquipments];
       newData.splice(index, 1);
       setImportedEquipments(newData);
@@ -174,10 +241,18 @@ const ImportarPlanilha = () => {
         title: "Equipamento removido",
         description: "O equipamento foi removido da lista de importação.",
       });
+    } else if (activeTab === "paradas") {
+      const newData = [...importedParadas];
+      newData.splice(index, 1);
+      setImportedParadas(newData);
+      toast({
+        title: "Parada removida",
+        description: "A parada foi removida da lista de importação.",
+      });
     }
   };
   
-  const handleUpdateItem = (index: number, updatedItem: ImportedProduct | ImportedEquipment) => {
+  const handleUpdateItem = (index: number, updatedItem: ImportedProduct | ImportedEquipment | ImportedParadaRealizada) => {
     if (activeTab === "produtos") {
       const newData = [...importedData];
       newData[index] = updatedItem as ImportedProduct;
@@ -186,13 +261,21 @@ const ImportarPlanilha = () => {
         title: "Produto atualizado",
         description: "O produto foi atualizado com sucesso.",
       });
-    } else {
+    } else if (activeTab === "equipamentos") {
       const newData = [...importedEquipments];
       newData[index] = updatedItem as ImportedEquipment;
       setImportedEquipments(newData);
       toast({
         title: "Equipamento atualizado",
         description: "O equipamento foi atualizado com sucesso.",
+      });
+    } else if (activeTab === "paradas") {
+      const newData = [...importedParadas];
+      newData[index] = updatedItem as ImportedParadaRealizada;
+      setImportedParadas(newData);
+      toast({
+        title: "Parada atualizada",
+        description: "A parada foi atualizada com sucesso.",
       });
     }
   };
@@ -230,6 +313,26 @@ const ImportarPlanilha = () => {
       toast({
         title: "Erro",
         description: "Falha ao enviar equipamento para o Firestore.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingSingle(null);
+    }
+  };
+
+  const handleUploadParada = async (index: number, parada: ImportedParadaRealizada) => {
+    setIsUploadingSingle(index);
+    try {
+      await uploadParadaRealizada(parada);
+      toast({
+        title: "Sucesso",
+        description: `Parada do equipamento ${parada.equipamento} cadastrada com sucesso!`,
+      });
+    } catch (error) {
+      console.error("Erro ao enviar parada:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao enviar parada para o Firestore.",
         variant: "destructive",
       });
     } finally {
@@ -294,7 +397,7 @@ const ImportarPlanilha = () => {
       } finally {
         setIsUploading(false);
       }
-    } else {
+    } else if (activeTab === "equipamentos") {
       if (importedEquipments.length === 0) {
         toast({
           title: "Erro",
@@ -321,8 +424,92 @@ const ImportarPlanilha = () => {
       } finally {
         setIsUploading(false);
       }
+    } else if (activeTab === "paradas") {
+      if (importedParadas.length === 0) {
+        toast({
+          title: "Erro",
+          description: "Não há paradas para enviar.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setIsUploading(true);
+      try {
+        await uploadMultipleParadasRealizadas(importedParadas);
+        toast({
+          title: "Sucesso",
+          description: `${importedParadas.length} paradas enviadas para o Firestore.`,
+        });
+      } catch (error) {
+        console.error("Erro ao enviar paradas:", error);
+        toast({
+          title: "Erro",
+          description: "Falha ao enviar paradas para o Firestore.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
+
+  const getCurrentCount = () => {
+    if (activeTab === "produtos") return importedData.length;
+    if (activeTab === "equipamentos") return importedEquipments.length;
+    if (activeTab === "paradas") return importedParadas.length;
+    return 0;
+  };
+
+  const renderFileControls = () => (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col md:flex-row gap-2 md:gap-4">
+        <Input 
+          ref={fileInputRef}
+          type="file" 
+          accept=".xlsx,.xls,.csv" 
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        <Button 
+          onClick={handleSelectFileClick} 
+          variant="outline"
+          className="w-full md:w-auto bg-gray-700 border-gray-600 hover:bg-gray-600 text-white"
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          Selecionar Arquivo
+        </Button>
+        <Button 
+          onClick={handleImport}
+          className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          Importar Dados
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={handleClearData}
+          className="w-full md:w-auto bg-gray-700 border-gray-600 hover:bg-gray-600 text-white"
+        >
+          Limpar Dados
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={handleUploadAll}
+          disabled={isUploading}
+          className="w-full md:w-auto bg-purple-600 hover:bg-purple-700 text-white"
+        >
+          <Database className="mr-2 h-5 w-5" />
+          {isUploading ? "Enviando..." : `Enviar Todos (${getCurrentCount()})`}
+        </Button>
+      </div>
+      
+      {fileSelected && (
+        <p className="text-sm text-gray-300 break-all">
+          Arquivo selecionado: {fileSelected.name}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <AppLayout title="Importar Planilha">
@@ -338,7 +525,7 @@ const ImportarPlanilha = () => {
               </CardHeader>
               <CardContent>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 bg-gray-700">
+                  <TabsList className="grid w-full grid-cols-3 bg-gray-700">
                     <TabsTrigger 
                       value="produtos" 
                       className="data-[state=active]:bg-gray-600 data-[state=active]:text-white"
@@ -351,106 +538,24 @@ const ImportarPlanilha = () => {
                     >
                       Importar Equipamentos
                     </TabsTrigger>
+                    <TabsTrigger 
+                      value="paradas" 
+                      className="data-[state=active]:bg-gray-600 data-[state=active]:text-white"
+                    >
+                      Importar Paradas Realizadas
+                    </TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="produtos" className="mt-4">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col md:flex-row gap-2 md:gap-4">
-                        <Input 
-                          ref={fileInputRef}
-                          type="file" 
-                          accept=".xlsx,.xls,.csv" 
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                        <Button 
-                          onClick={handleSelectFileClick} 
-                          variant="outline"
-                          className="w-full md:w-auto bg-gray-700 border-gray-600 hover:bg-gray-600 text-white"
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          Selecionar Arquivo
-                        </Button>
-                        <Button 
-                          onClick={handleImport}
-                          className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          Importar Dados
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={handleClearData}
-                          className="w-full md:w-auto bg-gray-700 border-gray-600 hover:bg-gray-600 text-white"
-                        >
-                          Limpar Dados
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          onClick={handleUploadAll}
-                          disabled={isUploading}
-                          className="w-full md:w-auto bg-purple-600 hover:bg-purple-700 text-white"
-                        >
-                          <Database className="mr-2 h-5 w-5" />
-                          {isUploading ? "Enviando..." : `Enviar Todos (${importedData.length})`}
-                        </Button>
-                      </div>
-                      
-                      {fileSelected && (
-                        <p className="text-sm text-gray-300 break-all">
-                          Arquivo selecionado: {fileSelected.name}
-                        </p>
-                      )}
-                    </div>
+                    {renderFileControls()}
                   </TabsContent>
                   
                   <TabsContent value="equipamentos" className="mt-4">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col md:flex-row gap-2 md:gap-4">
-                        <Input 
-                          ref={fileInputRef}
-                          type="file" 
-                          accept=".xlsx,.xls,.csv" 
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                        <Button 
-                          onClick={handleSelectFileClick} 
-                          variant="outline"
-                          className="w-full md:w-auto bg-gray-700 border-gray-600 hover:bg-gray-600 text-white"
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          Selecionar Arquivo
-                        </Button>
-                        <Button 
-                          onClick={handleImport}
-                          className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          Importar Dados
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={handleClearData}
-                          className="w-full md:w-auto bg-gray-700 border-gray-600 hover:bg-gray-600 text-white"
-                        >
-                          Limpar Dados
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          onClick={handleUploadAll}
-                          disabled={isUploading}
-                          className="w-full md:w-auto bg-purple-600 hover:bg-purple-700 text-white"
-                        >
-                          <Database className="mr-2 h-5 w-5" />
-                          {isUploading ? "Enviando..." : `Enviar Todos (${importedEquipments.length})`}
-                        </Button>
-                      </div>
-                      
-                      {fileSelected && (
-                        <p className="text-sm text-gray-300 break-all">
-                          Arquivo selecionado: {fileSelected.name}
-                        </p>
-                      )}
-                    </div>
+                    {renderFileControls()}
+                  </TabsContent>
+
+                  <TabsContent value="paradas" className="mt-4">
+                    {renderFileControls()}
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -492,6 +597,27 @@ const ImportarPlanilha = () => {
                       onRemoveEquipment={handleRemoveItem}
                       onUpdateEquipment={(index, equipment) => handleUpdateItem(index, equipment)}
                       onUploadEquipment={handleUploadEquipment}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === "paradas" && importedParadas.length > 0 && (
+              <div className="space-y-6">
+                <Card className="w-full bg-gray-800 border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-white">
+                      <FileText className="mr-2 h-5 w-5" />
+                      Dados Importados - Paradas Realizadas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    <ParadasRealizadasTable
+                      paradas={importedParadas}
+                      onRemoveParada={handleRemoveItem}
+                      onUpdateParada={(index, parada) => handleUpdateItem(index, parada)}
+                      onUploadParada={handleUploadParada}
                     />
                   </CardContent>
                 </Card>

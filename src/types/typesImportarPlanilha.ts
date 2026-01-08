@@ -41,3 +41,21 @@ export type ImportedEquipment = {
   setor: string;
   tag: string;
 };
+
+export type ImportedParadaRealizada = {
+  setor: string;
+  patrimonio: string;
+  equipamento: string;
+  tipoManutencao: string;
+  dataProgramada: string;
+  dataConclusao: string;
+  hrInicial: string;
+  hrFinal: string;
+  manutentorI: string;
+  manutentorII: string;
+  manutentorIII: string;
+  manutentorIIII: string;
+  tipoFalha: string;
+  descricaoMotivo: string;
+  resolucao: string;
+};

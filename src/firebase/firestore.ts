@@ -1,7 +1,7 @@
 // src/firebase/firestore.ts
 import { collection, addDoc, writeBatch, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
-import { ImportedProduct, ImportedEquipment } from "@/types/typesImportarPlanilha";
+import { ImportedProduct, ImportedEquipment, ImportedParadaRealizada } from "@/types/typesImportarPlanilha";
 
 // Função genérica para upload em lote
 const uploadBatch = async <T>(
@@ -92,7 +92,40 @@ export const uploadMultipleEquipments = async (equipments: ImportedEquipment[]) 
   }
 };
 
-// Operações para Emails
+// Operações para Paradas Realizadas
+export const uploadParadaRealizada = async (parada: ImportedParadaRealizada) => {
+  try {
+    const docRef = await addDoc(collection(db, "paradas_maquina"), {
+      ...parada,
+      createdAt: serverTimestamp()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Erro ao enviar parada realizada:", error);
+    throw error;
+  }
+};
+
+export const uploadMultipleParadasRealizadas = async (paradas: ImportedParadaRealizada[]) => {
+  try {
+    const batch = writeBatch(db);
+    const collectionRef = collection(db, "paradas_maquina");
+    
+    paradas.forEach((parada) => {
+      const docRef = doc(collectionRef);
+      batch.set(docRef, {
+        ...parada,
+        createdAt: serverTimestamp()
+      });
+    });
+    
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Erro ao enviar paradas realizadas:", error);
+    throw error;
+  }
+};
 export const uploadEmail = async (emailData: {
   remetente: string;
   remetenteNome: string;
