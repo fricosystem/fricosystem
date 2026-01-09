@@ -555,6 +555,50 @@ export const useParadaMaquina = () => {
     }
   };
 
+  // Cancelar parada (Encarregado - antes da execução | Manutentor - durante execução)
+  const cancelarParada = async (paradaId: string, motivo: string, canceladoPor: "encarregado" | "manutentor") => {
+    const parada = paradas.find(p => p.id === paradaId);
+    if (!parada) {
+      toast.error("Parada não encontrada");
+      return false;
+    }
+
+    // Validar se pode cancelar baseado no status e quem está cancelando
+    if (canceladoPor === "encarregado" && parada.status !== "aguardando") {
+      toast.error("Só é possível cancelar paradas que ainda não foram iniciadas");
+      return false;
+    }
+
+    if (canceladoPor === "manutentor" && parada.status !== "em_andamento") {
+      toast.error("Só é possível cancelar paradas em andamento");
+      return false;
+    }
+
+    const novoHistorico = criarHistorico(
+      "cancelado",
+      parada.status,
+      "cancelado",
+      `Cancelado por ${canceladoPor}: ${motivo}`,
+      parada.tentativaAtual
+    );
+
+    try {
+      const paradaRef = doc(db, "paradas_maquina", paradaId);
+      await updateDoc(paradaRef, {
+        status: "cancelado",
+        observacaoVerificacao: motivo,
+        historicoAcoes: [...(parada.historicoAcoes || []), novoHistorico]
+      });
+
+      toast.success("Parada cancelada com sucesso!");
+      return true;
+    } catch (error) {
+      console.error("Erro ao cancelar parada:", error);
+      toast.error("Erro ao cancelar parada");
+      return false;
+    }
+  };
+
   return {
     paradas,
     paradasAbertas,
@@ -568,6 +612,7 @@ export const useParadaMaquina = () => {
     verificarConcluido,
     verificarNaoConcluido,
     marcarCorrigido,
-    marcarNaoCorrigido
+    marcarNaoCorrigido,
+    cancelarParada
   };
 };

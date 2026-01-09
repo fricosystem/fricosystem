@@ -441,8 +441,8 @@ export function ParadasMaquinaMobile() {
                       />
                       <InfoRow 
                         icon={<Clock className="h-5 w-5" />}
-                        label="Período Programado"
-                        value={`${formatHorario((selectedParada as any).horarioInicio) || selectedParada.hrInicial || "--:--"} até ${formatHorario((selectedParada as any).horarioFinal) || selectedParada.hrFinal || "--:--"}`}
+                        label="Horário Programado"
+                        value={selectedParada.hrInicial || "--:--"}
                       />
                       <InfoRow 
                         icon={<Wrench className="h-5 w-5" />}

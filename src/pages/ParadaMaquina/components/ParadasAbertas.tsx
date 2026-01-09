@@ -17,7 +17,7 @@ interface ParadasAbertasProps {
 }
 
 const ParadasAbertas = ({ onCountChange, onStatsChange }: ParadasAbertasProps) => {
-  const { paradasAbertas, loading, stats, marcarCorrigido, marcarNaoCorrigido } = useParadaMaquina();
+  const { paradasAbertas, loading, stats, marcarCorrigido, marcarNaoCorrigido, cancelarParada } = useParadaMaquina();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedParada, setSelectedParada] = useState<ParadaMaquina | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -168,12 +168,17 @@ const ParadasAbertas = ({ onCountChange, onStatsChange }: ParadasAbertasProps) =
               <RelatorioParadaDetalhado
                 parada={selectedParada}
                 showVerificacaoButtons={true}
+                showCancelarButton={true}
                 onMarcarCorrigido={async (paradaId) => {
                   await marcarCorrigido(paradaId);
                   setIsDetailOpen(false);
                 }}
                 onMarcarNaoCorrigido={async (paradaId) => {
                   await marcarNaoCorrigido(paradaId);
+                  setIsDetailOpen(false);
+                }}
+                onCancelarParada={async (paradaId, motivo) => {
+                  await cancelarParada(paradaId, motivo, "encarregado");
                   setIsDetailOpen(false);
                 }}
               />

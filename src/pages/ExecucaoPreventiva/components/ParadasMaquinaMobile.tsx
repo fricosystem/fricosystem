@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Search, Play, CheckCircle, Clock, AlertTriangle, Timer, Calendar, Wrench, User, FileText, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Loader2, Search, Play, CheckCircle, Clock, AlertTriangle, Timer, Calendar, Wrench, User, FileText, ChevronRight, CheckCircle2, Ban } from "lucide-react";
 import { format, differenceInSeconds } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -214,14 +214,17 @@ export function ParadasMaquinaMobile() {
     paradasParaManutentor, 
     loading, 
     iniciarExecucao, 
-    finalizarExecucao
+    finalizarExecucao,
+    cancelarParada
   } = useParadaMaquina();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedParada, setSelectedParada] = useState<ParadaMaquina | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFinalizando, setIsFinalizando] = useState(false);
+  const [isCancelando, setIsCancelando] = useState(false);
   const [solucaoAplicada, setSolucaoAplicada] = useState("");
+  const [motivoCancelamento, setMotivoCancelamento] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const filteredParadas = paradasParaManutentor.filter((parada) => {
@@ -266,6 +269,25 @@ export function ParadasMaquinaMobile() {
       setIsFinalizando(false);
       setSolucaoAplicada("");
       // Não fecha o modal - vai para status aguardando_verificacao
+    }
+  };
+
+  const handleCancelar = async () => {
+    if (!selectedParada) return;
+    
+    if (!motivoCancelamento.trim()) {
+      toast.error("Informe o motivo do cancelamento");
+      return;
+    }
+
+    setProcessingId(selectedParada.id);
+    const success = await cancelarParada(selectedParada.id, motivoCancelamento, "manutentor");
+    setProcessingId(null);
+    
+    if (success) {
+      setIsCancelando(false);
+      setMotivoCancelamento("");
+      setIsDetailOpen(false);
     }
   };
 
@@ -427,8 +449,8 @@ export function ParadasMaquinaMobile() {
                       />
                       <InfoRow 
                         icon={<Clock className="h-5 w-5" />}
-                        label="Período Programado"
-                        value={`${selectedParada.hrInicial || "--:--"} até ${selectedParada.hrFinal || "--:--"}`}
+                        label="Horário Programado"
+                        value={selectedParada.hrInicial || "--:--"}
                       />
                       <InfoRow 
                         icon={<Wrench className="h-5 w-5" />}
@@ -590,6 +612,15 @@ export function ParadasMaquinaMobile() {
                           <CheckCircle className="h-5 w-5 mr-2" />
                           Finalizar Execução
                         </Button>
+                        <Button 
+                          className="w-full h-14 text-base font-semibold"
+                          variant="destructive"
+                          onClick={() => setIsCancelando(true)}
+                          disabled={processingId === selectedParada?.id}
+                        >
+                          <Ban className="h-5 w-5 mr-2" />
+                          Cancelar Parada
+                        </Button>
                       </>
                     ) : selectedParada?.status === "aguardando_verificacao" || 
                          selectedParada?.status?.match(/^aguardando_verificacao_\d+$/) ? (
@@ -655,6 +686,49 @@ export function ParadasMaquinaMobile() {
                 <CheckCircle className="h-4 w-4 mr-2" />
               )}
               Confirmar Finalização
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Cancelamento */}
+      <Dialog open={isCancelando} onOpenChange={setIsCancelando}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar Parada</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja cancelar esta parada em andamento? Esta ação não pode ser desfeita.
+            </p>
+            <div>
+              <label className="text-sm font-medium">Motivo do Cancelamento *</label>
+              <Textarea
+                placeholder="Informe o motivo do cancelamento..."
+                value={motivoCancelamento}
+                onChange={(e) => setMotivoCancelamento(e.target.value)}
+                className="mt-2"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsCancelando(false)}>
+              Voltar
+            </Button>
+            <Button 
+              onClick={handleCancelar}
+              disabled={processingId !== null || !motivoCancelamento.trim()}
+              variant="destructive"
+            >
+              {processingId ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Ban className="h-4 w-4 mr-2" />
+              )}
+              Confirmar Cancelamento
             </Button>
           </DialogFooter>
         </DialogContent>

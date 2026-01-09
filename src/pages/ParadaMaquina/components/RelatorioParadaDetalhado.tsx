@@ -4,16 +4,20 @@ import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Clock, Wrench, User, Calendar, MapPin, AlertTriangle, Package, FileText, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Clock, Wrench, User, Calendar, MapPin, AlertTriangle, Package, FileText, CheckCircle2, XCircle, Loader2, Ban } from "lucide-react";
 import { ParadaMaquina } from "@/types/typesParadaMaquina";
 import { Timestamp } from "firebase/firestore";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface RelatorioParadaDetalhadoProps {
   parada: ParadaMaquina;
   responsavelNome?: string;
   onMarcarCorrigido?: (paradaId: string) => Promise<void>;
   onMarcarNaoCorrigido?: (paradaId: string) => Promise<void>;
+  onCancelarParada?: (paradaId: string, motivo: string) => Promise<void>;
   showVerificacaoButtons?: boolean;
+  showCancelarButton?: boolean;
 }
 
 const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
@@ -21,10 +25,14 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
   responsavelNome,
   onMarcarCorrigido,
   onMarcarNaoCorrigido,
+  onCancelarParada,
   showVerificacaoButtons = false,
+  showCancelarButton = false,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingAction, setProcessingAction] = useState<'corrigido' | 'nao_corrigido' | null>(null);
+  const [processingAction, setProcessingAction] = useState<'corrigido' | 'nao_corrigido' | 'cancelar' | null>(null);
+  const [isCancelarModalOpen, setIsCancelarModalOpen] = useState(false);
+  const [motivoCancelamento, setMotivoCancelamento] = useState("");
 
   // Verifica se o status é aguardando verificação (incluindo variações)
   const isAguardandoVerificacao = parada.status?.startsWith('aguardando_verificacao');
@@ -47,6 +55,20 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
     setProcessingAction('nao_corrigido');
     try {
       await onMarcarNaoCorrigido(parada.id);
+    } finally {
+      setIsProcessing(false);
+      setProcessingAction(null);
+    }
+  };
+
+  const handleCancelar = async () => {
+    if (!onCancelarParada || !motivoCancelamento.trim()) return;
+    setIsProcessing(true);
+    setProcessingAction('cancelar');
+    try {
+      await onCancelarParada(parada.id, motivoCancelamento);
+      setIsCancelarModalOpen(false);
+      setMotivoCancelamento("");
     } finally {
       setIsProcessing(false);
       setProcessingAction(null);
@@ -383,6 +405,67 @@ const RelatorioParadaDetalhado: React.FC<RelatorioParadaDetalhadoProps> = ({
           </div>
         </>
       )}
+
+      {/* Botão de Cancelar - apenas para status aguardando (encarregado) */}
+      {showCancelarButton && parada.status === "aguardando" && (
+        <>
+          <Separator />
+          <div className="space-y-3 pb-6">
+            <Button
+              onClick={() => setIsCancelarModalOpen(true)}
+              disabled={isProcessing}
+              variant="destructive"
+              className="w-full h-14 text-base font-semibold"
+            >
+              <Ban className="h-5 w-5 mr-2" />
+              Cancelar Parada
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* Modal de Cancelamento */}
+      <Dialog open={isCancelarModalOpen} onOpenChange={setIsCancelarModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar Parada</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja cancelar esta parada? Esta ação não pode ser desfeita.
+            </p>
+            <div>
+              <label className="text-sm font-medium">Motivo do Cancelamento *</label>
+              <Textarea
+                placeholder="Informe o motivo do cancelamento..."
+                value={motivoCancelamento}
+                onChange={(e) => setMotivoCancelamento(e.target.value)}
+                className="mt-2"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsCancelarModalOpen(false)}>
+              Voltar
+            </Button>
+            <Button 
+              onClick={handleCancelar}
+              disabled={isProcessing || !motivoCancelamento.trim()}
+              variant="destructive"
+            >
+              {processingAction === 'cancelar' ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Ban className="h-4 w-4 mr-2" />
+              )}
+              Confirmar Cancelamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
