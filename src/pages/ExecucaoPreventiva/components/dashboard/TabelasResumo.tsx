@@ -6,7 +6,7 @@ import {
   filtrarPorPeriodo, 
   calcularDisponibilidade, 
   getTempoDisponivelMinutos,
-  calcularTempoParadaMinutos,
+  getTempoParadaReal,
   formatarTempoHMS,
   timestampToDate,
   getDatasSemanaAtual
@@ -84,11 +84,8 @@ export function TabelasResumo({
         setorData[setor] = { tempoParada: 0, abertas: 0, fechadas: 0, total: 0 };
       }
       
-      // Calcula tempo de parada real
-      let tempo = p.tempoParada;
-      if (!tempo || tempo <= 0) {
-        tempo = calcularTempoParadaMinutos(p.criadoEm, p.finalizadoEm);
-      }
+      // Calcula tempo de parada real usando a nova função
+      const tempo = getTempoParadaReal(p);
       setorData[setor].tempoParada += tempo;
       setorData[setor].total++;
       
@@ -102,8 +99,10 @@ export function TabelasResumo({
     return Object.entries(setorData)
       .filter(([_, data]) => data.total > 0)
       .map(([setor, data]) => {
-        const disponibilidade = calcularDisponibilidade(data.tempoParada, tempoDisponivel);
-        const dispMaquina = calcularDisponibilidade(data.tempoParada * 0.9, tempoDisponivel);
+        // Disponibilidade baseada em tempo real de paradas
+        const disponibilidade = calcularDisponibilidade(data.tempoParada, tempoDisponivel, true);
+        // Disponibilidade de máquina (considera 90% do tempo como produtivo)
+        const dispMaquina = calcularDisponibilidade(data.tempoParada, tempoDisponivel * 0.9, true);
         return {
           setor,
           disponibilidade: disponibilidade.toFixed(2),
@@ -111,7 +110,8 @@ export function TabelasResumo({
           dispGeral: disponibilidade.toFixed(2),
           abertas: data.abertas,
           fechadas: data.fechadas,
-          qtdParadas: data.total
+          qtdParadas: data.total,
+          tempoParada: data.tempoParada
         };
       })
       .sort((a, b) => b.qtdParadas - a.qtdParadas);
@@ -132,11 +132,8 @@ export function TabelasResumo({
         setorData[setor] = { tempo: 0, count: 0, abertas: 0, fechadas: 0 };
       }
       
-      // Calcula tempo de parada real
-      let tempo = p.tempoParada;
-      if (!tempo || tempo <= 0) {
-        tempo = calcularTempoParadaMinutos(p.criadoEm, p.finalizadoEm);
-      }
+      // Calcula tempo de parada real usando a nova função
+      const tempo = getTempoParadaReal(p);
       setorData[setor].tempo += tempo;
       setorData[setor].count++;
       
@@ -149,13 +146,14 @@ export function TabelasResumo({
 
     return Object.entries(setorData)
       .map(([setor, data]) => {
-        const disponibilidade = calcularDisponibilidade(data.tempo, tempoDisponivel);
+        const disponibilidade = calcularDisponibilidade(data.tempo, tempoDisponivel, true);
         return {
           setor,
           disponibilidade: disponibilidade.toFixed(2),
           abertas: data.abertas,
           fechadas: data.fechadas,
           tempoParada: formatarTempoHMS(data.tempo),
+          tempoParadaMinutos: data.tempo,
           qtdParadas: data.count,
           mediaParada: formatarTempoHMS(data.count > 0 ? data.tempo / data.count : 0)
         };
@@ -165,7 +163,7 @@ export function TabelasResumo({
 
   // ============ TABELA 3: TIPOS DE MANUTENÇÃO (SEMANA ATUAL) ============
   const tiposManutencaoSemana = () => {
-    const tipoData: Record<string, { count: number; tempo: number }> = {};
+    const tipoData: Record<string, { count: number; tempo: number; abertas: number; fechadas: number }> = {};
 
     paradasMaquina
       .filter(p => {
@@ -175,21 +173,27 @@ export function TabelasResumo({
       .forEach(p => {
         const tipo = p.tipoManutencao || "(vazio)";
         if (!tipoData[tipo]) {
-          tipoData[tipo] = { count: 0, tempo: 0 };
+          tipoData[tipo] = { count: 0, tempo: 0, abertas: 0, fechadas: 0 };
         }
         tipoData[tipo].count++;
         
-        let tempo = p.tempoParada;
-        if (!tempo || tempo <= 0) {
-          tempo = calcularTempoParadaMinutos(p.criadoEm, p.finalizadoEm);
-        }
+        // Usa a nova função para calcular tempo real
+        const tempo = getTempoParadaReal(p);
         tipoData[tipo].tempo += tempo;
+        
+        if (p.status === "concluido") {
+          tipoData[tipo].fechadas++;
+        } else {
+          tipoData[tipo].abertas++;
+        }
       });
 
     return Object.entries(tipoData)
       .map(([tipo, data]) => ({
         tipo,
         contagem: data.count,
+        abertas: data.abertas,
+        fechadas: data.fechadas,
         tempoGasto: formatarTempoHMS(data.tempo)
       }))
       .sort((a, b) => b.contagem - a.contagem);
@@ -212,10 +216,8 @@ export function TabelasResumo({
       const data = timestampToDate(p.criadoEm);
       if (data && data >= inicioSemana && data <= fimSemana) {
         diasParadas[data.getDay()]++;
-        let tempo = p.tempoParada;
-        if (!tempo || tempo <= 0) {
-          tempo = calcularTempoParadaMinutos(p.criadoEm, p.finalizadoEm);
-        }
+        // Usa a nova função para calcular tempo real
+        const tempo = getTempoParadaReal(p);
         diasTempo[data.getDay()] += tempo;
       }
     });
@@ -242,11 +244,7 @@ export function TabelasResumo({
   }), { abertas: 0, fechadas: 0, qtdParadas: 0 });
 
   const totalTempoMinutos = paradasFiltradas.reduce((acc, p) => {
-    let tempo = p.tempoParada;
-    if (!tempo || tempo <= 0) {
-      tempo = calcularTempoParadaMinutos(p.criadoEm, p.finalizadoEm);
-    }
-    return acc + tempo;
+    return acc + getTempoParadaReal(p);
   }, 0);
 
   return (
@@ -297,11 +295,11 @@ export function TabelasResumo({
                 ))}
                 <tr className="bg-muted/70 font-semibold">
                   <td className="p-3">Total Geral</td>
-                  <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel).toFixed(2).replace('.', ',')}%</td>
+                  <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel, true).toFixed(2).replace('.', ',')}%</td>
                   <td className="text-right p-3 text-warning">{totalDispData.abertas}</td>
                   <td className="text-right p-3 text-success">{totalDispData.fechadas}</td>
-                  <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos * 0.9, tempoDisponivel).toFixed(2).replace('.', ',')}%</td>
-                  <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel).toFixed(2).replace('.', ',')}%</td>
+                  <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel * 0.9, true).toFixed(2).replace('.', ',')}%</td>
+                  <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel, true).toFixed(2).replace('.', ',')}%</td>
                   <td className="text-right p-3">{totalDispData.qtdParadas}</td>
                 </tr>
               </tbody>
@@ -347,7 +345,7 @@ export function TabelasResumo({
                 ))}
                 <tr className="bg-muted/70 font-semibold">
                   <td className="p-3">Total Geral</td>
-                  <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel).toFixed(2).replace('.', ',')}%</td>
+                  <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel, true).toFixed(2).replace('.', ',')}%</td>
                   <td className="text-right p-3 text-warning">{totalDispData.abertas}</td>
                   <td className="text-right p-3 text-success">{totalDispData.fechadas}</td>
                   <td className="text-right p-3">{formatarTempoHMS(totalTempoMinutos)}</td>
@@ -375,6 +373,8 @@ export function TabelasResumo({
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-3 font-semibold">Tipo de Manutenção</th>
+                  <th className="text-right p-3 font-semibold">Abertas</th>
+                  <th className="text-right p-3 font-semibold">Fechadas</th>
                   <th className="text-right p-3 font-semibold">Contagem</th>
                   <th className="text-right p-3 font-semibold">Tempo Gasto</th>
                 </tr>
@@ -385,19 +385,23 @@ export function TabelasResumo({
                     {tiposData.map((row) => (
                       <tr key={row.tipo} className="border-b hover:bg-muted/30">
                         <td className={`p-3 ${row.tipo === "(vazio)" ? "text-muted-foreground italic" : ""}`}>{row.tipo}</td>
+                        <td className="text-right p-3 text-warning">{row.abertas}</td>
+                        <td className="text-right p-3 text-success">{row.fechadas}</td>
                         <td className="text-right p-3">{row.contagem}</td>
                         <td className="text-right p-3">{row.tempoGasto}</td>
                       </tr>
                     ))}
                     <tr className="bg-muted/70 font-semibold">
                       <td className="p-3">Total Geral</td>
+                      <td className="text-right p-3 text-warning">{tiposData.reduce((acc, d) => acc + d.abertas, 0)}</td>
+                      <td className="text-right p-3 text-success">{tiposData.reduce((acc, d) => acc + d.fechadas, 0)}</td>
                       <td className="text-right p-3">{tiposData.reduce((acc, d) => acc + d.contagem, 0)}</td>
                       <td className="text-right p-3">-</td>
                     </tr>
                   </>
                 ) : (
                   <tr>
-                    <td colSpan={3} className="p-4 text-center text-muted-foreground">
+                    <td colSpan={5} className="p-4 text-center text-muted-foreground">
                       Nenhuma parada registrada nesta semana
                     </td>
                   </tr>

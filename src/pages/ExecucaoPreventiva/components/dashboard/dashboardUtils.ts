@@ -96,13 +96,23 @@ export const getTempoDisponivelMinutos = (filtro: FiltroData): number => {
   return Math.ceil(diffMs / (1000 * 60));
 };
 
-// Calcula disponibilidade real
+// Calcula disponibilidade real - considera apenas horas úteis (8h/dia)
 export const calcularDisponibilidade = (
   tempoParadaMinutos: number,
-  tempoDisponivelMinutos: number
+  tempoDisponivelMinutos: number,
+  usarHorasUteis: boolean = true
 ): number => {
-  if (tempoDisponivelMinutos <= 0) return 100;
-  const disponibilidade = ((tempoDisponivelMinutos - tempoParadaMinutos) / tempoDisponivelMinutos) * 100;
+  // Converte tempo disponível para horas úteis (8h por dia)
+  let tempoUtil = tempoDisponivelMinutos;
+  if (usarHorasUteis) {
+    const diasDisponiveis = Math.ceil(tempoDisponivelMinutos / (24 * 60));
+    tempoUtil = diasDisponiveis * 8 * 60; // 8 horas por dia em minutos
+  }
+  
+  if (tempoUtil <= 0) return 100;
+  if (tempoParadaMinutos <= 0) return 100;
+  
+  const disponibilidade = ((tempoUtil - tempoParadaMinutos) / tempoUtil) * 100;
   return Math.max(0, Math.min(100, disponibilidade));
 };
 
@@ -112,13 +122,31 @@ export const calcularTempoParadaMinutos = (
   finalizadoEm: any
 ): number => {
   const dataInicio = timestampToDate(criadoEm);
-  const dataFim = timestampToDate(finalizadoEm);
   
   if (!dataInicio) return 0;
   
+  // Se tem data de finalização, usa ela; senão usa a data atual
+  const dataFim = timestampToDate(finalizadoEm);
   const fim = dataFim || new Date();
+  
   const diffMs = fim.getTime() - dataInicio.getTime();
-  return Math.max(0, Math.round(diffMs / (1000 * 60)));
+  const minutos = Math.max(0, Math.round(diffMs / (1000 * 60)));
+  
+  return minutos;
+};
+
+// Calcula tempo de parada considerando campo tempoParada ou timestamps
+export const getTempoParadaReal = (parada: {
+  tempoParada?: number;
+  criadoEm?: any;
+  finalizadoEm?: any;
+}): number => {
+  // Primeiro tenta usar o campo tempoParada se existir e for válido
+  if (parada.tempoParada && parada.tempoParada > 0) {
+    return parada.tempoParada;
+  }
+  // Senão calcula a partir dos timestamps
+  return calcularTempoParadaMinutos(parada.criadoEm, parada.finalizadoEm);
 };
 
 // Formata minutos para HH:MM:SS

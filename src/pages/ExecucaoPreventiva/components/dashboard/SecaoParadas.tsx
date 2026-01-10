@@ -8,7 +8,7 @@ import {
   filtrarPorPeriodo, 
   calcularDisponibilidade, 
   getTempoDisponivelMinutos, 
-  calcularTempoParadaMinutos,
+  getTempoParadaReal,
   formatarTempoHMS,
   timestampToDate,
   getDatasSemanaAtual,
@@ -55,17 +55,14 @@ export function SecaoParadas({ paradasMaquina, filtro, onFiltroChange }: SecaoPa
   const totalParadas = paradasFiltradas.length;
   const percentualConclusao = totalParadas > 0 ? Math.round((paradasConcluidas / totalParadas) * 100) : 0;
 
-  // Calcula tempo de parada total (em minutos)
+  // Calcula tempo de parada total (em minutos) usando função corrigida
   const tempoParadaTotal = paradasFiltradas.reduce((acc, p) => {
-    if (p.tempoParada && p.tempoParada > 0) {
-      return acc + p.tempoParada;
-    }
-    return acc + calcularTempoParadaMinutos(p.criadoEm, p.finalizadoEm);
+    return acc + getTempoParadaReal(p);
   }, 0);
 
-  // Disponibilidade geral
+  // Disponibilidade geral usando horas úteis
   const tempoDisponivel = getTempoDisponivelMinutos(filtro);
-  const disponibilidadeGeral = calcularDisponibilidade(tempoParadaTotal, tempoDisponivel);
+  const disponibilidadeGeral = calcularDisponibilidade(tempoParadaTotal, tempoDisponivel, true);
 
   // Tempo médio de parada
   const tempoMedioParada = totalParadas > 0 ? Math.round(tempoParadaTotal / totalParadas) : 0;
@@ -75,12 +72,12 @@ export function SecaoParadas({ paradasMaquina, filtro, onFiltroChange }: SecaoPa
     const manutentorHoras: Record<string, { total: number; paradas: number }> = {};
     
     paradasFiltradas.filter(p => p.status === "concluido").forEach(p => {
-      // Assumindo que existe um campo responsavelManutencao ou similar
       const nome = (p as any).responsavelManutencao || "Não identificado";
       if (!manutentorHoras[nome]) {
         manutentorHoras[nome] = { total: 0, paradas: 0 };
       }
-      const tempo = p.tempoParada || calcularTempoParadaMinutos(p.criadoEm, p.finalizadoEm);
+      // Usa a função corrigida para calcular tempo real
+      const tempo = getTempoParadaReal(p);
       manutentorHoras[nome].total += tempo;
       manutentorHoras[nome].paradas++;
     });
