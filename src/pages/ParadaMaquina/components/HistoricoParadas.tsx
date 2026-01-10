@@ -226,7 +226,11 @@ const HistoricoParadas = () => {
                     <div className="flex justify-between items-center pt-1">
                       <StatusBadgeParada status={parada.status} />
                       <span className="text-sm text-muted-foreground">
-                        {parada.criadoEm && format(parada.criadoEm.toDate(), "dd/MM/yy HH:mm")}
+                        {parada.criadoEm && (() => {
+                          const date = parada.criadoEm.toDate();
+                          const isZeroTime = date.getHours() === 0 && date.getMinutes() === 0;
+                          return format(date, isZeroTime ? "dd/MM/yy" : "dd/MM/yy HH:mm");
+                        })()}
                       </span>
                     </div>
                   </button>

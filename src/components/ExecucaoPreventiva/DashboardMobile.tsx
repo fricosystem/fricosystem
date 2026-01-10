@@ -794,12 +794,41 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     ].filter(item => item.value > 0);
   };
 
+  // Tempo de parada (minutos) com fallback (campo tempoParada ) timestamps  hrInicial/hrFinal
+  const getTempoParadaMinutos = (p: any): number => {
+    const tempoParadaNum = typeof p?.tempoParada === "number" ? p.tempoParada : 0;
+    if (tempoParadaNum > 0) return tempoParadaNum;
+
+    // Fallback por timestamps
+    const inicio = p?.criadoEm && typeof p.criadoEm?.toDate === "function" ? p.criadoEm.toDate() : null;
+    const fim = p?.finalizadoEm && typeof p.finalizadoEm?.toDate === "function" ? p.finalizadoEm.toDate() : null;
+    if (inicio instanceof Date) {
+      const end = fim instanceof Date ? fim : new Date();
+      const diffMs = Math.max(0, end.getTime() - inicio.getTime());
+      return diffMs / (1000 * 60);
+    }
+
+    // Fallback por horas em texto (HH:mm)
+    const hrInicial = typeof p?.hrInicial === "string" ? p.hrInicial : "";
+    const hrFinal = typeof p?.hrFinal === "string" ? p.hrFinal : "";
+    const parseHM = (hm: string) => {
+      const [h, m] = hm.split(":").map(Number);
+      if (Number.isNaN(h) || Number.isNaN(m)) return null;
+      return h * 60 + m;
+    };
+    const ini = parseHM(hrInicial);
+    const fin = parseHM(hrFinal);
+    if (ini !== null && fin !== null) return Math.abs(fin - ini);
+
+    return 0;
+  };
+
   // Tempo de Parada por Setor
   const tempoParadaPorSetorData = () => {
     const setorTempo: Record<string, number> = {};
     paradasMaquina.forEach(p => {
       const setor = p.setor || "Outros";
-      setorTempo[setor] = (setorTempo[setor] || 0) + (p.tempoParada || 0);
+      setorTempo[setor] = (setorTempo[setor] || 0) + getTempoParadaMinutos(p);
     });
     return Object.entries(setorTempo)
       .map(([name, value]) => ({ name, horas: Math.round(value / 60 * 10) / 10 }))
@@ -2635,14 +2664,16 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     if (!setorTempos[setor]) {
                       setorTempos[setor] = { tempo: 0, count: 0 };
                     }
-                    setorTempos[setor].tempo += p.tempoParada || 0;
+                    setorTempos[setor].tempo += getTempoParadaMinutos(p);
                     setorTempos[setor].count++;
                   });
 
                   const formatTempo = (minutos: number) => {
+                    if (!minutos || minutos <= 0) return "0:00:00";
                     const h = Math.floor(minutos / 60);
                     const m = Math.floor(minutos % 60);
-                    return `${h}:${m.toString().padStart(2, '0')}:00`;
+                    const s = Math.round((minutos * 60) % 60);
+                    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                   };
 
                   const totalTempo = Object.values(setorTempos).reduce((acc, s) => acc + s.tempo, 0);
@@ -2704,13 +2735,15 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                       tipoStats[tipo] = { count: 0, tempo: 0 };
                     }
                     tipoStats[tipo].count++;
-                    tipoStats[tipo].tempo += p.tempoParada || 0;
+                    tipoStats[tipo].tempo += getTempoParadaMinutos(p);
                   });
 
                   const formatTempo = (minutos: number) => {
+                    if (!minutos || minutos <= 0) return "0:00:00";
                     const h = Math.floor(minutos / 60);
                     const m = Math.floor(minutos % 60);
-                    return `${h}:${m.toString().padStart(2, '0')}:00`;
+                    const s = Math.round((minutos * 60) % 60);
+                    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                   };
 
                   const totalCount = Object.values(tipoStats).reduce((acc, s) => acc + s.count, 0);

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Database, Upload, FileText } from "lucide-react";
 import * as XLSX from 'xlsx';
-import { uploadMultipleProducts, uploadProduct, uploadParadaRealizada, uploadMultipleParadasRealizadas } from "@/firebase/firestore";
+import { uploadMultipleProducts, uploadProduct, uploadParadaRealizada, uploadMultipleParadasRealizadasComProgresso } from "@/firebase/firestore";
 import AppLayout from "@/layouts/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportTable } from "@/components/ImportTable";
@@ -13,6 +13,10 @@ import { EquipmentTable } from "@/components/EquipamentTable";
 import { ParadasRealizadasTable } from "@/components/ParadasRealizadasTable";
 import { ImportedProduct, ImportedEquipment, ImportedParadaRealizada } from "@/types/typesImportarPlanilha";
 import { uploadEquipment, uploadMultipleEquipments } from "@/firebase/firestore";
+import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Timestamp } from "firebase/firestore";
 
 // Converte número serial do Excel para string de data no formato dd/MM/yyyy
 const excelDateToString = (value: any): string => {
@@ -40,6 +44,65 @@ const excelDateToString = (value: any): string => {
   return String(value);
 };
 
+// Função auxiliar para calcular tempo decorrido entre dois horários
+const calcularTempoDecorrido = (hrInicial: string, hrFinal: string): string => {
+  if (!hrInicial || !hrFinal) return "00:00";
+  
+  const parseHora = (hora: string): number => {
+    const parts = hora.split(':').map(Number);
+    if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return 0;
+    return parts[0] * 60 + parts[1];
+  };
+  
+  const minutosInicial = parseHora(hrInicial);
+  const minutosFinal = parseHora(hrFinal);
+  const diff = Math.abs(minutosFinal - minutosInicial);
+  
+  const horas = Math.floor(diff / 60).toString().padStart(2, '0');
+  const minutos = (diff % 60).toString().padStart(2, '0');
+  
+  return `${horas}:${minutos}`;
+};
+
+// Função para converter data dd/MM/yyyy para Timestamp do Firestore
+const converterDataParaTimestamp = (dataString: string): Timestamp => {
+  if (!dataString) return Timestamp.now();
+  
+  const parts = dataString.split('/').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return Timestamp.now();
+  
+  const [dia, mes, ano] = parts;
+  const date = new Date(ano, mes - 1, dia, 0, 0, 0);
+  return Timestamp.fromDate(date);
+};
+
+// Função para converter data dd/MM/yyyy + hora HH:mm para Timestamp do Firestore
+const converterDataHoraParaTimestamp = (dataString: string, horaString: string): Timestamp => {
+  if (!dataString) return Timestamp.now();
+  
+  const dataParts = dataString.split('/').map(Number);
+  if (dataParts.length !== 3 || dataParts.some(isNaN)) return Timestamp.now();
+  
+  const [dia, mes, ano] = dataParts;
+  
+  // Parse da hora (formato HH:mm ou HH:mm:ss)
+  let horas = 0;
+  let minutos = 0;
+  let segundos = 0;
+  
+  if (horaString) {
+    const horaParts = horaString.split(':').map(Number);
+    if (horaParts.length >= 2 && !horaParts.some(isNaN)) {
+      horas = horaParts[0] || 0;
+      minutos = horaParts[1] || 0;
+      segundos = horaParts[2] || 0;
+    }
+  }
+  
+  const date = new Date(ano, mes - 1, dia, horas, minutos, segundos);
+  return Timestamp.fromDate(date);
+};
+
 const ImportarPlanilha = () => {
   const [importedData, setImportedData] = useState<ImportedProduct[]>([]);
   const [importedEquipments, setImportedEquipments] = useState<ImportedEquipment[]>([]);
@@ -48,8 +111,11 @@ const ImportarPlanilha = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingSingle, setIsUploadingSingle] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("produtos");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [showProgressModal, setShowProgressModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { userData } = useAuth();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -321,9 +387,47 @@ const ImportarPlanilha = () => {
   };
 
   const handleUploadParada = async (index: number, parada: ImportedParadaRealizada) => {
+    if (!userData) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUploadingSingle(index);
     try {
-      await uploadParadaRealizada(parada);
+      const paradaFormatada = {
+        status: "concluido",
+        criadoEm: converterDataHoraParaTimestamp(parada.dataConclusao || parada.dataProgramada, parada.hrInicial),
+        criadoPor: userData.id,
+        encarregadoId: userData.id,
+        encarregadoNome: userData.nome,
+        horarioExecucaoFim: parada.hrFinal,
+        horarioExecucaoInicio: parada.hrInicial,
+        horarioProgramado: parada.hrInicial,
+        id: crypto.randomUUID(),
+        origemParada: parada.tipoFalha,
+        tempoTotalDecorrido: calcularTempoDecorrido(parada.hrInicial, parada.hrFinal),
+        tentativaAtual: 1,
+        setor: parada.setor,
+        patrimonio: parada.patrimonio,
+        equipamento: parada.equipamento,
+        tipoManutencao: parada.tipoManutencao,
+        dataProgramada: converterDataHoraParaTimestamp(parada.dataProgramada, parada.hrInicial),
+        dataConclusao: converterDataHoraParaTimestamp(parada.dataConclusao, parada.hrFinal),
+        hrInicial: parada.hrInicial,
+        hrFinal: parada.hrFinal,
+        manutentorII: parada.manutentorII,
+        manutentorIII: parada.manutentorIII,
+        manutentorIIII: parada.manutentorIIII,
+        tipoFalha: parada.tipoFalha,
+        descricaoMotivo: parada.descricaoMotivo,
+        resolucao: parada.resolucao,
+      };
+
+      await uploadParadaRealizada(paradaFormatada);
       toast({
         title: "Sucesso",
         description: `Parada do equipamento ${parada.equipamento} cadastrada com sucesso!`,
@@ -433,10 +537,56 @@ const ImportarPlanilha = () => {
         });
         return;
       }
+
+      if (!userData) {
+        toast({
+          title: "Erro",
+          description: "Usuário não autenticado. Faça login novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
       
+      setShowProgressModal(true);
+      setUploadProgress(0);
       setIsUploading(true);
+
       try {
-        await uploadMultipleParadasRealizadas(importedParadas);
+        // Mapeia as paradas para o formato esperado no Firestore
+        const paradasFormatadas = importedParadas.map((parada) => ({
+          status: "concluido",
+          criadoEm: converterDataHoraParaTimestamp(parada.dataConclusao || parada.dataProgramada, parada.hrInicial),
+          criadoPor: userData.id,
+          encarregadoId: userData.id,
+          encarregadoNome: userData.nome,
+          horarioExecucaoFim: parada.hrFinal,
+          horarioExecucaoInicio: parada.hrInicial,
+          horarioProgramado: parada.hrInicial,
+          id: crypto.randomUUID(),
+          origemParada: parada.tipoFalha,
+          tempoTotalDecorrido: calcularTempoDecorrido(parada.hrInicial, parada.hrFinal),
+          tentativaAtual: 1,
+          setor: parada.setor,
+          patrimonio: parada.patrimonio,
+          equipamento: parada.equipamento,
+          tipoManutencao: parada.tipoManutencao,
+          dataProgramada: converterDataHoraParaTimestamp(parada.dataProgramada, parada.hrInicial),
+          dataConclusao: converterDataHoraParaTimestamp(parada.dataConclusao, parada.hrFinal),
+          hrInicial: parada.hrInicial,
+          hrFinal: parada.hrFinal,
+          manutentorII: parada.manutentorII,
+          manutentorIII: parada.manutentorIII,
+          manutentorIIII: parada.manutentorIIII,
+          tipoFalha: parada.tipoFalha,
+          descricaoMotivo: parada.descricaoMotivo,
+          resolucao: parada.resolucao,
+        }));
+
+        await uploadMultipleParadasRealizadasComProgresso(
+          paradasFormatadas,
+          (progress) => setUploadProgress(progress)
+        );
+
         toast({
           title: "Sucesso",
           description: `${importedParadas.length} paradas enviadas para o Firestore.`,
@@ -449,6 +599,7 @@ const ImportarPlanilha = () => {
           variant: "destructive",
         });
       } finally {
+        setShowProgressModal(false);
         setIsUploading(false);
       }
     }
@@ -625,6 +776,26 @@ const ImportarPlanilha = () => {
             )}
           </div>
         </div>
+
+        {/* Modal de Progresso */}
+        <Dialog open={showProgressModal} onOpenChange={() => {}}>
+          <DialogContent className="bg-gray-800 border-gray-700 sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-white text-center">
+                Enviando Paradas Realizadas
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <Progress value={uploadProgress} className="h-3" />
+              <p className="text-center text-xl font-semibold text-white">
+                {uploadProgress}%
+              </p>
+              <p className="text-center text-sm text-gray-400">
+                Por favor, aguarde enquanto os dados são enviados...
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -93,7 +93,7 @@ export const uploadMultipleEquipments = async (equipments: ImportedEquipment[]) 
 };
 
 // Operações para Paradas Realizadas
-export const uploadParadaRealizada = async (parada: ImportedParadaRealizada) => {
+export const uploadParadaRealizada = async (parada: Record<string, any>) => {
   try {
     const docRef = await addDoc(collection(db, "paradas_maquina"), {
       ...parada,
@@ -120,6 +120,45 @@ export const uploadMultipleParadasRealizadas = async (paradas: ImportedParadaRea
     });
     
     await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Erro ao enviar paradas realizadas:", error);
+    throw error;
+  }
+};
+
+// Nova função com progresso para upload de paradas
+export const uploadMultipleParadasRealizadasComProgresso = async (
+  paradas: any[],
+  onProgress?: (progress: number) => void
+) => {
+  const BATCH_LIMIT = 500;
+  const collectionRef = collection(db, "paradas_maquina");
+  
+  let totalEnviados = 0;
+  
+  try {
+    for (let i = 0; i < paradas.length; i += BATCH_LIMIT) {
+      const batch = writeBatch(db);
+      const lote = paradas.slice(i, i + BATCH_LIMIT);
+      
+      lote.forEach((parada) => {
+        const docRef = doc(collectionRef, parada.id); // Usa o ID gerado
+        batch.set(docRef, {
+          ...parada,
+          createdAt: serverTimestamp()
+        });
+      });
+      
+      await batch.commit();
+      totalEnviados += lote.length;
+      
+      const progress = Math.round((totalEnviados / paradas.length) * 100);
+      if (onProgress) {
+        onProgress(progress);
+      }
+    }
+    
     return true;
   } catch (error) {
     console.error("Erro ao enviar paradas realizadas:", error);
