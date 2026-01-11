@@ -5,3 +5,6 @@ export * from "./SecaoPreventivas";
 export * from "./SecaoParadas";
 export * from "./SecaoOS";
 export * from "./TabelasResumo";
+export * from "./DashboardLoading";
+export * from "./DashboardContent";
+export * from "./hooks";

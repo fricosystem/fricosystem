@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle2, Clock, TrendingUp, Wrench, AlertTriangle, Ca
 import { TarefaManutencao } from "@/types/typesManutencaoPreventiva";
 import { HistoricoExecucao } from "@/services/historicoExecucoes";
 import { TemplateTarefa } from "@/types/typesTemplatesTarefas";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { collection, query, getDocs, where } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getTempoParadaReal, formatarTempoHMS, filtrarPorPeriodo, FiltroData, PeriodoFiltro, PERIODO_LABELS } from "@/pages/ExecucaoPreventiva/components/dashboard/dashboardUtils";
 
 interface DashboardMobileProps {
   stats: {
@@ -82,6 +84,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
   const [templates, setTemplates] = useState<TemplateTarefa[]>([]);
   const [loadingParadas, setLoadingParadas] = useState(true);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [periodoSelecionado, setPeriodoSelecionado] = useState<FiltroData>({ periodo: "mensal" });
 
   // Estados para Ordens de Serviço
   const [ordensServico, setOrdensServico] = useState<{id: string; status: string; setor: string; equipamento: string; criadoEm: any; observacaoManutencao?: string}[]>([]);
@@ -2547,12 +2550,28 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       {/* Divisória e Seção de Resumo / Disponibilidade */}
       <Separator className="my-6" />
       
-      <div className="mb-4">
-        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary" />
-          Resumo / Disponibilidade
-        </h2>
-        <p className="text-sm text-muted-foreground">Indicadores detalhados por linha de produção</p>
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            Resumo / Disponibilidade
+          </h2>
+          <p className="text-sm text-muted-foreground">Indicadores detalhados por linha de produção</p>
+        </div>
+        <Select
+          value={periodoSelecionado.periodo}
+          onValueChange={(value: PeriodoFiltro) => setPeriodoSelecionado({ periodo: value })}
+        >
+          <SelectTrigger className="w-[160px] bg-background">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent className="bg-background z-50">
+            <SelectItem value="hoje">{PERIODO_LABELS.hoje}</SelectItem>
+            <SelectItem value="semanal">{PERIODO_LABELS.semanal}</SelectItem>
+            <SelectItem value="mensal">{PERIODO_LABELS.mensal}</SelectItem>
+            <SelectItem value="anual">{PERIODO_LABELS.anual}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Tabela 1: Disponibilidade por Setor */}
@@ -2658,23 +2677,16 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
               </thead>
               <tbody>
                 {(() => {
+                  const paradasFiltradas = filtrarPorPeriodo(paradasMaquina, periodoSelecionado as FiltroData, (p) => p.criadoEm);
                   const setorTempos: Record<string, { tempo: number; count: number }> = {};
-                  paradasMaquina.forEach(p => {
+                  paradasFiltradas.forEach(p => {
                     const setor = p.setor || "Outros";
                     if (!setorTempos[setor]) {
                       setorTempos[setor] = { tempo: 0, count: 0 };
                     }
-                    setorTempos[setor].tempo += getTempoParadaMinutos(p);
+                    setorTempos[setor].tempo += getTempoParadaReal(p);
                     setorTempos[setor].count++;
                   });
-
-                  const formatTempo = (minutos: number) => {
-                    if (!minutos || minutos <= 0) return "0:00:00";
-                    const h = Math.floor(minutos / 60);
-                    const m = Math.floor(minutos % 60);
-                    const s = Math.round((minutos * 60) % 60);
-                    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                  };
 
                   const totalTempo = Object.values(setorTempos).reduce((acc, s) => acc + s.tempo, 0);
                   const totalCount = Object.values(setorTempos).reduce((acc, s) => acc + s.count, 0);
@@ -2687,16 +2699,16 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                       {sortedSetores.map(([setor, data]) => (
                         <tr key={setor} className="border-b hover:bg-muted/30">
                           <td className="p-3">{setor}</td>
-                          <td className="text-right p-3">{formatTempo(data.tempo)}</td>
+                          <td className="text-right p-3">{formatarTempoHMS(data.tempo)}</td>
                           <td className="text-right p-3">{data.count}</td>
-                          <td className="text-right p-3">{formatTempo(data.count > 0 ? data.tempo / data.count : 0)}</td>
+                          <td className="text-right p-3">{formatarTempoHMS(data.count > 0 ? data.tempo / data.count : 0)}</td>
                         </tr>
                       ))}
                       <tr className="bg-muted/70 font-semibold">
                         <td className="p-3">Total Geral</td>
-                        <td className="text-right p-3">{formatTempo(totalTempo)}</td>
+                        <td className="text-right p-3">{formatarTempoHMS(totalTempo)}</td>
                         <td className="text-right p-3">{totalCount}</td>
-                        <td className="text-right p-3">{formatTempo(totalCount > 0 ? totalTempo / totalCount : 0)}</td>
+                        <td className="text-right p-3">{formatarTempoHMS(totalCount > 0 ? totalTempo / totalCount : 0)}</td>
                       </tr>
                     </>
                   );
@@ -2728,23 +2740,16 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
               </thead>
               <tbody>
                 {(() => {
+                  const paradasFiltradas = filtrarPorPeriodo(paradasMaquina, periodoSelecionado as FiltroData, (p) => p.criadoEm);
                   const tipoStats: Record<string, { count: number; tempo: number }> = {};
-                  paradasMaquina.forEach(p => {
+                  paradasFiltradas.forEach(p => {
                     const tipo = p.tipoManutencao || "(vazio)";
                     if (!tipoStats[tipo]) {
                       tipoStats[tipo] = { count: 0, tempo: 0 };
                     }
                     tipoStats[tipo].count++;
-                    tipoStats[tipo].tempo += getTempoParadaMinutos(p);
+                    tipoStats[tipo].tempo += getTempoParadaReal(p);
                   });
-
-                  const formatTempo = (minutos: number) => {
-                    if (!minutos || minutos <= 0) return "0:00:00";
-                    const h = Math.floor(minutos / 60);
-                    const m = Math.floor(minutos % 60);
-                    const s = Math.round((minutos * 60) % 60);
-                    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                  };
 
                   const totalCount = Object.values(tipoStats).reduce((acc, s) => acc + s.count, 0);
                   const totalTempo = Object.values(tipoStats).reduce((acc, s) => acc + s.tempo, 0);
@@ -2758,13 +2763,13 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                         <tr key={tipo} className="border-b hover:bg-muted/30">
                           <td className={`p-3 ${tipo === "(vazio)" ? "text-muted-foreground italic" : ""}`}>{tipo}</td>
                           <td className="text-right p-3">{data.count}</td>
-                          <td className="text-right p-3">{formatTempo(data.tempo)}</td>
+                          <td className="text-right p-3">{formatarTempoHMS(data.tempo)}</td>
                         </tr>
                       ))}
                       <tr className="bg-muted/70 font-semibold">
                         <td className="p-3">Total Geral</td>
                         <td className="text-right p-3">{totalCount}</td>
-                        <td className="text-right p-3">{formatTempo(totalTempo)}</td>
+                        <td className="text-right p-3">{formatarTempoHMS(totalTempo)}</td>
                       </tr>
                     </>
                   );
