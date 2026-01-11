@@ -292,17 +292,17 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
   const osConcluidas = osFiltradasFinalizadas.length;
   const osTotalAbertas = osFiltradasAbertas.length;
 
-  // Tempo médio de execução de OS
+  // Tempo médio de execução de OS (usa dados filtrados)
   const tempoMedioOS = () => {
-    const osComTempo = ordensFinalizadas.filter(os => os.tempoTotal && os.tempoTotal > 0);
+    const osComTempo = osFiltradasFinalizadas.filter(os => os.tempoTotal && os.tempoTotal > 0);
     if (osComTempo.length === 0) return 0;
     return Math.round(osComTempo.reduce((acc, os) => acc + (os.tempoTotal || 0), 0) / osComTempo.length / 60);
   };
 
-  // OS por setor
+  // OS por setor (filtradas)
   const osPorSetorData = () => {
     const setorCount: Record<string, number> = {};
-    ordensServico.forEach(os => {
+    osFiltradasAbertas.forEach(os => {
       const setor = os.setor || "Outros";
       setorCount[setor] = (setorCount[setor] || 0) + 1;
     });
@@ -312,10 +312,10 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .slice(0, 6);
   };
 
-  // OS por equipamento (Top 5)
+  // OS por equipamento (Top 5 - filtradas)
   const osPorEquipamentoData = () => {
     const equipCount: Record<string, number> = {};
-    ordensServico.forEach(os => {
+    osFiltradasAbertas.forEach(os => {
       const equip = os.equipamento || "Outros";
       equipCount[equip] = (equipCount[equip] || 0) + 1;
     });
@@ -325,7 +325,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .slice(0, 5);
   };
 
-  // Evolução de OS nos últimos 7 dias
+  // Evolução de OS nos últimos 7 dias (usa dados filtrados)
   const osUltimos7DiasData = () => {
     const hoje = new Date();
     const dias: Record<string, number> = {};
@@ -337,7 +337,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       dias[key] = 0;
     }
 
-    ordensFinalizadas.forEach(os => {
+    osFiltradasFinalizadas.forEach(os => {
       if (os.finalizadoEm) {
         let dataOS: Date;
         const timestamp = os.finalizadoEm as any;
@@ -364,9 +364,9 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     return Object.entries(dias).map(([name, value]) => ({ name, os: value }));
   };
 
-  // Taxa de resolução de OS
-  const taxaResolucaoOS = osTotalAbertas > 0 
-    ? Math.round((osConcluidas / (osConcluidas + osTotalAbertas)) * 100) 
+  // Taxa de resolução de OS (usa dados filtrados)
+  const taxaResolucaoOS = (osFiltradasAbertas.length + osFiltradasFinalizadas.length) > 0 
+    ? Math.round((osFiltradasFinalizadas.length / (osFiltradasFinalizadas.length + osFiltradasAbertas.length)) * 100) 
     : 100;
 
   // Dados para gráfico de Status das Tarefas (Pie)
@@ -426,7 +426,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .map(([name, value], index) => ({ name, value, fill: COLORS[index % COLORS.length] }));
   };
 
-  // Dados para gráfico de Execuções por Período (Últimos 7 dias)
+  // Dados para gráfico de Execuções por Período (Últimos 7 dias - usa filtro de preventivas)
   const execucoesPorDiaData = () => {
     const hoje = new Date();
     const dias: Record<string, number> = {};
@@ -438,7 +438,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       dias[key] = 0;
     }
 
-    historicoFiltrado.forEach(exec => {
+    historicoFiltradoPreventivas.forEach(exec => {
       if (exec.dataExecucao) {
         let dataExec: Date;
         const timestamp = exec.dataExecucao as any;
@@ -575,22 +575,22 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       }));
   };
 
-  // Taxa de conclusão (baseada nas tarefas filtradas)
-  const taxaConclusao = tarefasFiltradas.length > 0 
-    ? Math.round((statsFiltradas.concluidas / (statsFiltradas.concluidas + tarefasFiltradas.filter(t => t.status !== 'concluida').length)) * 100) 
+  // Taxa de conclusão (baseada nas tarefas filtradas de preventivas)
+  const taxaConclusao = tarefasFiltradasPreventivas.length > 0 
+    ? Math.round((statsPreventivas.concluidas / (statsPreventivas.concluidas + tarefasFiltradasPreventivas.filter(t => t.status !== 'concluida').length)) * 100) 
     : 0;
 
-  // Tempo médio de execução (baseado no histórico)
+  // Tempo médio de execução (baseado no histórico filtrado de preventivas)
   const tempoMedioExecucao = () => {
-    const execucoesComTempo = historicoFiltrado.filter(h => h.tempoRealizado && h.tempoRealizado > 0);
+    const execucoesComTempo = historicoFiltradoPreventivas.filter(h => h.tempoRealizado && h.tempoRealizado > 0);
     if (execucoesComTempo.length === 0) return 0;
     const total = execucoesComTempo.reduce((acc, h) => acc + (h.tempoRealizado || 0), 0);
     return Math.round(total / execucoesComTempo.length);
   };
 
-  // Desvio de tempo (estimado vs realizado)
+  // Desvio de tempo (estimado vs realizado - usa filtro de indicadores)
   const desvioTempoData = () => {
-    const execucoesComTempo = historicoFiltrado.filter(h => h.tempoRealizado && h.tempoEstimado);
+    const execucoesComTempo = historicoFiltradoIndicadores.filter(h => h.tempoRealizado && h.tempoEstimado);
     if (execucoesComTempo.length === 0) return [];
     
     return execucoesComTempo.slice(0, 10).map((h, index) => ({
@@ -600,7 +600,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     }));
   };
 
-  // Produtividade semanal (tarefas concluídas por semana)
+  // Produtividade semanal (tarefas concluídas por semana - usa filtro de indicadores)
   const produtividadeSemanalData = () => {
     const hoje = new Date();
     const semanas: Record<string, number> = {};
@@ -612,7 +612,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       semanas[weekLabel] = 0;
     }
 
-    historicoFiltrado.forEach(exec => {
+    historicoFiltradoIndicadores.forEach(exec => {
       if (exec.dataExecucao) {
         let dataExec: Date;
         const timestamp = exec.dataExecucao as any;
@@ -639,10 +639,10 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     return Object.entries(semanas).map(([name, value]) => ({ name, tarefas: value }));
   };
 
-  // Carga de trabalho por período (tarefas agendadas)
+  // Carga de trabalho por período (tarefas agendadas - usa filtro de indicadores)
   const cargaTrabalhoPorPeriodoData = () => {
     const periodoCount: Record<string, number> = {};
-    tarefasFiltradas.forEach(t => {
+    tarefasFiltradasIndicadores.forEach(t => {
       if (t.status === "pendente") {
         const periodo = t.periodoLabel || "Outros";
         periodoCount[periodo] = (periodoCount[periodo] || 0) + 1;
@@ -714,7 +714,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .map(([name, value], index) => ({ name, value, fill: COLORS[index % COLORS.length] }));
   };
 
-  // Evolução mensal de paradas (últimos 6 meses)
+  // Evolução mensal de paradas (usa filtro de paradas)
   const evolucaoMensalParadasData = () => {
     const hoje = new Date();
     const meses: Record<string, number> = {};
@@ -726,7 +726,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       meses[key] = 0;
     }
 
-    paradasMaquina.forEach(parada => {
+    paradasFiltradasParadas.forEach(parada => {
       if (parada.criadoEm) {
         let dataParada: Date;
         const timestamp = parada.criadoEm as any;
@@ -753,7 +753,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     return Object.entries(meses).map(([name, value]) => ({ name, paradas: value }));
   };
 
-  // Comparativo Preventivas vs Paradas (últimos 6 meses)
+  // Comparativo Preventivas vs Paradas (usa filtros respectivos)
   const comparativoPreventivasParadasData = () => {
     const hoje = new Date();
     const meses: Record<string, { preventivas: number; paradas: number }> = {};
@@ -765,7 +765,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       meses[key] = { preventivas: 0, paradas: 0 };
     }
 
-    historicoFiltrado.forEach(exec => {
+    historicoFiltradoPreventivas.forEach(exec => {
       if (exec.dataExecucao) {
         let dataExec: Date;
         const timestamp = exec.dataExecucao as any;
@@ -784,7 +784,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       }
     });
 
-    paradasMaquina.forEach(parada => {
+    paradasFiltradasParadas.forEach(parada => {
       if (parada.criadoEm) {
         let dataParada: Date;
         const timestamp = parada.criadoEm as any;
@@ -806,11 +806,11 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     return Object.entries(meses).map(([name, data]) => ({ name, ...data }));
   };
 
-  // Performance por Manutentor
+  // Performance por Manutentor (usa filtro de indicadores)
   const performanceManutentorData = () => {
     const manutentorStats: Record<string, { concluidas: number; tempoMedio: number; count: number }> = {};
     
-    historicoFiltrado.forEach(exec => {
+    historicoFiltradoIndicadores.forEach(exec => {
       const nome = exec.manutentorNome || "Outros";
       if (!manutentorStats[nome]) {
         manutentorStats[nome] = { concluidas: 0, tempoMedio: 0, count: 0 };
@@ -832,7 +832,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .slice(0, 8);
   };
 
-  // Cobertura de Preventivas por Equipamento
+  // Cobertura de Preventivas por Equipamento (usa filtro de indicadores)
   const coberturaPorEquipamentoData = () => {
     const cobertura: Record<string, { templates: number; execucoes: number }> = {};
     
@@ -844,7 +844,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       cobertura[maquina].templates++;
     });
 
-    historicoFiltrado.forEach(exec => {
+    historicoFiltradoIndicadores.forEach(exec => {
       const maquina = exec.maquinaNome || "Outros";
       if (!cobertura[maquina]) {
         cobertura[maquina] = { templates: 0, execucoes: 0 };
@@ -858,18 +858,18 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .slice(0, 8);
   };
 
-  // Eficiência de Tempo (% de tarefas dentro do tempo estimado)
+  // Eficiência de Tempo (% de tarefas dentro do tempo estimado - usa filtro de indicadores)
   const eficienciaTempo = () => {
-    const execucoesComTempo = historicoFiltrado.filter(h => h.tempoRealizado && h.tempoEstimado);
+    const execucoesComTempo = historicoFiltradoIndicadores.filter(h => h.tempoRealizado && h.tempoEstimado);
     if (execucoesComTempo.length === 0) return 0;
     const dentroDoPrazo = execucoesComTempo.filter(h => (h.tempoRealizado || 0) <= (h.tempoEstimado || 0) * 1.1);
     return Math.round((dentroDoPrazo.length / execucoesComTempo.length) * 100);
   };
 
-  // Distribuição de Prioridades das Tarefas Pendentes
+  // Distribuição de Prioridades das Tarefas Pendentes (usa filtro de indicadores)
   const prioridadesPendentesData = () => {
     const prioridadeCount: Record<string, number> = { "critica": 0, "alta": 0, "media": 0, "baixa": 0 };
-    tarefasFiltradas.filter(t => t.status === "pendente").forEach(t => {
+    tarefasFiltradasIndicadores.filter(t => t.status === "pendente").forEach(t => {
       const prioridade = t.prioridade || "baixa";
       prioridadeCount[prioridade]++;
     });
@@ -910,10 +910,10 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     return 0;
   };
 
-  // Tempo de Parada por Setor
+  // Tempo de Parada por Setor (usa filtro de paradas)
   const tempoParadaPorSetorData = () => {
     const setorTempo: Record<string, number> = {};
-    paradasMaquina.forEach(p => {
+    paradasFiltradasParadas.forEach(p => {
       const setor = p.setor || "Outros";
       setorTempo[setor] = (setorTempo[setor] || 0) + getTempoParadaMinutos(p);
     });
@@ -999,15 +999,15 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     return Object.entries(semanas).map(([name, data]) => ({ name, ...data }));
   };
 
-  // Status das Paradas (Funil)
+  // Status das Paradas (Funil) - usa filtro de paradas
   const statusParadasFunnelData = () => {
     const statusCount: Record<string, number> = {};
-    paradasMaquina.forEach(p => {
+    paradasFiltradasParadas.forEach(p => {
       const status = p.status || "pendente";
       statusCount[status] = (statusCount[status] || 0) + 1;
     });
     return [
-      { name: "Total", value: paradasMaquina.length, fill: "hsl(var(--muted-foreground))" },
+      { name: "Total", value: paradasFiltradasParadas.length, fill: "hsl(var(--muted-foreground))" },
       { name: "Pendentes", value: statusCount["pendente"] || 0, fill: "hsl(var(--warning))" },
       { name: "Em Andamento", value: statusCount["em_andamento"] || 0, fill: "hsl(var(--primary))" },
       { name: "Concluídas", value: statusCount["concluido"] || 0, fill: "hsl(var(--success))" },
@@ -1213,7 +1213,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </CardContent>
       </Card>
 
-      <Separator className="my-6" />
+      <Separator className="my-10" />
       <div className="space-y-2">
         <h2 className="text-lg font-bold flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-warning" />
