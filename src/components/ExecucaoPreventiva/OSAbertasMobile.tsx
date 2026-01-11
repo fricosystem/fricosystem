@@ -9,10 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardList, Play, Clock, Package, Plus, Minus, X, Check, AlertCircle, Search, ChevronRight, FileText, User, Calendar, Wrench, Timer } from "lucide-react";
+import { ClipboardList, Play, Clock, Package, Plus, Minus, X, Check, AlertCircle, Search, ChevronRight, FileText, User, Calendar, Wrench, Timer, XCircle, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -74,6 +84,8 @@ export function OSAbertasMobile() {
   const [showDetailsSheet, setShowDetailsSheet] = useState(false);
   const [showExecutionSheet, setShowExecutionSheet] = useState(false);
   const [showProductsModal, setShowProductsModal] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   
   // Execution state
   const [executionStartTime, setExecutionStartTime] = useState<Date | null>(null);
@@ -174,18 +186,21 @@ export function OSAbertasMobile() {
   };
 
   const handleOpenDetails = async (os: OrdemServico) => {
+    // Sempre define a OS selecionada antes de abrir qualquer modal
+    setSelectedOS(os);
+
     if (os.status === "em_execucao") {
       try {
         const osRef = doc(db, "ordens_servicos", os.id);
         const osDoc = await getDoc(osRef);
         const osData = osDoc.data();
-        
+
         // Atualizar selectedOS com dados completos do Firestore
         setSelectedOS({
           ...os,
-          descricaoOS: osData?.descricaoOS || os.descricaoOS
+          descricaoOS: osData?.descricaoOS || os.descricaoOS,
         });
-        
+
         if (osData?.inicioExecucao) {
           const inicio = osData.inicioExecucao.toDate();
           setExecutionStartTime(inicio);
@@ -196,17 +211,22 @@ export function OSAbertasMobile() {
           setExecutionStartTime(new Date());
           setElapsedTime(0);
         }
-        
+
         setObservacoes(osData?.observacoes || "");
         setSolucaoAplicada(osData?.solucaoAplicada || "");
-        setShowExecutionSheet(true);
       } catch (error) {
         console.error("Erro ao recuperar dados de execução:", error);
+        // Mantém a OS básica (já setada acima) para não abrir um modal em branco
+        setExecutionStartTime(new Date());
+        setElapsedTime(0);
+      } finally {
         setShowExecutionSheet(true);
       }
-    } else {
-      setShowDetailsSheet(true);
+
+      return;
     }
+
+    setShowDetailsSheet(true);
   };
 
   const handleStartExecution = async () => {
@@ -240,6 +260,39 @@ export function OSAbertasMobile() {
         description: "Não foi possível iniciar a execução",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleCancelOS = async () => {
+    if (!selectedOS || !user) return;
+
+    setCancelLoading(true);
+    try {
+      const osRef = doc(db, "ordens_servicos", selectedOS.id);
+      await updateDoc(osRef, {
+        status: "cancelada",
+        canceladoPor: userData?.nome || user.email,
+        canceladoEm: serverTimestamp(),
+        atualizadoEm: serverTimestamp(),
+      });
+
+      setShowCancelDialog(false);
+      setShowDetailsSheet(false);
+      setSelectedOS(null);
+
+      toast({
+        title: "OS Cancelada",
+        description: "A ordem de serviço foi cancelada com sucesso",
+      });
+    } catch (error) {
+      console.error("Erro ao cancelar OS:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível cancelar a ordem de serviço",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -580,15 +633,24 @@ export function OSAbertasMobile() {
                     </div>
                   </div>
 
-                  {/* Botão de Ação */}
+                  {/* Botões de Ação */}
                   <Separator />
-                  <div className="pb-6">
-                    <Button 
+                  <div className="pb-6 space-y-3">
+                    <Button
                       className="w-full h-14 text-base font-semibold"
                       onClick={handleStartExecution}
                     >
                       <Play className="h-5 w-5 mr-2" />
                       Iniciar Execução
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full h-12 text-base font-semibold border-destructive text-destructive hover:bg-destructive/10"
+                      onClick={() => setShowCancelDialog(true)}
+                    >
+                      <XCircle className="h-5 w-5 mr-2" />
+                      Cancelar OS
                     </Button>
                   </div>
                 </TabsContent>
@@ -817,6 +879,30 @@ export function OSAbertasMobile() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Confirmar cancelamento
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar esta OS? Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelLoading}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelOS}
+              disabled={cancelLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelLoading ? "Cancelando..." : "Sim, Cancelar OS"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
