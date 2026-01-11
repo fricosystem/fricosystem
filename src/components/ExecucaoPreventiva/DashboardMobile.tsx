@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getTempoParadaReal, formatarTempoHMS, filtrarPorPeriodo, FiltroData, PeriodoFiltro, PERIODO_LABELS } from "@/pages/ExecucaoPreventiva/components/dashboard/dashboardUtils";
+import { SectionFilter } from "./SectionFilter";
 
 interface DashboardMobileProps {
   stats: {
@@ -84,7 +85,15 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
   const [templates, setTemplates] = useState<TemplateTarefa[]>([]);
   const [loadingParadas, setLoadingParadas] = useState(true);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
-  const [periodoSelecionado, setPeriodoSelecionado] = useState<FiltroData>({ periodo: "mensal" });
+  const [periodoSelecionado, setPeriodoSelecionado] = useState<FiltroData>({ periodo: "hoje" });
+
+  // Estados de filtros por seção
+  const [filtroPreventivas, setFiltroPreventivas] = useState<FiltroData>({ periodo: "hoje" });
+  const [filtroParadas, setFiltroParadas] = useState<FiltroData>({ periodo: "hoje" });
+  const [filtroOS, setFiltroOS] = useState<FiltroData>({ periodo: "hoje" });
+  const [filtroIndicadores, setFiltroIndicadores] = useState<FiltroData>({ periodo: "hoje" });
+  const [filtroMetas, setFiltroMetas] = useState<FiltroData>({ periodo: "hoje" });
+  const [filtroResumo, setFiltroResumo] = useState<FiltroData>({ periodo: "hoje" });
 
   // Estados para Ordens de Serviço
   const [ordensServico, setOrdensServico] = useState<{id: string; status: string; setor: string; equipamento: string; criadoEm: any; observacaoManutencao?: string}[]>([]);
@@ -195,22 +204,93 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     fetchOS();
   }, []);
 
-  // Usar tarefas diretamente (sem filtro por usuário)
-  const tarefasFiltradas = tarefas;
-  const historicoFiltrado = historicoExecucoes;
+  // ========== DADOS FILTRADOS POR SEÇÃO ==========
+  
+  // Preventivas filtradas
+  const tarefasFiltradasPreventivas = useMemo(() => 
+    filtrarPorPeriodo(tarefas, filtroPreventivas, (t) => t.proximaExecucao), 
+    [tarefas, filtroPreventivas]
+  );
+  
+  const historicoFiltradoPreventivas = useMemo(() => 
+    filtrarPorPeriodo(historicoExecucoes, filtroPreventivas, (h) => h.dataExecucao), 
+    [historicoExecucoes, filtroPreventivas]
+  );
+
+  // Paradas filtradas
+  const paradasFiltradasParadas = useMemo(() => 
+    filtrarPorPeriodo(paradasMaquina, filtroParadas, (p) => p.criadoEm), 
+    [paradasMaquina, filtroParadas]
+  );
+
+  // OS filtradas
+  const osFiltradasAbertas = useMemo(() => 
+    filtrarPorPeriodo(ordensServico, filtroOS, (os) => os.criadoEm), 
+    [ordensServico, filtroOS]
+  );
+  
+  const osFiltradasFinalizadas = useMemo(() => 
+    filtrarPorPeriodo(ordensFinalizadas, filtroOS, (os) => os.finalizadoEm), 
+    [ordensFinalizadas, filtroOS]
+  );
+
+  // Indicadores filtrados
+  const historicoFiltradoIndicadores = useMemo(() => 
+    filtrarPorPeriodo(historicoExecucoes, filtroIndicadores, (h) => h.dataExecucao), 
+    [historicoExecucoes, filtroIndicadores]
+  );
+  
+  const tarefasFiltradasIndicadores = useMemo(() => 
+    filtrarPorPeriodo(tarefas, filtroIndicadores, (t) => t.proximaExecucao), 
+    [tarefas, filtroIndicadores]
+  );
+
+  // Metas filtradas
+  const paradasFiltradasMetas = useMemo(() => 
+    filtrarPorPeriodo(paradasMaquina, filtroMetas, (p) => p.criadoEm), 
+    [paradasMaquina, filtroMetas]
+  );
+  
+  const historicoFiltradoMetas = useMemo(() => 
+    filtrarPorPeriodo(historicoExecucoes, filtroMetas, (h) => h.dataExecucao), 
+    [historicoExecucoes, filtroMetas]
+  );
+
+  // Resumo filtrado
+  const paradasFiltradasResumo = useMemo(() => 
+    filtrarPorPeriodo(paradasMaquina, filtroResumo, (p) => p.criadoEm), 
+    [paradasMaquina, filtroResumo]
+  );
 
   // Templates ativos e inativos
   const templatesAtivos = templates.filter(t => t.ativo);
   const templatesInativos = templates.filter(t => !t.ativo);
 
-  // Stats (usar diretamente sem filtro)
+  // ========== STATS DE PREVENTIVAS (filtradas) ==========
+  const statsPreventivas = useMemo(() => {
+    const concluidas = historicoFiltradoPreventivas.length;
+    const pendentes = tarefasFiltradasPreventivas.filter(t => t.status === "pendente").length;
+    const atrasadas = tarefas.filter(t => {
+      // Verificar se está atrasada comparando proximaExecucao com hoje
+      if (!t.proximaExecucao) return false;
+      const proxExec = typeof t.proximaExecucao === 'string' ? new Date(t.proximaExecucao) : t.proximaExecucao;
+      return proxExec < new Date() && t.status !== "concluida";
+    }).length;
+    const emAndamento = tarefasFiltradasPreventivas.filter(t => t.status === "em_andamento").length;
+    const hoje = tarefasFiltradasPreventivas.length;
+    return { concluidas, pendentes, atrasadas, emAndamento, hoje, total: tarefasFiltradasPreventivas.length };
+  }, [historicoFiltradoPreventivas, tarefasFiltradasPreventivas, tarefas]);
+
+  // Variáveis de compatibilidade para código existente
+  const tarefasFiltradas = tarefasFiltradasIndicadores;
+  const historicoFiltrado = historicoFiltradoIndicadores;
   const statsFiltradas = stats;
 
-  // Stats de Ordens de Serviço
-  const osAbertas = ordensServico.filter(os => os.status === "aberta").length;
-  const osEmExecucao = ordensServico.filter(os => os.status === "em_execucao").length;
-  const osConcluidas = ordensFinalizadas.length;
-  const osTotalAbertas = ordensServico.length;
+  // ========== STATS DE OS (filtradas) ==========
+  const osAbertas = osFiltradasAbertas.filter(os => os.status === "aberta").length;
+  const osEmExecucao = osFiltradasAbertas.filter(os => os.status === "em_execucao").length;
+  const osConcluidas = osFiltradasFinalizadas.length;
+  const osTotalAbertas = osFiltradasAbertas.length;
 
   // Tempo médio de execução de OS
   const tempoMedioOS = () => {
@@ -310,10 +390,10 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .slice(0, 6);
   };
 
-  // Dados para gráfico de Paradas por Setor (Bar)
+  // Dados para gráfico de Paradas por Setor (Bar) - usa filtro de paradas
   const paradasPorSetorData = () => {
     const setorCount: Record<string, number> = {};
-    paradasMaquina.forEach(parada => {
+    paradasFiltradasParadas.forEach(parada => {
       const setor = parada.setor || "Outros";
       setorCount[setor] = (setorCount[setor] || 0) + 1;
     });
@@ -323,7 +403,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .slice(0, 5);
   };
 
-  // Dados para gráfico de Origem das Paradas (Pie)
+  // Dados para gráfico de Origem das Paradas (Pie) - usa filtro de paradas
   const origemParadasData = () => {
     const origemCount: Record<string, number> = {
       "Elétrica": 0,
@@ -332,7 +412,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       "Terceiros": 0,
       "Outro": 0
     };
-    paradasMaquina.forEach(parada => {
+    paradasFiltradasParadas.forEach(parada => {
       if (parada.origemParada) {
         if (parada.origemParada.eletrica) origemCount["Elétrica"]++;
         if (parada.origemParada.mecanica) origemCount["Mecânica"]++;
@@ -385,10 +465,10 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     return Object.entries(dias).map(([name, value]) => ({ name, preventivas: value }));
   };
 
-  // Stats de Paradas
-  const paradasPendentes = paradasMaquina.filter(p => p.status === "pendente").length;
-  const paradasEmAndamento = paradasMaquina.filter(p => p.status === "em_andamento").length;
-  const paradasConcluidas = paradasMaquina.filter(p => p.status === "concluido").length;
+  // Stats de Paradas (filtradas)
+  const paradasPendentes = paradasFiltradasParadas.filter(p => p.status === "pendente").length;
+  const paradasEmAndamento = paradasFiltradasParadas.filter(p => p.status === "em_andamento").length;
+  const paradasConcluidas = paradasFiltradasParadas.filter(p => p.status === "concluido").length;
 
   // ========== NOVAS MÉTRICAS BASEADAS NOS TEMPLATES ==========
 
@@ -594,22 +674,26 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
   const manutentoresAtivos = manutentores.filter(m => m.ativo).length;
   const capacidadeTotalDiaria = manutentores.filter(m => m.ativo).reduce((acc, m) => acc + (m.capacidadeDiaria || 0), 0);
 
-  // Taxa de paradas (Meta: diminuir)
-  const totalParadas = paradasMaquina.length;
-  const paradasAbertas = paradasMaquina.filter(p => p.status !== "concluido" && p.status !== "cancelado").length;
-  const taxaResolucaoParadas = totalParadas > 0 ? Math.round(((totalParadas - paradasAbertas) / totalParadas) * 100) : 100;
+  // Taxa de paradas (Meta: diminuir) - usa filtro de paradas
+  const totalParadasFiltradas = paradasFiltradasParadas.length;
+  const paradasAbertasFiltradas = paradasFiltradasParadas.filter(p => p.status !== "concluido" && p.status !== "cancelado").length;
+  const taxaResolucaoParadas = totalParadasFiltradas > 0 ? Math.round(((totalParadasFiltradas - paradasAbertasFiltradas) / totalParadasFiltradas) * 100) : 100;
 
-  // Tempo médio de parada
+  // Tempo médio de parada (usa filtro de paradas)
   const tempoMedioParada = () => {
-    const paradasComTempo = paradasMaquina.filter(p => p.tempoParada && p.tempoParada > 0);
+    const paradasComTempo = paradasFiltradasParadas.filter(p => p.tempoParada && p.tempoParada > 0);
     if (paradasComTempo.length === 0) return 0;
     return Math.round(paradasComTempo.reduce((acc, p) => acc + (p.tempoParada || 0), 0) / paradasComTempo.length);
   };
 
-  // Paradas por Equipamento (Top 10 - equipamentos problemáticos)
+  // Para métricas globais (metas e resumo)
+  const totalParadas = paradasMaquina.length;
+  const paradasAbertas = paradasMaquina.filter(p => p.status !== "concluido" && p.status !== "cancelado").length;
+
+  // Paradas por Equipamento (Top 10 - equipamentos problemáticos) - usa filtro de metas
   const paradasPorEquipamentoData = () => {
     const equipCount: Record<string, number> = {};
-    paradasMaquina.forEach(p => {
+    paradasFiltradasMetas.forEach(p => {
       const equip = p.equipamento || "Outros";
       equipCount[equip] = (equipCount[equip] || 0) + 1;
     });
@@ -619,10 +703,10 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .slice(0, 10);
   };
 
-  // Paradas por Tipo de Manutenção
+  // Paradas por Tipo de Manutenção - usa filtro de metas
   const paradasPorTipoManutencaoData = () => {
     const tipoCount: Record<string, number> = {};
-    paradasMaquina.forEach(p => {
+    paradasFiltradasMetas.forEach(p => {
       const tipo = p.tipoManutencao || "Outros";
       tipoCount[tipo] = (tipoCount[tipo] || 0) + 1;
     });
@@ -972,6 +1056,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
           Manutenções Preventivas
         </h2>
         <p className="text-xs text-muted-foreground">Visão geral das tarefas preventivas</p>
+        <SectionFilter filtro={filtroPreventivas} onFiltroChange={setFiltroPreventivas} />
       </div>
 
       {/* Cards de KPIs - Preventivas */}
@@ -984,7 +1069,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statsFiltradas.hoje}</div>
+            <div className="text-2xl font-bold">{statsPreventivas.hoje}</div>
             <p className="text-xs text-muted-foreground">Tarefas agendadas</p>
           </CardContent>
         </Card>
@@ -997,7 +1082,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{statsFiltradas.atrasadas}</div>
+            <div className="text-2xl font-bold text-destructive">{statsPreventivas.atrasadas}</div>
             <p className="text-xs text-muted-foreground">Requerem atenção</p>
           </CardContent>
         </Card>
@@ -1010,7 +1095,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{statsFiltradas.emAndamento}</div>
+            <div className="text-2xl font-bold text-warning">{statsPreventivas.emAndamento}</div>
             <p className="text-xs text-muted-foreground">Em execução</p>
           </CardContent>
         </Card>
@@ -1023,7 +1108,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{statsFiltradas.concluidas}</div>
+            <div className="text-2xl font-bold text-success">{statsPreventivas.concluidas}</div>
             <p className="text-xs text-muted-foreground">Total realizadas</p>
           </CardContent>
         </Card>
@@ -1128,7 +1213,6 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </CardContent>
       </Card>
 
-      {/* ========== SEÇÃO: PARADAS DE MÁQUINA ========== */}
       <Separator className="my-6" />
       <div className="space-y-2">
         <h2 className="text-lg font-bold flex items-center gap-2">
@@ -1136,6 +1220,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
           Paradas de Máquina
         </h2>
         <p className="text-xs text-muted-foreground">Monitoramento de paradas e disponibilidade</p>
+        <SectionFilter filtro={filtroParadas} onFiltroChange={setFiltroParadas} />
       </div>
 
       {/* KPIs de Paradas */}
@@ -1240,7 +1325,6 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </Card>
       )}
 
-      {/* ========== SEÇÃO: ORDENS DE SERVIÇO ========== */}
       <Separator className="my-6" />
       <div className="space-y-2">
         <h2 className="text-lg font-bold flex items-center gap-2">
@@ -1248,6 +1332,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
           Ordens de Serviço
         </h2>
         <p className="text-xs text-muted-foreground">Acompanhamento de OS corretivas</p>
+        <SectionFilter filtro={filtroOS} onFiltroChange={setFiltroOS} />
       </div>
 
       {/* KPIs de OS */}
@@ -1440,6 +1525,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
           Indicadores Estratégicos
         </h2>
         <p className="text-xs text-muted-foreground">Metas e performance geral</p>
+        <SectionFilter filtro={filtroIndicadores} onFiltroChange={setFiltroIndicadores} />
       </div>
 
       {/* Gráfico de Produtividade Semanal */}
@@ -1923,6 +2009,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
           Metas e Indicadores Estratégicos
         </h2>
         <p className="text-xs text-muted-foreground">Foco: Diminuir paradas e manter preventivas em dia</p>
+        <SectionFilter filtro={filtroMetas} onFiltroChange={setFiltroMetas} />
       </div>
 
       {/* KPIs Estratégicos */}
@@ -2550,28 +2637,13 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       {/* Divisória e Seção de Resumo / Disponibilidade */}
       <Separator className="my-6" />
       
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            Resumo / Disponibilidade
-          </h2>
-          <p className="text-sm text-muted-foreground">Indicadores detalhados por linha de produção</p>
-        </div>
-        <Select
-          value={periodoSelecionado.periodo}
-          onValueChange={(value: PeriodoFiltro) => setPeriodoSelecionado({ periodo: value })}
-        >
-          <SelectTrigger className="w-[160px] bg-background">
-            <SelectValue placeholder="Período" />
-          </SelectTrigger>
-          <SelectContent className="bg-background z-50">
-            <SelectItem value="hoje">{PERIODO_LABELS.hoje}</SelectItem>
-            <SelectItem value="semanal">{PERIODO_LABELS.semanal}</SelectItem>
-            <SelectItem value="mensal">{PERIODO_LABELS.mensal}</SelectItem>
-            <SelectItem value="anual">{PERIODO_LABELS.anual}</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="space-y-2 mb-4">
+        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          Resumo / Disponibilidade
+        </h2>
+        <p className="text-sm text-muted-foreground">Indicadores detalhados por linha de produção</p>
+        <SectionFilter filtro={filtroResumo} onFiltroChange={setFiltroResumo} />
       </div>
 
       {/* Tabela 1: Disponibilidade por Setor */}
@@ -2596,9 +2668,10 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
               </thead>
               <tbody>
                 {(() => {
-                  // Agrupa paradas por setor
+                  // Agrupa paradas por setor (usa filtro de resumo)
+                  const paradasParaResumo = paradasFiltradasResumo;
                   const setorParadas: Record<string, { count: number; tempoTotal: number }> = {};
-                  paradasMaquina.forEach(p => {
+                  paradasParaResumo.forEach(p => {
                     const setor = p.setor || "Outros";
                     if (!setorParadas[setor]) {
                       setorParadas[setor] = { count: 0, tempoTotal: 0 };
@@ -2677,7 +2750,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
               </thead>
               <tbody>
                 {(() => {
-                  const paradasFiltradas = filtrarPorPeriodo(paradasMaquina, periodoSelecionado as FiltroData, (p) => p.criadoEm);
+                  const paradasFiltradas = filtrarPorPeriodo(paradasMaquina, filtroResumo as FiltroData, (p) => p.criadoEm);
                   const setorTempos: Record<string, { tempo: number; count: number }> = {};
                   paradasFiltradas.forEach(p => {
                     const setor = p.setor || "Outros";
@@ -2740,7 +2813,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
               </thead>
               <tbody>
                 {(() => {
-                  const paradasFiltradas = filtrarPorPeriodo(paradasMaquina, periodoSelecionado as FiltroData, (p) => p.criadoEm);
+                  const paradasFiltradas = filtrarPorPeriodo(paradasMaquina, filtroResumo as FiltroData, (p) => p.criadoEm);
                   const tipoStats: Record<string, { count: number; tempo: number }> = {};
                   paradasFiltradas.forEach(p => {
                     const tipo = p.tipoManutencao || "(vazio)";

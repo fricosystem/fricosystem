@@ -13,10 +13,10 @@ export interface DashboardFiltersState {
 }
 
 export function useDashboardFilters(): DashboardFiltersState {
-  const [filtroPreventivas, setFiltroPreventivas] = useState<FiltroData>({ periodo: "mensal" });
-  const [filtroParadas, setFiltroParadas] = useState<FiltroData>({ periodo: "mensal" });
-  const [filtroOS, setFiltroOS] = useState<FiltroData>({ periodo: "mensal" });
-  const [filtroTabelas, setFiltroTabelas] = useState<FiltroData>({ periodo: "mensal" });
+  const [filtroPreventivas, setFiltroPreventivas] = useState<FiltroData>({ periodo: "hoje" });
+  const [filtroParadas, setFiltroParadas] = useState<FiltroData>({ periodo: "hoje" });
+  const [filtroOS, setFiltroOS] = useState<FiltroData>({ periodo: "hoje" });
+  const [filtroTabelas, setFiltroTabelas] = useState<FiltroData>({ periodo: "hoje" });
 
   return {
     filtroPreventivas,
