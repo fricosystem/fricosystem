@@ -57,11 +57,6 @@ export function OrdensServicoTab() {
               )}
             >
               {tab.label}
-              {tab.id === "historico" && openCount > 0 && (
-                <Badge variant="destructive" className="h-5 min-w-[20px] flex items-center justify-center p-0 text-xs font-bold">
-                  {openCount > 99 ? "99+" : openCount}
-                </Badge>
-              )}
             </button>
           ))}
         </div>

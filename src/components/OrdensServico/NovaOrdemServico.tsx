@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Save, RotateCcw, Loader2, ClipboardPlus } from "lucide-react";
 import { format } from "date-fns";
@@ -69,8 +69,8 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
   const [loadingOrigensParada, setLoadingOrigensParada] = useState(true);
   const [loadingMotivosOS, setLoadingMotivosOS] = useState(true);
   
-  // Estado para as origens selecionadas (dinâmico)
-  const [origensSelecionadas, setOrigensSelecionadas] = useState<Record<string, boolean>>({});
+  // Estado para a origem selecionada (seleção única)
+  const [origemSelecionada, setOrigemSelecionada] = useState<string>("");
 
   // Responsável pelo chamado é o nome do usuário autenticado
   const responsavelChamado = userData?.nome || "";
@@ -227,8 +227,8 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
     fetchMotivosOS();
   }, []);
 
-  const handleOrigemChange = (nome: string, checked: boolean) => {
-    setOrigensSelecionadas(prev => ({ ...prev, [nome]: checked }));
+  const handleOrigemChange = (nome: string) => {
+    setOrigemSelecionada(nome);
   };
 
   const handleLimpar = () => {
@@ -238,12 +238,12 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
     setDataAberturaOS(getDataHoraAtual());
     setDescricaoOS("");
     setObservacaoManutencao("");
-    setOrigensSelecionadas({});
+    setOrigemSelecionada("");
   };
 
   const handleSalvar = async () => {
-    // Verificar se pelo menos uma origem foi selecionada
-    const temOrigemSelecionada = Object.values(origensSelecionadas).some(v => v === true);
+    // Verificar se uma origem foi selecionada
+    const temOrigemSelecionada = origemSelecionada !== "";
     
     if (!setor || !equipamento || !linha || !descricaoOS || !temOrigemSelecionada || !observacaoManutencao) {
       toast({
@@ -257,18 +257,13 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
     try {
       setSaving(true);
       
-      // Converter origens selecionadas para array de nomes
-      const origensArray = Object.entries(origensSelecionadas)
-        .filter(([_, checked]) => checked)
-        .map(([nome]) => nome);
-      
       const ordemServico = {
         setor,
         equipamento,
         linha,
         dataAberturaOS: new Date().toISOString(),
         descricaoOS,
-        origensParada: origensArray,
+        origensParada: [origemSelecionada],
         observacaoManutencao,
         responsavelChamado,
         status: "aberta",
@@ -378,18 +373,6 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
         </div>
       </div>
 
-      {/* Descrição da OS */}
-      <div className="space-y-1.5">
-        <Label htmlFor="descricaoOS" className="text-sm font-medium">Descrição da OS *</Label>
-        <Textarea
-          id="descricaoOS"
-          value={descricaoOS}
-          onChange={(e) => setDescricaoOS(e.target.value)}
-          placeholder="Descreva o motivo da ordem de serviço..."
-          className="min-h-[100px] resize-none"
-        />
-      </div>
-      
       {/* Origem da Parada */}
       <div className="space-y-2">
         <Label className="text-sm font-medium">Origem da Parada *</Label>
@@ -402,13 +385,16 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
           ) : origensParada.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma origem cadastrada.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <RadioGroup
+              value={origemSelecionada}
+              onValueChange={handleOrigemChange}
+              className="grid grid-cols-2 gap-3"
+            >
               {origensParada.map((origem) => (
                 <div key={origem.id} className="flex items-center space-x-2">
-                  <Checkbox
+                  <RadioGroupItem
+                    value={origem.nome}
                     id={`origem-${origem.id}`}
-                    checked={origensSelecionadas[origem.nome] || false}
-                    onCheckedChange={(checked) => handleOrigemChange(origem.nome, checked as boolean)}
                   />
                   <Label 
                     htmlFor={`origem-${origem.id}`} 
@@ -418,12 +404,12 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
                   </Label>
                 </div>
               ))}
-            </div>
+            </RadioGroup>
           )}
         </div>
       </div>
 
-      {/* Observação da Manutenção */}
+      {/* Motivo da Manutenção */}
       <div className="space-y-1.5">
         <Label htmlFor="observacaoManutencao" className="text-sm font-medium">Motivo da Manutenção *</Label>
         <Select
@@ -442,6 +428,18 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Descrição da OS */}
+      <div className="space-y-1.5">
+        <Label htmlFor="descricaoOS" className="text-sm font-medium">Descrição da OS *</Label>
+        <Textarea
+          id="descricaoOS"
+          value={descricaoOS}
+          onChange={(e) => setDescricaoOS(e.target.value)}
+          placeholder="Descreva o motivo da ordem de serviço..."
+          className="min-h-[100px] resize-none"
+        />
       </div>
 
       {/* Botões de Ação */}
