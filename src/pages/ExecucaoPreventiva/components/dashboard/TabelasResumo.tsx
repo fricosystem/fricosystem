@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Gauge, Timer, Wrench, Clock, BarChart3 } from "lucide-react";
+import { Gauge, Timer, Wrench, Clock, BarChart3, Target, CheckCircle2, XCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { DashboardFilters } from "./DashboardFilters";
 import { 
   FiltroData, 
@@ -9,7 +10,8 @@ import {
   getTempoParadaReal,
   formatarTempoHMS,
   timestampToDate,
-  getDatasSemanaAtual
+  getDatasSemanaAtual,
+  getDatasPeriodo
 } from "./dashboardUtils";
 import { Separator } from "@/components/ui/separator";
 
@@ -231,10 +233,87 @@ export function TabelasResumo({
     };
   };
 
+  // ============ TABELA 5: DISPONIBILIDADE X META MENSAL ============
+  const disponibilidadeMetaMensal = () => {
+    const META_MENSAL = 80; // Meta fixa de 80%
+    const { inicio: periodoInicio, fim: periodoFim } = getDatasPeriodo(filtro);
+    const mesesData: Record<string, Set<string>> = {};
+
+    // Função para extrair ano-mês e dia de uma data
+    const processarData = (data: Date | null) => {
+      if (!data) return null;
+      // Verifica se está dentro do período filtrado
+      if (data < periodoInicio || data > periodoFim) return null;
+      
+      const ano = data.getFullYear();
+      const mes = data.getMonth();
+      const dia = data.getDate();
+      const chave = `${ano}-${String(mes).padStart(2, '0')}`;
+      return { chave, dia, ano, mes };
+    };
+
+    // Processa paradas concluídas (finalizadoEm)
+    paradasMaquina.forEach(p => {
+      if (p.status === "concluido" && p.finalizadoEm) {
+        const data = timestampToDate(p.finalizadoEm);
+        const resultado = processarData(data);
+        if (resultado) {
+          if (!mesesData[resultado.chave]) {
+            mesesData[resultado.chave] = new Set();
+          }
+          mesesData[resultado.chave].add(resultado.dia.toString());
+        }
+      }
+    });
+
+    // Processa histórico de execuções (dataExecucao)
+    historicoExecucoes.forEach(exec => {
+      const data = timestampToDate(exec.dataExecucao);
+      const resultado = processarData(data);
+      if (resultado) {
+        if (!mesesData[resultado.chave]) {
+          mesesData[resultado.chave] = new Set();
+        }
+        mesesData[resultado.chave].add(resultado.dia.toString());
+      }
+    });
+
+    // Converte para array ordenado
+    const nomeMeses = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+
+    const getDiasNoMes = (ano: number, mes: number) => {
+      return new Date(ano, mes + 1, 0).getDate();
+    };
+
+    return Object.entries(mesesData)
+      .map(([chave, diasSet]) => {
+        const [ano, mes] = chave.split("-").map(Number);
+        const diasTrabalhados = diasSet.size;
+        const diasNoMes = getDiasNoMes(ano, mes);
+        const disponibilidade = (diasTrabalhados / diasNoMes) * 100;
+        
+        return {
+          chave,
+          mesNome: `${nomeMeses[mes]}/${ano}`,
+          diasTrabalhados,
+          diasNoMes,
+          disponibilidade: disponibilidade.toFixed(1),
+          disponibilidadeNum: disponibilidade,
+          meta: META_MENSAL,
+          atingiuMeta: disponibilidade >= META_MENSAL
+        };
+      })
+      .sort((a, b) => b.chave.localeCompare(a.chave)); // Mais recente primeiro
+  };
+
   const dispData = disponibilidadePorSetor();
   const tempoData = tempoParadaPorSetor();
   const tiposData = tiposManutencaoSemana();
   const diasData = execucoesPorDiaSemana();
+  const metaMensalData = disponibilidadeMetaMensal();
 
   // Totais
   const totalDispData = dispData.reduce((acc, d) => ({
@@ -412,7 +491,76 @@ export function TabelasResumo({
         </CardContent>
       </Card>
 
-      {/* Tabela 4: Execuções por Dia da Semana (Semana Atual) */}
+      {/* Tabela 5: Disponibilidade x Meta Mensal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            Disponibilidade x Meta Mensal
+          </CardTitle>
+          <CardDescription>Dias trabalhados vs meta de 80%</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-3 font-semibold">Mês</th>
+                  <th className="text-center p-3 font-semibold">Dias Trabalhados</th>
+                  <th className="text-center p-3 font-semibold">Dias no Mês</th>
+                  <th className="text-center p-3 font-semibold">Disponibilidade</th>
+                  <th className="text-center p-3 font-semibold">Meta</th>
+                  <th className="text-center p-3 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metaMensalData.length > 0 ? (
+                  metaMensalData.map((row) => (
+                    <tr key={row.chave} className="border-b hover:bg-muted/30">
+                      <td className="p-3 font-medium">{row.mesNome}</td>
+                      <td className="text-center p-3">{row.diasTrabalhados}</td>
+                      <td className="text-center p-3">{row.diasNoMes}</td>
+                      <td className="text-center p-3">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={row.atingiuMeta ? "text-success font-medium" : "text-destructive font-medium"}>
+                            {row.disponibilidade.replace('.', ',')}%
+                          </span>
+                          <Progress 
+                            value={Math.min(row.disponibilidadeNum, 100)} 
+                            className="h-1.5 w-16" 
+                          />
+                        </div>
+                      </td>
+                      <td className="text-center p-3 text-muted-foreground">{row.meta}%</td>
+                      <td className="text-center p-3">
+                        {row.atingiuMeta ? (
+                          <div className="flex items-center justify-center gap-1 text-success">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span className="text-xs font-medium">Atingido</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1 text-destructive">
+                            <XCircle className="h-4 w-4" />
+                            <span className="text-xs font-medium">Abaixo</span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                      Nenhum dado de execução disponível
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela 6: Execuções por Dia da Semana (Semana Atual) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">

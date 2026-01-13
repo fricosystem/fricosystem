@@ -1077,12 +1077,12 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         <Card className="bg-gradient-to-br from-destructive/10 to-destructive/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-destructive" />
+              <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
               Atrasadas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{statsPreventivas.atrasadas}</div>
+            <div className="text-2xl font-bold text-red-500 dark:text-red-400">{statsPreventivas.atrasadas}</div>
             <p className="text-xs text-muted-foreground">Requerem atenção</p>
           </CardContent>
         </Card>
@@ -1196,7 +1196,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                   contentStyle={{ 
                     background: 'hsl(var(--background))', 
                     borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
+                    borderRadius: 'var(--radius)',
+                    color: 'hsl(var(--foreground))'
                   }}
                   formatter={(value) => [`${value}`, 'Preventivas']}
                 />
@@ -1313,7 +1314,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Paradas']}
                   />
@@ -1429,7 +1431,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'OS']}
                   />
@@ -1462,7 +1465,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'OS']}
                   />
@@ -1500,7 +1504,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                   contentStyle={{ 
                     background: 'hsl(var(--background))', 
                     borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
+                    borderRadius: 'var(--radius)',
+                    color: 'hsl(var(--foreground))'
                   }}
                   formatter={(value) => [`${value}`, 'OS']}
                 />
@@ -1548,7 +1553,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                   contentStyle={{ 
                     background: 'hsl(var(--background))', 
                     borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
+                    borderRadius: 'var(--radius)',
+                    color: 'hsl(var(--foreground))'
                   }}
                   formatter={(value) => [`${value}`, 'Tarefas']}
                 />
@@ -1570,7 +1576,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive" />
+              <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400" />
               Templates por Prioridade
             </CardTitle>
             <CardDescription>Distribuição de templates ativos</CardDescription>
@@ -1597,7 +1603,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                   />
                   <Legend />
@@ -1629,7 +1636,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Templates']}
                   />
@@ -1662,7 +1670,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Templates']}
                   />
@@ -1707,7 +1716,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                   />
                 </PieChart>
@@ -1738,7 +1748,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}h`, 'Tempo']}
                   />
@@ -1771,7 +1782,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value} min`, 'Média']}
                   />
@@ -1815,7 +1827,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                   />
                 </PieChart>
@@ -1846,7 +1859,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value} min`]}
                   />
@@ -1881,7 +1895,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Tarefas']}
                   />
@@ -1914,7 +1929,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Paradas']}
                   />
@@ -1931,7 +1947,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-destructive" />
+              <Wrench className="h-5 w-5 text-red-500 dark:text-red-400" />
               Origem das Paradas
             </CardTitle>
             <CardDescription>Por tipo de origem</CardDescription>
@@ -1958,7 +1974,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }} 
                   />
                 </PieChart>
@@ -1989,7 +2006,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Templates']}
                   />
@@ -2094,7 +2112,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Inativos</span>
-                <span className="text-sm font-medium text-destructive">{equipamentosInativos}</span>
+                <span className="text-sm font-medium text-red-500 dark:text-red-400">{equipamentosInativos}</span>
               </div>
             </div>
             <div className="space-y-3">
@@ -2174,7 +2192,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-destructive" />
+              <TrendingDown className="h-5 w-5 text-red-500 dark:text-red-400" />
               Evolução de Paradas
             </CardTitle>
             <CardDescription>Últimos 6 meses - Meta: tendência de queda</CardDescription>
@@ -2196,7 +2214,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Paradas']}
                   />
@@ -2213,7 +2232,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Cog className="h-5 w-5 text-destructive" />
+              <Cog className="h-5 w-5 text-red-500 dark:text-red-400" />
               Top 10 Equipamentos com Paradas
             </CardTitle>
             <CardDescription>Equipamentos problemáticos - Priorizar manutenção</CardDescription>
@@ -2229,7 +2248,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Paradas']}
                   />
@@ -2274,7 +2294,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                   />
                 </PieChart>
@@ -2305,7 +2326,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}h`, 'Tempo']}
                   />
@@ -2338,7 +2360,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                   />
                   <Legend />
@@ -2372,7 +2395,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                   />
                   <Legend />
@@ -2390,7 +2414,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive" />
+              <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400" />
               Prioridades Pendentes
             </CardTitle>
             <CardDescription>Tarefas aguardando execução</CardDescription>
@@ -2417,7 +2441,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                   />
                   <Legend />
@@ -2449,7 +2474,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Tarefas']}
                   />
@@ -2494,7 +2520,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                   />
                 </PieChart>
@@ -2525,7 +2552,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                   />
                   <Legend />
@@ -2559,7 +2587,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       borderColor: 'hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--foreground))'
                     }}
                     formatter={(value) => [`${value}`, 'Execuções']}
                   />
@@ -2619,7 +2648,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
               <p className="text-xs text-muted-foreground">Preventivas Realizadas</p>
             </div>
             <div className="p-3 rounded-lg bg-background/50">
-              <div className="text-2xl font-bold text-destructive">{totalParadas}</div>
+              <div className="text-2xl font-bold text-red-500 dark:text-red-400">{totalParadas}</div>
               <p className="text-xs text-muted-foreground">Total de Paradas</p>
             </div>
             <div className="p-3 rounded-lg bg-background/50">
@@ -2853,7 +2882,148 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </CardContent>
       </Card>
 
-      {/* Tabela 4: Execuções por Dia da Semana */}
+      {/* Tabela 4: Disponibilidade x Meta Mensal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-5 w-5 text-success" />
+            Disponibilidade x Meta Mensal
+          </CardTitle>
+          <CardDescription>Comparativo de disponibilidade real vs meta por setor</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-3 font-semibold">Setor</th>
+                  <th className="text-right p-3 font-semibold">Dias Trab.</th>
+                  <th className="text-right p-3 font-semibold">Disp. Real</th>
+                  <th className="text-right p-3 font-semibold">Meta</th>
+                  <th className="text-right p-3 font-semibold">Diferença</th>
+                  <th className="text-center p-3 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const paradasFiltradas = filtrarPorPeriodo(paradasMaquina, filtroResumo as FiltroData, (p) => p.criadoEm);
+                  const META_DISPONIBILIDADE = 80; // Meta fixa de 80%
+                  const DIAS_TRABALHADOS = 21; // Dias trabalhados fixos
+                  
+                  // Agrupa paradas por setor e calcula tempo total
+                  const setorData: Record<string, { tempoParada: number; count: number }> = {};
+                  paradasFiltradas.forEach(p => {
+                    const setor = p.setor || "Outros";
+                    if (!setorData[setor]) {
+                      setorData[setor] = { tempoParada: 0, count: 0 };
+                    }
+                    setorData[setor].tempoParada += getTempoParadaReal(p);
+                    setorData[setor].count++;
+                  });
+
+                  // Calcula disponibilidade baseado em 21 dias trabalhados x 24h = 504 horas = 30240 minutos
+                  const tempoMensal = DIAS_TRABALHADOS * 24 * 60; // minutos baseado nos dias trabalhados
+                  const calcDisponibilidade = (tempoParada: number) => {
+                    const dispReal = ((tempoMensal - tempoParada) / tempoMensal) * 100;
+                    return Math.max(0, Math.min(100, dispReal));
+                  };
+
+                  const sortedSetores = Object.entries(setorData)
+                    .map(([setor, data]) => ({
+                      setor,
+                      tempoParada: data.tempoParada,
+                      count: data.count,
+                      dispReal: calcDisponibilidade(data.tempoParada)
+                    }))
+                    .sort((a, b) => b.dispReal - a.dispReal);
+
+                  const totalTempoParada = Object.values(setorData).reduce((acc, s) => acc + s.tempoParada, 0);
+                  const dispGeralReal = calcDisponibilidade(totalTempoParada);
+
+                  if (sortedSetores.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                          Nenhum dado de parada encontrado no período selecionado
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return (
+                    <>
+                      {sortedSetores.map(({ setor, dispReal }) => {
+                        const diferenca = dispReal - META_DISPONIBILIDADE;
+                        const atingiuMeta = diferenca >= 0;
+                        return (
+                          <tr key={setor} className="border-b hover:bg-muted/30">
+                            <td className="p-3 font-medium">{setor}</td>
+                            <td className="text-right p-3 text-muted-foreground">{DIAS_TRABALHADOS}</td>
+                            <td className="text-right p-3">
+                              <span className={dispReal >= META_DISPONIBILIDADE ? "text-success" : "text-red-500 dark:text-red-400"}>
+                                {dispReal.toFixed(2).replace('.', ',')}%
+                              </span>
+                            </td>
+                            <td className="text-right p-3 text-muted-foreground">{META_DISPONIBILIDADE}%</td>
+                            <td className="text-right p-3">
+                              <span className={atingiuMeta ? "text-success" : "text-red-500 dark:text-red-400"}>
+                                {atingiuMeta ? "+" : ""}{diferenca.toFixed(2).replace('.', ',')}%
+                              </span>
+                            </td>
+                            <td className="text-center p-3">
+                              {atingiuMeta ? (
+                                <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Atingida
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/30">
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Abaixo
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="bg-muted/70 font-semibold">
+                        <td className="p-3">Total Geral</td>
+                        <td className="text-right p-3 text-muted-foreground">{DIAS_TRABALHADOS}</td>
+                        <td className="text-right p-3">
+                          <span className={dispGeralReal >= META_DISPONIBILIDADE ? "text-success" : "text-red-500 dark:text-red-400"}>
+                            {dispGeralReal.toFixed(2).replace('.', ',')}%
+                          </span>
+                        </td>
+                        <td className="text-right p-3 text-muted-foreground">{META_DISPONIBILIDADE}%</td>
+                        <td className="text-right p-3">
+                          <span className={dispGeralReal >= META_DISPONIBILIDADE ? "text-success" : "text-red-500 dark:text-red-400"}>
+                            {dispGeralReal >= META_DISPONIBILIDADE ? "+" : ""}{(dispGeralReal - META_DISPONIBILIDADE).toFixed(2).replace('.', ',')}%
+                          </span>
+                        </td>
+                        <td className="text-center p-3">
+                          {dispGeralReal >= META_DISPONIBILIDADE ? (
+                            <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                              <Check className="h-3 w-3 mr-1" />
+                              Atingida
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/30">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Abaixo
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    </>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela 5: Execuções por Dia da Semana */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -2928,7 +3098,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                       </tr>
                       <tr className="border-b hover:bg-muted/30">
                         {paradReord.map((val, i) => (
-                          <td key={`parada-${i}`} className="text-center p-3 text-destructive">{val} paradas</td>
+                          <td key={`parada-${i}`} className="text-center p-3 text-red-500 dark:text-red-400">{val} paradas</td>
                         ))}
                       </tr>
                       <tr className="hover:bg-muted/30">
