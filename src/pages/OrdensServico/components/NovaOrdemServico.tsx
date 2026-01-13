@@ -69,7 +69,7 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
   const [loadingOrigensParada, setLoadingOrigensParada] = useState(true);
   const [loadingMotivosOS, setLoadingMotivosOS] = useState(true);
   
-  // Estado para a origem selecionada (seleção única)
+  // Estado para a origem selecionada (apenas uma)
   const [origemSelecionada, setOrigemSelecionada] = useState<string>("");
 
   // Responsável pelo chamado é o nome do usuário autenticado
@@ -227,8 +227,8 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
     fetchMotivosOS();
   }, []);
 
-  const handleOrigemChange = (nome: string) => {
-    setOrigemSelecionada(nome);
+  const handleOrigemChange = (value: string) => {
+    setOrigemSelecionada(value);
   };
 
   const handleLimpar = () => {
@@ -242,10 +242,7 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
   };
 
   const handleSalvar = async () => {
-    // Verificar se uma origem foi selecionada
-    const temOrigemSelecionada = origemSelecionada !== "";
-    
-    if (!setor || !equipamento || !linha || !descricaoOS || !temOrigemSelecionada || !observacaoManutencao) {
+    if (!setor || !equipamento || !linha || !descricaoOS || !origemSelecionada || !observacaoManutencao) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos obrigatórios marcados com *.",
@@ -373,43 +370,19 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
         </div>
       </div>
 
-      {/* Origem da Parada */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Origem da Parada *</Label>
-        <div className="p-4 border border-border rounded-xl bg-muted/20">
-          {loadingOrigensParada ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Carregando origens...
-            </div>
-          ) : origensParada.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma origem cadastrada.</p>
-          ) : (
-            <RadioGroup
-              value={origemSelecionada}
-              onValueChange={handleOrigemChange}
-              className="grid grid-cols-2 gap-3"
-            >
-              {origensParada.map((origem) => (
-                <div key={origem.id} className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value={origem.nome}
-                    id={`origem-${origem.id}`}
-                  />
-                  <Label 
-                    htmlFor={`origem-${origem.id}`} 
-                    className="cursor-pointer font-normal text-sm leading-tight"
-                  >
-                    {origem.nome}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          )}
-        </div>
+      {/* Descrição da OS */}
+      <div className="space-y-1.5">
+        <Label htmlFor="descricaoOS" className="text-sm font-medium">Descrição da OS *</Label>
+        <Textarea
+          id="descricaoOS"
+          value={descricaoOS}
+          onChange={(e) => setDescricaoOS(e.target.value)}
+          placeholder="Descreva o motivo da ordem de serviço..."
+          className="min-h-[100px] resize-none"
+        />
       </div>
 
-      {/* Motivo da Manutenção */}
+      {/* Motivo da Manutenção - Movido para cima */}
       <div className="space-y-1.5">
         <Label htmlFor="observacaoManutencao" className="text-sm font-medium">Motivo da Manutenção *</Label>
         <Select
@@ -429,17 +402,38 @@ export function NovaOrdemServico({ onSuccess }: NovaOrdemServicoProps) {
           </SelectContent>
         </Select>
       </div>
-
-      {/* Descrição da OS */}
-      <div className="space-y-1.5">
-        <Label htmlFor="descricaoOS" className="text-sm font-medium">Descrição da OS *</Label>
-        <Textarea
-          id="descricaoOS"
-          value={descricaoOS}
-          onChange={(e) => setDescricaoOS(e.target.value)}
-          placeholder="Descreva o motivo da ordem de serviço..."
-          className="min-h-[100px] resize-none"
-        />
+      
+      {/* Origem da Parada - Seleção única com RadioGroup */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Origem da Parada *</Label>
+        <div className="p-4 border border-border rounded-xl bg-muted/20">
+          {loadingOrigensParada ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Carregando origens...
+            </div>
+          ) : origensParada.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma origem cadastrada.</p>
+          ) : (
+            <RadioGroup
+              value={origemSelecionada}
+              onValueChange={handleOrigemChange}
+              className="grid grid-cols-2 gap-3"
+            >
+              {origensParada.map((origem) => (
+                <div key={origem.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={origem.nome} id={`origem-${origem.id}`} />
+                  <Label 
+                    htmlFor={`origem-${origem.id}`} 
+                    className="cursor-pointer font-normal text-sm leading-tight"
+                  >
+                    {origem.nome}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          )}
+        </div>
       </div>
 
       {/* Botões de Ação */}

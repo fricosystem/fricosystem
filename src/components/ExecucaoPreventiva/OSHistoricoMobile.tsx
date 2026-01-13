@@ -17,6 +17,7 @@ interface OrdemFinalizada {
   setor: string;
   equipamento: string;
   descricao: string;
+  descricaoOS?: string;
   responsavelChamado: string;
   manutentorNome: string;
   origensParada: string[];
@@ -27,7 +28,10 @@ interface OrdemFinalizada {
   inicioExecucao: Timestamp;
   fimExecucao: Timestamp;
   finalizadoEm: Timestamp;
+  canceladoEm?: Timestamp;
+  canceladoPor?: string;
   tipoManutencao?: string;
+  status?: string;
   produtosUtilizados: {
     id: string;
     nome: string;
@@ -54,7 +58,7 @@ const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => (
   </div>
 );
 
-type FilterType = "todos" | "concluidas";
+type FilterType = "todos" | "concluidas" | "canceladas";
 
 export function OSHistoricoMobile() {
   const [ordensConcluidas, setOrdensConcluidas] = useState<OrdemFinalizada[]>([]);
@@ -87,17 +91,27 @@ export function OSHistoricoMobile() {
 
   const filteredOS = ordensConcluidas.filter((os) => {
     const searchValue = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       os.setor?.toLowerCase().includes(searchValue) ||
       os.equipamento?.toLowerCase().includes(searchValue) ||
       os.descricao?.toLowerCase().includes(searchValue) ||
+      os.descricaoOS?.toLowerCase().includes(searchValue) ||
       os.manutentorNome?.toLowerCase().includes(searchValue)
     );
+
+    if (!matchesSearch) return false;
+
+    if (activeFilter === "todos") return true;
+    if (activeFilter === "concluidas") return os.status !== "cancelada";
+    if (activeFilter === "canceladas") return os.status === "cancelada";
+    
+    return true;
   });
 
   const stats = {
     total: ordensConcluidas.length,
-    concluidas: ordensConcluidas.length
+    concluidas: ordensConcluidas.filter(os => os.status !== "cancelada").length,
+    canceladas: ordensConcluidas.filter(os => os.status === "cancelada").length
   };
 
   if (loading) {
@@ -140,11 +154,21 @@ export function OSHistoricoMobile() {
           variant={activeFilter === "concluidas" ? "default" : "outline"}
           size="sm"
           onClick={() => setActiveFilter("concluidas")}
-          className="rounded-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white"
+          className={`rounded-full whitespace-nowrap ${activeFilter === "concluidas" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
         >
           <CheckCircle2 className="h-4 w-4 mr-1" />
           Concluídas
           <Badge variant="secondary" className="ml-2 bg-background/20">{stats.concluidas}</Badge>
+        </Button>
+        <Button
+          variant={activeFilter === "canceladas" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveFilter("canceladas")}
+          className={`rounded-full whitespace-nowrap ${activeFilter === "canceladas" ? "bg-red-600 hover:bg-red-700 text-white" : ""}`}
+        >
+          <XCircle className="h-4 w-4 mr-1" />
+          Canceladas
+          <Badge variant="secondary" className="ml-2 bg-background/20">{stats.canceladas}</Badge>
         </Button>
       </div>
 
@@ -192,9 +216,15 @@ export function OSHistoricoMobile() {
               </div>
 
               <div className="flex justify-between items-center pt-1 gap-2 flex-wrap">
-                <Badge className="bg-emerald-500/20 text-emerald-700 border-emerald-500/30">
-                  Concluída
-                </Badge>
+                {os.status === "cancelada" ? (
+                  <Badge className="bg-red-500/20 text-red-700 border-red-500/30">
+                    Cancelada
+                  </Badge>
+                ) : (
+                  <Badge className="bg-emerald-500/20 text-emerald-700 border-emerald-500/30">
+                    Concluída
+                  </Badge>
+                )}
                 <span className="text-sm text-muted-foreground">
                   {os.finalizadoEm && format(os.finalizadoEm.toDate(), "dd/MM/yy HH:mm")}
                 </span>
@@ -209,7 +239,9 @@ export function OSHistoricoMobile() {
         <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl px-4 pt-2 pb-6">
           <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
           <SheetHeader className="mb-4">
-            <SheetTitle className="text-xl">Detalhes da OS Concluída</SheetTitle>
+            <SheetTitle className="text-xl">
+              {selectedOS?.status === "cancelada" ? "Detalhes da OS Cancelada" : "Detalhes da OS Concluída"}
+            </SheetTitle>
           </SheetHeader>
           
           {selectedOS && (
@@ -224,24 +256,45 @@ export function OSHistoricoMobile() {
                   {/* Header com Status */}
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <Badge className="bg-emerald-500/20 text-emerald-700 border-emerald-500/30">
-                        Concluída
-                      </Badge>
+                      {selectedOS.status === "cancelada" ? (
+                        <Badge className="bg-red-500/20 text-red-700 border-red-500/30">
+                          Cancelada
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-emerald-500/20 text-emerald-700 border-emerald-500/30">
+                          Concluída
+                        </Badge>
+                      )}
                     </div>
                     <h2 className="text-xl font-bold leading-tight">{selectedOS.equipamento}</h2>
                     <p className="text-base text-muted-foreground">{selectedOS.setor}</p>
                   </div>
 
-                  {/* Timer */}
-                  <div className="bg-primary/10 rounded-xl p-4">
-                    <div className="flex items-center justify-center gap-3">
-                      <Timer className="h-6 w-6 text-primary" />
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground">Tempo de Execução</p>
-                        <p className="text-2xl font-bold text-primary">{selectedOS.tempoFormatado}</p>
+                  {/* Timer - Apenas para concluídas */}
+                  {selectedOS.status !== "cancelada" && selectedOS.tempoFormatado && (
+                    <div className="bg-primary/10 rounded-xl p-4">
+                      <div className="flex items-center justify-center gap-3">
+                        <Timer className="h-6 w-6 text-primary" />
+                        <div className="text-center">
+                          <p className="text-sm text-muted-foreground">Tempo de Execução</p>
+                          <p className="text-2xl font-bold text-primary">{selectedOS.tempoFormatado}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Info de Cancelamento */}
+                  {selectedOS.status === "cancelada" && (
+                    <div className="bg-red-500/10 rounded-xl p-4">
+                      <div className="flex items-center justify-center gap-3">
+                        <XCircle className="h-6 w-6 text-red-600" />
+                        <div className="text-center">
+                          <p className="text-sm text-muted-foreground">Cancelada por</p>
+                          <p className="text-lg font-bold text-red-700">{selectedOS.canceladoPor || "Não informado"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <Separator />
 

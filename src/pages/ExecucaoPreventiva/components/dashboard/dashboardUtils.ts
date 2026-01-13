@@ -149,13 +149,13 @@ export const getTempoParadaReal = (parada: {
   return calcularTempoParadaMinutos(parada.criadoEm, parada.finalizadoEm);
 };
 
-// Formata minutos para "X Horas : Y Minutos" (horário brasileiro)
+// Formata minutos para HH:MM:SS
 export const formatarTempoHMS = (minutos: number): string => {
-  if (!minutos || minutos <= 0) return "0 Horas : 0 Minutos";
-  const totalMinutos = Math.floor(minutos);
-  const h = Math.floor(totalMinutos / 60);
-  const m = totalMinutos % 60;
-  return `${h} Horas : ${m} Minutos`;
+  if (!minutos || minutos <= 0) return "0:00:00";
+  const h = Math.floor(minutos / 60);
+  const m = Math.floor(minutos % 60);
+  const s = Math.round((minutos * 60) % 60);
+  return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
 // Formata minutos para horas decimais

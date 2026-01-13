@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, Timestamp, getDoc } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, Timestamp, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { ClipboardList, Play, Clock, Package, Plus, Minus, X, Check, AlertCircle, Search, ChevronRight, FileText, User, Calendar, Wrench, Timer, XCircle, AlertTriangle } from "lucide-react";
@@ -269,12 +269,21 @@ export function OSAbertasMobile() {
     setCancelLoading(true);
     try {
       const osRef = doc(db, "ordens_servicos", selectedOS.id);
-      await updateDoc(osRef, {
+      const osDoc = await getDoc(osRef);
+      const osData = osDoc.data();
+
+      // Adicionar à coleção ordens_servico_finalizada com status cancelada
+      await addDoc(collection(db, "ordens_servico_finalizada"), {
+        ...osData,
+        ordemServicoId: selectedOS.id,
         status: "cancelada",
         canceladoPor: userData?.nome || user.email,
         canceladoEm: serverTimestamp(),
-        atualizadoEm: serverTimestamp(),
+        finalizadoEm: serverTimestamp(),
       });
+
+      // Deletar da coleção ordens_servicos
+      await deleteDoc(osRef);
 
       setShowCancelDialog(false);
       setShowDetailsSheet(false);
@@ -282,7 +291,7 @@ export function OSAbertasMobile() {
 
       toast({
         title: "OS Cancelada",
-        description: "A ordem de serviço foi cancelada com sucesso",
+        description: "A ordem de serviço foi cancelada e movida para o histórico",
       });
     } catch (error) {
       console.error("Erro ao cancelar OS:", error);
@@ -554,109 +563,58 @@ export function OSAbertasMobile() {
           
           {selectedOS && (
             <div className="overflow-y-auto h-[calc(100%-80px)]">
-              <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="info">Informações</TabsTrigger>
-                  <TabsTrigger value="origem">Origem</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="info" className="space-y-5 pb-4">
-                  {/* Header com Status */}
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      {getStatusBadge(selectedOS.status)}
-                    </div>
-                    <h2 className="text-xl font-bold leading-tight">{selectedOS.equipamento}</h2>
-                    <p className="text-base text-muted-foreground">{selectedOS.setor}</p>
+              <div className="space-y-5 pb-4">
+                {/* Header com Status */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    {getStatusBadge(selectedOS.status)}
                   </div>
+                  <h2 className="text-xl font-bold leading-tight">{selectedOS.equipamento}</h2>
+                  <p className="text-base text-muted-foreground">{selectedOS.setor}</p>
+                </div>
 
-                  <Separator />
+                <Separator />
 
-                  {/* Informações Gerais */}
-                  <div className="space-y-4">
-                    <h3 className="text-base font-semibold flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-primary" />
-                      Informações Gerais
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 gap-4">
+                {/* Informações Gerais */}
+                <div className="space-y-4">
+                  <h3 className="text-base font-semibold flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Informações Gerais
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 gap-4">
+                    <InfoRow 
+                      icon={<Calendar className="h-5 w-5" />}
+                      label="Data/Hora do Registro"
+                      value={selectedOS.criadoEm ? format(selectedOS.criadoEm.toDate(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR }) : "-"}
+                    />
+                    <InfoRow 
+                      icon={<User className="h-5 w-5" />}
+                      label="Solicitante"
+                      value={selectedOS.responsavelChamado || "Não informado"}
+                    />
+                    {selectedOS.linha && (
                       <InfoRow 
-                        icon={<Calendar className="h-5 w-5" />}
-                        label="Data/Hora do Registro"
-                        value={selectedOS.criadoEm ? format(selectedOS.criadoEm.toDate(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR }) : "-"}
+                        icon={<Wrench className="h-5 w-5" />}
+                        label="Linha"
+                        value={selectedOS.linha}
                       />
+                    )}
+                    {selectedOS.observacaoManutencao && (
                       <InfoRow 
-                        icon={<User className="h-5 w-5" />}
-                        label="Solicitante"
-                        value={selectedOS.responsavelChamado || "Não informado"}
+                        icon={<FileText className="h-5 w-5" />}
+                        label="Motivo da Manutenção"
+                        value={selectedOS.observacaoManutencao}
                       />
-                      {selectedOS.linha && (
-                        <InfoRow 
-                          icon={<Wrench className="h-5 w-5" />}
-                          label="Linha"
-                          value={selectedOS.linha}
-                        />
-                      )}
-                      {selectedOS.observacaoManutencao && (
-                        <InfoRow 
-                          icon={<FileText className="h-5 w-5" />}
-                          label="Motivo da Manutenção"
-                          value={selectedOS.observacaoManutencao}
-                        />
-                      )}
-                    </div>
+                    )}
                   </div>
+                </div>
 
-                  <Separator />
+                <Separator />
 
-                  {/* Descrição */}
-                  <div className="space-y-3">
-                    <h3 className="text-base font-semibold">Descrição do Problema</h3>
-                    <div className="bg-muted/50 rounded-xl p-4">
-                      <p className="text-base leading-relaxed">
-                        {selectedOS.descricaoOS || "Nenhuma descrição fornecida"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Informações de Auditoria */}
-                  <Separator />
-                  <div className="bg-muted/30 rounded-xl p-4 space-y-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                      Informações de Auditoria
-                    </p>
-                    <div className="grid grid-cols-1 gap-3 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">ID do Registro:</span>
-                        <p className="font-mono text-xs mt-0.5 break-all">{selectedOS.id}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Botões de Ação */}
-                  <Separator />
-                  <div className="pb-6 space-y-3">
-                    <Button
-                      className="w-full h-14 text-base font-semibold"
-                      onClick={handleStartExecution}
-                    >
-                      <Play className="h-5 w-5 mr-2" />
-                      Iniciar Execução
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="w-full h-12 text-base font-semibold border-destructive text-destructive hover:bg-destructive/10"
-                      onClick={() => setShowCancelDialog(true)}
-                    >
-                      <XCircle className="h-5 w-5 mr-2" />
-                      Cancelar OS
-                    </Button>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="origem" className="pb-4">
-                  {selectedOS.origensParada && selectedOS.origensParada.length > 0 ? (
+                {/* Origens da Parada */}
+                {selectedOS.origensParada && selectedOS.origensParada.length > 0 && (
+                  <>
                     <div className="space-y-3">
                       <h3 className="text-base font-semibold flex items-center gap-2">
                         <AlertCircle className="h-5 w-5 text-primary" />
@@ -674,14 +632,55 @@ export function OSAbertasMobile() {
                         ))}
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <AlertCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                      <p className="text-muted-foreground">Nenhuma origem especificada</p>
+                    <Separator />
+                  </>
+                )}
+
+                {/* Descrição */}
+                <div className="space-y-3">
+                  <h3 className="text-base font-semibold">Descrição do Problema</h3>
+                  <div className="bg-muted/50 rounded-xl p-4">
+                    <p className="text-base leading-relaxed">
+                      {selectedOS.descricaoOS || "Nenhuma descrição fornecida"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Informações de Auditoria */}
+                <Separator />
+                <div className="bg-muted/30 rounded-xl p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                    Informações de Auditoria
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">ID do Registro:</span>
+                      <p className="font-mono text-xs mt-0.5 break-all">{selectedOS.id}</p>
                     </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                  </div>
+                </div>
+
+                {/* Botões de Ação */}
+                <Separator />
+                <div className="pb-6 space-y-3">
+                  <Button
+                    className="w-full h-14 text-base font-semibold"
+                    onClick={handleStartExecution}
+                  >
+                    <Play className="h-5 w-5 mr-2" />
+                    Iniciar Execução
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 text-base font-semibold border-destructive text-destructive hover:bg-destructive/10"
+                    onClick={() => setShowCancelDialog(true)}
+                  >
+                    <XCircle className="h-5 w-5 mr-2" />
+                    Cancelar OS
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </SheetContent>
