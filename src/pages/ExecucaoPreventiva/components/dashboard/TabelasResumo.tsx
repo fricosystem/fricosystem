@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Gauge, Timer, Wrench, Clock, BarChart3, Target, CheckCircle2, XCircle } from "lucide-react";
+import { Gauge, Timer, Wrench, Clock, BarChart3, Target, CheckCircle2, XCircle, Activity } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { DashboardFilters } from "./DashboardFilters";
 import { 
@@ -70,20 +70,21 @@ export function TabelasResumo({
     const setorData: Record<string, { 
       tempoParada: number; 
       abertas: number; 
-      fechadas: number; 
+      realizadas: number; 
+      naoRealizadas: number;
       total: number;
     }> = {};
 
     // Inicializa com setores conhecidos
     setores.forEach(s => {
-      setorData[s.nome] = { tempoParada: 0, abertas: 0, fechadas: 0, total: 0 };
+      setorData[s.nome] = { tempoParada: 0, abertas: 0, realizadas: 0, naoRealizadas: 0, total: 0 };
     });
 
     // Processa paradas
     paradasFiltradas.forEach(p => {
       const setor = p.setor || "Outros";
       if (!setorData[setor]) {
-        setorData[setor] = { tempoParada: 0, abertas: 0, fechadas: 0, total: 0 };
+        setorData[setor] = { tempoParada: 0, abertas: 0, realizadas: 0, naoRealizadas: 0, total: 0 };
       }
       
       // Calcula tempo de parada real usando a nova função
@@ -92,14 +93,16 @@ export function TabelasResumo({
       setorData[setor].total++;
       
       if (p.status === "concluido") {
-        setorData[setor].fechadas++;
+        setorData[setor].realizadas++;
+      } else if (p.status === "cancelado") {
+        setorData[setor].naoRealizadas++;
       } else {
         setorData[setor].abertas++;
       }
     });
 
     return Object.entries(setorData)
-      .filter(([_, data]) => data.total > 0)
+      .filter(([_, data]) => data.total > 0 || setores.some(s => s.nome === _))
       .map(([setor, data]) => {
         // Disponibilidade baseada em tempo real de paradas
         const disponibilidade = calcularDisponibilidade(data.tempoParada, tempoDisponivel, true);
@@ -111,7 +114,8 @@ export function TabelasResumo({
           dispMaquina: dispMaquina.toFixed(2),
           dispGeral: disponibilidade.toFixed(2),
           abertas: data.abertas,
-          fechadas: data.fechadas,
+          realizadas: data.realizadas,
+          naoRealizadas: data.naoRealizadas,
           qtdParadas: data.total,
           tempoParada: data.tempoParada
         };
@@ -309,18 +313,128 @@ export function TabelasResumo({
       .sort((a, b) => b.chave.localeCompare(a.chave)); // Mais recente primeiro
   };
 
+  // ============ TABELA 6: INDICADOR DE METAS DE MANUTENÇÃO ============
+  const indicadorMetasManutencao = () => {
+    const HDE_PADRAO = 8 * 60; // 8 horas diárias em minutos (tempo disponível por dia)
+    const META_PADRAO = 98; // Meta padrão de 98%
+    const { inicio: periodoInicio, fim: periodoFim } = getDatasPeriodo(filtro);
+    
+    const mesesData: Record<string, {
+      diasTrabalhados: Set<string>;
+      numQuebras: number;
+      tempoQuebra: number; // em minutos
+      hdeTotal: number;
+    }> = {};
+
+    // Função para extrair ano-mês de uma data
+    const processarData = (data: Date | null) => {
+      if (!data) return null;
+      if (data < periodoInicio || data > periodoFim) return null;
+      
+      const ano = data.getFullYear();
+      const mes = data.getMonth();
+      const dia = data.getDate();
+      const chave = `${ano}-${String(mes).padStart(2, '0')}`;
+      return { chave, dia, ano, mes };
+    };
+
+    // Processa paradas de máquina (quebras)
+    paradasMaquina.forEach(p => {
+      const data = timestampToDate(p.criadoEm);
+      const resultado = processarData(data);
+      if (resultado) {
+        if (!mesesData[resultado.chave]) {
+          mesesData[resultado.chave] = {
+            diasTrabalhados: new Set(),
+            numQuebras: 0,
+            tempoQuebra: 0,
+            hdeTotal: 0
+          };
+        }
+        
+        mesesData[resultado.chave].diasTrabalhados.add(resultado.dia.toString());
+        mesesData[resultado.chave].numQuebras++;
+        mesesData[resultado.chave].tempoQuebra += getTempoParadaReal(p);
+      }
+    });
+
+    // Processa histórico de execuções para contar dias trabalhados
+    historicoExecucoes.forEach(exec => {
+      const data = timestampToDate(exec.dataExecucao);
+      const resultado = processarData(data);
+      if (resultado) {
+        if (!mesesData[resultado.chave]) {
+          mesesData[resultado.chave] = {
+            diasTrabalhados: new Set(),
+            numQuebras: 0,
+            tempoQuebra: 0,
+            hdeTotal: 0
+          };
+        }
+        mesesData[resultado.chave].diasTrabalhados.add(resultado.dia.toString());
+      }
+    });
+
+    const nomeMeses = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+
+    return Object.entries(mesesData)
+      .map(([chave, data]) => {
+        const [ano, mes] = chave.split("-").map(Number);
+        const diasTrabalhados = data.diasTrabalhados.size;
+        const hde = diasTrabalhados * HDE_PADRAO; // HDE em minutos
+        const hdeHoras = Math.round(hde / 60); // HDE em horas
+        const tempoQuebra = data.tempoQuebra; // em minutos
+        const tempoQuebraHoras = (tempoQuebra / 60).toFixed(2);
+        const numQuebras = data.numQuebras;
+        
+        // MTTR = Tempo médio de reparo (tempo total de quebra / número de quebras) em horas
+        const mttr = numQuebras > 0 ? (tempoQuebra / numQuebras / 60).toFixed(2) : "0.00";
+        
+        // MTBF = Tempo médio entre falhas ((HDE - tempo de quebra) / número de quebras) em horas
+        const mtbf = numQuebras > 0 ? ((hde - tempoQuebra) / numQuebras / 60).toFixed(2) : "0.00";
+        
+        // Disposição = ((HDE - tempo de quebra) / HDE) * 100
+        const disposicao = hde > 0 ? (((hde - tempoQuebra) / hde) * 100).toFixed(2) : "100.00";
+        
+        // Meta atingida em percentual (considerando a disposição)
+        const disposicaoNum = parseFloat(disposicao);
+        const metaAtingida = Math.round((disposicaoNum / META_PADRAO) * 100);
+        
+        return {
+          chave,
+          ano,
+          mesNome: nomeMeses[mes],
+          diasTrabalhados,
+          hde: hdeHoras,
+          numQuebras,
+          tempoQuebra: tempoQuebraHoras,
+          mttr,
+          mtbf,
+          disposicao,
+          meta: `${metaAtingida}%`,
+          metaNum: metaAtingida
+        };
+      })
+      .sort((a, b) => b.chave.localeCompare(a.chave));
+  };
+
   const dispData = disponibilidadePorSetor();
   const tempoData = tempoParadaPorSetor();
   const tiposData = tiposManutencaoSemana();
   const diasData = execucoesPorDiaSemana();
   const metaMensalData = disponibilidadeMetaMensal();
+  const indicadorMetasData = indicadorMetasManutencao();
 
   // Totais
   const totalDispData = dispData.reduce((acc, d) => ({
     abertas: acc.abertas + d.abertas,
-    fechadas: acc.fechadas + d.fechadas,
+    realizadas: acc.realizadas + d.realizadas,
+    naoRealizadas: acc.naoRealizadas + d.naoRealizadas,
     qtdParadas: acc.qtdParadas + d.qtdParadas,
-  }), { abertas: 0, fechadas: 0, qtdParadas: 0 });
+  }), { abertas: 0, realizadas: 0, naoRealizadas: 0, qtdParadas: 0 });
 
   const totalTempoMinutos = paradasFiltradas.reduce((acc, p) => {
     return acc + getTempoParadaReal(p);
@@ -352,34 +466,31 @@ export function TabelasResumo({
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-3 font-semibold">Setor</th>
-                  <th className="text-right p-3 font-semibold">Disponib.</th>
-                  <th className="text-right p-3 font-semibold">Abertas</th>
-                  <th className="text-right p-3 font-semibold">Fechadas</th>
-                  <th className="text-right p-3 font-semibold">Disp. Máq.</th>
+                  <th className="text-right p-3 font-semibold">Disp. Máquina</th>
                   <th className="text-right p-3 font-semibold">Disp. Geral</th>
-                  <th className="text-right p-3 font-semibold">Qtd.</th>
+                  <th className="text-right p-3 font-semibold">Realizadas</th>
+                  <th className="text-right p-3 font-semibold">Não Realizadas</th>
+                  <th className="text-right p-3 font-semibold">Abertas</th>
                 </tr>
               </thead>
               <tbody>
                 {dispData.map((row) => (
                   <tr key={row.setor} className="border-b hover:bg-muted/30">
                     <td className="p-3">{row.setor}</td>
-                    <td className="text-right p-3">{row.disponibilidade.replace('.', ',')}%</td>
-                    <td className="text-right p-3 text-warning">{row.abertas}</td>
-                    <td className="text-right p-3 text-success">{row.fechadas}</td>
                     <td className="text-right p-3">{row.dispMaquina.replace('.', ',')}%</td>
                     <td className="text-right p-3">{row.dispGeral.replace('.', ',')}%</td>
-                    <td className="text-right p-3">{row.qtdParadas}</td>
+                    <td className="text-right p-3 text-success">{row.realizadas}</td>
+                    <td className="text-right p-3 text-destructive">{row.naoRealizadas}</td>
+                    <td className="text-right p-3 text-warning">{row.abertas}</td>
                   </tr>
                 ))}
                 <tr className="bg-muted/70 font-semibold">
                   <td className="p-3">Total Geral</td>
-                  <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel, true).toFixed(2).replace('.', ',')}%</td>
-                  <td className="text-right p-3 text-warning">{totalDispData.abertas}</td>
-                  <td className="text-right p-3 text-success">{totalDispData.fechadas}</td>
                   <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel * 0.9, true).toFixed(2).replace('.', ',')}%</td>
                   <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel, true).toFixed(2).replace('.', ',')}%</td>
-                  <td className="text-right p-3">{totalDispData.qtdParadas}</td>
+                  <td className="text-right p-3 text-success">{totalDispData.realizadas}</td>
+                  <td className="text-right p-3 text-destructive">{totalDispData.naoRealizadas}</td>
+                  <td className="text-right p-3 text-warning">{totalDispData.abertas}</td>
                 </tr>
               </tbody>
             </table>
@@ -426,7 +537,7 @@ export function TabelasResumo({
                   <td className="p-3">Total Geral</td>
                   <td className="text-right p-3">{calcularDisponibilidade(totalTempoMinutos, tempoDisponivel, true).toFixed(2).replace('.', ',')}%</td>
                   <td className="text-right p-3 text-warning">{totalDispData.abertas}</td>
-                  <td className="text-right p-3 text-success">{totalDispData.fechadas}</td>
+                  <td className="text-right p-3 text-success">{totalDispData.realizadas}</td>
                   <td className="text-right p-3">{formatarTempoHMS(totalTempoMinutos)}</td>
                   <td className="text-right p-3">{totalDispData.qtdParadas}</td>
                   <td className="text-right p-3">{formatarTempoHMS(totalDispData.qtdParadas > 0 ? totalTempoMinutos / totalDispData.qtdParadas : 0)}</td>
@@ -560,7 +671,74 @@ export function TabelasResumo({
         </CardContent>
       </Card>
 
-      {/* Tabela 6: Execuções por Dia da Semana (Semana Atual) */}
+      {/* Tabela 6: Indicador de Metas de Manutenção */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Indicador de Metas de Manutenção
+          </CardTitle>
+          <CardDescription>MTTR, MTBF, Disposição e Meta por mês</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-3 font-semibold" colSpan={2}>Data</th>
+                  <th className="text-center p-3 font-semibold" colSpan={8}>Manutenção</th>
+                </tr>
+                <tr className="border-b bg-muted/30">
+                  <th className="text-left p-2 font-semibold text-xs">Ano</th>
+                  <th className="text-left p-2 font-semibold text-xs">Mês</th>
+                  <th className="text-center p-2 font-semibold text-xs">Dias Trab.</th>
+                  <th className="text-center p-2 font-semibold text-xs">HDE</th>
+                  <th className="text-center p-2 font-semibold text-xs">Nº Quebras</th>
+                  <th className="text-center p-2 font-semibold text-xs">Tempo Quebra</th>
+                  <th className="text-center p-2 font-semibold text-xs">MTTR</th>
+                  <th className="text-center p-2 font-semibold text-xs">MTBF</th>
+                  <th className="text-center p-2 font-semibold text-xs">Disposição</th>
+                  <th className="text-center p-2 font-semibold text-xs">Meta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {indicadorMetasData.length > 0 ? (
+                  indicadorMetasData.map((row) => (
+                    <tr key={row.chave} className="border-b hover:bg-muted/30">
+                      <td className="p-2 font-medium">{row.ano}</td>
+                      <td className="p-2 font-medium">{row.mesNome}</td>
+                      <td className="text-center p-2">{row.diasTrabalhados}</td>
+                      <td className="text-center p-2">{row.hde}</td>
+                      <td className="text-center p-2 text-destructive font-medium">{row.numQuebras}</td>
+                      <td className="text-center p-2">{row.tempoQuebra.replace('.', ',')}</td>
+                      <td className="text-center p-2">{row.mttr.replace('.', ',')}</td>
+                      <td className="text-center p-2">{row.mtbf.replace('.', ',')}</td>
+                      <td className="text-center p-2">
+                        <span className={parseFloat(row.disposicao) >= 95 ? "text-success font-medium" : parseFloat(row.disposicao) >= 90 ? "text-warning font-medium" : "text-destructive font-medium"}>
+                          {row.disposicao.replace('.', ',')}%
+                        </span>
+                      </td>
+                      <td className="text-center p-2">
+                        <span className={row.metaNum >= 100 ? "text-success font-medium" : "text-destructive font-medium"}>
+                          {row.meta}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={10} className="p-4 text-center text-muted-foreground">
+                      Nenhum dado de manutenção disponível
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela 7: Execuções por Dia da Semana (Semana Atual) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">

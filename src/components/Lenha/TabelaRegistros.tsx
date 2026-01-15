@@ -419,7 +419,7 @@ const TabelaRegistros = ({ onClickNovo }: TabelaRegistrosProps) => {
         onClose={() => setModalComprovanteAberto(false)}
         totalMetrosCubicos={totalMetrosCubicos}
         totalValor={totalValor}
-        itens={registros} // Adicionando a propriedade faltante
+        itens={registrosFiltrados}
       />
       
       <AlertDialog open={!!registroParaExcluir} onOpenChange={(open) => !open && setRegistroParaExcluir(null)}>

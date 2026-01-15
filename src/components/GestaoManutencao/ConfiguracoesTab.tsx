@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Settings, Save, Play, History, TrendingUp, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Settings, Save, Play, History, TrendingUp, Calendar, AlertCircle, CheckCircle2, CalendarDays } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import {
@@ -27,6 +27,7 @@ import { executarAutomacaoCompleta } from "@/services/automacaoManutencao";
 import { collection, getDocs, addDoc, updateDoc, doc, query, orderBy, limit, Timestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { ConfiguracaoAutomacao, LogAutomacao, EstatisticasAutomacao } from "@/types/typesAlertasManutencao";
+import CalendarioDiasTrabalhados from "./CalendarioDiasTrabalhados";
 
 export default function ConfiguracoesTab() {
   const { toast } = useToast();
@@ -338,6 +339,10 @@ export default function ConfiguracoesTab() {
           <TabsTrigger value="periodos">Períodos</TabsTrigger>
           <TabsTrigger value="categorias">Categorias</TabsTrigger>
           <TabsTrigger value="automacao">Automação</TabsTrigger>
+          <TabsTrigger value="calendario" className="flex items-center gap-1">
+            <CalendarDays className="h-4 w-4" />
+            Calendário Dias Trabalhados
+          </TabsTrigger>
         </TabsList>
 
         {/* Tipos de Manutenção */}
@@ -680,6 +685,11 @@ export default function ConfiguracoesTab() {
               </ScrollArea>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Calendário Dias Trabalhados */}
+        <TabsContent value="calendario" className="space-y-4">
+          <CalendarioDiasTrabalhados />
         </TabsContent>
       </Tabs>
     </div>

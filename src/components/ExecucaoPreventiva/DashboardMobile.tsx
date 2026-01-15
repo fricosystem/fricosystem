@@ -2692,31 +2692,37 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                   <th className="text-left p-3 font-semibold">Setor</th>
                   <th className="text-right p-3 font-semibold">Disp. Máquina</th>
                   <th className="text-right p-3 font-semibold">Disp. Geral</th>
-                  <th className="text-right p-3 font-semibold">Qtd. Paradas</th>
+                  <th className="text-right p-3 font-semibold">Realizadas</th>
+                  <th className="text-right p-3 font-semibold">Não Realizadas</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
                   // Agrupa paradas por setor (usa filtro de resumo)
                   const paradasParaResumo = paradasFiltradasResumo;
-                  const setorParadas: Record<string, { count: number; tempoTotal: number }> = {};
+                  const setorParadas: Record<string, { realizadas: number; naoRealizadas: number; tempoTotal: number }> = {};
                   paradasParaResumo.forEach(p => {
                     const setor = p.setor || "Outros";
                     if (!setorParadas[setor]) {
-                      setorParadas[setor] = { count: 0, tempoTotal: 0 };
+                      setorParadas[setor] = { realizadas: 0, naoRealizadas: 0, tempoTotal: 0 };
                     }
-                    setorParadas[setor].count++;
+                    if (p.status === "concluido") {
+                      setorParadas[setor].realizadas++;
+                    } else if (p.status === "cancelado") {
+                      setorParadas[setor].naoRealizadas++;
+                    }
                     setorParadas[setor].tempoTotal += p.tempoParada || 0;
                   });
 
                   // Adiciona setores sem paradas
                   setores.forEach(s => {
                     if (!setorParadas[s.nome]) {
-                      setorParadas[s.nome] = { count: 0, tempoTotal: 0 };
+                      setorParadas[s.nome] = { realizadas: 0, naoRealizadas: 0, tempoTotal: 0 };
                     }
                   });
 
-                  const totalParadasGeral = Object.values(setorParadas).reduce((acc, s) => acc + s.count, 0);
+                  const totalRealizadas = Object.values(setorParadas).reduce((acc, s) => acc + s.realizadas, 0);
+                  const totalNaoRealizadas = Object.values(setorParadas).reduce((acc, s) => acc + s.naoRealizadas, 0);
                   const totalTempoGeral = Object.values(setorParadas).reduce((acc, s) => acc + s.tempoTotal, 0);
 
                   // Calcula disponibilidade (assumindo 8760 horas/ano = 525600 min)
@@ -2726,7 +2732,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                   };
 
                   const sortedSetores = Object.entries(setorParadas)
-                    .sort((a, b) => b[1].count - a[1].count);
+                    .sort((a, b) => (b[1].realizadas + b[1].naoRealizadas) - (a[1].realizadas + a[1].naoRealizadas));
 
                   return (
                     <>
@@ -2738,7 +2744,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                             <td className="p-3">{setor}</td>
                             <td className="text-right p-3">{dispMaquina.toFixed(2).replace('.', ',')}%</td>
                             <td className="text-right p-3">{dispGeral.toFixed(2).replace('.', ',')}%</td>
-                            <td className="text-right p-3">{data.count}</td>
+                            <td className="text-right p-3 text-success">{data.realizadas}</td>
+                            <td className="text-right p-3 text-destructive">{data.naoRealizadas}</td>
                           </tr>
                         );
                       })}
@@ -2746,7 +2753,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                         <td className="p-3">Total Geral</td>
                         <td className="text-right p-3">{calcDisp(totalTempoGeral).toFixed(2).replace('.', ',')}%</td>
                         <td className="text-right p-3">{calcDisp(totalTempoGeral * 1.1).toFixed(2).replace('.', ',')}%</td>
-                        <td className="text-right p-3">{totalParadasGeral}</td>
+                        <td className="text-right p-3 text-success">{totalRealizadas}</td>
+                        <td className="text-right p-3 text-destructive">{totalNaoRealizadas}</td>
                       </tr>
                     </>
                   );
@@ -3023,7 +3031,172 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </CardContent>
       </Card>
 
-      {/* Tabela 5: Execuções por Dia da Semana */}
+      {/* Tabela 5: Indicador de Metas de Manutenção */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Indicador de Metas de Manutenção
+          </CardTitle>
+          <CardDescription>MTTR, MTBF, Disposição e Meta por mês</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-3 font-semibold" colSpan={2}>Data</th>
+                  <th className="text-center p-3 font-semibold" colSpan={8}>Manutenção</th>
+                </tr>
+                <tr className="border-b bg-muted/30">
+                  <th className="text-left p-2 font-semibold text-xs">Ano</th>
+                  <th className="text-left p-2 font-semibold text-xs">Mês</th>
+                  <th className="text-center p-2 font-semibold text-xs">Dias Trab.</th>
+                  <th className="text-center p-2 font-semibold text-xs">HDE</th>
+                  <th className="text-center p-2 font-semibold text-xs">Nº Quebras</th>
+                  <th className="text-center p-2 font-semibold text-xs">Tempo Quebra</th>
+                  <th className="text-center p-2 font-semibold text-xs">MTTR</th>
+                  <th className="text-center p-2 font-semibold text-xs">MTBF</th>
+                  <th className="text-center p-2 font-semibold text-xs">Disposição</th>
+                  <th className="text-center p-2 font-semibold text-xs">Meta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const HDE_PADRAO = 8 * 60; // minutos/dia
+                  const META_PADRAO = 98; // %
+
+                  const paradasPeriodo = paradasFiltradasResumo;
+                  const execucoesPeriodo = filtrarPorPeriodo(
+                    historicoExecucoes || [],
+                    filtroResumo as FiltroData,
+                    (h) => (h as any)?.dataExecucao
+                  );
+
+                  const mesesData: Record<string, { diasTrabalhados: Set<string>; numQuebras: number; tempoQuebra: number }> = {};
+
+                  const toDateSafe = (ts: any): Date | null => {
+                    if (!ts) return null;
+                    if (typeof ts === "object" && typeof ts.toDate === "function") return ts.toDate();
+                    if (ts instanceof Date) return ts;
+                    return null;
+                  };
+
+                  const addDia = (key: string, dia: number) => {
+                    if (!mesesData[key]) mesesData[key] = { diasTrabalhados: new Set(), numQuebras: 0, tempoQuebra: 0 };
+                    mesesData[key].diasTrabalhados.add(String(dia));
+                  };
+
+                  // Quebras
+                  paradasPeriodo.forEach((p) => {
+                    const d = toDateSafe((p as any).criadoEm);
+                    if (!d) return;
+                    const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
+                    addDia(key, d.getDate());
+                    mesesData[key].numQuebras += 1;
+                    mesesData[key].tempoQuebra += getTempoParadaReal(p as any);
+                  });
+
+                  // Dias trabalhados (preventivas)
+                  execucoesPeriodo.forEach((e: any) => {
+                    const d = toDateSafe(e?.dataExecucao);
+                    if (!d) return;
+                    const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
+                    addDia(key, d.getDate());
+                  });
+
+                  const nomeMeses = [
+                    "Janeiro",
+                    "Fevereiro",
+                    "Março",
+                    "Abril",
+                    "Maio",
+                    "Junho",
+                    "Julho",
+                    "Agosto",
+                    "Setembro",
+                    "Outubro",
+                    "Novembro",
+                    "Dezembro",
+                  ];
+
+                  const rows = Object.entries(mesesData)
+                    .map(([key, data]) => {
+                      const [ano, mes] = key.split("-").map(Number);
+                      const diasTrabalhados = data.diasTrabalhados.size;
+                      const hdeMin = diasTrabalhados * HDE_PADRAO;
+                      const tempoQuebraMin = data.tempoQuebra;
+                      const numQuebras = data.numQuebras;
+
+                      const mttr = numQuebras > 0 ? tempoQuebraMin / numQuebras : 0; // min
+                      const mtbf = numQuebras > 0 ? (hdeMin - tempoQuebraMin) / numQuebras : 0; // min
+                      const disposicao = hdeMin > 0 ? ((hdeMin - tempoQuebraMin) / hdeMin) * 100 : 100;
+                      const metaAtingida = Math.round((disposicao / META_PADRAO) * 100);
+
+                      return {
+                        key,
+                        ano,
+                        mesNome: nomeMeses[mes],
+                        diasTrabalhados,
+                        hdeHoras: Math.round(hdeMin / 60),
+                        numQuebras,
+                        tempoQuebraHoras: (tempoQuebraMin / 60).toFixed(2),
+                        mttrHoras: (mttr / 60).toFixed(2),
+                        mtbfHoras: (mtbf / 60).toFixed(2),
+                        disposicao: disposicao.toFixed(2),
+                        metaAtingida,
+                      };
+                    })
+                    .sort((a, b) => b.key.localeCompare(a.key));
+
+                  if (rows.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={10} className="p-6 text-center text-muted-foreground">
+                          Nenhum dado de manutenção disponível
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return rows.map((row) => (
+                    <tr key={row.key} className="border-b hover:bg-muted/30">
+                      <td className="p-2 font-medium">{row.ano}</td>
+                      <td className="p-2 font-medium">{row.mesNome}</td>
+                      <td className="text-center p-2">{row.diasTrabalhados}</td>
+                      <td className="text-center p-2">{row.hdeHoras}</td>
+                      <td className="text-center p-2 text-destructive font-medium">{row.numQuebras}</td>
+                      <td className="text-center p-2">{row.tempoQuebraHoras.replace(".", ",")}</td>
+                      <td className="text-center p-2">{row.mttrHoras.replace(".", ",")}</td>
+                      <td className="text-center p-2">{row.mtbfHoras.replace(".", ",")}</td>
+                      <td className="text-center p-2">
+                        <span
+                          className={
+                            parseFloat(row.disposicao) >= 95
+                              ? "text-success font-medium"
+                              : parseFloat(row.disposicao) >= 90
+                                ? "text-warning font-medium"
+                                : "text-destructive font-medium"
+                          }
+                        >
+                          {row.disposicao.replace(".", ",")}%
+                        </span>
+                      </td>
+                      <td className="text-center p-2">
+                        <span className={row.metaAtingida >= 100 ? "text-success font-medium" : "text-destructive font-medium"}>
+                          {row.metaAtingida}%
+                        </span>
+                      </td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela 6: Execuções por Dia da Semana */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
