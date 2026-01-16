@@ -159,10 +159,15 @@ export const podeIniciarExecucao = (horarioProgramado?: Timestamp): { pode: bool
   const diffMinutos = diffMs / (1000 * 60);
   
   if (diffMinutos > 5) {
-    const minutos = Math.ceil(diffMinutos);
+    const totalMinutos = Math.ceil(diffMinutos);
+    const horas = Math.floor(totalMinutos / 60);
+    const minutos = totalMinutos % 60;
+    const tempoFormatado = horas > 0 
+      ? `${horas}h ${minutos}min` 
+      : `${minutos} min`;
     return { 
       pode: false, 
-      mensagem: `Aguarde ${minutos} minutos para iniciar (liberado 5 min antes)` 
+      mensagem: `Aguarde ${tempoFormatado} para iniciar (liberado 5 min antes)` 
     };
   }
   

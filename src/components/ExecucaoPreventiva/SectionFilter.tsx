@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import { Calendar as CalendarIcon, Clock, CalendarDays, BarChart2, TrendingUp } from "lucide-react";
-import { format } from "date-fns";
+import { format, parse, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -30,16 +31,56 @@ const PERIODO_CONFIG: { id: PeriodoFiltro; label: string; icon: React.ElementTyp
 ];
 
 export function SectionFilter({ filtro, onFiltroChange, className }: SectionFilterProps) {
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [inicioInput, setInicioInput] = useState("");
+  const [fimInput, setFimInput] = useState("");
+  const [errors, setErrors] = useState<{ inicio?: string; fim?: string; range?: string }>({});
+
+  useEffect(() => {
+    if (filtro.periodo !== "personalizado") return;
+
+    setInicioInput(filtro.dataInicio ? format(filtro.dataInicio, "dd/MM/yyyy") : "");
+    setFimInput(filtro.dataFim ? format(filtro.dataFim, "dd/MM/yyyy") : "");
+  }, [filtro.periodo, filtro.dataInicio, filtro.dataFim]);
+
+  const sanitizeDateInput = (value: string) => value.replace(/[^0-9/]/g, "").slice(0, 10);
+
+  const parseInputDate = (value: string): Date | undefined => {
+    if (!value || value.length !== 10) return undefined;
+    const parsed = parse(value, "dd/MM/yyyy", new Date());
+    return isValid(parsed) ? parsed : undefined;
+  };
 
   const handlePeriodoChange = (periodo: PeriodoFiltro) => {
+    setErrors({});
+
     if (periodo === "personalizado") {
-      setShowDatePicker(true);
       onFiltroChange({ ...filtro, periodo });
     } else {
-      setShowDatePicker(false);
       onFiltroChange({ periodo });
     }
+  };
+
+  const startDate = parseInputDate(inicioInput);
+  const endDate = parseInputDate(fimInput);
+
+  const handleApply = () => {
+    const nextErrors: { inicio?: string; fim?: string; range?: string } = {};
+
+    if (inicioInput && !startDate) nextErrors.inicio = "Data início inválida";
+    if (fimInput && !endDate) nextErrors.fim = "Data fim inválida";
+    if (startDate && endDate && endDate < startDate) {
+      nextErrors.range = "Data fim deve ser maior/igual à data início";
+    }
+
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    onFiltroChange({
+      ...filtro,
+      periodo: "personalizado",
+      dataInicio: startDate,
+      dataFim: endDate,
+    });
   };
 
   return (
@@ -74,75 +115,101 @@ export function SectionFilter({ filtro, onFiltroChange, className }: SectionFilt
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Data de Início</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal h-9"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    {filtro.dataInicio ? (
-                      format(filtro.dataInicio, "dd/MM/yyyy", { locale: ptBR })
-                    ) : (
-                      <span className="text-muted-foreground">Selecione uma data</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={filtro.dataInicio}
-                    onSelect={(date) => {
-                      if (date) {
-                        onFiltroChange({
-                          ...filtro,
-                          dataInicio: date,
-                        });
-                      }
-                    }}
-                    locale={ptBR}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <label className="text-xs font-medium text-muted-foreground">Data Início</label>
+              <div className="relative">
+                <Input
+                  placeholder="01/01/2026"
+                  inputMode="numeric"
+                  value={inicioInput}
+                  onChange={(e) => {
+                    setInicioInput(sanitizeDateInput(e.target.value));
+                    setErrors((prev) => ({ ...prev, inicio: undefined, range: undefined }));
+                  }}
+                  className="h-9 pr-9"
+                />
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Selecionar data início"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                    >
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setInicioInput(format(date, "dd/MM/yyyy"));
+                        setErrors((prev) => ({ ...prev, inicio: undefined, range: undefined }));
+                      }}
+                      locale={ptBR}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {errors.inicio && <p className="text-xs text-destructive">{errors.inicio}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Data de Fim</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal h-9"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    {filtro.dataFim ? (
-                      format(filtro.dataFim, "dd/MM/yyyy", { locale: ptBR })
-                    ) : (
-                      <span className="text-muted-foreground">Selecione uma data</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={filtro.dataFim}
-                    onSelect={(date) => {
-                      if (date) {
-                        onFiltroChange({
-                          ...filtro,
-                          dataFim: date,
-                        });
-                      }
-                    }}
-                    locale={ptBR}
-                    disabled={(date) => filtro.dataInicio ? date < filtro.dataInicio : false}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <label className="text-xs font-medium text-muted-foreground">Data Fim</label>
+              <div className="relative">
+                <Input
+                  placeholder="01/01/2026"
+                  inputMode="numeric"
+                  value={fimInput}
+                  onChange={(e) => {
+                    setFimInput(sanitizeDateInput(e.target.value));
+                    setErrors((prev) => ({ ...prev, fim: undefined, range: undefined }));
+                  }}
+                  className="h-9 pr-9"
+                />
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Selecionar data fim"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                    >
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setFimInput(format(date, "dd/MM/yyyy"));
+                        setErrors((prev) => ({ ...prev, fim: undefined, range: undefined }));
+                      }}
+                      locale={ptBR}
+                      disabled={(date) => (startDate ? date < startDate : false)}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {errors.fim && <p className="text-xs text-destructive">{errors.fim}</p>}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Button type="button" onClick={handleApply} className="h-9">
+              Aplicar
+            </Button>
+            {errors.range && <p className="text-xs text-destructive">{errors.range}</p>}
+            <p className="text-xs text-muted-foreground">
+              As datas só serão aplicadas após clicar em “Aplicar”.
+            </p>
           </div>
         </div>
       )}

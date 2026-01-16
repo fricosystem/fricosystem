@@ -199,10 +199,15 @@ function podeIniciarPorHorario(horarioInicio: any): { pode: boolean; mensagem: s
   const diffMinutos = diffMs / (1000 * 60);
   
   if (diffMinutos > 5) {
-    const minutos = Math.ceil(diffMinutos);
+    const totalMinutos = Math.ceil(diffMinutos);
+    const horas = Math.floor(totalMinutos / 60);
+    const mins = totalMinutos % 60;
+    const tempoFormatado = horas > 0 
+      ? `${horas}h ${mins}min` 
+      : `${mins} min`;
     return { 
       pode: false, 
-      mensagem: `Aguarde ${minutos} min para iniciar (liberado 5 min antes)` 
+      mensagem: `Aguarde ${tempoFormatado} para iniciar (liberado 5 min antes)` 
     };
   }
   
