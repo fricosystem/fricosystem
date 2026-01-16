@@ -1190,10 +1190,10 @@ const CommitPanel: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border/40 bg-gradient-to-r from-muted/30 to-muted/10 flex-shrink-0">
-        <span className="text-sm font-semibold text-foreground">Commits</span>
+      <div className="flex items-center justify-between p-2 sm:p-3 border-b border-border/40 bg-gradient-to-r from-muted/30 to-muted/10 flex-shrink-0">
+        <span className="text-xs sm:text-sm font-semibold text-foreground">Commits</span>
         <div className="flex items-center gap-1">
           <Button
             size="sm"
@@ -1218,8 +1218,8 @@ const CommitPanel: React.FC = () => {
       </div>
       
       {/* Lista de Commits - ScrollArea simples */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-1 space-y-1 pb-4">
+      <ScrollArea className="flex-1 min-h-0 w-full">
+        <div className="p-1 space-y-1 pb-4 overflow-hidden">
           {loading && commits.length === 0 ? (
             <div className="p-6 text-center">
               <div className="space-y-3">
@@ -1242,16 +1242,16 @@ const CommitPanel: React.FC = () => {
                   <>
                     {/* Grupos de commits de cópia */}
                     {Object.entries(groups).map(([groupKey, groupCommits]) => (
-                      <div key={groupKey} className="space-y-1">
+                      <div key={groupKey} className="space-y-1 overflow-hidden">
                         <div
-                          className="p-3 mx-1 rounded-md border border-border/20 bg-muted/20 hover:bg-muted/30 transition-all duration-200 cursor-pointer"
+                          className="p-2 sm:p-3 mx-1 rounded-md border border-border/20 bg-muted/20 hover:bg-muted/30 transition-all duration-200 cursor-pointer overflow-hidden"
                           onClick={() => toggleGroup(groupKey)}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <GitCommit className="h-4 w-4 text-primary" />
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-foreground">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
+                              <GitCommit className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                              <div className="flex-1 min-w-0 overflow-hidden">
+                                <p className="text-xs sm:text-sm font-medium text-foreground break-words whitespace-normal leading-tight">
                                   {groupKey}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
@@ -1259,7 +1259,7 @@ const CommitPanel: React.FC = () => {
                                 </p>
                               </div>
                             </div>
-                            <div className="text-muted-foreground">
+                            <div className="text-muted-foreground flex-shrink-0">
                               {expandedGroups.has(groupKey) ? '▼' : '▶'}
                             </div>
                           </div>
@@ -1270,24 +1270,24 @@ const CommitPanel: React.FC = () => {
                             {groupCommits.map((commit) => (
                               <div
                                 key={commit.sha}
-                                className="p-3 mx-1 rounded-md border border-border/10 bg-card/20 hover:bg-card/40 hover:border-border/30 transition-all duration-200 group"
+                                className="p-2 sm:p-3 mx-1 rounded-md border border-border/10 bg-card/20 hover:bg-card/40 hover:border-border/30 transition-all duration-200 group overflow-hidden"
                               >
                                 <div className="space-y-2">
-                                  <div className="flex items-start gap-3">
+                                  <div className="flex items-start gap-2 sm:gap-3 min-w-0">
                                     <GitCommit className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors break-words">
+                                    <div className="flex-1 min-w-0 overflow-hidden">
+                                      <p className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors break-words whitespace-normal leading-tight">
                                         {commit.message}
                                       </p>
                                     </div>
                                   </div>
 
-                                  <div className="flex items-center gap-4 text-xs text-muted-foreground ml-6 flex-wrap">
-                                    <span className="truncate max-w-[120px]">{commit.author}</span>
-                                    <span className="whitespace-nowrap">{formatDate(commit.date)}</span>
+                                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground ml-5 sm:ml-6">
+                                    <span className="truncate max-w-[80px] sm:max-w-[120px]">{commit.author}</span>
+                                    <span className="whitespace-nowrap text-[10px] sm:text-xs">{formatDate(commit.date)}</span>
                                   </div>
 
-                                  <div className="flex items-center justify-between ml-6">
+                                  <div className="flex flex-wrap items-center justify-between gap-2 ml-5 sm:ml-6">
                                     <Badge variant="secondary" className="text-xs bg-muted/40 px-2 py-1">
                                       {truncateSha(commit.sha)}
                                     </Badge>
@@ -1325,24 +1325,24 @@ const CommitPanel: React.FC = () => {
                     {regularCommits.map((commit) => (
                       <div
                         key={commit.sha}
-                        className="p-3 mx-1 rounded-md border border-border/20 bg-card/30 hover:bg-card/50 hover:border-border/40 transition-all duration-200 group"
+                        className="p-2 sm:p-3 mx-1 rounded-md border border-border/20 bg-card/30 hover:bg-card/50 hover:border-border/40 transition-all duration-200 group overflow-hidden"
                       >
                         <div className="space-y-2">
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-2 sm:gap-3 min-w-0">
                             <GitCommit className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors break-words">
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <p className="text-xs sm:text-sm font-medium text-foreground group-hover:text-primary transition-colors break-words whitespace-normal leading-tight">
                                 {commit.message}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground ml-7 flex-wrap">
-                            <span className="truncate max-w-[120px]">{commit.author}</span>
-                            <span className="whitespace-nowrap">{formatDate(commit.date)}</span>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground ml-6 sm:ml-7">
+                            <span className="truncate max-w-[80px] sm:max-w-[120px]">{commit.author}</span>
+                            <span className="whitespace-nowrap text-[10px] sm:text-xs">{formatDate(commit.date)}</span>
                           </div>
 
-                          <div className="flex items-center justify-between ml-7">
+                          <div className="flex flex-wrap items-center justify-between gap-2 ml-6 sm:ml-7">
                             <Badge variant="secondary" className="text-xs bg-muted/40 px-2 py-1">
                               {truncateSha(commit.sha)}
                             </Badge>

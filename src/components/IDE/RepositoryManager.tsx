@@ -463,9 +463,9 @@ const RepositoryManager: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Header com ações em massa */}
-      <div className="p-3 border-b bg-background/50 backdrop-blur-sm flex items-center justify-between gap-2">
+      <div className="p-2 sm:p-3 border-b bg-background/50 backdrop-blur-sm flex items-center justify-between gap-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Checkbox
             checked={allSelected}
@@ -494,8 +494,8 @@ const RepositoryManager: React.FC = () => {
       </div>
 
       {/* Lista de repositórios */}
-      <ScrollArea className="flex-1">
-        <div className="p-3 space-y-2">
+      <ScrollArea className="flex-1 w-full">
+        <div className="p-2 sm:p-3 space-y-2 overflow-hidden">
           {repositories.length === 0 ? (
             <div className="text-center py-8 space-y-2">
               <Folder className="h-12 w-12 mx-auto text-muted-foreground/30" />
@@ -505,34 +505,34 @@ const RepositoryManager: React.FC = () => {
             repositories.map((repo) => (
               <div
                 key={repo.id}
-                className="group relative p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                className="group relative p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors overflow-hidden"
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-2 sm:gap-3">
                   <Checkbox
                     checked={selectedRepos.has(repo.id)}
                     onCheckedChange={(checked) => handleSelectRepo(repo.id, checked as boolean)}
-                    className="mt-1"
+                    className="mt-1 flex-shrink-0"
                   />
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <GitBranch className="h-4 w-4 text-primary flex-shrink-0" />
-                      <h3 className="font-medium text-sm truncate">{repo.name}</h3>
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="flex items-start gap-2 mb-1">
+                      <GitBranch className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                      <h3 className="font-medium text-sm break-words whitespace-normal leading-tight">{repo.name}</h3>
                     </div>
                     
                     {repo.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2 break-words">
                         {repo.description}
                       </p>
                     )}
                     
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        {repo.default_branch}
+                        <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate max-w-[60px] sm:max-w-none">{repo.default_branch}</span>
                       </span>
-                      <span>•</span>
-                      <span>
+                      <span className="hidden sm:inline">•</span>
+                      <span className="text-[10px] sm:text-xs">
                         {new Date(repo.updated_at).toLocaleString('pt-BR', {
                           day: '2-digit',
                           month: '2-digit',
