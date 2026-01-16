@@ -149,28 +149,54 @@ export const getTempoParadaReal = (parada: {
   return calcularTempoParadaMinutos(parada.criadoEm, parada.finalizadoEm);
 };
 
+// Função auxiliar para garantir que estamos trabalhando com minutos
+export const garantirMinutos = (tempo: number): number => {
+  // Se o tempo for muito grande (acima de 1000), assume que está em segundos
+  // e converte para minutos
+  if (tempo > 1000 && tempo < 86400) { // Provavelmente está em segundos
+    return tempo / 60;
+  }
+  // Se for muito grande (acima de 86400), assume que está em segundos
+  // mas de um período muito longo
+  if (tempo >= 86400) {
+    return tempo / 60;
+  }
+  // Caso contrário, assume que já está em minutos
+  return tempo;
+};
+
 // Formata minutos para HH:MM:SS
-export const formatarTempoHMS = (valor: number): string => {
-  if (!valor || valor <= 0) return "00:00:00";
+export const formatarTempoHMS = (minutos: number): string => {
+  if (!minutos || minutos <= 0) return "00:00:00";
 
-  // IMPORTANT: Em alguns lugares o "tempoParada" vem persistido em SEGUNDOS.
-  // Para manter compatibilidade, detectamos e normalizamos para segundos totais.
-  const pareceSegundos = valor >= 24 * 60 && Number.isInteger(valor) && valor % 60 === 0;
-  const totalSegundos = pareceSegundos ? valor : Math.round(valor * 60);
+  // Garante que estamos trabalhando com minutos
+  const minutosConvertidos = garantirMinutos(minutos);
+  
+  // Calcula horas, minutos e segundos
+  const horas = Math.floor(minutosConvertidos / 60);
+  const minutosRestantes = Math.floor(minutosConvertidos % 60);
+  const segundos = Math.floor((minutosConvertidos * 60) % 60);
 
-  const h = Math.floor(totalSegundos / 3600);
-  const m = Math.floor((totalSegundos % 3600) / 60);
-  const s = totalSegundos % 60;
-
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s
-    .toString()
-    .padStart(2, '0')}`;
+  return `${horas.toString().padStart(2, '0')}:${minutosRestantes.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
 };
 
 // Formata minutos para horas decimais
 export const formatarHorasDecimais = (minutos: number): string => {
   if (!minutos || minutos <= 0) return "0.0";
-  return (minutos / 60).toFixed(1);
+  // Garante que estamos trabalhando com minutos
+  const minutosConvertidos = garantirMinutos(minutos);
+  return (minutosConvertidos / 60).toFixed(1);
+};
+
+// Nova função para formatar segundos diretamente para HH:MM:SS
+export const formatarSegundosParaHMS = (segundos: number): string => {
+  if (!segundos || segundos <= 0) return "00:00:00";
+  
+  const horas = Math.floor(segundos / 3600);
+  const minutos = Math.floor((segundos % 3600) / 60);
+  const segundosRestantes = Math.floor(segundos % 60);
+  
+  return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundosRestantes.toString().padStart(2, '0')}`;
 };
 
 // Cores do gráfico
