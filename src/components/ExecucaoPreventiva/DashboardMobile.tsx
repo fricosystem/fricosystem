@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTempoParadaReal, formatarTempoHMS, filtrarPorPeriodo, FiltroData, PeriodoFiltro, PERIODO_LABELS } from "@/pages/ExecucaoPreventiva/components/dashboard/dashboardUtils";
 import { SectionFilter } from "./SectionFilter";
 
@@ -1048,16 +1049,71 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
     return Math.round(disponibilidade);
   };
   return (
-    <div className="space-y-4 pb-20">
-      {/* ========== SEÇÃO: MANUTENÇÕES PREVENTIVAS ========== */}
-      <div className="space-y-2">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-primary" />
-          Manutenções Preventivas
-        </h2>
-        <p className="text-xs text-muted-foreground">Visão geral das tarefas preventivas</p>
-        <SectionFilter filtro={filtroPreventivas} onFiltroChange={setFiltroPreventivas} />
-      </div>
+    <div className="pb-20">
+      <Tabs defaultValue="preventivas" className="w-full">
+        {/* Tab Navigation - Sticky no topo */}
+        <div className="sticky top-0 z-20 bg-background pb-3 pt-1">
+          <TabsList className="w-full flex flex-nowrap overflow-x-auto h-auto gap-1 bg-muted border border-border p-1.5 rounded-lg shadow-sm">
+            <TabsTrigger 
+              value="preventivas" 
+              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <Wrench className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Preventivas</span>
+              <span className="sm:hidden">Prev.</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="paradas" 
+              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Paradas</span>
+              <span className="sm:hidden">Par.</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="os" 
+              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <ClipboardCheck className="h-3.5 w-3.5" />
+              <span>OS</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="indicadores" 
+              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <Target className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Indicadores</span>
+              <span className="sm:hidden">Ind.</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="metas" 
+              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <Award className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Metas</span>
+              <span className="sm:hidden">Met.</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="resumo" 
+              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Resumo</span>
+              <span className="sm:hidden">Res.</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* ========== TAB: MANUTENÇÕES PREVENTIVAS ========== */}
+        <TabsContent value="preventivas" className="space-y-4 mt-0">
+          <div className="space-y-2">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-primary" />
+              Manutenções Preventivas
+            </h2>
+            <p className="text-xs text-muted-foreground">Visão geral das tarefas preventivas</p>
+            <SectionFilter filtro={filtroPreventivas} onFiltroChange={setFiltroPreventivas} />
+          </div>
 
       {/* Cards de KPIs - Preventivas */}
       <div className="grid grid-cols-2 gap-3">
@@ -1214,15 +1270,18 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </CardContent>
       </Card>
 
-      <Separator className="my-10" />
-      <div className="space-y-2">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-warning" />
-          Paradas de Máquina
-        </h2>
-        <p className="text-xs text-muted-foreground">Monitoramento de paradas e disponibilidade</p>
-        <SectionFilter filtro={filtroParadas} onFiltroChange={setFiltroParadas} />
-      </div>
+        </TabsContent>
+
+        {/* ========== TAB: PARADAS DE MÁQUINA ========== */}
+        <TabsContent value="paradas" className="space-y-4 mt-0">
+          <div className="space-y-2">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Paradas de Máquina
+            </h2>
+            <p className="text-xs text-muted-foreground">Monitoramento de paradas e disponibilidade</p>
+            <SectionFilter filtro={filtroParadas} onFiltroChange={setFiltroParadas} />
+          </div>
 
       {/* KPIs de Paradas */}
       <div className="grid grid-cols-3 gap-3">
@@ -1327,15 +1386,18 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </Card>
       )}
 
-      <Separator className="my-6" />
-      <div className="space-y-2">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <ClipboardCheck className="h-5 w-5 text-blue-500" />
-          Ordens de Serviço
-        </h2>
-        <p className="text-xs text-muted-foreground">Acompanhamento de OS corretivas</p>
-        <SectionFilter filtro={filtroOS} onFiltroChange={setFiltroOS} />
-      </div>
+        </TabsContent>
+
+        {/* ========== TAB: ORDENS DE SERVIÇO ========== */}
+        <TabsContent value="os" className="space-y-4 mt-0">
+          <div className="space-y-2">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-blue-500" />
+              Ordens de Serviço
+            </h2>
+            <p className="text-xs text-muted-foreground">Acompanhamento de OS corretivas</p>
+            <SectionFilter filtro={filtroOS} onFiltroChange={setFiltroOS} />
+          </div>
 
       {/* KPIs de OS */}
       <div className="grid grid-cols-2 gap-3">
@@ -1522,16 +1584,18 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </CardContent>
       </Card>
 
-      {/* ========== SEÇÃO: INDICADORES GERAIS ========== */}
-      <Separator className="my-6" />
-      <div className="space-y-2">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
-          Indicadores Estratégicos
-        </h2>
-        <p className="text-xs text-muted-foreground">Metas e performance geral</p>
-        <SectionFilter filtro={filtroIndicadores} onFiltroChange={setFiltroIndicadores} />
-      </div>
+        </TabsContent>
+
+        {/* ========== TAB: INDICADORES ESTRATÉGICOS ========== */}
+        <TabsContent value="indicadores" className="space-y-4 mt-0">
+          <div className="space-y-2">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Indicadores Estratégicos
+            </h2>
+            <p className="text-xs text-muted-foreground">Metas e performance geral</p>
+            <SectionFilter filtro={filtroIndicadores} onFiltroChange={setFiltroIndicadores} />
+          </div>
 
       {/* Gráfico de Produtividade Semanal */}
       <Card>
@@ -2019,16 +2083,18 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </Card>
       )}
 
-      {/* ========== SEÇÃO: METAS E INDICADORES ========== */}
-      <Separator className="my-6" />
-      <div className="space-y-2 mb-4">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
-          Metas e Indicadores Estratégicos
-        </h2>
-        <p className="text-xs text-muted-foreground">Foco: Diminuir paradas e manter preventivas em dia</p>
-        <SectionFilter filtro={filtroMetas} onFiltroChange={setFiltroMetas} />
-      </div>
+        </TabsContent>
+
+        {/* ========== TAB: METAS E INDICADORES ========== */}
+        <TabsContent value="metas" className="space-y-4 mt-0">
+          <div className="space-y-2 mb-4">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Award className="h-5 w-5 text-primary" />
+              Metas e Indicadores Estratégicos
+            </h2>
+            <p className="text-xs text-muted-foreground">Foco: Diminuir paradas e manter preventivas em dia</p>
+            <SectionFilter filtro={filtroMetas} onFiltroChange={setFiltroMetas} />
+          </div>
 
       {/* KPIs Estratégicos */}
       <div className="grid grid-cols-2 gap-3">
@@ -2663,17 +2729,18 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </CardContent>
       </Card>
 
-      {/* Divisória e Seção de Resumo / Disponibilidade */}
-      <Separator className="my-6" />
-      
-      <div className="space-y-2 mb-4">
-        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary" />
-          Resumo / Disponibilidade
-        </h2>
-        <p className="text-sm text-muted-foreground">Indicadores detalhados por linha de produção</p>
-        <SectionFilter filtro={filtroResumo} onFiltroChange={setFiltroResumo} />
-      </div>
+        </TabsContent>
+
+        {/* ========== TAB: RESUMO / DISPONIBILIDADE ========== */}
+        <TabsContent value="resumo" className="space-y-4 mt-0">
+          <div className="space-y-2 mb-4">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Resumo / Disponibilidade
+            </h2>
+            <p className="text-sm text-muted-foreground">Indicadores detalhados por linha de produção</p>
+            <SectionFilter filtro={filtroResumo} onFiltroChange={setFiltroResumo} />
+          </div>
 
       {/* Tabela 1: Disponibilidade por Setor */}
       <Card>
@@ -3287,7 +3354,8 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
           </div>
         </CardContent>
       </Card>
-
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -58,33 +58,50 @@ export function DashboardContent({
   return (
     <div className="pb-4">
       <Tabs defaultValue="preventivas" className="w-full">
-        <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1 rounded-lg mb-4">
-          <TabsTrigger value="preventivas" className="flex items-center gap-2 data-[state=active]:bg-background">
-            <Wrench className="h-4 w-4" />
-            <span className="hidden sm:inline">Manutenções Preventivas</span>
-            <span className="sm:hidden">Preventivas</span>
-          </TabsTrigger>
-          <TabsTrigger value="paradas" className="flex items-center gap-2 data-[state=active]:bg-background">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="hidden sm:inline">Paradas de Máquina</span>
-            <span className="sm:hidden">Paradas</span>
-          </TabsTrigger>
-          <TabsTrigger value="os" className="flex items-center gap-2 data-[state=active]:bg-background">
-            <ClipboardList className="h-4 w-4" />
-            <span className="hidden sm:inline">Ordens de Serviço</span>
-            <span className="sm:hidden">OS</span>
-          </TabsTrigger>
-          <TabsTrigger value="indicadores" className="flex items-center gap-2 data-[state=active]:bg-background">
-            <Target className="h-4 w-4" />
-            <span className="hidden sm:inline">Indicadores Estratégicos</span>
-            <span className="sm:hidden">Indicadores</span>
-          </TabsTrigger>
-          <TabsTrigger value="resumo" className="flex items-center gap-2 data-[state=active]:bg-background">
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Resumo / Disponibilidade</span>
-            <span className="sm:hidden">Resumo</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="sticky top-0 z-10 bg-background pb-2">
+          <TabsList className="w-full flex flex-nowrap overflow-x-auto h-auto gap-1 bg-muted border border-border p-1.5 rounded-lg mb-2 shadow-sm">
+            <TabsTrigger 
+              value="preventivas" 
+              className="flex items-center gap-2 flex-shrink-0 px-3 py-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <Wrench className="h-4 w-4" />
+              <span className="hidden sm:inline">Manutenções Preventivas</span>
+              <span className="sm:hidden">Preventivas</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="paradas" 
+              className="flex items-center gap-2 flex-shrink-0 px-3 py-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              <span className="hidden sm:inline">Paradas de Máquina</span>
+              <span className="sm:hidden">Paradas</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="os" 
+              className="flex items-center gap-2 flex-shrink-0 px-3 py-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <ClipboardList className="h-4 w-4" />
+              <span className="hidden sm:inline">Ordens de Serviço</span>
+              <span className="sm:hidden">OS</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="indicadores" 
+              className="flex items-center gap-2 flex-shrink-0 px-3 py-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <Target className="h-4 w-4" />
+              <span className="hidden sm:inline">Indicadores Estratégicos</span>
+              <span className="sm:hidden">Indicadores</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="resumo" 
+              className="flex items-center gap-2 flex-shrink-0 px-3 py-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Resumo / Disponibilidade</span>
+              <span className="sm:hidden">Resumo</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="preventivas">
           <SecaoPreventivas
