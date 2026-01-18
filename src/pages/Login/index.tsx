@@ -176,8 +176,8 @@ const Login = () => {
                 className="w-16 h-16 rounded-lg object-scale-down" 
               />
               <div>
-                <span className="text-2xl font-bold text-white">FR Stock Manager</span>
-                <h1 className="text-sm font-extrabold text-frico-500">Fricó Alimentos</h1>
+                <span className="text-2xl font-bold text-white">APEX HUB</span>
+                <h1 className="text-sm font-extrabold text-frico-500">ERP</h1>
               </div>
             </a>
           </div>
