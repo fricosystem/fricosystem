@@ -1,6 +1,7 @@
 import { LayoutDashboard, Calendar, User, AlertTriangle, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type MainTabType = "dashboard" | "preventiva" | "paradas" | "os" | "perfil";
 type SubTabType = "lista" | "calendario" | "historico" | "criadas" | "historico-paradas" | "os-abertas" | "os-historico";
@@ -83,45 +84,39 @@ export function BottomNavigation({ activeTab, onTabChange, badgeCounts }: Bottom
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t pb-safe">
       {/* Sub-abas - aparecem apenas quando Paradas está ativa */}
       {mainTab === "paradas" && (
-        <div className="flex justify-center py-3 px-4">
-          <div className="inline-flex items-center bg-muted/30 rounded-xl p-1 backdrop-blur-sm border border-border/50">
-            {paradasSubTabs.map((subTab) => (
-              <button
-                key={subTab.id}
-                onClick={() => onTabChange(subTab.tabValue)}
-                className={cn(
-                  "px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-                  currentSubTab === subTab.id
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {subTab.label}
-              </button>
-            ))}
-          </div>
+        <div className="py-3 px-4">
+          <Tabs value={currentSubTab || "criadas"} onValueChange={(v) => {
+            const tab = paradasSubTabs.find(t => t.id === v);
+            if (tab) onTabChange(tab.tabValue);
+          }}>
+            <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+              <TabsTrigger value="criadas" className="flex items-center gap-2 rounded-l-lg rounded-r-none">
+                Abertas
+              </TabsTrigger>
+              <TabsTrigger value="historico-paradas" className="flex items-center gap-2 rounded-r-lg rounded-l-none">
+                Histórico
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       )}
 
       {/* Sub-abas - aparecem apenas quando OS está ativa */}
       {mainTab === "os" && (
-        <div className="flex justify-center py-3 px-4">
-          <div className="inline-flex items-center bg-muted/30 rounded-xl p-1 backdrop-blur-sm border border-border/50">
-            {osSubTabs.map((subTab) => (
-              <button
-                key={subTab.id}
-                onClick={() => onTabChange(subTab.tabValue)}
-                className={cn(
-                  "px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-                  currentSubTab === subTab.id
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {subTab.label}
-              </button>
-            ))}
-          </div>
+        <div className="py-3 px-4">
+          <Tabs value={currentSubTab || "os-abertas"} onValueChange={(v) => {
+            const tab = osSubTabs.find(t => t.id === v);
+            if (tab) onTabChange(tab.tabValue);
+          }}>
+            <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+              <TabsTrigger value="os-abertas" className="flex items-center gap-2 rounded-l-lg rounded-r-none">
+                Abertas
+              </TabsTrigger>
+              <TabsTrigger value="os-historico" className="flex items-center gap-2 rounded-r-lg rounded-l-none">
+                Histórico
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       )}
 

@@ -148,16 +148,43 @@ export const getStatusLabel = (status: StatusParada): string => {
 };
 
 // Helper para verificar se pode iniciar execução (5 minutos antes)
-export const podeIniciarExecucao = (horarioProgramado?: Timestamp): { pode: boolean; mensagem: string } => {
-  if (!horarioProgramado) {
+// Suporta hrInicial (string "HH:mm") e/ou horarioProgramado (Timestamp)
+export const podeIniciarExecucao = (
+  horarioProgramado?: Timestamp, 
+  hrInicial?: string,
+  dataProgramada?: string
+): { pode: boolean; mensagem: string } => {
+  const agora = new Date();
+  let inicio: Date | null = null;
+  
+  // Prioridade 1: horarioProgramado (Timestamp completo)
+  if (horarioProgramado) {
+    inicio = horarioProgramado.toDate();
+  }
+  // Prioridade 2: hrInicial (string HH:mm) com data de hoje ou dataProgramada
+  else if (hrInicial) {
+    const [horas, minutos] = hrInicial.split(":").map(Number);
+    if (!isNaN(horas) && !isNaN(minutos)) {
+      if (dataProgramada) {
+        // Usar data programada se disponível
+        inicio = new Date(`${dataProgramada}T${hrInicial}:00`);
+      } else {
+        // Usar data de hoje
+        inicio = new Date();
+        inicio.setHours(horas, minutos, 0, 0);
+      }
+    }
+  }
+  
+  // Se não tem horário definido, permite iniciar
+  if (!inicio) {
     return { pode: true, mensagem: "" };
   }
   
-  const agora = new Date();
-  const programado = horarioProgramado.toDate();
-  const diffMs = programado.getTime() - agora.getTime();
+  const diffMs = inicio.getTime() - agora.getTime();
   const diffMinutos = diffMs / (1000 * 60);
   
+  // Permite iniciar 5 minutos antes ou após o horário
   if (diffMinutos > 5) {
     const totalMinutos = Math.ceil(diffMinutos);
     const horas = Math.floor(totalMinutos / 60);

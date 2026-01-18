@@ -98,7 +98,7 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
 
   // Estados para Ordens de Serviço
   const [ordensServico, setOrdensServico] = useState<{id: string; status: string; setor: string; equipamento: string; criadoEm: any; observacaoManutencao?: string}[]>([]);
-  const [ordensFinalizadas, setOrdensFinalizadas] = useState<{id: string; tempoTotal?: number; setor?: string; equipamento?: string; finalizadoEm?: any}[]>([]);
+  const [ordensFinalizadas, setOrdensFinalizadas] = useState<{id: string; tempoTotal?: number; setor?: string; equipamento?: string; finalizadoEm?: any; status?: string}[]>([]);
   const [loadingOS, setLoadingOS] = useState(true);
 
   useEffect(() => {
@@ -326,18 +326,86 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       .slice(0, 5);
   };
 
-  // Evolução de OS nos últimos 7 dias (usa dados filtrados)
-  const osUltimos7DiasData = () => {
-    const hoje = new Date();
-    const dias: Record<string, number> = {};
+  // Evolução de OS por status no período selecionado
+  const osEvolucaoData = useMemo(() => {
+    const { inicio, fim } = (() => {
+      const hoje = new Date();
+      const fimData = new Date(hoje);
+      fimData.setHours(23, 59, 59, 999);
+      
+      let inicioData = new Date(hoje);
+      inicioData.setHours(0, 0, 0, 0);
+      
+      switch (filtroOS.periodo) {
+        case "hoje":
+          break;
+        case "semanal":
+          const diaSemana = hoje.getDay();
+          const diffParaSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
+          inicioData = new Date(hoje);
+          inicioData.setDate(hoje.getDate() + diffParaSegunda);
+          inicioData.setHours(0, 0, 0, 0);
+          break;
+        case "mensal":
+          inicioData = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+          break;
+        case "anual":
+          inicioData = new Date(hoje.getFullYear(), 0, 1);
+          break;
+        case "personalizado":
+          if (filtroOS.dataInicio && filtroOS.dataFim) {
+            return { inicio: new Date(filtroOS.dataInicio), fim: new Date(filtroOS.dataFim) };
+          }
+          break;
+      }
+      
+      return { inicio: inicioData, fim: fimData };
+    })();
+
+    // Gerar dias do período
+    const dias: { name: string; date: Date }[] = [];
+    const diffMs = fim.getTime() - inicio.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24)) + 1;
     
-    for (let i = 6; i >= 0; i--) {
-      const data = new Date(hoje);
-      data.setDate(data.getDate() - i);
-      const key = data.toLocaleDateString('pt-BR', { weekday: 'short' });
-      dias[key] = 0;
+    // Limitar quantidade de pontos para legibilidade
+    const maxPontos = filtroOS.periodo === "hoje" ? 24 : Math.min(diffDays, 31);
+    const intervalo = Math.max(1, Math.floor(diffDays / maxPontos));
+    
+    if (filtroOS.periodo === "hoje") {
+      // Para "hoje", agrupar por hora
+      for (let h = 0; h < 24; h += 3) {
+        const horaData = new Date(inicio);
+        horaData.setHours(h);
+        dias.push({
+          name: `${h.toString().padStart(2, '0')}h`,
+          date: horaData
+        });
+      }
+    } else {
+      // Para outros períodos, agrupar por dia
+      for (let i = 0; i < diffDays; i += intervalo) {
+        const dataAtual = new Date(inicio);
+        dataAtual.setDate(inicio.getDate() + i);
+        dias.push({
+          name: dataAtual.toLocaleDateString('pt-BR', { 
+            day: '2-digit', 
+            month: '2-digit' 
+          }),
+          date: dataAtual
+        });
+      }
     }
 
+    // Inicializar contadores
+    const dadosAgrupados = dias.map(d => ({
+      name: d.name,
+      date: d.date,
+      concluido: 0,
+      cancelado: 0,
+      aguardando: 0
+    }));
+
+    // Processar OS finalizadas (concluído e cancelado)
     osFiltradasFinalizadas.forEach(os => {
       if (os.finalizadoEm) {
         let dataOS: Date;
@@ -350,20 +418,69 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
           return;
         }
         
-        const diffTime = hoje.getTime() - dataOS.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        // Encontrar o slot de data correto
+        const status = os.status?.toLowerCase() || 'concluido';
         
-        if (diffDays >= 0 && diffDays < 7) {
-          const key = dataOS.toLocaleDateString('pt-BR', { weekday: 'short' });
-          if (dias[key] !== undefined) {
-            dias[key]++;
+        for (let i = dadosAgrupados.length - 1; i >= 0; i--) {
+          const slot = dadosAgrupados[i];
+          const nextSlot = dadosAgrupados[i + 1];
+          
+          const slotInicio = new Date(slot.date);
+          const slotFim = nextSlot 
+            ? new Date(nextSlot.date) 
+            : new Date(slot.date.getFullYear(), slot.date.getMonth(), slot.date.getDate() + 1);
+          
+          if (dataOS >= slotInicio && dataOS < slotFim) {
+            if (status === 'cancelada' || status === 'cancelado') {
+              slot.cancelado++;
+            } else {
+              slot.concluido++;
+            }
+            break;
           }
         }
       }
     });
 
-    return Object.entries(dias).map(([name, value]) => ({ name, os: value }));
-  };
+    // Processar OS abertas (aguardando)
+    osFiltradasAbertas.forEach(os => {
+      if (os.criadoEm && os.status === 'aguardando') {
+        let dataOS: Date;
+        const timestamp = os.criadoEm as any;
+        if (typeof timestamp === 'object' && typeof timestamp.toDate === 'function') {
+          dataOS = timestamp.toDate();
+        } else if (timestamp instanceof Date) {
+          dataOS = timestamp;
+        } else {
+          return;
+        }
+        
+        // Encontrar o slot de data correto
+        for (let i = dadosAgrupados.length - 1; i >= 0; i--) {
+          const slot = dadosAgrupados[i];
+          const nextSlot = dadosAgrupados[i + 1];
+          
+          const slotInicio = new Date(slot.date);
+          const slotFim = nextSlot 
+            ? new Date(nextSlot.date) 
+            : new Date(slot.date.getFullYear(), slot.date.getMonth(), slot.date.getDate() + 1);
+          
+          if (dataOS >= slotInicio && dataOS < slotFim) {
+            slot.aguardando++;
+            break;
+          }
+        }
+      }
+    });
+
+    // Remover o campo date antes de retornar
+    return dadosAgrupados.map(({ name, concluido, cancelado, aguardando }) => ({
+      name,
+      concluido,
+      cancelado,
+      aguardando
+    }));
+  }, [osFiltradasFinalizadas, osFiltradasAbertas, filtroOS]);
 
   // Taxa de resolução de OS (usa dados filtrados)
   const taxaResolucaoOS = (osFiltradasAbertas.length + osFiltradasFinalizadas.length) > 0 
@@ -1540,27 +1657,21 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
         </Card>
       )}
 
-      {/* OS Finalizadas - Últimos 7 dias */}
+      {/* OS por Status - Evolução no Período */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-success" />
-            OS Finalizadas - Últimos 7 Dias
+            Evolução de OS - {PERIODO_LABELS[filtroOS.periodo]}
           </CardTitle>
-          <CardDescription>Ordens de serviço concluídas por dia</CardDescription>
+          <CardDescription>Ordens de serviço por status no período</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[280px]">
+          <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={osUltimos7DiasData()}>
-                <defs>
-                  <linearGradient id="colorOS" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(221 83% 53%)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="hsl(221 83% 53%)" stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
+              <LineChart data={osEvolucaoData}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="name" fontSize={12} />
+                <XAxis dataKey="name" fontSize={11} angle={-45} textAnchor="end" height={60} />
                 <YAxis fontSize={12} allowDecimals={false} />
                 <Tooltip 
                   contentStyle={{ 
@@ -1569,16 +1680,50 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
                     borderRadius: 'var(--radius)',
                     color: 'hsl(var(--foreground))'
                   }}
-                  formatter={(value) => [`${value}`, 'OS']}
+                  formatter={(value, name) => {
+                    const labels: Record<string, string> = {
+                      concluido: 'Concluídas',
+                      cancelado: 'Canceladas',
+                      aguardando: 'Aguardando'
+                    };
+                    return [`${value}`, labels[name as string] || name];
+                  }}
                 />
-                <Area 
+                <Legend 
+                  formatter={(value) => {
+                    const labels: Record<string, string> = {
+                      concluido: 'Concluídas',
+                      cancelado: 'Canceladas',
+                      aguardando: 'Aguardando'
+                    };
+                    return labels[value] || value;
+                  }}
+                />
+                <Line 
                   type="monotone" 
-                  dataKey="os" 
-                  stroke="hsl(221 83% 53%)" 
-                  fillOpacity={1} 
-                  fill="url(#colorOS)" 
+                  dataKey="concluido" 
+                  stroke="hsl(142 76% 36%)" 
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(142 76% 36%)', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6 }}
                 />
-              </AreaChart>
+                <Line 
+                  type="monotone" 
+                  dataKey="cancelado" 
+                  stroke="hsl(0 84% 60%)" 
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(0 84% 60%)', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="aguardando" 
+                  stroke="hsl(45 93% 47%)" 
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(45 93% 47%)', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </CardContent>

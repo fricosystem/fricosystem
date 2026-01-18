@@ -179,10 +179,14 @@ export const useParadaMaquina = () => {
       return false;
     }
 
-    // Verificar regra dos 5 minutos usando horarioProgramado (Timestamp)
-    const { pode, mensagem } = podeIniciarExecucao(parada.horarioProgramado);
+    // Verificar regra dos 5 minutos - suporta hrInicial e horarioProgramado
+    const { pode, mensagem } = podeIniciarExecucao(
+      parada.horarioProgramado,
+      parada.hrInicial,
+      parada.dataProgramada
+    );
     if (!pode) {
-      toast.error(mensagem);
+      toast.info(mensagem); // Mensagem informativa, não de erro
       return false;
     }
 

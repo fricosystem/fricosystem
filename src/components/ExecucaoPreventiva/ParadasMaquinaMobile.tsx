@@ -179,40 +179,8 @@ function formatTempoDecorrido(segundos?: number): string {
   return `${secs}s`;
 }
 
-// Helper para verificar se pode iniciar (5 minutos antes do horarioInicio)
-function podeIniciarPorHorario(horarioInicio: any): { pode: boolean; mensagem: string } {
-  if (!horarioInicio) return { pode: true, mensagem: "" };
-  
-  const now = new Date();
-  let inicio: Date;
-  
-  if (typeof horarioInicio === "string") {
-    const today = format(now, "yyyy-MM-dd");
-    inicio = new Date(`${today}T${horarioInicio}:00`);
-  } else if (horarioInicio.toDate) {
-    inicio = horarioInicio.toDate();
-  } else {
-    return { pode: true, mensagem: "" };
-  }
-  
-  const diffMs = inicio.getTime() - now.getTime();
-  const diffMinutos = diffMs / (1000 * 60);
-  
-  if (diffMinutos > 5) {
-    const totalMinutos = Math.ceil(diffMinutos);
-    const horas = Math.floor(totalMinutos / 60);
-    const mins = totalMinutos % 60;
-    const tempoFormatado = horas > 0 
-      ? `${horas}h ${mins}min` 
-      : `${mins} min`;
-    return { 
-      pode: false, 
-      mensagem: `Aguarde ${tempoFormatado} para iniciar (liberado 5 min antes)` 
-    };
-  }
-  
-  return { pode: true, mensagem: "" };
-}
+// Usa a função centralizada de typesParadaMaquina.ts
+// Removida a função duplicada podeIniciarPorHorario
 
 export function ParadasMaquinaMobile() {
   const { 
@@ -239,10 +207,14 @@ export function ParadasMaquinaMobile() {
   });
 
   const handleIniciar = async (parada: ParadaMaquina) => {
-    // Verificar regra dos 5 minutos
-    const { pode, mensagem } = podeIniciarExecucao(parada.horarioProgramado);
+    // Verificar regra dos 5 minutos - suporta hrInicial e horarioProgramado
+    const { pode, mensagem } = podeIniciarExecucao(
+      parada.horarioProgramado,
+      parada.hrInicial,
+      parada.dataProgramada
+    );
     if (!pode) {
-      toast.error(mensagem);
+      toast.info(mensagem); // Mudado de toast.error para toast.info
       return;
     }
 
@@ -575,25 +547,34 @@ export function ParadasMaquinaMobile() {
                   <Separator />
                   <div className="space-y-3 pb-6">
                     {selectedParada?.status === "aguardando" || selectedParada?.status === "nao_concluido" ? (
-                      <>
-                        {!podeIniciarPorHorario((selectedParada as any).horarioInicio).pode && (
-                          <p className="text-xs text-muted-foreground text-center">
-                            {podeIniciarPorHorario((selectedParada as any).horarioInicio).mensagem}
-                          </p>
-                        )}
-                        <Button 
-                          className="w-full h-14 text-base font-semibold"
-                          onClick={() => handleIniciar(selectedParada)}
-                          disabled={processingId === selectedParada?.id || !podeIniciarPorHorario((selectedParada as any).horarioInicio).pode}
-                        >
-                          {processingId === selectedParada?.id ? (
-                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          ) : (
-                            <Play className="h-5 w-5 mr-2" />
-                          )}
-                          {selectedParada?.status === "nao_concluido" ? "Reiniciar Execução" : "Iniciar Execução"}
-                        </Button>
-                      </>
+                      (() => {
+                        const verificacao = podeIniciarExecucao(
+                          selectedParada.horarioProgramado,
+                          selectedParada.hrInicial,
+                          selectedParada.dataProgramada
+                        );
+                        return (
+                          <>
+                            {!verificacao.pode && (
+                              <p className="text-xs text-muted-foreground text-center">
+                                {verificacao.mensagem}
+                              </p>
+                            )}
+                            <Button 
+                              className="w-full h-14 text-base font-semibold"
+                              onClick={() => handleIniciar(selectedParada)}
+                              disabled={processingId === selectedParada?.id || !verificacao.pode}
+                            >
+                              {processingId === selectedParada?.id ? (
+                                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                              ) : (
+                                <Play className="h-5 w-5 mr-2" />
+                              )}
+                              {selectedParada?.status === "nao_concluido" ? "Reiniciar Execução" : "Iniciar Execução"}
+                            </Button>
+                          </>
+                        );
+                      })()
                     ) : selectedParada?.status === "em_andamento" ? (
                       <>
                         {selectedParada.horarioExecucaoInicio && (
