@@ -176,8 +176,8 @@ const Login = () => {
                 className="w-16 h-16 rounded-lg object-scale-down" 
               />
               <div>
-                <span className="text-2xl font-bold text-white">FR Stock Manager</span>
-                <h1 className="text-sm font-extrabold text-frico-500">Fricó Alimentos</h1>
+                <span className="text-2xl font-bold text-white">APEX HUB</span>
+                <h1 className="text-sm font-extrabold text-frico-500">ERP</h1>
               </div>
             </a>
           </div>
@@ -215,11 +215,11 @@ const Login = () => {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 animate-fade-in">
               Bem vindo ao <span>Gerenciador de Estoque</span>
               <br />
-              <span className="text-3xl md:text-4xl text-frico-500">Fricó Alimentos</span>
+              <span className="text-3xl md:text-4xl text-frico-500">APEX HUB</span>
             </h1>
             
             <p className="text-xl text-gray-500 max-w-2xl mb-8 animate-fade-up">
-              O FR Stock Manager transforma a gestão corporativa com soluções integradas para estoque, finanças, recursos humanos e muito mais. Fazemos com que a empresa alcançe a excelência operacional.
+              O APEX HUB transforma a gestão corporativa com soluções integradas para estoque, finanças, recursos humanos e muito mais. Fazemos com que a empresa alcançe a excelência operacional.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 animate-fade-up" style={{ animationDelay: "0.2s" }}>
@@ -263,7 +263,7 @@ const Login = () => {
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold text-white mb-4">Nossas Soluções</h2>
               <p className="text-gray-400 max-w-2xl mx-auto text-xl">
-                O FR Stock Manager foi desenvolvido para atender as necessidades específicas da empresa, 
+                O APEX HUB foi desenvolvido para atender as necessidades específicas da empresa, 
                 trazendo soluções integradas para levar a eficiência operacional a um novo patamar.
               </p>
             </div>
@@ -389,7 +389,7 @@ const Login = () => {
                 <div className="bg-gray-900/50 border border-gray-800 p-6 rounded-xl h-64 overflow-hidden backdrop-blur-sm">
                   <iframe 
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15263.353856551582!2d-49.47381462032724!3d-16.6535792!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x935e673e31c193bb%3A0x52922e18e6cd4b00!2sFric%C3%B3%20Alimentos!5e0!3m2!1spt-BR!2sbr!4v1713888339927!5m2!1spt-BR!2sbr&map_style=night" 
-                    width="100%" height="100%" style={{border: 0}} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Localização da Fricó Alimentos" className="rounded-lg"
+                    width="100%" height="100%" style={{border: 0}} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Localização da APEX HUB" className="rounded-lg"
                   ></iframe>
                 </div>
               </div>

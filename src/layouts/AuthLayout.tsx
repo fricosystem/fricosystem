@@ -53,7 +53,7 @@ const AuthLayout = ({
           transition={{ delay: 0.5, duration: 0.5 }}
           className="text-center text-white/80 text-sm mt-6"
         >
-          © 2025 Fricó Alimentos - Todos os direitos reservados
+          © 2026 APEX HUB - Todos os direitos reservados
         </motion.div>
       </motion.div>
     </div>

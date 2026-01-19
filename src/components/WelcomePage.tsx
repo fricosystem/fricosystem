@@ -10,17 +10,17 @@ const WelcomePage = () => {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   
   const textSequence = [
-    'Aguarde aprovação pela nossa equipe administrativa Fricó Alimentos',
-    'Já conhece a inteligência do FR Stock Manager?',
-    'Sabia que o FR Stock Manager otimiza seu estoque em tempo real?',
+    'Aguarde aprovação pela nossa equipe administrativa',
+    'Já conhece a inteligência do APEX HUB?',
+    'Sabia que o APEX HUB otimiza seu estoque em tempo real?',
     'Você está prestes a experimentar um novo nível de controle logístico.',
-    'Com o FR Stock Manager, cada produto tem seu lugar certo.',
+    'Com o APEX HUB, cada produto tem seu lugar certo.',
     'Estoque semiautomatizado com decisões inteligentes.',
-    'FR Stock Manager: feito para reduzir desperdícios e maximizar eficiência.',
+    'APEX HUB: feito para reduzir desperdícios e maximizar eficiência.',
     'Sabia que você pode rastrear cada movimentação de forma precisa?',
     'Um arrasta e solta pode ser o suficiente para reorganizar seu inventário.',
     'Precisa de uma requisição? Faça direto pelo sistema!',
-    'O FR Stock Manager avisa para não deixar faltar produtos no estoque.',
+    'O APEX HUB avisa para não deixar faltar produtos no estoque.',
     'Fácil de usar com amplas funcionalidades.',
     'Enquanto você aguarda, o sistema já está se preparando jogos para você.'
   ];
