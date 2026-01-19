@@ -1,13 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
-import { Save, X, Circle } from 'lucide-react';
+import { Save, X, Circle, Copy, Scissors, Trash2, ClipboardPaste, Undo2, Redo2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { githubService } from '@/services/githubService';
 import { useHotkeys } from 'react-hotkeys-hook';
 import SaveStatusModal from '@/components/IDE/SaveStatusModal';
 import { useSaveStatus } from '@/hooks/useSaveStatus';
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 interface OpenFile {
   path: string;
   content: string;
@@ -314,7 +324,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col min-h-0 overflow-hidden">
+    <div className="h-full w-full flex flex-col" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Abas dos arquivos - compacta no mobile */}
       <div className="inline-flex h-8 md:h-10 items-center justify-start rounded-none bg-muted/30 p-0.5 md:p-1 text-muted-foreground overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent min-w-0 border-b flex-shrink-0">
         <div className="flex min-w-0">
@@ -413,66 +423,199 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
         </div>
       )}
 
-      {/* Editor */}
-      <div className="flex-1 min-h-0 w-full overflow-hidden relative" style={{ minHeight: '200px' }}>
+      {/* Editor - ocupa todo espaço disponível */}
+      <div className="w-full overflow-hidden relative" style={{ flex: '1 1 0%', minHeight: 0 }}>
         {loading ? (
           <div className="h-full w-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : activeFileData ? (
-          <div className="absolute inset-0">
-            <Editor
-              height="100%"
-              width="100%"
-              language={getLanguageFromPath(activeFileData.path)}
-              value={activeFileData.content}
-              onChange={(value) => {
-                if (value !== undefined) {
-                  updateFileContent(activeFileData.path, value);
-                }
-              }}
-              onMount={(editor) => {
-                editorRef.current = editor;
-                // Força layout correto após montar
-                setTimeout(() => {
-                  editor.layout();
-                }, 100);
-                // Listener para resize
-                const handleResize = () => editor.layout();
-                window.addEventListener('resize', handleResize);
-                return () => window.removeEventListener('resize', handleResize);
-              }}
-              theme={theme === 'dark' ? 'vs-dark' : 'light'}
-              options={{
-                fontSize: 14,
-                fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-                insertSpaces: true,
-                wordWrap: 'on',
-                lineNumbers: 'on',
-                renderWhitespace: 'selection',
-                bracketPairColorization: { enabled: true },
-                quickSuggestions: {
-                  other: true,
-                  comments: true,
-                  strings: true,
-                },
-                overviewRulerBorder: false,
-                hideCursorInOverviewRuler: true,
-                scrollbar: {
-                  vertical: 'auto',
-                  horizontal: 'auto',
-                  verticalScrollbarSize: 10,
-                  horizontalScrollbarSize: 10,
-                },
-              }}
-            />
-          </div>
+          <Editor
+            height="100%"
+            width="100%"
+            language={getLanguageFromPath(activeFileData.path)}
+            value={activeFileData.content}
+            onChange={(value) => {
+              if (value !== undefined) {
+                updateFileContent(activeFileData.path, value);
+              }
+            }}
+            onMount={(editor) => {
+              editorRef.current = editor;
+              setTimeout(() => {
+                editor.layout();
+              }, 100);
+              setTimeout(() => {
+                editor.layout();
+              }, 500);
+              const handleResize = () => editor.layout();
+              window.addEventListener('resize', handleResize);
+              return () => window.removeEventListener('resize', handleResize);
+            }}
+            theme={theme === 'dark' ? 'vs-dark' : 'light'}
+            options={{
+              fontSize: 14,
+              fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              insertSpaces: true,
+              wordWrap: 'on',
+              lineNumbers: 'on',
+              renderWhitespace: 'selection',
+              bracketPairColorization: { enabled: true },
+              quickSuggestions: {
+                other: true,
+                comments: true,
+                strings: true,
+              },
+              overviewRulerBorder: false,
+              hideCursorInOverviewRuler: true,
+              scrollbar: {
+                vertical: 'auto',
+                horizontal: 'auto',
+                verticalScrollbarSize: 10,
+                horizontalScrollbarSize: 10,
+              },
+            }}
+          />
         ) : null}
       </div>
+
+      {/* Barra de ações inferior */}
+      {activeFileData && (
+        <div className="flex items-center justify-center gap-1 px-2 py-1.5 border-t bg-muted/30 flex-shrink-0">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              if (editorRef.current) {
+                editorRef.current.focus();
+                document.execCommand('copy');
+                toast({ title: "Copiado", description: "Texto copiado para a área de transferência" });
+              }
+            }}
+            className="h-7 px-2 text-xs gap-1"
+            title="Copiar (Ctrl+C)"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Copiar</span>
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              if (editorRef.current) {
+                editorRef.current.focus();
+                document.execCommand('cut');
+                toast({ title: "Cortado", description: "Texto cortado para a área de transferência" });
+              }
+            }}
+            className="h-7 px-2 text-xs gap-1"
+            title="Cortar (Ctrl+X)"
+          >
+            <Scissors className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Cortar</span>
+          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                title="Excluir tudo"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Excluir</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir todo o conteúdo?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação irá limpar todo o conteúdo do arquivo atual. Você pode desfazer esta ação com Ctrl+Z.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (editorRef.current) {
+                      editorRef.current.setValue('');
+                      updateFileContent(activeFileData.path, '');
+                      toast({ title: "Conteúdo excluído", description: "Todo o conteúdo foi removido" });
+                    }
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Excluir tudo
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={async () => {
+              if (editorRef.current) {
+                try {
+                  const text = await navigator.clipboard.readText();
+                  const selection = editorRef.current.getSelection();
+                  editorRef.current.executeEdits('paste', [{
+                    range: selection,
+                    text: text,
+                    forceMoveMarkers: true
+                  }]);
+                  toast({ title: "Colado", description: "Texto colado com sucesso" });
+                } catch {
+                  toast({ title: "Erro", description: "Não foi possível acessar a área de transferência", variant: "destructive" });
+                }
+              }
+            }}
+            className="h-7 px-2 text-xs gap-1"
+            title="Colar (Ctrl+V)"
+          >
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Colar</span>
+          </Button>
+
+          <div className="w-px h-4 bg-border mx-1" />
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              if (editorRef.current) {
+                editorRef.current.trigger('keyboard', 'undo', null);
+              }
+            }}
+            className="h-7 px-2 text-xs gap-1"
+            title="Desfazer (Ctrl+Z)"
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Desfazer</span>
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              if (editorRef.current) {
+                editorRef.current.trigger('keyboard', 'redo', null);
+              }
+            }}
+            className="h-7 px-2 text-xs gap-1"
+            title="Refazer (Ctrl+Y)"
+          >
+            <Redo2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Refazer</span>
+          </Button>
+        </div>
+      )}
 
       {/* Modal de Status de Salvamento */}
       <SaveStatusModal
