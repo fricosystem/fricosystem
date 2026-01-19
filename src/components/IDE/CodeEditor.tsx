@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
-import { Save, X, Circle, Copy, Scissors, Trash2, ClipboardPaste, Undo2, Redo2 } from 'lucide-react';
+import { Save, X, Circle, Copy, Scissors, Trash2, ClipboardPaste, Undo2, Redo2, CheckSquare } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { githubService } from '@/services/githubService';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
 interface OpenFile {
   path: string;
   content: string;
@@ -300,7 +301,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
 
   if (openFiles.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="h-auto flex items-center justify-center">
         <div className="text-center space-y-6 p-8">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/10 blur-2xl rounded-full"></div>
@@ -324,7 +325,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
+    <div className="h-full md:h-full w-full flex flex-col">
       {/* Abas dos arquivos - compacta no mobile */}
       <div className="inline-flex h-8 md:h-10 items-center justify-start rounded-none bg-muted/30 p-0.5 md:p-1 text-muted-foreground overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent min-w-0 border-b flex-shrink-0">
         <div className="flex min-w-0">
@@ -424,7 +425,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
       )}
 
       {/* Editor - ocupa todo espaço disponível */}
-      <div className="w-full overflow-hidden relative" style={{ flex: '1 1 0%', minHeight: 0 }}>
+      <div className="w-full overflow-hidden relative flex-1 pb-12 md:pb-0">
         {loading ? (
           <div className="h-full w-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -483,9 +484,29 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
         ) : null}
       </div>
 
-      {/* Barra de ações inferior */}
+      {/* Barra de ações inferior - fixada no mobile */}
       {activeFileData && (
-        <div className="flex items-center justify-center gap-1 px-2 py-1.5 border-t bg-muted/30 flex-shrink-0">
+        <div className="fixed md:relative bottom-0 left-0 right-0 flex items-center justify-center gap-1 px-2 py-1.5 border-t bg-background md:bg-muted/30 flex-shrink-0 z-50 shadow-lg md:shadow-none">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              if (editorRef.current) {
+                const model = editorRef.current.getModel();
+                if (model) {
+                  editorRef.current.setSelection(model.getFullModelRange());
+                  editorRef.current.focus();
+                  toast({ title: "Selecionado", description: "Todo o código foi selecionado" });
+                }
+              }
+            }}
+            className="h-7 px-2 text-xs gap-1"
+            title="Selecionar tudo (Ctrl+A)"
+          >
+            <CheckSquare className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Selecionar</span>
+          </Button>
+
           <Button
             size="sm"
             variant="ghost"
