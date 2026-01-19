@@ -213,7 +213,7 @@ const Login = () => {
         <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
           <div className="container mx-auto relative z-10 px-4 flex flex-col items-center text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 animate-fade-in">
-              Bem vindo ao <span>Gerenciador de Estoque</span>
+              Bem vindo ao <span>Gerenciador industrial</span>
               <br />
               <span className="text-3xl md:text-4xl text-frico-500">APEX HUB</span>
             </h1>
