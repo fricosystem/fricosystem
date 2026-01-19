@@ -1,23 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
-import { Save, X, Circle, Copy, Scissors, Trash2, ClipboardPaste, Undo2, Redo2, CheckSquare } from 'lucide-react';
+import { Save, X, Circle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { githubService } from '@/services/githubService';
 import { useHotkeys } from 'react-hotkeys-hook';
 import SaveStatusModal from '@/components/IDE/SaveStatusModal';
 import { useSaveStatus } from '@/hooks/useSaveStatus';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import AcaoFlutuante from '@/components/IDE/AcaoFlutuante';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface OpenFile {
   path: string;
@@ -29,14 +20,16 @@ interface OpenFile {
 interface CodeEditorProps {
   selectedFile: string | null;
   theme: 'light' | 'dark';
+  onBack?: () => void;
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
+const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) => {
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const editorRef = useRef<any>(null);
+  const isMobile = useIsMobile();
   
   // Hook para gerenciar status de salvamento
   const { 
@@ -325,9 +318,21 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col">
-      {/* Abas dos arquivos - compacta no mobile */}
-      <div className="inline-flex h-8 md:h-10 items-center justify-start rounded-none bg-muted/30 p-0.5 md:p-1 text-muted-foreground overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent min-w-0 border-b flex-shrink-0">
+    <div className="h-full w-full flex flex-col relative">
+      {/* Menu Flutuante - apenas no mobile quando há arquivo ativo */}
+      {isMobile && activeFileData && (
+        <AcaoFlutuante
+          fileName={activeFileData.path.split('/').pop() || ''}
+          isModified={activeFileData.modified}
+          onSave={saveActiveFile}
+          onBack={onBack || (() => {})}
+          editorRef={editorRef}
+          onContentChange={(content) => updateFileContent(activeFileData.path, content)}
+        />
+      )}
+
+      {/* Abas dos arquivos - escondidas no mobile */}
+      <div className={`${isMobile ? 'hidden' : 'inline-flex'} h-8 md:h-10 items-center justify-start rounded-none bg-muted/30 p-0.5 md:p-1 text-muted-foreground overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent min-w-0 border-b flex-shrink-0`}>
         <div className="flex min-w-0">
           {openFiles.map((file) => (
             <div
@@ -362,7 +367,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
           ))}
         </div>
         
-        {/* Botão salvar compacto no mobile */}
+        {/* Botão salvar compacto no desktop */}
         {activeFileData?.modified && (
           <Button
             size="sm"
@@ -424,10 +429,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
         </div>
       )}
 
-      {/* Container principal do editor com barra de ações */}
-      <div className="flex-1 min-h-0 relative flex flex-col">
-        {/* Editor - ocupa todo espaço disponível */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+      {/* Container principal do editor - ocupa 100% do espaço disponível */}
+      <div className={`flex-1 min-h-0 relative flex flex-col overflow-hidden ${isMobile && activeFileData ? 'pt-12' : ''}`}>
+        {/* Editor - 100% do espaço */}
+        <div className="flex-1 min-h-0 overflow-hidden h-full">
           {loading ? (
             <div className="h-full w-full flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -485,169 +490,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme }) => {
             />
           ) : null}
         </div>
-
-        {/* Barra de ações inferior - dentro do container do editor */}
-        {activeFileData && (
-          <div className="border-t bg-background md:bg-muted/30 flex-shrink-0">
-            <div className="flex items-center justify-start md:justify-center gap-1 px-2 py-1.5 overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  if (editorRef.current) {
-                    const model = editorRef.current.getModel();
-                    if (model) {
-                      editorRef.current.setSelection(model.getFullModelRange());
-                      editorRef.current.focus();
-                      toast({ title: "Selecionado", description: "Todo o código foi selecionado" });
-                    }
-                  }
-                }}
-                className="h-7 px-2 text-xs gap-1 min-w-[80px] md:min-w-[70px] shrink-0"
-                title="Selecionar tudo (Ctrl+A)"
-              >
-                <CheckSquare className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Selecionar</span>
-                <span className="sm:hidden">Sel.</span>
-              </Button>
-
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  if (editorRef.current) {
-                    editorRef.current.focus();
-                    document.execCommand('copy');
-                    toast({ title: "Copiado", description: "Texto copiado para a área de transferência" });
-                  }
-                }}
-                className="h-7 px-2 text-xs gap-1 min-w-[80px] md:min-w-[70px] shrink-0"
-                title="Copiar (Ctrl+C)"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Copiar</span>
-                <span className="sm:hidden">Cop.</span>
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  if (editorRef.current) {
-                    editorRef.current.focus();
-                    document.execCommand('cut');
-                    toast({ title: "Cortado", description: "Texto cortado para a área de transferência" });
-                  }
-                }}
-                className="h-7 px-2 text-xs gap-1 min-w-[80px] md:min-w-[70px] shrink-0"
-                title="Cortar (Ctrl+X)"
-              >
-                <Scissors className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Cortar</span>
-                <span className="sm:hidden">Cort.</span>
-              </Button>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 min-w-[80px] md:min-w-[70px] shrink-0"
-                    title="Excluir tudo"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Excluir</span>
-                    <span className="sm:hidden">Exc.</span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir todo o conteúdo?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação irá limpar todo o conteúdo do arquivo atual. Você pode desfazer esta ação com Ctrl+Z.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        if (editorRef.current) {
-                          editorRef.current.setValue('');
-                          updateFileContent(activeFileData.path, '');
-                          toast({ title: "Conteúdo excluído", description: "Todo o conteúdo foi removido" });
-                        }
-                      }}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Excluir tudo
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={async () => {
-                  if (editorRef.current) {
-                    try {
-                      const text = await navigator.clipboard.readText();
-                      const selection = editorRef.current.getSelection();
-                      editorRef.current.executeEdits('paste', [{
-                        range: selection,
-                        text: text,
-                        forceMoveMarkers: true
-                      }]);
-                      toast({ title: "Colado", description: "Texto colado com sucesso" });
-                    } catch {
-                      toast({ title: "Erro", description: "Não foi possível acessar a área de transferência", variant: "destructive" });
-                    }
-                  }
-                }}
-                className="h-7 px-2 text-xs gap-1 min-w-[80px] md:min-w-[70px] shrink-0"
-                title="Colar (Ctrl+V)"
-              >
-                <ClipboardPaste className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Colar</span>
-                <span className="sm:hidden">Col.</span>
-              </Button>
-
-              <div className="w-px h-4 bg-border mx-1 shrink-0" />
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  if (editorRef.current) {
-                    editorRef.current.trigger('keyboard', 'undo', null);
-                  }
-                }}
-                className="h-7 px-2 text-xs gap-1 min-w-[80px] md:min-w-[70px] shrink-0"
-                title="Desfazer (Ctrl+Z)"
-              >
-                <Undo2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Desfazer</span>
-                <span className="sm:hidden">Desf.</span>
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  if (editorRef.current) {
-                    editorRef.current.trigger('keyboard', 'redo', null);
-                  }
-                }}
-                className="h-7 px-2 text-xs gap-1 min-w-[80px] md:min-w-[70px] shrink-0"
-                title="Refazer (Ctrl+Y)"
-              >
-                <Redo2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Refazer</span>
-                <span className="sm:hidden">Ref.</span>
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Modal de Status de Salvamento */}

@@ -311,52 +311,16 @@ const IDE: React.FC = () => {
                   </div>
                 )}
 
-                {/* Vista de Editor - Arquivo aberto em tela cheia */}
+                {/* Vista de Editor - Arquivo aberto em tela cheia SEM header (gerenciado pelo AcaoFlutuante) */}
                 {mobileView === 'editor' && selectedFile && (
                   <div className="h-full w-full flex flex-col min-h-0 overflow-hidden">
-                    {/* Header com botão voltar e salvar */}
-                    <div className="flex items-center justify-between p-2 border-b border-border/40 bg-background/80 backdrop-blur-sm flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleMobileBack}
-                        className="h-8 px-2"
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Voltar
-                      </Button>
-                      
-                      <span className="text-xs font-mono text-muted-foreground truncate max-w-[40%]">
-                        {selectedFile.split('/').pop()}
-                      </span>
-                      
-                      <div className="flex gap-1">
-                        {/* Abas do editor no mobile */}
-                        <Button
-                          variant={activeEditorTab === 'editor' ? 'secondary' : 'ghost'}
-                          size="sm"
-                          onClick={() => setActiveEditorTab('editor')}
-                          className="h-8 px-2"
-                        >
-                          <Code className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant={activeEditorTab === 'preview' ? 'secondary' : 'ghost'}
-                          size="sm"
-                          onClick={() => setActiveEditorTab('preview')}
-                          className="h-8 px-2"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Conteúdo do editor */}
+                    {/* Conteúdo do editor - ocupa 100% da tela */}
                     <div className="flex-1 min-h-0 w-full overflow-hidden">
                       {activeEditorTab === 'editor' ? (
                         <CodeEditor 
                           selectedFile={selectedFile} 
                           theme={theme}
+                          onBack={handleMobileBack}
                         />
                       ) : (
                         <div className="h-full w-full overflow-hidden">
