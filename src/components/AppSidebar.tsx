@@ -603,7 +603,7 @@ const AppSidebar = () => {
   };
 
   // Testar diferentes caminhos para a imagem
-  const logoPaths = ['/APEX LOGO.png', '/images/APEX LOGO.png', '/public/APEX LOGO.png', '/public/images/APEX LOGO.png', 'APEX LOGO.png', './APEX LOGO.png', '../APEX LOGO.png', '../../APEX LOGO.png'];
+  const logoPaths = ['/public/APEX LOGO.png', '/images/public/APEX LOGO.png', '/public/APEX LOGO.png', '/public/images/public/APEX LOGO.png', 'APEX LOGO.png', './public/APEX LOGO.png', '../public/APEX LOGO.png', '../../public/APEX LOGO.png'];
   return <Sidebar className="border-r border-[#2b3341] h-screen">
       <SidebarContent className="relative h-full overflow-hidden">
         <style>
@@ -714,7 +714,7 @@ const AppSidebar = () => {
           {/* Logo - fixo no topo */}
           <div className="logo-container flex-shrink-0">
             <img 
-              src="/APEX LOGO.png" 
+              src="/public/APEX LOGO.png" 
               alt="APEX HUB Logo" 
               className="w-24 h-24 object-contain mx-auto"
             />

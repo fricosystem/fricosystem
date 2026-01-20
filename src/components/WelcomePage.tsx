@@ -182,7 +182,7 @@ const WelcomePage = () => {
           {/* Ícone da Fricó fixo no centro */}
           <div className="mx-auto mb-8 flex justify-center">
             <img 
-              src="/APEX LOGO.png" 
+              src="/public/APEX LOGO.png" 
               alt="APEX HUB Logo" 
               className="w-40 h-40 object-scale-down" 
             />

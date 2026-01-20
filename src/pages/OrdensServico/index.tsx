@@ -83,7 +83,7 @@ export default function OrdensServico() {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
         <div className="container mx-auto py-4 px-6 flex items-center gap-3">
           <img 
-            src="/APEX LOGO.png" 
+            src="/public/APEX LOGO.png" 
             alt="Fricó" 
             className="h-10 w-10 object-contain" 
           />

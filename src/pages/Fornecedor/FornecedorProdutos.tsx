@@ -237,7 +237,7 @@ const FornecedorProdutos: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <img 
-                src="/APEX LOGO.png" 
+                src="/public/APEX LOGO.png" 
                 alt="APEX HUB" 
                 className="h-10 w-10 object-contain"
               />
