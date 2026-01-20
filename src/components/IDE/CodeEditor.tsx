@@ -269,6 +269,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
     }
   }, [selectedFile]);
 
+  // Força o layout do Monaco Editor quando o arquivo ativo muda
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.layout();
+    }
+  }, [activeFile]);
+
   const activeFileData = openFiles.find(f => f.path === activeFile);
 
   if (!githubService.isConfigured()) {
@@ -318,19 +325,17 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
   }
 
   return (
-    <div className={`h-full w-full flex flex-col relative ${isMobile && activeFileData ? 'pt-12' : ''}`}>
+    <div className="h-full w-full flex flex-col">
       {/* Menu Flutuante - apenas no mobile quando há arquivo ativo */}
       {isMobile && activeFileData && (
-        <div className="absolute top-0 left-0 right-0 z-50">
-          <AcaoFlutuante
-            fileName={activeFileData.path.split('/').pop() || ''}
-            isModified={activeFileData.modified}
-            onSave={saveActiveFile}
-            onBack={onBack || (() => {})}
-            editorRef={editorRef}
-            onContentChange={(content) => updateFileContent(activeFileData.path, content)}
-          />
-        </div>
+        <AcaoFlutuante
+          fileName={activeFileData.path.split('/').pop() || ''}
+          isModified={activeFileData.modified}
+          onSave={saveActiveFile}
+          onBack={onBack || (() => {})}
+          editorRef={editorRef}
+          onContentChange={(content) => updateFileContent(activeFileData.path, content)}
+        />
       )}
 
       {/* Abas dos arquivos - escondidas no mobile */}
@@ -432,62 +437,59 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
       )}
 
       {/* Container principal do editor */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden relative">
         {loading ? (
-          <div className="h-full w-full flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : activeFileData ? (
-          <Editor
-            height="100%"
-            width="100%"
-            language={getLanguageFromPath(activeFileData.path)}
-            value={activeFileData.content}
-            onChange={(value) => {
-              if (value !== undefined) {
-                updateFileContent(activeFileData.path, value);
-              }
-            }}
-            onMount={(editor) => {
-              editorRef.current = editor;
-              setTimeout(() => {
-                editor.layout();
-              }, 100);
-              setTimeout(() => {
-                editor.layout();
-              }, 500);
-              const handleResize = () => editor.layout();
-              window.addEventListener('resize', handleResize);
-              return () => window.removeEventListener('resize', handleResize);
-            }}
-            theme={theme === 'dark' ? 'vs-dark' : 'light'}
-            options={{
-              fontSize: 14,
-              fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-              insertSpaces: true,
-              wordWrap: 'on',
-              lineNumbers: 'on',
-              renderWhitespace: 'selection',
-              bracketPairColorization: { enabled: true },
-              quickSuggestions: {
-                other: true,
-                comments: true,
-                strings: true,
-              },
-              overviewRulerBorder: false,
-              hideCursorInOverviewRuler: true,
-              scrollbar: {
-                vertical: 'auto',
-                horizontal: 'auto',
-                verticalScrollbarSize: 10,
-                horizontalScrollbarSize: 10,
-              },
-            }}
-          />
+          <div className="h-full w-full">
+            <Editor
+              height="100%"
+              width="100%"
+              language={getLanguageFromPath(activeFileData.path)}
+              value={activeFileData.content}
+              onChange={(value) => {
+                if (value !== undefined) {
+                  updateFileContent(activeFileData.path, value);
+                }
+              }}
+              onMount={(editor) => {
+                editorRef.current = editor;
+                editor.layout(); 
+                const handleResize = () => editor.layout();
+                window.addEventListener('resize', handleResize);
+                return () => window.removeEventListener('resize', handleResize);
+              }}
+              theme={theme === 'dark' ? 'vs-dark' : 'light'}
+              options={{
+                fontSize: isMobile ? 12 : 14, // Fonte menor no mobile
+                fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+                insertSpaces: true,
+                wordWrap: 'on',
+                lineNumbers: 'on',
+                renderWhitespace: 'selection',
+                bracketPairColorization: { enabled: true },
+                quickSuggestions: {
+                  other: true,
+                  comments: true,
+                  strings: true,
+                },
+                overviewRulerBorder: false,
+                hideCursorInOverviewRuler: true,
+                scrollbar: {
+                  vertical: 'auto',
+                  horizontal: 'auto',
+                  verticalScrollbarSize: 10,
+                  horizontalScrollbarSize: 10,
+                },
+              }}
+            />
+          </div>
         ) : null}
       </div>
 
