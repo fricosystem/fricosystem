@@ -9,6 +9,7 @@ import SaveStatusModal from '@/components/IDE/SaveStatusModal';
 import { useSaveStatus } from '@/hooks/useSaveStatus';
 import AcaoFlutuante from '@/components/IDE/AcaoFlutuante';
 import { useIsMobile } from '@/hooks/use-mobile';
+import SaveConfirmationDialog from '@/components/IDE/SaveConfirmationDialog';
 
 interface OpenFile {
   path: string;
@@ -27,6 +28,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmSaveDialog, setConfirmSaveDialog] = useState<{ isOpen: boolean; filePath: string | null }>({
+    isOpen: false,
+    filePath: null,
+  });
   const { toast } = useToast();
   const editorRef = useRef<any>(null);
   const isMobile = useIsMobile();
@@ -127,7 +132,21 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
     }));
   };
 
-  const saveFile = async (filePath: string) => {
+  // Função que abre o modal de confirmação
+  const requestSaveFile = (filePath: string) => {
+    const file = openFiles.find(f => f.path === filePath);
+    if (!file || !file.modified) return;
+    
+    setConfirmSaveDialog({ isOpen: true, filePath });
+  };
+
+  // Função que efetivamente salva o arquivo (chamada após confirmação)
+  const confirmSaveFile = async () => {
+    const filePath = confirmSaveDialog.filePath;
+    if (!filePath) return;
+    
+    setConfirmSaveDialog({ isOpen: false, filePath: null });
+    
     const file = openFiles.find(f => f.path === filePath);
     if (!file || !file.modified) return;
 
@@ -165,6 +184,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
     }
   };
 
+  const cancelSaveConfirmation = () => {
+    setConfirmSaveDialog({ isOpen: false, filePath: null });
+  };
+
   const closeFile = (filePath: string) => {
     const file = openFiles.find(f => f.path === filePath);
     
@@ -174,17 +197,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
       );
       
       if (shouldSave) {
-        saveFile(filePath).then(() => {
-          // Remove o arquivo da lista
-          setOpenFiles(prev => {
-            const newFiles = prev.filter(f => f.path !== filePath);
-            // Se o arquivo fechado era o ativo, muda para outro
-            if (activeFile === filePath) {
-              setActiveFile(newFiles.length > 0 ? newFiles[0].path : null);
-            }
-            return newFiles;
-          });
-        });
+        requestSaveFile(filePath);
         return;
       }
     }
@@ -202,7 +215,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
 
   const saveActiveFile = () => {
     if (activeFile) {
-      saveFile(activeFile);
+      requestSaveFile(activeFile);
     }
   };
 
@@ -217,22 +230,33 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
       return;
     }
 
-    const promises = modifiedFiles.map(file => saveFile(file.path));
-    
-    try {
-      await Promise.all(promises);
-      toast({
-        title: "✅ Sucesso",
-        description: `${modifiedFiles.length} arquivo(s) salvado(s) com sucesso`,
-      });
-    } catch (error) {
-      console.error('Erro ao salvar arquivos:', error);
-      toast({
-        title: "❌ Erro",
-        description: "Falha ao salvar alguns arquivos. Verifique os logs para mais detalhes.",
-        variant: "destructive",
-      });
+    // Para múltiplos arquivos, salvamos todos sem confirmação individual
+    for (const file of modifiedFiles) {
+      try {
+        const fileName = file.path.split('/').pop() || file.path;
+        const success = await saveFileWithStatus(
+          file.path,
+          file.content,
+          `Atualizar ${fileName} via IDE`
+        );
+
+        if (success) {
+          setOpenFiles(prev => prev.map(f => {
+            if (f.path === file.path) {
+              return { ...f, modified: false, originalContent: f.content };
+            }
+            return f;
+          }));
+        }
+      } catch (error) {
+        console.error('Erro ao salvar arquivo:', error);
+      }
     }
+    
+    toast({
+      title: "✅ Sucesso",
+      description: `${modifiedFiles.length} arquivo(s) salvado(s) com sucesso`,
+    });
   };
 
   const getModifiedFilesCount = () => {
@@ -325,7 +349,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
   }
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className="h-full w-full flex flex-col" style={{ minHeight: isMobile ? 'calc(100dvh - 120px)' : undefined }}>
       {/* Menu Flutuante - apenas no mobile quando há arquivo ativo */}
       {isMobile && activeFileData && (
         <AcaoFlutuante
@@ -437,7 +461,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
       )}
 
       {/* Container principal do editor */}
-      <div className="flex-1 min-h-0 overflow-hidden relative">
+      <div 
+        className="flex-1 overflow-hidden relative"
+        style={{ 
+          minHeight: isMobile ? 'calc(100dvh - 180px)' : '300px',
+          height: isMobile ? 'calc(100dvh - 120px)' : '100%'
+        }}
+      >
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -492,6 +522,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
           </div>
         ) : null}
       </div>
+
+      {/* Modal de Confirmação de Salvamento */}
+      <SaveConfirmationDialog
+        isOpen={confirmSaveDialog.isOpen}
+        onConfirm={confirmSaveFile}
+        onCancel={cancelSaveConfirmation}
+        fileName={confirmSaveDialog.filePath?.split('/').pop() || ''}
+      />
 
       {/* Modal de Status de Salvamento */}
       <SaveStatusModal

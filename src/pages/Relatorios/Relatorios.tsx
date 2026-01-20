@@ -135,24 +135,43 @@ const Relatorios = () => {
           tipos: new Set<string>()
         };
 
-        relatoriosData.forEach(data => {
-          uniqueValues.solicitantes.add(data.solicitante.nome);
-          uniqueValues.cargos.add(data.solicitante.cargo);
-          if (data.deposito) uniqueValues.depositos.add(data.deposito);
-          uniqueValues.usuarios.add(data.usuario.nome);
-          if (data.centro_de_custo) uniqueValues.centrosCusto.add(data.centro_de_custo);
-          if (data.unidade) uniqueValues.unidades.add(data.unidade);
-          if (data.tipo) uniqueValues.tipos.add(data.tipo);
+        const normalizeOption = (value?: string) => (value ?? "").trim();
+
+        relatoriosData.forEach((data) => {
+          // Evita gerar <SelectItem value=""> (Radix não permite value vazio)
+          const solicitanteNome = normalizeOption(data?.solicitante?.nome);
+          if (solicitanteNome) uniqueValues.solicitantes.add(solicitanteNome);
+
+          const cargo = normalizeOption(data?.solicitante?.cargo);
+          if (cargo) uniqueValues.cargos.add(cargo);
+
+          const deposito = normalizeOption(data?.deposito);
+          if (deposito) uniqueValues.depositos.add(deposito);
+
+          const usuarioNome = normalizeOption(data?.usuario?.nome);
+          if (usuarioNome) uniqueValues.usuarios.add(usuarioNome);
+
+          const centroCusto = normalizeOption(data?.centro_de_custo);
+          if (centroCusto) uniqueValues.centrosCusto.add(centroCusto);
+
+          const unidade = normalizeOption(data?.unidade);
+          if (unidade) uniqueValues.unidades.add(unidade);
+
+          const tipo = normalizeOption(data?.tipo);
+          if (tipo) uniqueValues.tipos.add(tipo);
         });
 
+        const toSortedArray = (set: Set<string>) =>
+          Array.from(set).filter((s) => s.trim() !== "");
+
         setOpcoesFiltro({
-          solicitantes: Array.from(uniqueValues.solicitantes),
-          cargos: Array.from(uniqueValues.cargos),
-          depositos: Array.from(uniqueValues.depositos),
-          usuarios: Array.from(uniqueValues.usuarios),
-          centrosCusto: Array.from(uniqueValues.centrosCusto),
-          unidades: Array.from(uniqueValues.unidades),
-          tipos: Array.from(uniqueValues.tipos)
+          solicitantes: toSortedArray(uniqueValues.solicitantes),
+          cargos: toSortedArray(uniqueValues.cargos),
+          depositos: toSortedArray(uniqueValues.depositos),
+          usuarios: toSortedArray(uniqueValues.usuarios),
+          centrosCusto: toSortedArray(uniqueValues.centrosCusto),
+          unidades: toSortedArray(uniqueValues.unidades),
+          tipos: toSortedArray(uniqueValues.tipos),
         });
       } catch (error) {
         console.error("Erro ao carregar relatórios:", error);

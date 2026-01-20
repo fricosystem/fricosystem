@@ -44,8 +44,8 @@ const AppLayout = ({ children, title }: AppLayoutProps) => {
         <AppSidebar />
         <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
           <AppHeader title={title} />
-          <main className={`flex-1 overflow-auto ${isIDEPage ? 'p-0' : 'p-2 sm:p-4 md:p-6'}`}>
-            <div className="w-full max-w-full">
+          <main className={`flex-1 ${isIDEPage ? 'p-0 overflow-hidden' : 'overflow-auto p-2 sm:p-4 md:p-6'}`}>
+            <div className={`w-full max-w-full ${isIDEPage ? 'h-full flex flex-col' : ''}`}>
               {children}
             </div>
           </main>

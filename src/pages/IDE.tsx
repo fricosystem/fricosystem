@@ -256,7 +256,7 @@ const IDE: React.FC = () => {
           <div className="flex-1 min-h-0 w-full overflow-hidden bg-background">
             {/* Layout Mobile */}
             {isMobile ? (
-              <div className="h-full w-full flex flex-col min-h-0 overflow-hidden">
+              <div className="w-full flex flex-col overflow-hidden" style={{ height: 'calc(100dvh - 64px)' }}>
                 {/* Vista de Abas - Tela inicial mobile */}
                 {mobileView === 'tabs' && (
                   <div className="h-full w-full flex flex-col p-4 gap-3">
@@ -313,9 +313,9 @@ const IDE: React.FC = () => {
 
                 {/* Vista de Editor - Arquivo aberto em tela cheia SEM header (gerenciado pelo AcaoFlutuante) */}
                 {mobileView === 'editor' && selectedFile && (
-                  <div className="h-full w-full flex flex-col min-h-0 overflow-hidden">
+                  <div className="w-full flex flex-col overflow-hidden" style={{ height: 'calc(100dvh - 64px)' }}>
                     {/* Conteúdo do editor - ocupa 100% da tela */}
-                    <div className="flex-1 min-h-0 w-full overflow-hidden">
+                    <div className="flex-1 w-full overflow-hidden" style={{ minHeight: '200px' }}>
                       {activeEditorTab === 'editor' ? (
                         <CodeEditor 
                           selectedFile={selectedFile} 

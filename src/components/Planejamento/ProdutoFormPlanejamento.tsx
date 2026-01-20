@@ -38,13 +38,13 @@ export const ProdutoFormPlanejamento: React.FC<ProdutoFormPlanejamentoProps> = (
         </SelectTrigger>
         <SelectContent>
           {carregandoProdutos ? (
-            <SelectItem value="" disabled>Carregando...</SelectItem>
+            <SelectItem value="__loading__" disabled>Carregando...</SelectItem>
           ) : (produtos && produtos.length > 0 ? (
             produtos.map(produto => (
               <SelectItem key={produto.id} value={produto.id}>{produto.nome}</SelectItem>
             ))
           ) : (
-            <SelectItem value="" disabled>Nenhum produto cadastrado</SelectItem>
+            <SelectItem value="__empty__" disabled>Nenhum produto cadastrado</SelectItem>
           ))}
         </SelectContent>
       </Select>

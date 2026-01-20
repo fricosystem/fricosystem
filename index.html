@@ -120,6 +120,13 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Workaround for some preview/proxy environments where Vite's WS token injection can fail,
+      // causing /@vite/client to crash with "__WS_TOKEN__ is not defined".
+      // This keeps the app loading even if HMR token checks can't run.
+      // eslint-disable-next-line no-var
+      if (typeof __WS_TOKEN__ === "undefined") var __WS_TOKEN__ = "";
+    </script>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>

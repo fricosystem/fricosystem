@@ -122,7 +122,7 @@ export const AddManutencaoModal = ({
                 <SelectValue placeholder="Selecione uma peça" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma peça específica</SelectItem>
+                <SelectItem value="__none__">Nenhuma peça específica</SelectItem>
                 {pecas.map((peca) => (
                   <SelectItem key={peca.id} value={peca.id}>
                     {peca.nome} ({peca.codigo})

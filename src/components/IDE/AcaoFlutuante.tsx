@@ -116,14 +116,14 @@ const AcaoFlutuante: React.FC<AcaoFlutuanteProps> = ({
   };
 
   return (
-    <div className="bg-background/95 backdrop-blur-sm border-b shadow-sm">
-      <div className="flex items-center justify-between px-2 py-2 gap-2">
+    <div className="bg-background/95 backdrop-blur-sm border-b shadow-sm flex-shrink-0">
+      <div className="flex items-center justify-between px-2 py-1.5 gap-2">
         {/* Botão Voltar */}
         <Button
           variant="ghost"
           size="sm"
           onClick={onBack}
-          className="h-9 px-2 shrink-0"
+          className="h-8 px-2 shrink-0"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -143,20 +143,20 @@ const AcaoFlutuante: React.FC<AcaoFlutuanteProps> = ({
           size="sm"
           onClick={onSave}
           disabled={!isModified}
-          className={`h-9 px-3 shrink-0 ${
+          className={`h-8 px-2.5 shrink-0 ${
             isModified 
               ? 'bg-primary hover:bg-primary/90 text-primary-foreground' 
               : 'opacity-50'
           }`}
         >
-          <Save className="h-4 w-4 mr-1" />
+          <Save className="h-3.5 w-3.5 mr-1" />
           Salvar
         </Button>
 
         {/* Menu de ações */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-9 px-2 shrink-0">
+            <Button variant="ghost" size="sm" className="h-8 px-2 shrink-0">
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
