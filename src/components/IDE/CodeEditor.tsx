@@ -318,17 +318,19 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
   }
 
   return (
-    <div className="h-full w-full flex flex-col relative">
+    <div className={`h-full w-full flex flex-col relative ${isMobile && activeFileData ? 'pt-12' : ''}`}>
       {/* Menu Flutuante - apenas no mobile quando há arquivo ativo */}
       {isMobile && activeFileData && (
-        <AcaoFlutuante
-          fileName={activeFileData.path.split('/').pop() || ''}
-          isModified={activeFileData.modified}
-          onSave={saveActiveFile}
-          onBack={onBack || (() => {})}
-          editorRef={editorRef}
-          onContentChange={(content) => updateFileContent(activeFileData.path, content)}
-        />
+        <div className="absolute top-0 left-0 right-0 z-50">
+          <AcaoFlutuante
+            fileName={activeFileData.path.split('/').pop() || ''}
+            isModified={activeFileData.modified}
+            onSave={saveActiveFile}
+            onBack={onBack || (() => {})}
+            editorRef={editorRef}
+            onContentChange={(content) => updateFileContent(activeFileData.path, content)}
+          />
+        </div>
       )}
 
       {/* Abas dos arquivos - escondidas no mobile */}
@@ -429,67 +431,64 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedFile, theme, onBack }) 
         </div>
       )}
 
-      {/* Container principal do editor - ocupa 100% do espaço disponível */}
-      <div className={`flex-1 min-h-0 relative flex flex-col overflow-hidden ${isMobile && activeFileData ? 'pt-12' : ''}`}>
-        {/* Editor - 100% do espaço */}
-        <div className="flex-1 min-h-0 overflow-hidden h-full">
-          {loading ? (
-            <div className="h-full w-full flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : activeFileData ? (
-            <Editor
-              height="100%"
-              width="100%"
-              language={getLanguageFromPath(activeFileData.path)}
-              value={activeFileData.content}
-              onChange={(value) => {
-                if (value !== undefined) {
-                  updateFileContent(activeFileData.path, value);
-                }
-              }}
-              onMount={(editor) => {
-                editorRef.current = editor;
-                setTimeout(() => {
-                  editor.layout();
-                }, 100);
-                setTimeout(() => {
-                  editor.layout();
-                }, 500);
-                const handleResize = () => editor.layout();
-                window.addEventListener('resize', handleResize);
-                return () => window.removeEventListener('resize', handleResize);
-              }}
-              theme={theme === 'dark' ? 'vs-dark' : 'light'}
-              options={{
-                fontSize: 14,
-                fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-                insertSpaces: true,
-                wordWrap: 'on',
-                lineNumbers: 'on',
-                renderWhitespace: 'selection',
-                bracketPairColorization: { enabled: true },
-                quickSuggestions: {
-                  other: true,
-                  comments: true,
-                  strings: true,
-                },
-                overviewRulerBorder: false,
-                hideCursorInOverviewRuler: true,
-                scrollbar: {
-                  vertical: 'auto',
-                  horizontal: 'auto',
-                  verticalScrollbarSize: 10,
-                  horizontalScrollbarSize: 10,
-                },
-              }}
-            />
-          ) : null}
-        </div>
+      {/* Container principal do editor */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {loading ? (
+          <div className="h-full w-full flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : activeFileData ? (
+          <Editor
+            height="100%"
+            width="100%"
+            language={getLanguageFromPath(activeFileData.path)}
+            value={activeFileData.content}
+            onChange={(value) => {
+              if (value !== undefined) {
+                updateFileContent(activeFileData.path, value);
+              }
+            }}
+            onMount={(editor) => {
+              editorRef.current = editor;
+              setTimeout(() => {
+                editor.layout();
+              }, 100);
+              setTimeout(() => {
+                editor.layout();
+              }, 500);
+              const handleResize = () => editor.layout();
+              window.addEventListener('resize', handleResize);
+              return () => window.removeEventListener('resize', handleResize);
+            }}
+            theme={theme === 'dark' ? 'vs-dark' : 'light'}
+            options={{
+              fontSize: 14,
+              fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              insertSpaces: true,
+              wordWrap: 'on',
+              lineNumbers: 'on',
+              renderWhitespace: 'selection',
+              bracketPairColorization: { enabled: true },
+              quickSuggestions: {
+                other: true,
+                comments: true,
+                strings: true,
+              },
+              overviewRulerBorder: false,
+              hideCursorInOverviewRuler: true,
+              scrollbar: {
+                vertical: 'auto',
+                horizontal: 'auto',
+                verticalScrollbarSize: 10,
+                horizontalScrollbarSize: 10,
+              },
+            }}
+          />
+        ) : null}
       </div>
 
       {/* Modal de Status de Salvamento */}

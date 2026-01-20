@@ -116,7 +116,7 @@ const AcaoFlutuante: React.FC<AcaoFlutuanteProps> = ({
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b shadow-sm">
+    <div className="bg-background/95 backdrop-blur-sm border-b shadow-sm">
       <div className="flex items-center justify-between px-2 py-2 gap-2">
         {/* Botão Voltar */}
         <Button
