@@ -714,7 +714,7 @@ const AppSidebar = () => {
           {/* Logo - fixo no topo */}
           <div className="logo-container flex-shrink-0">
             <img 
-              src="https://res.cloudinary.com/diomtgcvb/image/upload/q_auto:best,f_auto/v1758851478/IconeFrico3D_oasnj7.png" 
+              src="/IconeFrico3D.png" 
               alt="Fricó Alimentos Logo" 
               className="w-24 h-24 object-contain mx-auto"
             />

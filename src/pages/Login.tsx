@@ -171,7 +171,7 @@ const Login = () => {
           <div className="flex items-center gap-2 pl-1">
             <a href="#hero" className="flex items-center gap-2">
               <img 
-                src="https://res.cloudinary.com/diomtgcvb/image/upload/q_100,f_png/v1758851478/IconeFrico3D_oasnj7.png" 
+                src="/IconeFrico3D.png" 
                 alt="Fricó Alimentos Logo" 
                 className="w-16 h-16 rounded-lg object-scale-down" 
               />

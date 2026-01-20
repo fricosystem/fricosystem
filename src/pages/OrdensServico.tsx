@@ -83,7 +83,7 @@ export default function OrdensServico() {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
         <div className="container mx-auto py-4 px-6 flex items-center gap-3">
           <img 
-            src="https://res.cloudinary.com/diomtgcvb/image/upload/q_100,f_png/v1758851478/IconeFrico3D_oasnj7.png" 
+            src="/IconeFrico3D.png" 
             alt="Fricó" 
             className="h-10 w-10 object-contain" 
           />
