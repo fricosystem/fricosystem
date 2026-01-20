@@ -100,6 +100,7 @@ type Relatorio = {
   };
 };
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#A4DE6C', '#D0ED57', '#FFC658'];
+
 const Dashboard = () => {
   // Aplica correção para DataCloneError
   usePostMessageFix();
@@ -109,9 +110,7 @@ const Dashboard = () => {
   const [customEndDate, setCustomEndDate] = useState<Date>();
   const [loading, setLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   // Dados do dashboard
   const [totalUsuarios, setTotalUsuarios] = useState(0);
@@ -185,9 +184,11 @@ const Dashboard = () => {
       currency: 'BRL'
     }).format(value);
   };
+
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('pt-BR').format(date);
   };
+
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month, 0).getDate();
   };
@@ -342,10 +343,6 @@ const Dashboard = () => {
       // Processar relatórios
       const relatoriosData = relatoriosSnapshot.docs.map(doc => {
         const data = doc.data();
-          centro_de_custo: data.centro_de_custo,
-          data_registro: data.data_registro,
-          quantidade: data.quantidade
-        });
         return { 
           id: doc.id,
           ...data, 
@@ -353,7 +350,6 @@ const Dashboard = () => {
           data_saida: data.data_saida 
         } as Relatorio;
       });
-
 
       // Calcular produtos do período atual (otimizado)
       const produtosEsteMes = calculatePeriodProducts(produtosData);
@@ -459,6 +455,7 @@ const Dashboard = () => {
   // Carregar dados inicial
   useEffect(() => {
     if (isCacheValid() && loadFromCache()) {
+      // Cache carregado com sucesso
     } else {
       fetchFirestoreData();
     }
@@ -508,6 +505,7 @@ const Dashboard = () => {
       value
     })).sort((a, b) => b.value - a.value).slice(0, 5);
   };
+
   const produtosPorUnidade = () => {
     const unidadeCount: Record<string, number> = {};
     produtos.forEach(produto => {
@@ -520,6 +518,7 @@ const Dashboard = () => {
       value
     }));
   };
+
   const fornecedoresPorEstado = () => {
     const estadoCount: Record<string, number> = {};
     fornecedores.forEach(fornecedor => {
@@ -531,6 +530,7 @@ const Dashboard = () => {
       value
     })).sort((a, b) => b.value - a.value);
   };
+
   const relatoriosMovimentacaoPorPeriodo = () => {
     const now = new Date();
     let timeLabels: string[] = [];
@@ -538,16 +538,12 @@ const Dashboard = () => {
 
     // Definir intervalos de tempo baseado no período
     if (period === "hoje") {
-      timeLabels = Array.from({
-        length: 24
-      }, (_, i) => `${i}h`);
+      timeLabels = Array.from({ length: 24 }, (_, i) => `${i}h`);
     } else if (period === "semana") {
       timeLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     } else if (period === "mes") {
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      timeLabels = Array.from({
-        length: daysInMonth
-      }, (_, i) => `${i + 1}`);
+      timeLabels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`);
     } else {
       timeLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'];
     }
@@ -580,7 +576,6 @@ const Dashboard = () => {
         console.warn('Data inválida no relatório:', relatorio.id, relatorio.data_registro);
         return false;
       }
-      
       
       if (period === 'hoje') {
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -619,7 +614,6 @@ const Dashboard = () => {
       }
       return false;
     });
-
 
     // Extrair todos os centros de custo únicos dos relatórios
     const centrosCusto = new Set<string>();
@@ -680,12 +674,11 @@ const Dashboard = () => {
       centrosCusto: Array.from(centrosCusto)
     };
   };
+
   const transferenciasPorPeriodo = () => {
     const now = new Date();
-    let data: {
-      name: string;
-      transferencias: number;
-    }[] = [];
+    let data: { name: string; transferencias: number; }[] = [];
+    
     if (period === "hoje") {
       // Filtro para hoje
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -693,9 +686,7 @@ const Dashboard = () => {
       endOfToday.setHours(23, 59, 59, 999);
 
       // Por hora hoje
-      const hours = Array.from({
-        length: 24
-      }, (_, i) => i);
+      const hours = Array.from({ length: 24 }, (_, i) => i);
       data = hours.map(hour => ({
         name: `${hour}h`,
         transferencias: transferencias.filter(t => {
@@ -727,9 +718,7 @@ const Dashboard = () => {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       const daysInMonth = endOfMonth.getDate();
-      data = Array.from({
-        length: daysInMonth
-      }, (_, i) => {
+      data = Array.from({ length: daysInMonth }, (_, i) => {
         const dayDate = new Date(now.getFullYear(), now.getMonth(), i + 1);
         const endOfDay = new Date(dayDate);
         endOfDay.setHours(23, 59, 59, 999);
@@ -759,6 +748,7 @@ const Dashboard = () => {
     }
     return data;
   };
+
   // Dados para gráfico de movimentações por status (entrada vs saída)
   const movimentacoesPorStatus = () => {
     if (!relatorios || relatorios.length === 0) {
@@ -797,27 +787,22 @@ const Dashboard = () => {
     return [{
       subject: 'Valor Total',
       A: Math.min(valorEstoque / 10000, 100),
-      // Normalizado para escala 0-100
       fullMark: 100
     }, {
       subject: 'Produtos',
       A: Math.min(totalProdutos / 100, 100),
-      // Normalizado para escala 0-100
       fullMark: 100
     }, {
       subject: 'Fornecedores',
       A: Math.min(fornecedores.length / 10, 100),
-      // Normalizado para escala 0-100
       fullMark: 100
     }, {
       subject: 'Unidades',
       A: Math.min(unidades.length / 5, 100),
-      // Normalizado para escala 0-100
       fullMark: 100
     }, {
       subject: 'Transferências',
       A: Math.min(transferencias.length / 50, 100),
-      // Normalizado para escala 0-100
       fullMark: 100
     }];
   };
@@ -939,7 +924,6 @@ const Dashboard = () => {
       }];
     }
     
-    
     const now = new Date();
     const last90Days = new Date(now);
     last90Days.setDate(now.getDate() - 90);
@@ -963,7 +947,6 @@ const Dashboard = () => {
       return dataRegistro >= last90Days; // Últimos 90 dias
     });
     
-    
     const centroCustoMap: Record<string, number> = {};
     filteredRelatorios.forEach(relatorio => {
       if (relatorio.centro_de_custo) {
@@ -978,7 +961,6 @@ const Dashboard = () => {
       fill: COLORS[index % COLORS.length]
     })).sort((a, b) => b.value - a.value).slice(0, 10);
     
-    
     if (result.length === 0) {
       return [{
         name: 'Sem dados',
@@ -989,6 +971,7 @@ const Dashboard = () => {
     
     return result;
   };
+
   return (
     <AppLayout title="Dashboard Geral">
       {/* Seletor de período */}
@@ -1096,367 +1079,447 @@ const Dashboard = () => {
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Package className="h-5 w-5" /> Estoque
             </h2>
-          {/* Cards de estatísticas */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <StatsCard title="Usuários Ativos" value={`${usuariosAtivos}/${totalUsuarios}`} icon={<Users className="h-5 w-5" />} trend={{
-          value: porcentagemAtivos,
-          positive: porcentagemAtivos > 70,
-          label: `${porcentagemAtivos.toFixed(0)}% de ativos`
-        }} description="Eficiência da equipe" className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10" />
-            <StatsCard title="Total de Produtos" value={totalProdutos.toString()} icon={<Package className="h-5 w-5" />} description="Diversidade de itens" className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10" />
-            <StatsCard title="Valor em Estoque" value={formatCurrency(valorEstoque)} icon={<DollarSign className="h-5 w-5" />} description="Valor total do inventário" className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10" />
-            <StatsCard title="Baixo Estoque" value={produtosBaixoEstoque.length.toString()} icon={<AlertTriangle className="h-5 w-5 text-yellow-600" />} trend={{
-          value: produtosBaixoEstoque.length / totalProdutos * 100,
-          positive: false,
-          label: `${(produtosBaixoEstoque.length / totalProdutos * 100).toFixed(1)}%`
-        }} description="Itens com estoque crítico" className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-900/10" />
-          </div>
+            {/* Cards de estatísticas */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+              <StatsCard 
+                title="Usuários Ativos" 
+                value={`${usuariosAtivos}/${totalUsuarios}`} 
+                icon={<Users className="h-5 w-5" />} 
+                trend={{
+                  value: porcentagemAtivos,
+                  positive: porcentagemAtivos > 70,
+                  label: `${porcentagemAtivos.toFixed(0)}% de ativos`
+                }} 
+                description="Eficiência da equipe" 
+                className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10" 
+              />
+              <StatsCard 
+                title="Total de Produtos" 
+                value={totalProdutos.toString()} 
+                icon={<Package className="h-5 w-5" />} 
+                description="Diversidade de itens" 
+                className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10" 
+              />
+              <StatsCard 
+                title="Valor em Estoque" 
+                value={formatCurrency(valorEstoque)} 
+                icon={<DollarSign className="h-5 w-5" />} 
+                description="Valor total do inventário" 
+                className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10" 
+              />
+              <StatsCard 
+                title="Baixo Estoque" 
+                value={produtosBaixoEstoque.length.toString()} 
+                icon={<AlertTriangle className="h-5 w-5 text-yellow-600" />} 
+                trend={{
+                  value: produtosBaixoEstoque.length / totalProdutos * 100,
+                  positive: false,
+                  label: `${(produtosBaixoEstoque.length / totalProdutos * 100).toFixed(1)}%`
+                }} 
+                description="Itens com estoque crítico" 
+                className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-900/10" 
+              />
+            </div>
 
-          {/* Primeira linha de gráficos */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
-            {/* Movimentação por Centro de Custo - Gráfico de Área Múltipla */}
-            <Card className="col-span-2">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Truck className="h-5 w-5" /> Movimentação por Centro de Custo
-                    </CardTitle>
-                    <CardDescription>
-                      {period === "hoje" ? "Hoje por hora" : period === "semana" ? "Esta semana por dia" : period === "mes" ? "Este mês por dia" : "Este ano por mês"}
-                    </CardDescription>
+            {/* Primeira linha de gráficos */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
+              {/* Movimentação por Centro de Custo - Gráfico de Área Múltipla */}
+              <Card className="col-span-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Truck className="h-5 w-5" /> Movimentação por Centro de Custo
+                      </CardTitle>
+                      <CardDescription>
+                        {period === "hoje" ? "Hoje por hora" : period === "semana" ? "Esta semana por dia" : period === "mes" ? "Este mês por dia" : "Este ano por mês"}
+                      </CardDescription>
+                    </div>
                   </div>
-                  
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={relatoriosMovimentacaoPorPeriodo().data}>
-                      <defs>
-                        {relatoriosMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => <linearGradient key={centro} id={`color${centro.replace(/\s+/g, '')}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.8} />
-                            <stop offset="95%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.1} />
-                          </linearGradient>)}
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip contentStyle={{
-                    background: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
-                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={(value, name) => [`${value} itens`, name]} />
-                      <Legend />
-                      {relatoriosMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => <Area key={centro} type="monotone" dataKey={centro} stackId="1" stroke={COLORS[index % COLORS.length]} fillOpacity={1} fill={`url(#color${centro.replace(/\s+/g, '')})`} />)}
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Análise de Estoque - Gráfico de Radar */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Boxes className="h-5 w-5" /> Saúde do Estoque
-                </CardTitle>
-                <CardDescription>Métricas-chave do inventário</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={dadosAnaliseEstoque()}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="subject" />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} />
-                      <Tooltip contentStyle={{
-                    background: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
-                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value}%`, 'Índice']} />
-                      <Radar name="Estoque" dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Segunda linha de gráficos */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
-            {/* Produtos por fornecedor - Gráfico de Barras Horizontais */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5" /> Top Fornecedores
-                </CardTitle>
-                <CardDescription>Por quantidade de produtos</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart layout="vertical" data={produtosPorFornecedor()} margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 5
-                }}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" width={100} />
-                      <Tooltip contentStyle={{
-                    background: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
-                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value} produtos`, 'Quantidade']} />
-                      <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Fornecedores por estado - Gráfico de Pizza */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Map className="h-5 w-5" /> Fornecedores por Estado
-                </CardTitle>
-                <CardDescription>Distribuição geográfica</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={fornecedoresPorEstado()} cx="50%" cy="50%" labelLine={false} outerRadius={80} innerRadius={40} paddingAngle={5} dataKey="value" nameKey="name" label={({
-                    name,
-                    percent
-                  }) => `${name}: ${(percent * 100).toFixed(0)}%`}>
-                        {fornecedoresPorEstado().map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip contentStyle={{
-                    background: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
-                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value} fornecedores`, 'Quantidade']} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Valor Total por Centro de Custo - Gráfico de Barras */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" /> Valor Total por Centro de Custo
-                </CardTitle>
-                <CardDescription>Valor total das movimentações por centro de custo</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      layout="vertical" 
-                      data={valorPorCentroDeCusto()} 
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" width={150} />
-                      <Tooltip 
-                        contentStyle={{
-                          background: 'hsl(var(--background))',
-                          borderColor: 'hsl(var(--border))',
-                          borderRadius: 'var(--radius)'
-                        }} 
-                        labelStyle={{ color: '#FFFFFF' }} 
-                        itemStyle={{ color: '#82ca9d' }} 
-                        formatter={value => [formatCurrency(Number(value)), 'Valor Total']} 
-                      />
-                      <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Terceira linha de gráficos */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
-            {/* Requisições por Centro de Custo */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" /> Movimentações por Centro de Custo
-                </CardTitle>
-                <CardDescription>Distribuição de movimentações (últimos 90 dias)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={relatoriosPorCentroCusto()}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} interval={0} />
-                      <YAxis />
-                      <Tooltip contentStyle={{
-                    background: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
-                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value} itens`, 'Quantidade']} />
-                      <Bar dataKey="value" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Produtos por unidade - Gráfico de Barras */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Warehouse className="h-5 w-5" /> Produtos por Unidade
-                </CardTitle>
-                <CardDescription>Distribuição por localização</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dadosProdutosPorUnidade()}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip contentStyle={{
-                    background: 'hsl(var(--background))',
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
-                  }} labelStyle={{ color: '#FFFFFF' }} itemStyle={{ color: '#82ca9d' }} formatter={value => [`${value} produtos`, 'Quantidade']} />
-                      <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Valor do estoque por unidade - Gráfico Composto */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" /> Valor por Unidade
-                </CardTitle>
-                <CardDescription>Valor total do estoque por local</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={dadosValorEstoquePorUnidade()} margin={{
-                  top: 20,
-                  right: 20,
-                  bottom: 20,
-                  left: 20
-                }}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="name" />
-                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                      <Tooltip 
-                        contentStyle={{
-                          background: 'hsl(var(--background))',
-                          borderColor: 'hsl(var(--border))',
-                          borderRadius: 'var(--radius)'
-                        }} 
-                        labelStyle={{ color: '#FFFFFF' }}
-                        formatter={(value, name) => {
-                          if (name === 'valor') return [<span style={{ color: '#82ca9d' }}>{formatCurrency(Number(value))}</span>, <span style={{ color: '#8dd1e1' }}>Valor</span>];
-                          if (name === 'quantidade') return [<span style={{ color: '#82ca9d' }}>{value}</span>, <span style={{ color: '#8dd1e1' }}>Produtos</span>];
-                          return [<span style={{ color: '#82ca9d' }}>{value}</span>, <span style={{ color: '#8dd1e1' }}>{name}</span>];
-                        }} 
-                      />
-                      <Legend />
-                      <Bar yAxisId="left" dataKey="valor" name="Valor" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                      <Bar yAxisId="right" dataKey="quantidade" name="Produtos" fill="#82ca9d" radius={[4, 4, 0, 0]} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Listas de informações */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Lista de produtos com baixo estoque */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" /> Produtos com Baixo Estoque
-                </CardTitle>
-                <CardDescription>Itens que precisam de reposição</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {produtosBaixoEstoque.length > 0 ? produtosBaixoEstoque.slice(0, 5).map((produto, index) => <div key={index} className="flex items-start justify-between p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
-                        <div>
-                          <p className="font-medium">{produto.nome || 'Produto sem nome'}</p>
-                          <p className="text-sm text-muted-foreground">{produto.fornecedor_nome || 'Fornecedor não especificado'}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-yellow-600">{produto.quantidade} un.</p>
-                          <p className="text-sm">{formatCurrency(Number(produto.valor_unitario))} cada</p>
-                        </div>
-                      </div>) : <div className="text-center py-6 text-muted-foreground">
-                      Nenhum produto com estoque baixo encontrado
-                    </div>}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Movimentações por Status - Gráfico de Pizza */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" /> Movimentações por Status
-                </CardTitle>
-                <CardDescription>Distribuição de entradas e saídas</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie 
-                        data={movimentacoesPorStatus()} 
-                        cx="50%" 
-                        cy="50%" 
-                        labelLine={false} 
-                        outerRadius={80} 
-                        innerRadius={40} 
-                        paddingAngle={5} 
-                        dataKey="value" 
-                        nameKey="name" 
-                        label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
-                      >
-                        {movimentacoesPorStatus().map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={relatoriosMovimentacaoPorPeriodo().data}>
+                        <defs>
+                          {relatoriosMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => (
+                            <linearGradient key={centro} id={`color${centro.replace(/\s+/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.8} />
+                              <stop offset="95%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.1} />
+                            </linearGradient>
+                          ))}
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }} 
+                          labelStyle={{ color: '#FFFFFF' }} 
+                          itemStyle={{ color: '#82ca9d' }} 
+                          formatter={(value, name) => [`${value} itens`, name]} 
+                        />
+                        <Legend />
+                        {relatoriosMovimentacaoPorPeriodo().centrosCusto.map((centro, index) => (
+                          <Area 
+                            key={centro} 
+                            type="monotone" 
+                            dataKey={centro} 
+                            stackId="1" 
+                            stroke={COLORS[index % COLORS.length]} 
+                            fillOpacity={1} 
+                            fill={`url(#color${centro.replace(/\s+/g, '')})`} 
+                          />
                         ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{
-                          background: 'hsl(var(--background))',
-                          borderColor: 'hsl(var(--border))',
-                          borderRadius: 'var(--radius)'
-                        }} 
-                        labelStyle={{ color: '#FFFFFF' }} 
-                        itemStyle={{ color: '#82ca9d' }} 
-                        formatter={value => [`${value} movimentações`, 'Quantidade']} 
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Análise de Estoque - Gráfico de Radar */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Boxes className="h-5 w-5" /> Saúde do Estoque
+                  </CardTitle>
+                  <CardDescription>Métricas-chave do inventário</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={dadosAnaliseEstoque()}>
+                        <PolarGrid />
+                        <PolarAngleAxis dataKey="subject" />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }} 
+                          labelStyle={{ color: '#FFFFFF' }} 
+                          itemStyle={{ color: '#82ca9d' }} 
+                          formatter={value => [`${value}%`, 'Índice']} 
+                        />
+                        <Radar name="Estoque" dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Segunda linha de gráficos */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
+              {/* Produtos por fornecedor - Gráfico de Barras Horizontais */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5" /> Top Fornecedores
+                  </CardTitle>
+                  <CardDescription>Por quantidade de produtos</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        layout="vertical" 
+                        data={produtosPorFornecedor()} 
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={100} />
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }} 
+                          labelStyle={{ color: '#FFFFFF' }} 
+                          itemStyle={{ color: '#82ca9d' }} 
+                          formatter={value => [`${value} produtos`, 'Quantidade']} 
+                        />
+                        <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Fornecedores por estado - Gráfico de Pizza */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Map className="h-5 w-5" /> Fornecedores por Estado
+                  </CardTitle>
+                  <CardDescription>Distribuição geográfica</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie 
+                          data={fornecedoresPorEstado()} 
+                          cx="50%" 
+                          cy="50%" 
+                          labelLine={false} 
+                          outerRadius={80} 
+                          innerRadius={40} 
+                          paddingAngle={5} 
+                          dataKey="value" 
+                          nameKey="name" 
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {fornecedoresPorEstado().map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }} 
+                          labelStyle={{ color: '#FFFFFF' }} 
+                          itemStyle={{ color: '#82ca9d' }} 
+                          formatter={value => [`${value} fornecedores`, 'Quantidade']} 
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Valor Total por Centro de Custo - Gráfico de Barras */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" /> Valor Total por Centro de Custo
+                  </CardTitle>
+                  <CardDescription>Valor total das movimentações por centro de custo</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        layout="vertical" 
+                        data={valorPorCentroDeCusto()} 
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={150} />
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }} 
+                          labelStyle={{ color: '#FFFFFF' }} 
+                          itemStyle={{ color: '#82ca9d' }} 
+                          formatter={value => [formatCurrency(Number(value)), 'Valor Total']} 
+                        />
+                        <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Terceira linha de gráficos */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
+              {/* Requisições por Centro de Custo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" /> Movimentações por Centro de Custo
+                  </CardTitle>
+                  <CardDescription>Distribuição de movimentações (últimos 90 dias)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={relatoriosPorCentroCusto()}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} interval={0} />
+                        <YAxis />
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }} 
+                          labelStyle={{ color: '#FFFFFF' }} 
+                          itemStyle={{ color: '#82ca9d' }} 
+                          formatter={value => [`${value} itens`, 'Quantidade']} 
+                        />
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Produtos por unidade - Gráfico de Barras */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Warehouse className="h-5 w-5" /> Produtos por Unidade
+                  </CardTitle>
+                  <CardDescription>Distribuição por localização</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dadosProdutosPorUnidade()}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }} 
+                          labelStyle={{ color: '#FFFFFF' }} 
+                          itemStyle={{ color: '#82ca9d' }} 
+                          formatter={value => [`${value} produtos`, 'Quantidade']} 
+                        />
+                        <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Valor do estoque por unidade - Gráfico Composto */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" /> Valor por Unidade
+                  </CardTitle>
+                  <CardDescription>Valor total do estoque por local</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart 
+                        data={dadosValorEstoquePorUnidade()} 
+                        margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                        <XAxis dataKey="name" />
+                        <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                        <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }} 
+                          labelStyle={{ color: '#FFFFFF' }}
+                          formatter={(value, name) => {
+                            if (name === 'valor') return [<span style={{ color: '#82ca9d' }}>{formatCurrency(Number(value))}</span>, <span style={{ color: '#8dd1e1' }}>Valor</span>];
+                            if (name === 'quantidade') return [<span style={{ color: '#82ca9d' }}>{value}</span>, <span style={{ color: '#8dd1e1' }}>Produtos</span>];
+                            return [<span style={{ color: '#82ca9d' }}>{value}</span>, <span style={{ color: '#8dd1e1' }}>{name}</span>];
+                          }} 
+                        />
+                        <Legend />
+                        <Bar yAxisId="left" dataKey="valor" name="Valor" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                        <Bar yAxisId="right" dataKey="quantidade" name="Produtos" fill="#82ca9d" radius={[4, 4, 0, 0]} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Listas de informações */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Lista de produtos com baixo estoque */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600" /> Produtos com Baixo Estoque
+                  </CardTitle>
+                  <CardDescription>Itens que precisam de reposição</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {produtosBaixoEstoque.length > 0 ? (
+                      produtosBaixoEstoque.slice(0, 5).map((produto, index) => (
+                        <div key={index} className="flex items-start justify-between p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
+                          <div>
+                            <p className="font-medium">{produto.nome || 'Produto sem nome'}</p>
+                            <p className="text-sm text-muted-foreground">{produto.fornecedor_nome || 'Fornecedor não especificado'}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-yellow-600">{produto.quantidade} un.</p>
+                            <p className="text-sm">{formatCurrency(Number(produto.valor_unitario))} cada</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6 text-muted-foreground">
+                        Nenhum produto com estoque baixo encontrado
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Movimentações por Status - Gráfico de Pizza */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" /> Movimentações por Status
+                  </CardTitle>
+                  <CardDescription>Distribuição de entradas e saídas</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie 
+                          data={movimentacoesPorStatus()} 
+                          cx="50%" 
+                          cy="50%" 
+                          labelLine={false} 
+                          outerRadius={80} 
+                          innerRadius={40} 
+                          paddingAngle={5} 
+                          dataKey="value" 
+                          nameKey="name" 
+                          label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                        >
+                          {movimentacoesPorStatus().map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{
+                            background: 'hsl(var(--background))',
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: 'var(--radius)'
+                          }} 
+                          labelStyle={{ color: '#FFFFFF' }} 
+                          itemStyle={{ color: '#82ca9d' }} 
+                          formatter={value => [`${value} movimentações`, 'Quantidade']} 
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* ===== DIVISÓRIA ===== */}

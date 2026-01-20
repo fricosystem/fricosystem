@@ -10,6 +10,7 @@ interface FileNode {
   sha?: string;
   content?: string;
   children?: FileNode[];
+  size?: number;
 }
 
 interface GitHubConfig {
@@ -50,6 +51,14 @@ interface StoredGitHubConfig extends GitHubConfig {
   id: string;
   createdAt: any;
   updatedAt: any;
+}
+
+interface FileComparison {
+  path: string;
+  status: 'new' | 'modified' | 'deleted' | 'unchanged';
+  sourceHash?: string;
+  targetHash?: string;
+  sizeDiff?: number;
 }
 
 class GitHubService {
@@ -240,7 +249,7 @@ class GitHubService {
         repo: this.config.repo,
         path: 'README.md'
       });
-    } catch (error) {
+    } catch (error: any) {
       // Se falhou por outro motivo que não seja arquivo não encontrado
       if (!error?.toString().includes('Not Found')) {
         missing.push('contents:write - Permissão de escrita');
@@ -443,6 +452,7 @@ class GitHubService {
         sha = data.sha;
       }
     } catch (error) {
+      // Arquivo não existe, cria novo
     }
 
     // Adiciona timestamp ao commit
@@ -461,6 +471,7 @@ class GitHubService {
       sha,
     });
 
+    console.log('Arquivo atualizado com sucesso:', {
       commit: response.data.commit?.sha,
       url: response.data.content?.html_url,
       message: commitMessage
@@ -622,16 +633,19 @@ class GitHubService {
 
     // Busca SHA atual se arquivo existe
     try {
-      const { data } = await this.octokit!.rest.repos.getContent({
-        owner: this.config!.owner,
-        repo: this.config!.repo,
-        path,
-      });
-      
-      if ('sha' in data) {
-        currentSha = data.sha;
+      if (this.octokit && this.config) {
+        const { data } = await this.octokit.rest.repos.getContent({
+          owner: this.config.owner,
+          repo: this.config.repo,
+          path,
+        });
+        
+        if ('sha' in data) {
+          currentSha = data.sha;
+        }
       }
     } catch (error) {
+      // Arquivo não existe, começamos do zero
     }
 
     progressCallback?.(30, `Processando ${chunks.length} partes (${strategy})...`);
@@ -654,18 +668,20 @@ class GitHubService {
         try {
           const encodedContent = btoa(unescape(encodeURIComponent(chunk)));
 
-          const response = await this.octokit!.rest.repos.createOrUpdateFileContents({
-            owner: this.config!.owner,
-            repo: this.config!.repo,
-            path,
-            message: chunkMessage,
-            content: encodedContent,
-            sha: currentSha,
-          });
+          if (this.octokit && this.config) {
+            const response = await this.octokit.rest.repos.createOrUpdateFileContents({
+              owner: this.config.owner,
+              repo: this.config.repo,
+              path,
+              message: chunkMessage,
+              content: encodedContent,
+              sha: currentSha,
+            });
 
-          currentSha = response.data.content?.sha;
-          chunkSuccess = true;
-          break;
+            currentSha = response.data.content?.sha;
+            chunkSuccess = true;
+            break;
+          }
         } catch (error) {
           console.warn(`Erro no chunk ${i + 1}, tentativa ${retry + 1}:`, error);
           if (retry < 2) {
@@ -712,6 +728,7 @@ class GitHubService {
     const ignoredCount = files.length - validFiles.length;
     
     if (ignoredCount > 0) {
+      console.log(`${ignoredCount} arquivos ignorados por padrões de exclusão`);
     }
 
     progressCallback?.(10, `Processando ${validFiles.length} arquivos válidos...`);
@@ -720,6 +737,7 @@ class GitHubService {
     const totalSize = validFiles.reduce((sum, file) => sum + new Blob([file.content]).size, 0);
     const avgFileSize = totalSize / validFiles.length;
     
+    progressCallback?.(15, 'Calculando estatísticas...', {
       arquivos: validFiles.length,
       tamanhoTotal: `${Math.round(totalSize / 1024)}KB`,
       tamanhoMedio: `${Math.round(avgFileSize / 1024)}KB`
@@ -756,7 +774,7 @@ class GitHubService {
 
       try {
         const success = await this.updateFile(file.path, file.content, `${message} - ${file.path}`);
-        results.push({ path: file.path, success });
+        results.push({ path: file.path, success, error: success ? undefined : 'Erro desconhecido' });
         if (success) successCount++;
 
         // Pausa entre arquivos para evitar rate limiting
@@ -802,7 +820,7 @@ class GitHubService {
       const batchPromises = batch.map(async (file) => {
         try {
           const success = await this.updateFile(file.path, file.content, `${message} - ${file.path}`);
-          return { path: file.path, success };
+          return { path: file.path, success, error: success ? undefined : 'Erro desconhecido' };
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
           return { path: file.path, success: false, error: errorMsg };
@@ -841,13 +859,11 @@ class GitHubService {
     progressCallback?.(15, 'Usando estratégia otimizada para poucos arquivos...');
 
     // Processa todos em paralelo com limite de concorrência
-    const semaphore = new Array(3).fill(null); // Máximo 3 operações paralelas
-    
     const processFile = async (file: { path: string; content: string }, index: number) => {
       try {
         progressCallback?.(20 + Math.round((index / files.length) * 70), `Processando ${file.path}...`);
         const success = await this.updateFile(file.path, file.content, `${message} - ${file.path}`);
-        return { path: file.path, success };
+        return { path: file.path, success, error: success ? undefined : 'Erro desconhecido' };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
         return { path: file.path, success: false, error: errorMsg };
@@ -903,7 +919,13 @@ class GitHubService {
     }
   }
 
-  public async getCommitHistory(limit: number = 10) {
+  public async getCommitHistory(limit: number = 10): Promise<Array<{
+    sha: string;
+    message: string;
+    author: string;
+    date: string;
+    url: string;
+  }>> {
     if (!this.octokit || !this.config) {
       throw new Error('GitHub não configurado');
     }
@@ -1130,7 +1152,12 @@ class GitHubService {
     }
   }
 
-  private async getRepositoryTreeWithSHA(owner: string, repo: string, branch: string = 'main') {
+  private async getRepositoryTreeWithSHA(owner: string, repo: string, branch: string = 'main'): Promise<Array<{
+    path: string;
+    type: 'file' | 'dir';
+    sha: string;
+    size?: number;
+  }>> {
     try {
       const { data: refData } = await this.octokit!.rest.git.getRef({
         owner, repo, ref: `heads/${branch}`,
@@ -1212,21 +1239,4 @@ class GitHubService {
 }
 
 export const githubService = new GitHubService();
-export type { FileNode, GitHubConfig, StoredGitHubConfig, Codespace, CodespaceConfig };
-
-export interface FileComparison {
-  path: string;
-  status: 'new' | 'modified' | 'deleted' | 'unchanged';
-  sourceHash?: string;
-  targetHash?: string;
-  sizeDiff?: number;
-}
-
-// Export interface for file comparison
-export interface FileComparison {
-  path: string;
-  status: 'new' | 'modified' | 'deleted' | 'unchanged';
-  sourceHash?: string;
-  targetHash?: string;
-  sizeDiff?: number;
-}
+export type { FileNode, GitHubConfig, StoredGitHubConfig, Codespace, CodespaceConfig, FileComparison };
