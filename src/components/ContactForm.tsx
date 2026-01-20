@@ -50,7 +50,6 @@ const ContactForm = () => {
       // Bot checks
       // 1. Honeypot check - should be caught by zod, but double-check
       if (data.honeypot) {
-        console.log('Bot detected via honeypot');
         toast({
           title: "Error",
           description: "There was a problem with your submission. Please try again.",
@@ -62,7 +61,6 @@ const ContactForm = () => {
       // 2. Time-based check - Submission should take at least 3 seconds (too fast is likely a bot)
       const timeDiff = Date.now() - data.timestamp;
       if (timeDiff < 3000) {
-        console.log(`Bot detected: Form submitted too quickly (${timeDiff}ms)`);
         toast({
           title: "Error",
           description: "Please take a moment to review your message before submitting.",
@@ -71,8 +69,6 @@ const ContactForm = () => {
         setIsSubmitting(false);
         return;
       }
-      
-      console.log('Form submitted:', data);
       
       // Remove honeypot and timestamp fields before sending
       const { honeypot, timestamp, ...emailData } = data;
@@ -86,11 +82,6 @@ const ContactForm = () => {
         reply_to: emailData.email // Keeping reply_to for compatibility
       };
       
-      console.log('Sending email with params:', templateParams);
-      console.log('Using service:', EMAILJS_SERVICE_ID);
-      console.log('Using template:', EMAILJS_TEMPLATE_ID);
-      console.log('Using public key:', EMAILJS_PUBLIC_KEY);
-      
       // Send email directly without initializing, as it's not needed with the send method that includes the key
       const response = await emailjs.send(
         EMAILJS_SERVICE_ID,
@@ -98,8 +89,6 @@ const ContactForm = () => {
         templateParams,
         EMAILJS_PUBLIC_KEY // Re-adding the public key parameter
       );
-      
-      console.log('Email sent successfully:', response);
       
       toast({
         title: "Message sent!",

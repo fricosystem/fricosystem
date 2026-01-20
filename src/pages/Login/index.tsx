@@ -171,8 +171,8 @@ const Login = () => {
           <div className="flex items-center gap-2 pl-1">
             <a href="#hero" className="flex items-center gap-2">
               <img 
-                src="/IconeFrico3D.png" 
-                alt="Fricó Alimentos Logo" 
+                src="/APEX LOGO.png" 
+                alt="APEX HUB Logo" 
                 className="w-16 h-16 rounded-lg object-scale-down" 
               />
               <div>
@@ -389,7 +389,7 @@ const Login = () => {
                 <div className="bg-gray-900/50 border border-gray-800 p-6 rounded-xl h-64 overflow-hidden backdrop-blur-sm">
                   <iframe 
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15263.353856551582!2d-49.47381462032724!3d-16.6535792!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x935e673e31c193bb%3A0x52922e18e6cd4b00!2sFric%C3%B3%20Alimentos!5e0!3m2!1spt-BR!2sbr!4v1713888339927!5m2!1spt-BR!2sbr&map_style=night" 
-                    width="100%" height="100%" style={{border: 0}} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Localização da Fricó Alimentos" className="rounded-lg"
+                    width="100%" height="100%" style={{border: 0}} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Localização da APEX HUB" className="rounded-lg"
                   ></iframe>
                 </div>
               </div>

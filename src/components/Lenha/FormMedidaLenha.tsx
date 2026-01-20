@@ -371,7 +371,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="/IconeFrico3D.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+                <img src="/APEX LOGO.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">
@@ -449,7 +449,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="/IconeFrico3D.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+                <img src="/APEX LOGO.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">

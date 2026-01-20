@@ -171,8 +171,8 @@ const Login = () => {
           <div className="flex items-center gap-2 pl-1">
             <a href="#hero" className="flex items-center gap-2">
               <img 
-                src="/IconeFrico3D.png" 
-                alt="Fricó Alimentos Logo" 
+                src="/APEX LOGO.png" 
+                alt="APEX HUB Logo" 
                 className="w-16 h-16 rounded-lg object-scale-down" 
               />
               <div>
@@ -403,7 +403,7 @@ const Login = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="text-white text-lg font-bold mb-4">Fricó Alimentos</h3>
+              <h3 className="text-white text-lg font-bold mb-4">APEX HUB</h3>
               <p className="text-gray-400 mb-4">
                 Soluções corporativas integradas para maximizar a eficiência operacional da sua empresa no setor alimentício.
               </p>
@@ -432,7 +432,7 @@ const Login = () => {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 mt-8 text-center">
-            <p className="text-gray-500">&copy; {new Date().getFullYear()} Fricó Alimentos. Todos os direitos reservados.</p>
+            <p className="text-gray-500">&copy; {new Date().getFullYear()} APEX HUB. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>

@@ -603,7 +603,7 @@ const AppSidebar = () => {
   };
 
   // Testar diferentes caminhos para a imagem
-  const logoPaths = ['/IconeFrico3D.png', '/images/IconeFrico3D.png', '/public/IconeFrico3D.png', '/public/images/IconeFrico3D.png', 'IconeFrico3D.png', './IconeFrico3D.png', '../IconeFrico3D.png', '../../IconeFrico3D.png'];
+  const logoPaths = ['/APEX LOGO.png', '/images/APEX LOGO.png', '/public/APEX LOGO.png', '/public/images/APEX LOGO.png', 'APEX LOGO.png', './APEX LOGO.png', '../APEX LOGO.png', '../../APEX LOGO.png'];
   return <Sidebar className="border-r border-[#2b3341] h-screen">
       <SidebarContent className="relative h-full overflow-hidden">
         <style>
@@ -714,8 +714,8 @@ const AppSidebar = () => {
           {/* Logo - fixo no topo */}
           <div className="logo-container flex-shrink-0">
             <img 
-              src="/IconeFrico3D.png" 
-              alt="Fricó Alimentos Logo" 
+              src="/APEX LOGO.png" 
+              alt="APEX HUB Logo" 
               className="w-24 h-24 object-contain mx-auto"
             />
           </div>
