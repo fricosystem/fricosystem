@@ -51,13 +51,11 @@ const ParcelsPage = () => {
   // Simuler la synchronisation des données avec les autres modules
   useEffect(() => {
     const syncWithOtherModules = () => {
-      console.log("Synchronisation des données avec les modules de cultures et de statistiques");
       
       // Simule un délai de synchronisation
       const timer = setTimeout(() => {
         setLastSyncDate(new Date());
         syncDataAcrossCRM();
-        console.log("Les données des parcelles sont maintenant synchronisées avec tous les modules");
       }, 1500);
       
       return () => clearTimeout(timer);
@@ -67,8 +65,6 @@ const ParcelsPage = () => {
   }, [syncDataAcrossCRM]);
 
   const handleExportData = () => {
-    console.log("L'export de toutes les données des parcelles a démarré");
-    console.log("Les données exportées sont maintenant disponibles dans le module Statistiques");
   };
 
   const handleImportData = () => {
@@ -77,14 +73,11 @@ const ParcelsPage = () => {
   
   const handleImportConfirm = (importType: string) => {
     setImportDialogOpen(false);
-    console.log(`Les données ${importType} ont été importées avec succès`);
-    console.log("Les modules Cultures et Statistiques ont été mis à jour avec les nouvelles données");
   };
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm) {
-      console.log(`Recherche effectuée pour "${searchTerm}"`);
     }
   };
   
@@ -105,22 +98,17 @@ const ParcelsPage = () => {
 
   const toggleView = () => {
     setShowGuadeloupeView(!showGuadeloupeView);
-    console.log(`Vue ${showGuadeloupeView ? 'Standard' : 'Guadeloupe'} activée`);
-    console.log(`Les données affichées dans les modules Cultures et Finances ont été adaptées`);
   };
 
   const handleGenerateStatistics = () => {
     setStatsDialogOpen(true);
-    console.log("Les statistiques de vos parcelles ont été générées");
   };
 
   const handleOpenLayerManager = () => {
     setLayersDialogOpen(true);
-    console.log("Gestionnaire de couches ouvert");
   };
 
   const handleAddParcel = () => {
-    console.log("Formulaire de création de parcelle ouvert");
   };
 
   return (

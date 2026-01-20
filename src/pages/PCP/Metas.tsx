@@ -244,7 +244,6 @@ const Metas = () => {
     try {
       // Carregar metas salvas do Firestore primeiro
       const metasSalvas = await carregarMetasDoFirestore();
-      console.log('Metas carregadas do Firestore:', metasSalvas);
       const classificacoesUnicas = [...new Set(dadosProcessados.map(item => item.classificacao || item.setor || 'Sem classificação'))].filter(Boolean);
 
       // Se há dados PCP mas nenhuma classificação, usar dados padrão
@@ -268,12 +267,10 @@ const Metas = () => {
         if (metasSalvas && metasSalvas[classificacao]) {
           // Se há meta salva, usar ela (já é diária)
           metaDiaria = metasSalvas[classificacao];
-          console.log(`Meta salva encontrada para ${classificacao}: ${metaDiaria}`);
         } else {
           // Calcular meta diária baseada na meta mensal padrão
           const metaMensal = metasPadrao[classificacao] || (config?.meta_minima_mensal || 100000) * 0.1;
           metaDiaria = config?.dias_uteis_mes ? metaMensal / config.dias_uteis_mes : metaMensal / 22;
-          console.log(`Meta calculada para ${classificacao}: ${metaDiaria} (mensal: ${metaMensal})`);
         }
 
         // Usar dia atual se há produção, senão usar dia anterior
@@ -295,7 +292,6 @@ const Metas = () => {
 
       // Incluir todas as metas, mesmo as que não têm produção no dia atual
       setMetasPorClassificacao(metasComRealizado);
-      console.log('Metas inicializadas:', metasComRealizado);
     } catch (error) {
       console.error('Erro ao inicializar metas:', error);
       toast({
@@ -347,7 +343,6 @@ const Metas = () => {
       metas.forEach(meta => {
         metasParaSalvar[meta.classificacao] = meta.meta;
       });
-      console.log('Salvando metas no Firestore:', metasParaSalvar);
       const docRef = doc(db, "PCP_configuracoes", "metas");
       await setDoc(docRef, {
         metas: metasParaSalvar,
@@ -356,7 +351,6 @@ const Metas = () => {
       }, {
         merge: true
       });
-      console.log('Metas salvas com sucesso no Firestore');
     } catch (error) {
       console.error("Erro ao salvar metas no Firestore:", error);
       throw error;
@@ -367,20 +361,15 @@ const Metas = () => {
   const carregarMetasDoFirestore = async (): Promise<Record<string, number> | null> => {
     try {
       const docRef = doc(db, "PCP_configuracoes", "metas");
-      console.log('Tentando carregar metas da coleção PCP_configuracoes...');
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('Documento de metas encontrado:', data);
         if (data.metas && typeof data.metas === 'object') {
-          console.log('Metas carregadas com sucesso:', data.metas);
           return data.metas;
         } else {
-          console.log('Estrutura de metas inválida no documento');
           return null;
         }
       } else {
-        console.log('Documento de metas não encontrado');
         return null;
       }
     } catch (error) {

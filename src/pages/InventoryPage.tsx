@@ -43,11 +43,8 @@ const InventoryPage = () => {
 
   const handleExportData = () => {
     if (activeTab === 'inventory') {
-      console.log("Export des données d'inventaire lancé");
     } else if (activeTab === 'crops') {
-      console.log("Export des données de cultures");
     } else if (activeTab === 'weather') {
-      console.log("Export des données météo");
     }
   };
 
@@ -61,7 +58,6 @@ const InventoryPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    console.log(`Importation du fichier ${file.name}`);
     
     // Reset file input
     if (fileInputRef.current) {
@@ -74,7 +70,6 @@ const InventoryPage = () => {
                       activeTab === 'crops' ? 'culture' : 
                       activeTab === 'weather' ? 'alerte' : 'élément';
                       
-    console.log(`Fonctionnalité d'ajout de ${actionText} activée`);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,7 +79,6 @@ const InventoryPage = () => {
 
   const handleDownloadTemplate = () => {
     downloadInventoryTemplate();
-    console.log("Téléchargement du modèle d'inventaire");
   };
 
   const renderTabActions = () => {
@@ -222,7 +216,6 @@ const InventoryPage = () => {
       weather: 'les Alertes Météo'
     };
     
-    console.log(`Vous consultez maintenant ${tabLabels[value as keyof typeof tabLabels] || value}`);
   };
 
   return (

@@ -99,7 +99,6 @@ const Statistics = () => {
   
   // Handle export for the chart filters
   const handleExportData = async () => {
-    console.log(`Exportation des données ${currentChart} en cours...`);
   };
   
   return (

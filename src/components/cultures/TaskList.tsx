@@ -51,12 +51,10 @@ const TaskList = () => {
   };
 
   const handleTaskComplete = (id: number) => {
-    console.log('Tâche marquée comme terminée');
     setTasks(tasks.filter(task => task.id !== id));
   };
 
   const handleTaskDelete = (id: number) => {
-    console.log('Tâche supprimée avec succès');
     setTasks(tasks.filter(task => task.id !== id));
   };
 
@@ -64,7 +62,6 @@ const TaskList = () => {
     setTasks(tasks.map(task => 
       task.id === id ? { ...task, priority } : task
     ));
-    console.log(`Priorité modifiée en "${priority}"`);
   };
 
   const handleAddTask = () => {
@@ -89,7 +86,6 @@ const TaskList = () => {
       priority: 'Moyenne'
     });
     setShowAddTask(false);
-    console.log('Nouvelle tâche ajoutée avec succès');
   };
 
   return (

@@ -61,7 +61,6 @@ const updatedStyles = {
     try {
       // Esta seria a implementação real que modificaria o arquivo
       // Integraria com o githubService para fazer commit das mudanças
-      console.log(`Aplicando mudanças em ${filePath}:`, changes);
       return true;
     } catch (error) {
       console.error('Erro ao aplicar mudanças no arquivo:', error);

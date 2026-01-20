@@ -500,7 +500,6 @@ const Processamento: React.FC = () => {
 
   // Função para carregar dados consolidados dos processamentos
   const loadProcessamentos = useCallback(async () => {
-    console.log("🔄 Carregando processamentos...");
     try {
       const processamentosCollection = collection(db, "PCP");
       const q = query(processamentosCollection, where("processado", "==", "sim"));
@@ -519,7 +518,6 @@ const Processamento: React.FC = () => {
             dataProcessamento: data.date || documentId,
             dataUltimaAtualizacao: data.updatedAt || data.timestamp
           };
-          console.log("📊 Processamento encontrado:", processamentoComData);
           dadosConsolidados.push(processamentoComData);
         } else {
           // Caso contrário, calcular na hora (dados consolidados)
@@ -587,7 +585,6 @@ const Processamento: React.FC = () => {
               itensTurno2,
               turnosAtivos: [...(itensTurno1 > 0 ? ['1° Turno'] : []), ...(itensTurno2 > 0 ? ['2° Turno'] : [])].join(', ')
             });
-            console.log("📋 Dados consolidados adicionados:", {
               documentId,
               dataProcessamento: data.date || documentId,
               itensTurno1,
@@ -718,10 +715,6 @@ const Processamento: React.FC = () => {
     setShowDetailsDialog(true);
   };
   const handleShowEditModal = async (processamento: ProcessamentoData) => {
-    console.log("🔍 Abrindo modal de edição para:", processamento);
-    console.log("📅 Data do processamento:", processamento.dataProcessamento);
-    console.log("🏷️ ID do processamento:", processamento.id);
-    console.log("📄 Document ID:", processamento.documentId);
 
     setEditingProcessamento(processamento);
     setOriginalProcessamentoDate(processamento.dataProcessamento);

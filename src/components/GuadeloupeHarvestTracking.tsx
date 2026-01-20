@@ -68,14 +68,12 @@ const GuadeloupeHarvestTracking = () => {
     
     newData[rowIndex] = updatedRow as HarvestData;
     setHarvestData(newData);
-    console.log('Données de récolte mises à jour');
   };
   
   const handleDeleteRow = (rowIndex: number) => {
     const newData = [...harvestData];
     newData.splice(rowIndex, 1);
     setHarvestData(newData);
-    console.log('Culture supprimée du suivi');
   };
   
   const handleAddRow = (newRow: Record<string, any>) => {
@@ -88,7 +86,6 @@ const GuadeloupeHarvestTracking = () => {
       quality: (newRow.quality as HarvestData['quality']) || 'Moyenne'
     };
     setHarvestData([...harvestData, typedRow]);
-    console.log('Nouvelle culture ajoutée au suivi');
   };
   
   // Données pour le graphique comparatif

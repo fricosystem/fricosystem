@@ -204,7 +204,6 @@ export const useSaveStatus = (): SaveStatusHookReturn => {
       const fileName = filePath.split('/').pop() || filePath;
       const contentSize = new Blob([content]).size;
       
-      console.log(`Processando ${fileName} (${Math.round(contentSize / 1024)}KB)`);
 
       let result;
       

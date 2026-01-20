@@ -71,7 +71,6 @@ export const HistoricoTendenciasCard = () => {
       const metasSnapshot = await getDoc(metasRef);
       const metasPorClassificacao = metasSnapshot.exists() ? metasSnapshot.data()?.metas || {} : {};
       
-      console.log('Metas carregadas por classificação:', metasPorClassificacao);
       
       // Carregar dados dos últimos 30 dias do mês atual
       const hoje = new Date();
@@ -153,8 +152,6 @@ export const HistoricoTendenciasCard = () => {
       // Ordenar por data
       dadosHistoricos.sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
       
-      console.log('Dados históricos processados:', dadosHistoricos.length, 'dias');
-      console.log('Produção total do mês:', totalProducaoMes);
       
       setHistorico(dadosHistoricos);
       setProducaoTotal(totalProducaoMes);

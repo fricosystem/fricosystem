@@ -353,17 +353,14 @@ class GitHubService {
 
     // Verifica se o arquivo deve ser ignorado
     if (this.shouldIgnoreFile(path)) {
-      console.log(`Arquivo ${path} está na lista de ignorados, pulando...`);
       return true;
     }
 
     // Verifica o tamanho do conteúdo
     const contentSize = new Blob([content]).size;
-    console.log(`Processando arquivo ${path} (${Math.round(contentSize / 1024)}KB)`);
 
     // Estratégia baseada no tamanho
     if (contentSize > this.MAX_FILE_SIZE) {
-      console.log(`Arquivo ${path} é muito grande, usando estratégia incremental`);
       return this.updateFileWithRetry(path, content, message, 'incremental');
     }
 
@@ -396,14 +393,12 @@ class GitHubService {
         // Verifica se é erro de rate limit
         if (errorMessage.includes('rate limit') || errorMessage.includes('abuse')) {
           const backoffTime = Math.pow(2, attempt) * 1000; // Backoff exponencial
-          console.log(`Rate limit detectado, aguardando ${backoffTime}ms antes de tentar novamente...`);
           await new Promise(resolve => setTimeout(resolve, backoffTime));
           continue;
         }
 
         // Verifica se é erro de tamanho e muda estratégia
         if (errorMessage.includes('too large') && strategy === 'standard') {
-          console.log('Arquivo muito grande, mudando para estratégia incremental...');
           strategy = 'incremental';
           continue;
         }
@@ -448,7 +443,6 @@ class GitHubService {
         sha = data.sha;
       }
     } catch (error) {
-      console.log('Criando novo arquivo:', path);
     }
 
     // Adiciona timestamp ao commit
@@ -467,7 +461,6 @@ class GitHubService {
       sha,
     });
 
-    console.log(`Arquivo ${path} atualizado com sucesso:`, {
       commit: response.data.commit?.sha,
       url: response.data.content?.html_url,
       message: commitMessage
@@ -639,7 +632,6 @@ class GitHubService {
         currentSha = data.sha;
       }
     } catch (error) {
-      console.log('Arquivo não existe, será criado incrementalmente');
     }
 
     progressCallback?.(30, `Processando ${chunks.length} partes (${strategy})...`);
@@ -694,7 +686,6 @@ class GitHubService {
     }
 
     progressCallback?.(100, `Processo incremental ${strategy} concluído com sucesso!`);
-    console.log(`Arquivo ${path} atualizado incrementalmente (${strategy}) com sucesso`);
     return true;
   }
 
@@ -721,7 +712,6 @@ class GitHubService {
     const ignoredCount = files.length - validFiles.length;
     
     if (ignoredCount > 0) {
-      console.log(`${ignoredCount} arquivos ignorados baseado nos padrões de exclusão`);
     }
 
     progressCallback?.(10, `Processando ${validFiles.length} arquivos válidos...`);
@@ -730,7 +720,6 @@ class GitHubService {
     const totalSize = validFiles.reduce((sum, file) => sum + new Blob([file.content]).size, 0);
     const avgFileSize = totalSize / validFiles.length;
     
-    console.log(`Estatísticas do upload:`, {
       arquivos: validFiles.length,
       tamanhoTotal: `${Math.round(totalSize / 1024)}KB`,
       tamanhoMedio: `${Math.round(avgFileSize / 1024)}KB`

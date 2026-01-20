@@ -92,13 +92,10 @@ const ListaParadasMaquina = () => {
   const fetchParadas = async () => {
     setLoading(true);
     try {
-      console.log("Buscando paradas de máquina...");
       const q = query(collection(db, "paradas_maquina"), orderBy("criadoEm", "desc"));
       const querySnapshot = await getDocs(q);
-      console.log("Total de paradas encontradas:", querySnapshot.size);
       const fetchedParadas: ParadaMaquina[] = [];
       querySnapshot.forEach(doc => {
-        console.log("Parada:", doc.id, doc.data());
         fetchedParadas.push({
           id: doc.id,
           ...doc.data()
@@ -217,7 +214,6 @@ const ListaParadasMaquina = () => {
       await updateDoc(equipamentoRef, {
         sistemas: novosSistemas
       });
-      console.log("Manutenção da peça atualizada com sucesso");
       toast.success("Manutenção da peça registrada e próxima data calculada!");
     } catch (error) {
       console.error("Erro ao atualizar manutenção da peça:", error);

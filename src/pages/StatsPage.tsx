@@ -36,7 +36,6 @@ const StatsPage = () => {
   
   useEffect(() => {
     const initialSync = setTimeout(() => {
-      console.log('Les modules Parcelles, Cultures et Finances sont maintenant connectés aux statistiques');
     }, 1000);
     
     return () => clearTimeout(initialSync);
@@ -44,13 +43,10 @@ const StatsPage = () => {
   
   const syncData = () => {
     setIsSyncing(true);
-    console.log('Récupération des dernières données depuis tous les modules connectés...');
     
     setTimeout(() => {
       setIsSyncing(false);
       setLastSyncDate(new Date());
-      console.log('Toutes les statistiques sont à jour avec les dernières données des modules');
-      console.log("Les indicateurs de performance ont été recalculés avec les dernières données");
     }, 2000);
   };
   
@@ -74,8 +70,6 @@ const StatsPage = () => {
     newData[rowIndex] = updatedRow;
     setPerformanceData(newData);
     
-    console.log(`L'indicateur ${updatedRow.name} a été mis à jour avec succès.`);
-    console.log(`Les modules connectés ont été informés de la mise à jour de ${updatedRow.name}`);
   };
   
   const handleDeleteRow = (rowIndex: number) => {
@@ -84,8 +78,6 @@ const StatsPage = () => {
     newData.splice(rowIndex, 1);
     setPerformanceData(newData);
     
-    console.log(`L'indicateur ${deletedItem.name} a été supprimé avec succès.`);
-    console.log(`Les modules connectés ont été informés de la suppression de ${deletedItem.name}`);
   };
   
   const handleAddRow = (newRow: Record<string, any>) => {
@@ -97,33 +89,25 @@ const StatsPage = () => {
     };
     setPerformanceData([...performanceData, typedRow]);
     
-    console.log(`L'indicateur ${typedRow.name} a été ajouté avec succès.`);
-    console.log(`Les modules connectés ont été informés de l'ajout de ${typedRow.name}`);
   };
 
   const handleTitleChange = (value: string | number) => {
     setPageTitle(String(value));
-    console.log('Le titre de la page a été mis à jour.');
   };
 
   const handleDescriptionChange = (value: string | number) => {
     setPageDescription(String(value));
-    console.log('La description de la page a été mise à jour.');
   };
   
   const handleViewChange = (view: 'performance' | 'harvest' | 'detailed') => {
     setActiveView(view);
-    console.log(`Vous consultez maintenant la vue ${
       view === 'performance' ? 'Indicateurs de performance' : 
       view === 'harvest' ? 'Suivi des récoltes' : 'Statistiques détaillées'
     }`);
     
-    console.log(`Les modules connectés ont été adaptés à la vue ${view === 'performance' ? 'indicateurs' : view === 'harvest' ? 'récoltes' : 'détaillée'}`);
   };
   
   const handleExportData = () => {
-    console.log('Les données statistiques ont été exportées avec succès.');
-    console.log("Les données exportées sont disponibles pour tous les modules");
   };
 
   return (
@@ -234,7 +218,6 @@ const StatsPage = () => {
                 
                 <button 
                   onClick={() => {
-                    console.log('Vos préférences de notification ont été mises à jour');
                   }}
                   className="px-3 py-1.5 rounded-md flex items-center text-sm bg-muted hover:bg-muted/80 transition-colors"
                 >
@@ -255,13 +238,10 @@ const StatsPage = () => {
                   title="Indicateurs de performance agricole en Guadeloupe"
                   description="Suivez vos performances par rapport à vos objectifs pour les cultures guadeloupéennes"
                   onTitleChange={(title) => {
-                    console.log('Le titre du graphique a été mis à jour.');
                   }}
                   onDescriptionChange={(desc) => {
-                    console.log('La description du graphique a été mise à jour.');
                   }}
                   onOptionsChange={(options) => {
-                    console.log('Les options du graphique ont été mises à jour.');
                   }}
                   className="mb-6"
                 >

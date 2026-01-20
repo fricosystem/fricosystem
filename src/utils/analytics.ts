@@ -49,7 +49,6 @@ const saveEvents = (events: AnalyticsEvent[]): void => {
 // Initialize by loading stored events
 const initAnalytics = (): void => {
   eventQueue = loadEvents();
-  console.log(`Analytics initialized with ${eventQueue.length} stored events`);
 };
 
 // Track a user event
@@ -74,7 +73,6 @@ export const trackEvent = (
   
   // For development, log event to console
   if (import.meta.env.DEV) {
-    console.log('Analytics event:', event);
   }
   
   // In a real app, we would send this to a server
@@ -87,7 +85,6 @@ const sendEvents = async (): Promise<void> => {
   
   // In a real application, this would send data to a server
   // For now, we'll just simulate it
-  console.log(`Would send ${eventQueue.length} events to analytics server`);
   
   // After successful send, we could clear the queue
   // eventQueue = [];

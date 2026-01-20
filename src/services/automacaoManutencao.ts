@@ -239,14 +239,12 @@ async function registrarLog(
  * Função principal de automação - executa todo o processo
  */
 export async function executarAutomacaoCompleta() {
-  console.log("[Automação] Iniciando processo completo...");
 
   try {
     // 1. Buscar configuração
     const config = await buscarConfiguracao();
 
     if (!config.ativo) {
-      console.log("[Automação] Sistema desativado nas configurações");
       await registrarLog(
         "verificacao",
         "Sistema de automação desativado",
@@ -302,14 +300,12 @@ export async function executarAutomacaoCompleta() {
         if (!temOS && config.gerarOSAutomatica) {
           novaOrdemId = await criarOrdemServico(tarefa);
           osGeradas++;
-          console.log(`[Automação] OS gerada para: ${tarefa.descricaoTarefa}`);
         }
 
         // 7. Criar alerta se necessário
         if (!temAlerta) {
           await criarAlerta(tarefa, diasRestantes, urgencia, novaOrdemId);
           alertasCriados++;
-          console.log(`[Automação] Alerta criado para: ${tarefa.descricaoTarefa}`);
         }
       }
     }
@@ -325,7 +321,6 @@ export async function executarAutomacaoCompleta() {
       { tarefasProcessadas }
     );
 
-    console.log(`[Automação] Concluída: ${osGeradas} OS geradas, ${alertasCriados} alertas criados`);
 
     return {
       success: true,
@@ -379,5 +374,4 @@ export async function recalcularProximaExecucao(tarefaId: string): Promise<void>
     atualizadoEm: Timestamp.now(),
   });
 
-  console.log(`[Automação] Próxima execução recalculada para: ${proximaData.toISOString().split("T")[0]}`);
 }

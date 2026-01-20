@@ -145,7 +145,6 @@ const Dashboard = () => {
         // Converter segundos para milissegundos e adicionar nanossegundos convertidos
         const milliseconds = timestamp.seconds * 1000 + Math.floor(timestamp.nanoseconds / 1000000);
         const date = new Date(milliseconds);
-        console.log(`Converted Firestore timestamp: seconds=${timestamp.seconds}, nanoseconds=${timestamp.nanoseconds} -> ${date.toISOString()}`);
         return date;
       } catch (error) {
         console.warn('convertFirebaseTimestamp: error converting Firestore timestamp:', error);
@@ -201,7 +200,6 @@ const Dashboard = () => {
     // Remove pontos de milhar e substitui vírgula decimal por ponto
     const cleanedValue = value.toString().replace(/\./g, '').replace(',', '.');
     const result = parseFloat(cleanedValue) || 0;
-    console.log(`parseCurrencyValue: "${value}" -> "${cleanedValue}" -> ${result}`);
     return result;
   };
 
@@ -344,7 +342,6 @@ const Dashboard = () => {
       // Processar relatórios
       const relatoriosData = relatoriosSnapshot.docs.map(doc => {
         const data = doc.data();
-        console.log(`Processando relatório ${doc.id}:`, {
           centro_de_custo: data.centro_de_custo,
           data_registro: data.data_registro,
           quantidade: data.quantidade
@@ -357,7 +354,6 @@ const Dashboard = () => {
         } as Relatorio;
       });
 
-      console.log(`Total de relatórios carregados: ${relatoriosData.length}`);
 
       // Calcular produtos do período atual (otimizado)
       const produtosEsteMes = calculatePeriodProducts(produtosData);
@@ -463,9 +459,7 @@ const Dashboard = () => {
   // Carregar dados inicial
   useEffect(() => {
     if (isCacheValid() && loadFromCache()) {
-      console.log("Dados carregados do cache");
     } else {
-      console.log("Cache inválido ou não encontrado, carregando do Firestore");
       fetchFirestoreData();
     }
   }, []); // Carregar apenas uma vez
@@ -587,14 +581,12 @@ const Dashboard = () => {
         return false;
       }
       
-      console.log(`Filtrando relatório ${relatorio.id}: data=${dataRegistro.toISOString()}, centro=${relatorio.centro_de_custo}, period=${period}`);
       
       if (period === 'hoje') {
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const endOfToday = new Date(startOfToday);
         endOfToday.setHours(23, 59, 59, 999);
         const isInPeriod = dataRegistro >= startOfToday && dataRegistro <= endOfToday;
-        console.log(`Hoje: ${startOfToday.toISOString()} <= ${dataRegistro.toISOString()} <= ${endOfToday.toISOString()} = ${isInPeriod}`);
         return isInPeriod;
       } else if (period === 'semana') {
         const startOfWeek = new Date(now);
@@ -604,21 +596,18 @@ const Dashboard = () => {
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
         const isInPeriod = dataRegistro >= startOfWeek && dataRegistro <= endOfWeek;
-        console.log(`Semana: ${startOfWeek.toISOString()} <= ${dataRegistro.toISOString()} <= ${endOfWeek.toISOString()} = ${isInPeriod}`);
         return isInPeriod;
       } else if (period === 'mes') {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         endOfMonth.setHours(23, 59, 59, 999);
         const isInPeriod = dataRegistro >= startOfMonth && dataRegistro <= endOfMonth;
-        console.log(`Mês: ${startOfMonth.toISOString()} <= ${dataRegistro.toISOString()} <= ${endOfMonth.toISOString()} = ${isInPeriod}`);
         return isInPeriod;
       } else if (period === 'ano') {
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31);
         endOfYear.setHours(23, 59, 59, 999);
         const isInPeriod = dataRegistro >= startOfYear && dataRegistro <= endOfYear;
-        console.log(`Ano: ${startOfYear.toISOString()} <= ${dataRegistro.toISOString()} <= ${endOfYear.toISOString()} = ${isInPeriod}`);
         return isInPeriod;
       } else if (period === 'personalizado' && customStartDate && customEndDate) {
         const startDate = new Date(customStartDate);
@@ -626,13 +615,11 @@ const Dashboard = () => {
         const endDate = new Date(customEndDate);
         endDate.setHours(23, 59, 59, 999);
         const isInPeriod = dataRegistro >= startDate && dataRegistro <= endDate;
-        console.log(`Personalizado: ${startDate.toISOString()} <= ${dataRegistro.toISOString()} <= ${endDate.toISOString()} = ${isInPeriod}`);
         return isInPeriod;
       }
       return false;
     });
 
-    console.log(`Total de relatórios disponíveis: ${relatorios.length}, Filtrados para ${period}: ${filteredRelatorios.length}`);
 
     // Extrair todos os centros de custo únicos dos relatórios
     const centrosCusto = new Set<string>();
@@ -952,7 +939,6 @@ const Dashboard = () => {
       }];
     }
     
-    console.log(`Analisando ${relatorios.length} relatórios TOTAIS para centro de custo (últimos 90 dias)`);
     
     const now = new Date();
     const last90Days = new Date(now);
@@ -977,7 +963,6 @@ const Dashboard = () => {
       return dataRegistro >= last90Days; // Últimos 90 dias
     });
     
-    console.log(`Relatórios dos últimos 90 dias: ${filteredRelatorios.length}`);
     
     const centroCustoMap: Record<string, number> = {};
     filteredRelatorios.forEach(relatorio => {
@@ -993,7 +978,6 @@ const Dashboard = () => {
       fill: COLORS[index % COLORS.length]
     })).sort((a, b) => b.value - a.value).slice(0, 10);
     
-    console.log('Resultado final do centro de custo:', result);
     
     if (result.length === 0) {
       return [{

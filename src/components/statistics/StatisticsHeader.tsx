@@ -24,9 +24,7 @@ const StatisticsHeader = () => {
 
   const handleExport = async () => {
     try {
-      console.log("Exportation des statistiques au format CSV...");
       await exportModuleData('statistiques', 'csv');
-      console.log("Exportation réussie!");
     } catch (error) {
       console.error("Error exporting statistics:", error);
     }
@@ -34,9 +32,7 @@ const StatisticsHeader = () => {
 
   const handlePrint = async () => {
     try {
-      console.log("Préparation de l'impression des statistiques...");
       await printModuleData('statistiques');
-      console.log("Document envoyé à l'impression");
     } catch (error) {
       console.error("Error printing statistics:", error);
     }
@@ -44,21 +40,16 @@ const StatisticsHeader = () => {
 
   const handleShare = () => {
     setShareDialogOpen(true);
-    console.log("Ouverture de la boîte de dialogue de partage");
   };
   
   const handleShareByEmail = () => {
-    console.log("Préparation du partage par email...");
     setShareDialogOpen(false);
-    console.log("Email de partage préparé");
   };
   
   const handleShareByPDF = async () => {
     try {
-      console.log("Génération du PDF pour partage...");
       await exportModuleData('statistiques', 'pdf');
       setShareDialogOpen(false);
-      console.log("PDF généré avec succès pour partage");
     } catch (error) {
       console.error("Error generating PDF:", error);
       setShareDialogOpen(false);

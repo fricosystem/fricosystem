@@ -72,19 +72,16 @@ const CropsPage = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-white border shadow-lg">
                 <DropdownMenuItem 
-                  onClick={() => console.log("Export CSV des données de récolte")}
                   className="cursor-pointer"
                 >
                   Export CSV
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  onClick={() => console.log("Export Excel des données de récolte")}
                   className="cursor-pointer"
                 >
                   Export Excel
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  onClick={() => console.log("Export PDF des données de récolte")}
                   className="cursor-pointer"
                 >
                   Export PDF
@@ -96,7 +93,6 @@ const CropsPage = () => {
               variant="outline" 
               className="flex items-center gap-2 transition-colors"
               onClick={() => {
-                console.log("Synchronisation des données de récolte");
               }}
             >
               <RefreshCw className="h-4 w-4" />
@@ -106,7 +102,6 @@ const CropsPage = () => {
               variant="outline" 
               className="flex items-center gap-2 transition-colors"
               onClick={() => {
-                console.log("Filtres appliqués aux données de récolte");
               }}
             >
               <Filter className="h-4 w-4" />
@@ -128,7 +123,6 @@ const CropsPage = () => {
             <Button 
               className="flex items-center gap-2 bg-agri-primary hover:bg-agri-primary-dark transition-colors"
               onClick={() => {
-                console.log("Ajout de nouvelle culture");
               }}
             >
               <Plus className="h-4 w-4" />
@@ -138,7 +132,6 @@ const CropsPage = () => {
               variant="outline" 
               className="flex items-center gap-2 transition-colors"
               onClick={() => {
-                console.log("Export des données des cultures");
               }}
             >
               <Download className="h-4 w-4" />
@@ -161,7 +154,6 @@ const CropsPage = () => {
               variant="outline" 
               className="flex items-center gap-2 transition-colors"
               onClick={() => {
-                console.log("Planification du calendrier des cultures");
               }}
             >
               <CalendarRange className="h-4 w-4" />
@@ -170,7 +162,6 @@ const CropsPage = () => {
             <Button 
               className="flex items-center gap-2 transition-colors"
               onClick={() => {
-                console.log("Ajout de nouvelle tâche culturale");
               }}
             >
               <Plus className="h-4 w-4" />
@@ -193,7 +184,6 @@ const CropsPage = () => {
     };
     
     const label = tabLabels[value as keyof typeof tabLabels] || value;
-    console.log(`${label} activé - Affichage des données correspondantes`);
   };
 
   const tabs: TabItem[] = [

@@ -117,7 +117,6 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
   // Função para verificar datas que já possuem dados na coleção PCP
   const fetchDatesWithData = async () => {
     try {
-      console.log("🔍 Carregando datas com dados da coleção PCP...");
       const querySnapshot = await getDocs(collection(db, "PCP"));
       const dates = new Set<string>();
       
@@ -132,7 +131,6 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
         }
       });
       
-      console.log("📅 Datas com dados encontradas:", Array.from(dates));
       setDatesWithData(dates);
     } catch (error) {
       console.error("Erro ao verificar datas com dados:", error);
@@ -426,7 +424,6 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
     setSelectedTurnosToTransfer(['1', '2']);
     
     // Carregar datas com dados sempre que abrir o modal
-    console.log("🔄 Abrindo modal de transferência, carregando datas...");
     await fetchDatesWithData();
     
     setMergeReplaceModalOpen(true);
@@ -1069,7 +1066,6 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
                                 key={i}
                                 onClick={() => {
                                   if (hasData) {
-                                    console.log("⛔ Data bloqueada por ter dados existentes");
                                     toast({
                                       title: "Data não disponível",
                                       description: "Já existem dados nesta data. Escolha outra data para evitar conflitos nos dados.",
@@ -1077,7 +1073,6 @@ const ModificarProcessamentoModal: React.FC<ModificarProcessamentoModalProps> = 
                                     });
                                     return;
                                   }
-                                  console.log("✅ Data aprovada para seleção");
                                   setMergeSelectedDate(currentDate);
                                 }}
                                 disabled={hasData}
