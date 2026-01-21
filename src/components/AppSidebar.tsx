@@ -603,7 +603,7 @@ const AppSidebar = () => {
   };
 
   // Testar diferentes caminhos para a imagem
-  const logoPaths = ['https://res.cloudinary.com/diomtgcvb/image/upload/v1768955988/grok_image_1768912989679_w8typ7.jpg'];
+  const logoPaths = ['https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png'];
   return <Sidebar className="border-r border-[#2b3341] h-screen">
       <SidebarContent className="relative h-full overflow-hidden">
         <style>
