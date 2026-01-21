@@ -603,7 +603,7 @@ const AppSidebar = () => {
   };
 
   // Testar diferentes caminhos para a imagem
-  const logoPaths = ['/public/APEX LOGO.png', '/images/public/APEX LOGO.png', '/public/APEX LOGO.png', '/public/images/public/APEX LOGO.png', 'APEX LOGO.png', './public/APEX LOGO.png', '../public/APEX LOGO.png', '../../public/APEX LOGO.png'];
+  const logoPaths = ['/https://res.cloudinary.com/diomtgcvb/image/upload/v1768955988/grok_image_1768912989679_w8typ7.jpg', '/images/public/APEX LOGO.png', '/public/APEX LOGO.png', '/public/images/public/APEX LOGO.png', 'APEX LOGO.png', './public/APEX LOGO.png', '../public/APEX LOGO.png', '../../public/APEX LOGO.png'];
   return <Sidebar className="border-r border-[#2b3341] h-screen">
       <SidebarContent className="relative h-full overflow-hidden">
         <style>
