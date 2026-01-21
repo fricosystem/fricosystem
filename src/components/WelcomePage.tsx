@@ -179,10 +179,10 @@ const WelcomePage = () => {
           transition={{ duration: 1, delay: 0.5 }}
           className="text-center mb-12"
         >
-          {/* Ícone da Fricó fixo no centro */}
+          {/* Logo APEX HUB */}
           <div className="mx-auto mb-8 flex justify-center">
             <img 
-              src="/public/APEX LOGO.png" 
+              src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" 
               alt="APEX HUB Logo" 
               className="w-40 h-40 object-scale-down" 
             />

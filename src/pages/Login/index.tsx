@@ -171,7 +171,7 @@ const Login = () => {
           <div className="flex items-center gap-2 pl-1">
             <a href="#hero" className="flex items-center gap-2">
               <img 
-                src="/public/APEX LOGO.png" 
+                src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" 
                 alt="APEX HUB Logo" 
                 className="w-16 h-16 rounded-lg object-scale-down" 
               />

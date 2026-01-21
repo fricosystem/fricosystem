@@ -585,11 +585,6 @@ const Processamento: React.FC = () => {
               itensTurno2,
               turnosAtivos: [...(itensTurno1 > 0 ? ['1° Turno'] : []), ...(itensTurno2 > 0 ? ['2° Turno'] : [])].join(', ')
             });
-              documentId,
-              dataProcessamento: data.date || documentId,
-              itensTurno1,
-              itensTurno2
-            });
           }
         }
       });

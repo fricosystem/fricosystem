@@ -342,15 +342,13 @@ const Dashboard = () => {
       // Processar relatórios
       const relatoriosData = relatoriosSnapshot.docs.map(doc => {
         const data = doc.data();
-          centro_de_custo: data.centro_de_custo,
-          data_registro: data.data_registro,
-          quantidade: data.quantidade
-        });
         return { 
           id: doc.id,
           ...data, 
+          centro_de_custo: data.centro_de_custo,
           data_registro: data.data_registro,
-          data_saida: data.data_saida 
+          data_saida: data.data_saida,
+          quantidade: data.quantidade
         } as Relatorio;
       });
 

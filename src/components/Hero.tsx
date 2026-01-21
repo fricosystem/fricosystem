@@ -58,7 +58,7 @@ const Hero = () => {
             {/* Fallback image if video fails to load */}
             <img 
               src="/lovable-uploads/4bfa0d71-3ed2-4693-90b6-35142468907f.png" 
-              alt="WRLDS Technologies Connected People" 
+              alt="APEX HUB - Sistema de Gestão Industrial" 
               className={`w-full h-full object-cover opacity-70 grayscale ${isMobile ? 'object-right' : 'object-center'}`} 
             />
           </video>

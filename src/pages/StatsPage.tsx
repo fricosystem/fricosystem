@@ -101,10 +101,9 @@ const StatsPage = () => {
   
   const handleViewChange = (view: 'performance' | 'harvest' | 'detailed') => {
     setActiveView(view);
-      view === 'performance' ? 'Indicateurs de performance' : 
-      view === 'harvest' ? 'Suivi des récoltes' : 'Statistiques détaillées'
-    }`);
-    
+    const viewLabel = view === 'performance' ? 'Indicateurs de performance' : 
+      view === 'harvest' ? 'Suivi des récoltes' : 'Statistiques détaillées';
+    console.log(`Vue changée vers: ${viewLabel}`);
   };
   
   const handleExportData = () => {

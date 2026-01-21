@@ -141,7 +141,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="/public/APEX LOGO.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
+                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">
@@ -216,7 +216,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="/public/APEX LOGO.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
+                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">

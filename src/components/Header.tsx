@@ -8,8 +8,8 @@ const Header = () => {
       <div className="px-5 md:px-20 py-5 md:py-6">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="font-serif text-2xl md:text-3xl font-bold italic">
-            Vesper
+          <Link to="/" className="font-sans text-2xl md:text-3xl font-bold">
+            APEX HUB
           </Link>
 
           {/* Right Side Actions */}
