@@ -17,6 +17,7 @@ import { db } from "@/firebase/firebase";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getCachedCollection } from "@/lib/offlineDB";
+import { useThemedLogo } from "@/hooks/useThemedLogo";
 
 interface ScannedData {
   setor: string;
@@ -41,6 +42,7 @@ export default function ParadaMaquina() {
     concluidas: 0,
     total: 0
   });
+  const logoSrc = useThemedLogo();
 
   // Carregar contagem de OS abertas
   useEffect(() => {
@@ -188,7 +190,7 @@ export default function ParadaMaquina() {
         {/* Header Fixo */}
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
           <div className="container mx-auto py-4 px-6 flex items-center gap-3">
-            <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" alt="APEX HUB" className="h-10 w-10 object-contain" />
+            <img src={logoSrc} alt="APEX HUB" className="h-10 w-10 object-contain" />
             <div>
               <h1 className="text-lg sm:text-xl font-bold">{getPageTitle()}</h1>
               <p className="text-xs text-muted-foreground">{getPageSubtitle()}</p>

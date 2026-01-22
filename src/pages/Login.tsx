@@ -17,6 +17,7 @@ import {
   BarChart4, Calendar, Clipboard, CreditCard, Database, FileText, Users,
   Phone, Mail, MessageSquare 
 } from "lucide-react";
+import { useThemedLogo } from "@/hooks/useThemedLogo";
 
 // Dados das seções
 const features = [
@@ -133,6 +134,8 @@ const Login = () => {
     return () => document.removeEventListener('click', handleClick);
   }, []);
 
+  const logoSrc = useThemedLogo();
+
   const openLoginModal = () => {
     setActiveTab("login");
     setAuthModalOpen(true);
@@ -171,7 +174,7 @@ const Login = () => {
           <div className="flex items-center gap-2 pl-1">
             <a href="#hero" className="flex items-center gap-2">
               <img 
-                src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" 
+                src={logoSrc} 
                 alt="APEX HUB Logo" 
                 className="w-16 h-16 rounded-lg object-scale-down" 
               />

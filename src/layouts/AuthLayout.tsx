@@ -1,6 +1,7 @@
 
 import { ReactNode } from "react";
 import { motion } from "framer-motion";
+import { useThemedLogo } from "@/hooks/useThemedLogo";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -9,6 +10,8 @@ interface AuthLayoutProps {
 const AuthLayout = ({
   children
 }: AuthLayoutProps) => {
+  const logoSrc = useThemedLogo();
+  
   return (
     <div 
       className="min-h-screen flex flex-col items-center justify-center bg-cover bg-center p-4 sm:p-6 md:p-8" 
@@ -30,7 +33,7 @@ const AuthLayout = ({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5 }}
-              src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" 
+              src={logoSrc} 
               alt="APEX HUB Logo" 
               className="h-24 w-auto mb-2 rounded-lg shadow-xl" 
             />

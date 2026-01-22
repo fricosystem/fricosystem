@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { LogOut, Package, Filter, Calendar, Moon, Sun } from 'lucide-react';
+import { getThemedLogo } from "@/hooks/useThemedLogo";
 
 interface Compra {
   id: string;
@@ -237,7 +238,7 @@ const FornecedorProdutos: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <img 
-                src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" 
+                src={getThemedLogo(theme)} 
                 alt="APEX HUB" 
                 className="h-10 w-10 object-contain"
               />

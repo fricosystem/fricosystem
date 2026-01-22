@@ -4,11 +4,13 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import emailjs from 'emailjs-com';
+import { useThemedLogo } from "@/hooks/useThemedLogo";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const logoSrc = useThemedLogo();
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,9 +73,9 @@ const Footer = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 pb-10 border-b border-gray-700">
           <div className="lg:col-span-2">
             <img 
-              src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" 
+              src={logoSrc} 
               alt="APEX HUB Logo" 
-              className="h-10 w-auto mb-6 invert"
+              className="h-10 w-auto mb-6"
             />
             <p className="text-gray-300 mb-6">
               APEX HUB é um sistema ERP completo para gestão industrial, desenvolvido pela ATOM Corp. para otimizar processos e aumentar a eficiência operacional.

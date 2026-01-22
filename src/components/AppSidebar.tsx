@@ -11,6 +11,7 @@ import { db } from "@/firebase/firebase";
 import { collection, query, where, getDocs, doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
+import { getThemedLogo } from "@/hooks/useThemedLogo";
 
 interface SidebarItem {
   to: string;
@@ -49,8 +50,8 @@ const AppSidebar = () => {
   const isAdmin = userData?.cargo === "DESENVOLVEDOR";
   const isDesenvolvedor = userData?.cargo === "DESENVOLVEDOR";
 
-  // Testar diferentes caminhos para a imagem
-  const logoPaths = ['https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png'];
+  // Logo baseada no tema
+  const logoPaths = [getThemedLogo(theme)];
 
   // Verifica se o usuário está ativo
   useEffect(() => {

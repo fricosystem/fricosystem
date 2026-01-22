@@ -2,12 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Box, Square } from 'lucide-react';
+import { useThemedLogo } from "@/hooks/useThemedLogo";
 
 const WelcomePage = () => {
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const logoSrc = useThemedLogo();
   
   const textSequence = [
     'Aguarde aprovação pela nossa equipe administrativa',
@@ -182,7 +184,7 @@ const WelcomePage = () => {
           {/* Logo APEX HUB */}
           <div className="mx-auto mb-8 flex justify-center">
             <img 
-              src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" 
+              src={logoSrc} 
               alt="APEX HUB Logo" 
               className="w-40 h-40 object-scale-down" 
             />
