@@ -397,6 +397,7 @@ const FuturisticFloatingMenu = () => {
       items: filterItemsByPermission([
         { id: "planejamento-desenvolvimento", icon: <ClipboardList size={20} />, label: "Planejamento", path: "/planejamento-desenvolvimento", permission: "planejamento_desenvolvimento" },
         { id: "ide", icon: <Monitor size={20} />, label: "IDE", path: "/ide", permission: "ide" },
+        { id: "sistema", icon: <Wrench size={20} />, label: "Sistema", path: "/sistema", permission: "sistema" },
       ]),
     }] : []),
     {
