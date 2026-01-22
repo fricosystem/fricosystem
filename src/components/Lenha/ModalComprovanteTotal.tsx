@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
-import { Card } from "@/components/ui/card";
 import { 
   Dialog,
   DialogContent,
@@ -8,10 +7,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Printer, Download, Share2, X } from "lucide-react";
+import { Download, Share2, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MedidaLenha } from "@/types/typesLenha";
+import { useContextLogo } from "@/hooks/useThemedLogo";
 
 interface ModalComprovanteTotalProps {
   isOpen: boolean;
@@ -30,6 +30,7 @@ const ModalComprovanteTotal = ({
 }: ModalComprovanteTotalProps) => {
   const comprovanteRef = useRef<HTMLDivElement>(null);
   const [isPrinting, setIsPrinting] = useState(false);
+  const logoUrl = useContextLogo("relatorio-lenha");
 
   const formatarValor = (valor: number): string => {
     return valor.toLocaleString('pt-BR', {
@@ -154,7 +155,7 @@ const ModalComprovanteTotal = ({
           <body>
             <div class="container">
               <div class="header">
-                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" alt="APEX HUB Logo" class="logo" onerror="this.style.display='none'" />
+                <img src="${logoUrl}" alt="Logo" class="logo" onerror="this.style.display='none'" />
                 <div class="header-text">
                   <h1 class="title">RELATÓRIO GERAL DE MEDIÇÃO DE LENHA</h1>
                   <div class="date">Data/Hora do relatório: ${dataFormatada}</div>
@@ -239,8 +240,8 @@ const ModalComprovanteTotal = ({
         <div ref={comprovanteRef} className="p-4 md:p-6 bg-gray-800 rounded-lg border border-gray-700">
           <div className="flex items-center mb-6 pb-4 border-b border-gray-700">
             <div className="mr-4">
-              <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" 
-              alt="APEX HUB Logo" className="h-12" onError={(e) => (e.currentTarget.style.display = 'none')} />
+              <img src={logoUrl} 
+              alt="Logo" className="h-12" onError={(e) => (e.currentTarget.style.display = 'none')} />
             </div>
             <div className="flex-1 text-center">
               <h2 className="text-lg font-bold text-white">RELATÓRIO GERAL DE MEDIÇÃO DE LENHA</h2>
