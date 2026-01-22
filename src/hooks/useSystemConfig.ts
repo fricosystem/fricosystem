@@ -14,6 +14,8 @@ const DEFAULT_IMAGES = {
   logoHeaderParadaMaquina: "https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png",
   logoRecibosComprovantes: "https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png",
   logoRelatoriosPDF: "https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png",
+  logoComprovanteLenha: "https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png",
+  logoRequisicoes: "https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png",
 };
 
 const DEFAULT_APPEARANCE = {
@@ -42,6 +44,8 @@ export interface SystemImages {
   logoHeaderParadaMaquina: string;
   logoRecibosComprovantes: string;
   logoRelatoriosPDF: string;
+  logoComprovanteLenha: string;
+  logoRequisicoes: string;
 }
 
 export interface SystemAppearance {
