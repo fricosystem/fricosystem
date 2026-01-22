@@ -374,6 +374,11 @@ const AppSidebar = () => {
       icon: Monitor,
       label: "IDE",
       permission: "ide"
+    }, {
+      to: "/sistema",
+      icon: Wrench,
+      label: "Sistema",
+      permission: "sistema"
     }]
   }] : [])], [pendingRequestsCount, isAdmin, isDesenvolvedor]);
 
