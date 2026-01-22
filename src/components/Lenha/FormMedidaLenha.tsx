@@ -11,6 +11,7 @@ import { MedidaLenha } from "@/types/typesLenha";
 import { FornecedorSelect } from "@/components/Lenha/FornecedorSelect";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useContextLogo } from "@/hooks/useThemedLogo";
 
 interface FormMedidaLenhaProps {
   onSaveSuccess: () => void;
@@ -18,6 +19,7 @@ interface FormMedidaLenhaProps {
 }
 
 const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
+  const logoUrl = useContextLogo("comprovante-lenha");
   // Estado inicial
   const [medidas, setMedidas] = useState<number[]>([0, 0, 0, 0, 0, 0]);
   const [comprimento, setComprimento] = useState<number>(0);
@@ -371,7 +373,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
+                <img src="${logoUrl}" alt="Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">
@@ -449,7 +451,7 @@ const FormMedidaLenha = ({ onSaveSuccess, onCancel }: FormMedidaLenhaProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
+                <img src="${logoUrl}" alt="Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">
