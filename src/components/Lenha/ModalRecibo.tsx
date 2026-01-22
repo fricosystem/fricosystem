@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Printer } from "lucide-react";
+import { useContextLogo } from "@/hooks/useThemedLogo";
 
 interface ModalReciboProps {
   medida: MedidaLenha;
@@ -16,6 +17,7 @@ interface ModalReciboProps {
 const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
   const reciboRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const logoUrl = useContextLogo("comprovante-lenha");
 
   // Formatar data para exibição
   const dataFormatada = format(medida.data, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
@@ -141,7 +143,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
+                <img src="${logoUrl}" alt="Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">
@@ -216,7 +218,7 @@ const ModalRecibo = ({ medida, isOpen, onClose }: ModalReciboProps) => {
           <div class="recibo-container">
             <div>
               <div class="logo-container">
-                <img src="https://res.cloudinary.com/diomtgcvb/image/upload/v1768956525/APEX_LOGO_ssi5g2.png" alt="APEX HUB Logo" onError="this.style.display='none'" />
+                <img src="${logoUrl}" alt="Logo" onError="this.style.display='none'" />
               </div>
               
               <div class="recibo-header">
