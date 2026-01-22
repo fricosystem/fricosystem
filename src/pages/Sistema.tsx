@@ -396,8 +396,24 @@ const Sistema: React.FC = () => {
                       </h3>
                       <div className="grid gap-4 ml-4">
                         <ImageField
-                          label="Logo para Recibos e Comprovantes"
-                          description="Imagem impressa nos recibos de medição de lenha e comprovantes de requisição de materiais"
+                          label="Logo para Comprovante de Medida de Lenha"
+                          description="Imagem impressa nos comprovantes de entrega de lenha na impressão e PDF"
+                          value={images.logoComprovanteLenha || images.logoRecibosComprovantes}
+                          defaultValue={defaultImages.logoComprovanteLenha || defaultImages.logoRecibosComprovantes}
+                          onChange={(v) => handleImageChange("logoComprovanteLenha", v)}
+                          onReset={() => handleImageChange("logoComprovanteLenha", defaultImages.logoComprovanteLenha)}
+                        />
+                        <ImageField
+                          label="Logo para Comprovantes de Requisição"
+                          description="Imagem impressa nos comprovantes de requisição de materiais"
+                          value={images.logoRequisicoes || images.logoRecibosComprovantes}
+                          defaultValue={defaultImages.logoRequisicoes || defaultImages.logoRecibosComprovantes}
+                          onChange={(v) => handleImageChange("logoRequisicoes", v)}
+                          onReset={() => handleImageChange("logoRequisicoes", defaultImages.logoRequisicoes)}
+                        />
+                        <ImageField
+                          label="Logo para Recibos Gerais"
+                          description="Imagem padrão para outros recibos e comprovantes do sistema"
                           value={images.logoRecibosComprovantes}
                           defaultValue={defaultImages.logoRecibosComprovantes}
                           onChange={(v) => handleImageChange("logoRecibosComprovantes", v)}
