@@ -32,6 +32,7 @@ import PCP from "./pages/PCP/PCP";
 import RelatoriosES from "./pages/Relatorios/Relatorios";
 import PlanejamentoDesenvolvimento from "./pages/Planejamento/PlanejamentoDesenvolvimento";
 import IDE from "./pages/IDE";
+import Sistema from "./pages/Sistema";
 
 // Páginas de Transferência e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
@@ -193,6 +194,7 @@ const AppContent = () => {
            <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
            <Route path="/planejamento-desenvolvimento" element={<AuthGuard><PlanejamentoDesenvolvimento /></AuthGuard>} />
            <Route path="/ide" element={<AuthGuard><IDE /></AuthGuard>} />
+           <Route path="/sistema" element={<AuthGuard><Sistema /></AuthGuard>} />
 
            {/* Rotas de Entrada Manual e Transferência */}
           <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />
