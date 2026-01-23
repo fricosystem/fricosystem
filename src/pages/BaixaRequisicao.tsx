@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Minus, Plus, Trash2, Loader2, Search, Package, X, Calendar as CalendarIcon } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Minus, Plus, Trash2, Loader2, Search, Package, X, Calendar as CalendarIcon, History, ClipboardList } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, serverTimestamp, addDoc, orderBy, limit, query } from "firebase/firestore";
@@ -13,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import HistoricoBaixas from "@/components/baixa-requisicao/HistoricoBaixas";
 
 interface Produto {
   id: string;
@@ -86,14 +88,16 @@ const BaixaRequisicao = () => {
         }));
         setProdutos(listaProdutos);
         
-        // Carregar centros de custo
+        // Carregar centros de custo filtrados pela unidade do usuário
         const centrosRef = collection(db, "centro_de_custo");
         const centrosSnapshot = await getDocs(centrosRef);
-        const listaCentros: CentroDeCusto[] = centrosSnapshot.docs.map(doc => ({
-          id: doc.id,
-          nome: doc.data().nome || "",
-          unidade: doc.data().unidade || ""
-        }));
+        const listaCentros: CentroDeCusto[] = centrosSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            nome: doc.data().nome || "",
+            unidade: doc.data().unidade || ""
+          }))
+          .filter(centro => centro.unidade === userData?.unidade);
         listaCentros.sort((a, b) => a.nome.localeCompare(b.nome));
         setCentrosDeCusto(listaCentros);
         
@@ -110,7 +114,7 @@ const BaixaRequisicao = () => {
     };
     
     carregarDados();
-  }, []);
+  }, [userData?.unidade]);
 
   // Filtrar produtos no modal
   const produtosFiltrados = useMemo(() => {
@@ -313,7 +317,7 @@ const BaixaRequisicao = () => {
           deposito: "MANUTENCAO",
           prateleira: item.prateleira,
           centro_de_custo: item.centroDeCusto,
-          unidade: userName,
+          unidade: userData?.unidade || "",
           unidade_de_medida: item.unidade_de_medida,
           data_saida: serverTimestamp(),
           data_registro: serverTimestamp(),
@@ -358,16 +362,32 @@ const BaixaRequisicao = () => {
     <AppLayout title="Baixa Requisição">
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <Package className="h-8 w-8 text-primary" />
-            <h1 className="text-xl sm:text-2xl font-bold">Baixa Requisição</h1>
-          </div>
-          <Button onClick={abrirModal} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Produto
-          </Button>
+        <div className="flex items-center gap-4 mb-6">
+          <Package className="h-8 w-8 text-primary" />
+          <h1 className="text-xl sm:text-2xl font-bold">Baixa Requisição</h1>
         </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="nova-baixa" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="nova-baixa" className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Nova Baixa
+            </TabsTrigger>
+            <TabsTrigger value="historico" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Histórico
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="nova-baixa">
+            {/* Botão Adicionar */}
+            <div className="flex justify-end mb-6">
+              <Button onClick={abrirModal} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Produto
+              </Button>
+            </div>
 
         {/* Lista de itens */}
         {isLoading ? (
@@ -545,6 +565,12 @@ const BaixaRequisicao = () => {
             </div>
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="historico">
+            <HistoricoBaixas />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modal Lateral */}
