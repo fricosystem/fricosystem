@@ -369,7 +369,7 @@ const BaixaRequisicao = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="nova-baixa" className="w-full">
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 w-full max-w-md mx-auto grid grid-cols-2">
             <TabsTrigger value="nova-baixa" className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
               Nova Baixa
@@ -389,182 +389,182 @@ const BaixaRequisicao = () => {
               </Button>
             </div>
 
-        {/* Lista de itens */}
-        {isLoading ? (
-          <div className="text-center py-12 bg-muted/30 rounded-lg border">
-            <Loader2 className="mx-auto h-12 w-12 text-muted-foreground animate-spin mb-4" />
-            <p className="text-lg text-muted-foreground">Carregando...</p>
-          </div>
-        ) : itensBaixa.length === 0 ? (
-          <div className="text-center py-12 bg-muted/30 rounded-lg border">
-            <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg text-muted-foreground mb-4">Nenhum produto adicionado</p>
-            <Button onClick={abrirModal}>
-              Adicionar Produto
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="bg-card rounded-lg shadow overflow-x-auto">
-              {/* Cabeçalho da tabela - Desktop */}
-              <div className="hidden md:grid grid-cols-[1fr,3fr,1fr,1fr,1fr,auto] gap-4 p-4 font-medium border-b">
-                <div>Imagem</div>
-                <div>Produto</div>
-                <div className="text-center">Quantidade</div>
-                <div className="text-right">Preço Unit.</div>
-                <div className="text-right">Subtotal</div>
-                <div className="w-10"></div>
+            {/* Lista de itens */}
+            {isLoading ? (
+              <div className="text-center py-12 bg-muted/30 rounded-lg border">
+                <Loader2 className="mx-auto h-12 w-12 text-muted-foreground animate-spin mb-4" />
+                <p className="text-lg text-muted-foreground">Carregando...</p>
               </div>
-  
-              {itensBaixa.map(item => (
-                <div key={item.id} className="border-b last:border-b-0">
-                  {/* Desktop */}
-                  <div className="hidden md:grid grid-cols-[1fr,3fr,1fr,1fr,1fr,auto] gap-4 p-4 items-center">
-                    <div>
-                      <img 
-                        src={item.imagem} 
-                        alt={item.nome} 
-                        className="w-16 h-16 object-cover rounded" 
-                      />
-                    </div>
-                    <div>
-                      <div className="font-medium">{item.nome}</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        <p>Código: {item.codigo_material || "N/A"} | Centro de Custo: {item.centroDeCusto}</p>
-                        <p>Disponível: {item.quantidadeDisponivel} {item.unidade_de_medida}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <div className="flex items-center border rounded-md">
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 p-0 rounded-none"
-                          onClick={() => alterarQuantidade(item.id, -1)}
-                          disabled={item.quantidade <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-10 text-center font-medium">{item.quantidade}</span>
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 p-0 rounded-none"
-                          onClick={() => alterarQuantidade(item.id, 1)}
-                          disabled={item.quantidade >= item.quantidadeDisponivel}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      {formatCurrency(item.valor_unitario)}
-                    </div>
-                    <div className="text-right font-medium">
-                      {formatCurrency(item.valor_unitario * item.quantidade)}
-                    </div>
-                    <div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive-foreground hover:bg-destructive/20"
-                        onClick={() => removerItem(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+            ) : itensBaixa.length === 0 ? (
+              <div className="text-center py-12 bg-muted/30 rounded-lg border">
+                <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-lg text-muted-foreground mb-4">Nenhum produto adicionado</p>
+                <Button onClick={abrirModal}>
+                  Adicionar Produto
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-card rounded-lg shadow overflow-x-auto">
+                  {/* Cabeçalho da tabela - Desktop */}
+                  <div className="hidden md:grid grid-cols-[1fr,3fr,1fr,1fr,1fr,auto] gap-4 p-4 font-medium border-b">
+                    <div>Imagem</div>
+                    <div>Produto</div>
+                    <div className="text-center">Quantidade</div>
+                    <div className="text-right">Preço Unit.</div>
+                    <div className="text-right">Subtotal</div>
+                    <div className="w-10"></div>
                   </div>
-                  
-                  {/* Mobile */}
-                  <div className="md:hidden p-4 space-y-3">
-                    <div className="flex gap-3">
-                      <img 
-                        src={item.imagem} 
-                        alt={item.nome} 
-                        className="w-16 h-16 object-cover rounded flex-shrink-0" 
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{item.nome}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Código: {item.codigo_material || "N/A"}
+    
+                  {itensBaixa.map(item => (
+                    <div key={item.id} className="border-b last:border-b-0">
+                      {/* Desktop */}
+                      <div className="hidden md:grid grid-cols-[1fr,3fr,1fr,1fr,1fr,auto] gap-4 p-4 items-center">
+                        <div>
+                          <img 
+                            src={item.imagem} 
+                            alt={item.nome} 
+                            className="w-16 h-16 object-cover rounded" 
+                          />
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          Centro de Custo: {item.centroDeCusto}
+                        <div>
+                          <div className="font-medium">{item.nome}</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            <p>Código: {item.codigo_material || "N/A"} | Centro de Custo: {item.centroDeCusto}</p>
+                            <p>Disponível: {item.quantidadeDisponivel} {item.unidade_de_medida}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <div className="flex items-center border rounded-md">
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 p-0 rounded-none"
+                              onClick={() => alterarQuantidade(item.id, -1)}
+                              disabled={item.quantidade <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-10 text-center font-medium">{item.quantidade}</span>
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 p-0 rounded-none"
+                              onClick={() => alterarQuantidade(item.id, 1)}
+                              disabled={item.quantidade >= item.quantidadeDisponivel}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {formatCurrency(item.valor_unitario)}
+                        </div>
+                        <div className="text-right font-medium">
+                          {formatCurrency(item.valor_unitario * item.quantidade)}
+                        </div>
+                        <div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive-foreground hover:bg-destructive/20"
+                            onClick={() => removerItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="h-8 w-8 text-destructive flex-shrink-0"
-                        onClick={() => removerItem(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      
+                      {/* Mobile */}
+                      <div className="md:hidden p-4 space-y-3">
+                        <div className="flex gap-3">
+                          <img 
+                            src={item.imagem} 
+                            alt={item.nome} 
+                            className="w-16 h-16 object-cover rounded flex-shrink-0" 
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{item.nome}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Código: {item.codigo_material || "N/A"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Centro de Custo: {item.centroDeCusto}
+                            </div>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8 text-destructive flex-shrink-0"
+                            onClick={() => removerItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center border rounded-md">
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 p-0 rounded-none"
+                              onClick={() => alterarQuantidade(item.id, -1)}
+                              disabled={item.quantidade <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-10 text-center font-medium">{item.quantidade}</span>
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 p-0 rounded-none"
+                              onClick={() => alterarQuantidade(item.id, 1)}
+                              disabled={item.quantidade >= item.quantidadeDisponivel}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-muted-foreground">{formatCurrency(item.valor_unitario)} x {item.quantidade}</div>
+                            <div className="font-medium">{formatCurrency(item.valor_unitario * item.quantidade)}</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center border rounded-md">
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 p-0 rounded-none"
-                          onClick={() => alterarQuantidade(item.id, -1)}
-                          disabled={item.quantidade <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-10 text-center font-medium">{item.quantidade}</span>
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 p-0 rounded-none"
-                          onClick={() => alterarQuantidade(item.id, 1)}
-                          disabled={item.quantidade >= item.quantidadeDisponivel}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-muted-foreground">{formatCurrency(item.valor_unitario)} x {item.quantidade}</div>
-                        <div className="font-medium">{formatCurrency(item.valor_unitario * item.quantidade)}</div>
-                      </div>
+                  ))}
+    
+                  <div className="p-4 bg-muted/20">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Total</span>
+                      <span className="text-xl font-bold">{formatCurrency(valorTotal)}</span>
                     </div>
                   </div>
                 </div>
-              ))}
-  
-              <div className="p-4 bg-muted/20">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Total</span>
-                  <span className="text-xl font-bold">{formatCurrency(valorTotal)}</span>
-                </div>
-              </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row justify-between gap-4">
-              <Button variant="outline" onClick={abrirModal}>
-                Adicionar Mais Produtos
-              </Button>
-              <Button 
-                onClick={finalizarBaixa} 
-                disabled={isSubmitting || itensBaixa.length === 0}
-                className="sm:ml-auto"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  "Finalizar Baixa"
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
+                <div className="flex flex-col sm:flex-row justify-between gap-4">
+                  <Button variant="outline" onClick={abrirModal}>
+                    Adicionar Mais Produtos
+                  </Button>
+                  <Button 
+                    onClick={finalizarBaixa} 
+                    disabled={isSubmitting || itensBaixa.length === 0}
+                    className="sm:ml-auto"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      "Finalizar Baixa"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="historico">
