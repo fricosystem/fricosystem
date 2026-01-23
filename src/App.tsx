@@ -20,6 +20,7 @@ import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
 import Carrinho from "./pages/Carrinho";
 import Requisicoes from "./pages/Requisicoes";
+import BaixaRequisicao from "./pages/BaixaRequisicao";
 import DevolucaoMateriais from "./pages/DevolucaoMateriais";
 import Enderecamento from "./pages/Enderecamento";
 import ParadaMaquina from "./pages/ParadaMaquina";
@@ -169,6 +170,7 @@ const AppContent = () => {
           <Route path="/perfil" element={<AuthGuard><Perfil /></AuthGuard>} />
           <Route path="/carrinho" element={<AuthGuard><Carrinho /></AuthGuard>} />
           <Route path="/requisicoes" element={<AuthGuard><Requisicoes /></AuthGuard>} />
+          <Route path="/baixa-requisicao" element={<AuthGuard><BaixaRequisicao /></AuthGuard>} />
           <Route path="/devolucao" element={<AuthGuard><DevolucaoMateriais /></AuthGuard>} />
           <Route path="/enderecamento" element={<AuthGuard><Enderecamento /></AuthGuard>} />
           <Route path="/parada-maquina" element={<AuthGuard><EncarregadoGuard><ParadaMaquina /></EncarregadoGuard></AuthGuard>} />
