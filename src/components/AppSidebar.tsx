@@ -144,6 +144,12 @@ const AppSidebar = () => {
       icon: TreePine,
       label: "Cubagem e medida de Lenha",
       permission: "medida_lenha"
+    },
+     {
+      to: "/baixa-requisicao",
+      icon: ClipboardCheck,
+      label: "Baixa Requisição",
+      permission: "baixa-requisicao"
     }, {
       to: "/relatorios",
       icon: FileSpreadsheet,
