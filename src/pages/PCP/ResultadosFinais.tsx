@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { RefreshCw, CalendarIcon } from "lucide-react";
+import { RefreshCw, CalendarIcon, Clock, Layers, BarChart2 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -374,15 +374,25 @@ const ResultadosFinais: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div>
+          <div>
               <Label>Período</Label>
               <Tabs value={periodType} onValueChange={(value: PeriodType) => setPeriodType(value)} className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="dia">Ontem</TabsTrigger>
-                  <TabsTrigger value="semana">Semana</TabsTrigger>
-                  <TabsTrigger value="mes">Mês</TabsTrigger>
-                  <TabsTrigger value="ano">Ano</TabsTrigger>
-                  <TabsTrigger value="personalizado">Personalizado</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <TabsTrigger value="dia" className="flex items-center gap-2 rounded-l-lg rounded-r-none">
+                    <Clock className="h-4 w-4" /> Ontem
+                  </TabsTrigger>
+                  <TabsTrigger value="semana" className="flex items-center gap-2 rounded-none">
+                    <CalendarIcon className="h-4 w-4" /> Semana
+                  </TabsTrigger>
+                  <TabsTrigger value="mes" className="flex items-center gap-2 rounded-none">
+                    <Layers className="h-4 w-4" /> Mês
+                  </TabsTrigger>
+                  <TabsTrigger value="ano" className="flex items-center gap-2 rounded-none">
+                    <BarChart2 className="h-4 w-4" /> Ano
+                  </TabsTrigger>
+                  <TabsTrigger value="personalizado" className="flex items-center gap-2 rounded-r-lg rounded-l-none">
+                    <CalendarIcon className="h-4 w-4" /> Personalizado
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>

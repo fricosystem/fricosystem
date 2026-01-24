@@ -17,6 +17,8 @@ import { db } from "@/firebase/firebase";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getCachedCollection } from "@/lib/offlineDB";
+import { getThemedLogo } from "@/hooks/useThemedLogo";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ScannedData {
   setor: string;
@@ -41,6 +43,10 @@ export default function ParadaMaquina() {
     concluidas: 0,
     total: 0
   });
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [logoError, setLogoError] = useState(false);
+  const [logoLoaded, setLogoLoaded] = useState(false);
+  const { user } = useAuth();
 
   // Carregar contagem de OS abertas
   useEffect(() => {
@@ -72,6 +78,43 @@ export default function ParadaMaquina() {
       setSubTab("nova-os");
     }
   }, [activeTab]);
+
+  // Carregar tema para o logo
+  useEffect(() => {
+    const loadTheme = async () => {
+      const userEmail = user?.email;
+      if (!userEmail) return;
+      
+      try {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const savedTheme = localStorage.getItem("theme") as "light" | "dark" || (prefersDark ? "dark" : "light");
+        setTheme(savedTheme);
+      } catch (error) {
+        console.error("Erro ao carregar tema:", error);
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const fallbackTheme = prefersDark ? "dark" : "light";
+        setTheme(fallbackTheme);
+      }
+    };
+    
+    loadTheme();
+  }, [user]);
+
+  // Obter o logo baseado no tema
+  const logoPath = getThemedLogo(theme);
+
+  // Função para lidar com erro na imagem
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    console.error("Erro ao carregar imagem do logo:", e);
+    setLogoError(true);
+    setLogoLoaded(false);
+  };
+
+  // Função para quando a imagem carrega com sucesso
+  const handleImageLoad = () => {
+    setLogoLoaded(true);
+    setLogoError(false);
+  };
   
   const handleQrCodeScanned = async (code: string) => {
     const isOffline = !navigator.onLine;
@@ -188,7 +231,24 @@ export default function ParadaMaquina() {
         {/* Header Fixo */}
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
           <div className="container mx-auto py-4 px-6 flex items-center gap-3">
-            <img src="/public/APEX LOGO.png" alt="Fricó" className="h-10 w-10 object-contain" />
+            {/* Logo usando o mesmo hook useThemedLogo */}
+            {logoError ? (
+              <div 
+                className="h-10 w-10 rounded-full flex items-center justify-center bg-gradient-to-br from-[#0e7490] to-[#0891b2] text-white font-bold text-sm cursor-default"
+                title="APEX HUB"
+              >
+                APEX
+              </div>
+            ) : (
+              <img 
+                src={logoPath} 
+                alt="APEX HUB Logo" 
+                className="h-10 w-10 object-contain"
+                onError={handleImageError}
+                onLoad={handleImageLoad}
+                loading="lazy"
+              />
+            )}
             <div>
               <h1 className="text-lg sm:text-xl font-bold">{getPageTitle()}</h1>
               <p className="text-xs text-muted-foreground">{getPageSubtitle()}</p>

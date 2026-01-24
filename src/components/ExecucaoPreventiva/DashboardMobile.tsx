@@ -1170,53 +1170,53 @@ export function DashboardMobile({ stats, tarefasHoje, tarefasAtrasadas, execucoe
       <Tabs defaultValue="preventivas" className="w-full">
         {/* Tab Navigation - Sticky no topo */}
         <div className="sticky top-0 z-20 bg-background pb-3 pt-1">
-          <TabsList className="w-full flex flex-nowrap overflow-x-auto h-auto gap-1 bg-muted border border-border p-1.5 rounded-lg shadow-sm">
+          <TabsList className="w-full flex flex-nowrap overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-lg">
             <TabsTrigger 
               value="preventivas" 
-              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+              className="flex items-center justify-center gap-2 flex-1 min-w-0 px-4 py-3 rounded-l-lg rounded-r-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
-              <Wrench className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Preventivas</span>
-              <span className="sm:hidden">Prev.</span>
+              <Wrench className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">Preventivas</span>
+              <span className="sm:hidden truncate">Prev.</span>
             </TabsTrigger>
             <TabsTrigger 
               value="paradas" 
-              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+              className="flex items-center justify-center gap-2 flex-1 min-w-0 px-4 py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Paradas</span>
-              <span className="sm:hidden">Par.</span>
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">Paradas</span>
+              <span className="sm:hidden truncate">Par.</span>
             </TabsTrigger>
             <TabsTrigger 
               value="os" 
-              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+              className="flex items-center justify-center gap-2 flex-1 min-w-0 px-4 py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
-              <ClipboardCheck className="h-3.5 w-3.5" />
-              <span>OS</span>
+              <ClipboardCheck className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">OS</span>
             </TabsTrigger>
             <TabsTrigger 
               value="indicadores" 
-              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+              className="flex items-center justify-center gap-2 flex-1 min-w-0 px-4 py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
-              <Target className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Indicadores</span>
-              <span className="sm:hidden">Ind.</span>
+              <Target className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">Indicadores</span>
+              <span className="sm:hidden truncate">Ind.</span>
             </TabsTrigger>
             <TabsTrigger 
               value="metas" 
-              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+              className="flex items-center justify-center gap-2 flex-1 min-w-0 px-4 py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
-              <Award className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Metas</span>
-              <span className="sm:hidden">Met.</span>
+              <Award className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">Metas</span>
+              <span className="sm:hidden truncate">Met.</span>
             </TabsTrigger>
             <TabsTrigger 
               value="resumo" 
-              className="flex items-center gap-1.5 flex-shrink-0 px-3 py-2 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+              className="flex items-center justify-center gap-2 flex-1 min-w-0 px-4 py-3 rounded-r-lg rounded-l-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
-              <BarChart3 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Resumo</span>
-              <span className="sm:hidden">Res.</span>
+              <BarChart3 className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">Resumo</span>
+              <span className="sm:hidden truncate">Res.</span>
             </TabsTrigger>
           </TabsList>
         </div>
