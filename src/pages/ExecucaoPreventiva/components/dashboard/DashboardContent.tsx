@@ -5,7 +5,8 @@ import { FiltroData } from "./dashboardUtils";
 import { SecaoPreventivas } from "./SecaoPreventivas";
 import { SecaoParadas } from "./SecaoParadas";
 import { SecaoOS } from "./SecaoOS";
-import { TabelasResumo } from "./TabelasResumo";
+import { SecaoIndicadores } from "./SecaoIndicadores";
+import { SecaoResumo } from "./SecaoResumo";
 import { SecaoDashboard } from "./dashboardUtils";
 import { ParadaMaquinaData, SetorData } from "./hooks/useDashboardData";
 import { SectionRefs } from "./hooks/useDashboardNavigation";
@@ -131,9 +132,8 @@ export function DashboardContent({
         </TabsContent>
 
         <TabsContent value="indicadores">
-          <TabelasResumo
+          <SecaoIndicadores
             paradasMaquina={paradasMaquina}
-            setores={setores}
             historicoExecucoes={historicoExecucoes}
             filtro={filtroTabelas}
             onFiltroChange={onFiltroTabelasChange}
@@ -141,7 +141,7 @@ export function DashboardContent({
         </TabsContent>
 
         <TabsContent value="resumo">
-          <TabelasResumo
+          <SecaoResumo
             paradasMaquina={paradasMaquina}
             setores={setores}
             historicoExecucoes={historicoExecucoes}

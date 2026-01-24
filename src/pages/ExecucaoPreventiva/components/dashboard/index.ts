@@ -4,6 +4,8 @@ export * from "./DashboardNavigation";
 export * from "./SecaoPreventivas";
 export * from "./SecaoParadas";
 export * from "./SecaoOS";
+export * from "./SecaoIndicadores";
+export * from "./SecaoResumo";
 export * from "./TabelasResumo";
 export * from "./DashboardLoading";
 export * from "./DashboardContent";
