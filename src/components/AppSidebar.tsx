@@ -300,10 +300,14 @@ const AppSidebar = () => {
       label: "Controle de Qualidade",
       icon: Shield,
       items: [
-        { to: "/inspecao-entrada", icon: FileText, label: "Inspeção de Entrada", permission: "inspecao_entrada" },
-        { to: "/inspecao-saida", icon: FileText, label: "Inspeção de Saída", permission: "inspecao_saida" },
-        { to: "/nao-conformidades", icon: AlertTriangle, label: "Não Conformidades", permission: "nao_conformidades" },
-        { to: "/relatorios-qc", icon: FileSpreadsheet, label: "Relatórios QC", permission: "relatorios_qc" }
+        { to: "/dashboard-cq", icon: FileText, label: "Dashboard", permission: "dashboard-cq" },
+        { to: "/planilhas-cq", icon: FileText, label: "Planilhas", permission: "planilhas" },
+        { to: "/agendamento-cq", icon: FileText, label: "Agendamento", permission: "agendamento-cq" },
+        { to: "/melhoria-continua-cq", icon: AlertTriangle, label: "Melhoria Contínua", permission: "melhoria-continua-cq" },
+        { to: "/rastreabilidade-cq", icon: AlertTriangle, label: "Rastreabilidade", permission: "rastreabilidade-cq" },
+        { to: "/relatorios-cq", icon: FileSpreadsheet, label: "Relatórios", permission: "relatorios_qc" },
+        { to: "/cadastros-cq", icon: FileSpreadsheet, label: "Cadastros", permission: "cadastros_qc" },
+        { to: "/configuracoes-cq", icon: FileSpreadsheet, label: "Configurações", permission: "configuracoes_qc" }
       ]
     },
     // 👆 Fim da nova categoria
