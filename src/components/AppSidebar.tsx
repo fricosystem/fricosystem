@@ -249,8 +249,7 @@ const AppSidebar = () => {
         { to: "/compras", icon: ShoppingBag, label: "Compras", permission: "compras" },
         { to: "/cotacoes-orcamentos", icon: Receipt, label: "Cotações e Orçamentos", permission: "cotacoes_orcamentos" },
         { to: "/rastreamento-entregas", icon: Truck, label: "Rastreamento de Entregas", permission: "rastreamento_entregas" },
-        { to: "/calendario-recebimento", icon: CalendarCheck, label: "Calendário de Recebimento", permission: "calendario_recebimento" },
-        { to: "/ordens-servico", icon: ClipboardList, label: "Ordens de Serviço", permission: "ordens_servico" }
+        { to: "/calendario-recebimento", icon: CalendarCheck, label: "Calendário de Recebimento", permission: "calendario_recebimento" }
       ]
     },
     {
