@@ -55,7 +55,7 @@ export default function ExecucaoPreventiva() {
   useEffect(() => {
     const fetchParadasPendentes = async () => {
       try {
-        const paradasRef = collection(db, "paradasMaquina");
+        const paradasRef = collection(db, "paradas_maquina");
         const q = query(paradasRef, where("status", "in", ["pendente", "em_andamento"]));
         const snapshot = await getDocs(q);
         setParadasPendentes(snapshot.size);
