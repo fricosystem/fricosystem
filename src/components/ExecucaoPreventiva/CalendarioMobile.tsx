@@ -105,8 +105,8 @@ export function CalendarioMobile({ tarefas, onTarefaClick, execucoesPorTarefa = 
   const tarefasDiaSelecionado = diaSelecionado ? getTarefasDoDia(diaSelecionado) : [];
 
   return (
-    <div className="space-y-4 pb-20">
-      <Card>
+    <div className="flex flex-col h-full gap-3">
+      <Card className="flex-shrink-0">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <Button variant="ghost" size="icon" onClick={mesAnterior}>
@@ -222,13 +222,13 @@ export function CalendarioMobile({ tarefas, onTarefaClick, execucoesPorTarefa = 
 
       {/* Tarefas do dia selecionado */}
       {diaSelecionado && (
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="text-base">
               Tarefas em {diaSelecionado.toLocaleDateString('pt-BR')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 overflow-auto">
             {tarefasDiaSelecionado.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Nenhuma tarefa neste dia
