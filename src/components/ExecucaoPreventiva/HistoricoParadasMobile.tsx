@@ -12,44 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { HistoricoAcoesTimeline } from "@/components/ParadaMaquina/HistoricoAcoesTimeline";
-
-interface ProdutoUtilizado {
-  produtoId: string;
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
-  valorTotal: number;
-}
-
-interface ParadaMaquina {
-  id: string;
-  setor: string;
-  equipamento: string;
-  hrInicial: string;
-  hrFinal: string;
-  linhaParada: string;
-  descricaoMotivo: string;
-  observacao: string;
-  origemParada: {
-    automatizacao: boolean;
-    terceiros: boolean;
-    eletrica: boolean;
-    mecanica: boolean;
-    outro: boolean;
-  };
-  responsavelManutencao: string;
-  encarregadoNome?: string;
-  tipoManutencao: string;
-  tipoFalha?: string;
-  solucaoAplicada: string;
-  produtosUtilizados: ProdutoUtilizado[];
-  valorTotalProdutos: number;
-  criadoPor: string;
-  criadoEm: Timestamp;
-  status: string;
-  tentativaAtual?: number;
-  historicoAcoes?: any[];
-}
+import { ParadaMaquina, getOrigensParadaArray } from "@/types/typesParadaMaquina";
 
 interface Usuario {
   id: string;
@@ -171,14 +134,7 @@ export function HistoricoParadasMobile() {
   };
 
   const getOrigensParada = (origens: ParadaMaquina["origemParada"]) => {
-    if (!origens) return [];
-    const tipos = [];
-    if (origens.automatizacao) tipos.push("Automatização");
-    if (origens.terceiros) tipos.push("Terceiros");
-    if (origens.eletrica) tipos.push("Elétrica");
-    if (origens.mecanica) tipos.push("Mecânica");
-    if (origens.outro) tipos.push("Outro");
-    return tipos;
+    return getOrigensParadaArray(origens);
   };
 
   const formatCurrency = (value: number) => {
