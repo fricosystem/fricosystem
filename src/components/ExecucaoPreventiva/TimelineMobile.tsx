@@ -88,9 +88,9 @@ export function TimelineMobile({ tarefas, execucoesPorTarefa = {}, historicoExec
   // Render view based on activeView
   if (activeView === "calendario") {
     return (
-      <div className="pb-20">
+      <div className="flex flex-col h-[calc(100vh-180px)] pb-20">
       {/* Abas de visualização */}
-        <div className="flex justify-center py-3 mb-4">
+        <div className="flex justify-center py-3 mb-2 flex-shrink-0">
           <div className="inline-flex items-center bg-muted/30 rounded-xl p-1 backdrop-blur-sm border border-border/50">
             {viewTabs.map((tab) => (
               <button
@@ -108,7 +108,9 @@ export function TimelineMobile({ tarefas, execucoesPorTarefa = {}, historicoExec
             ))}
           </div>
         </div>
-        <CalendarioMobile tarefas={tarefas} execucoesPorTarefa={execucoesPorTarefa} />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <CalendarioMobile tarefas={tarefas} execucoesPorTarefa={execucoesPorTarefa} />
+        </div>
       </div>
     );
   }
