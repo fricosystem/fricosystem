@@ -105,9 +105,12 @@ export function HistoricoOS() {
             </p>
             <div className="flex justify-between items-center text-xs text-muted-foreground">
               <span>{ordem.responsavelChamado}</span>
-              {ordem.dataAberturaOS && (
-                <span>{format(new Date(ordem.dataAberturaOS), "dd/MM/yyyy", { locale: ptBR })}</span>
-              )}
+              {ordem.dataAberturaOS && (() => {
+                const date = new Date(ordem.dataAberturaOS);
+                return !isNaN(date.getTime()) ? (
+                  <span>{format(date, "dd/MM/yyyy", { locale: ptBR })}</span>
+                ) : null;
+              })()}
             </div>
           </CardContent>
         </Card>
