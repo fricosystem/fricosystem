@@ -107,6 +107,7 @@ export const useParadaMaquina = () => {
   useEffect(() => {
     const verificarParadasExpiradas = async () => {
       const agora = new Date();
+      const dataAtualStr = agora.toISOString().split('T')[0]; // YYYY-MM-DD
       const horaAtual = agora.getHours().toString().padStart(2, '0') + ':' + agora.getMinutes().toString().padStart(2, '0');
       
       for (const parada of paradas) {
@@ -116,8 +117,26 @@ export const useParadaMaquina = () => {
         const hrFinal = parada.hrFinal;
         if (!hrFinal) continue;
         
-        // Se a hora atual passou da hora final, marcar como não executada
-        if (horaAtual >= hrFinal) {
+        // Verifica se a parada expirou considerando a data programada
+        let expirada = false;
+        
+        if (parada.dataProgramada) {
+          // Se tem data programada, compara data + hora
+          if (parada.dataProgramada < dataAtualStr) {
+            // Data programada já passou
+            expirada = true;
+          } else if (parada.dataProgramada === dataAtualStr && horaAtual >= hrFinal) {
+            // É hoje e a hora já passou
+            expirada = true;
+          }
+        } else {
+          // Sem data programada, considera apenas a hora do dia atual
+          if (horaAtual >= hrFinal) {
+            expirada = true;
+          }
+        }
+        
+        if (expirada) {
           try {
             const paradaRef = doc(db, "paradas_maquina", parada.id);
             const novoHistorico: HistoricoAcao = {
