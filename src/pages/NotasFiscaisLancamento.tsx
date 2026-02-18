@@ -41,6 +41,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -609,21 +610,23 @@ const NotasFiscaisLancamento = () => {
                           value={searchFornecedor}
                           onValueChange={setSearchFornecedor}
                         />
-                        <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
-                        <CommandGroup className="max-h-[300px] overflow-y-auto">
-                          {filteredFornecedores.map((fornecedor) => (
-                            <CommandItem
-                              key={fornecedor.id}
-                              value={`${fornecedor.cnpj} - ${fornecedor.razaoSocial}`}
-                              onSelect={() => handleSelectFornecedor(fornecedor)}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium">{fornecedor.razaoSocial}</span>
-                                <span className="text-sm text-muted-foreground">{fornecedor.cnpj}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
+                        <CommandList>
+                          <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredFornecedores.map((fornecedor) => (
+                              <CommandItem
+                                key={fornecedor.id}
+                                value={`${fornecedor.cnpj} - ${fornecedor.razaoSocial}`}
+                                onSelect={() => handleSelectFornecedor(fornecedor)}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{fornecedor.razaoSocial}</span>
+                                  <span className="text-sm text-muted-foreground">{fornecedor.cnpj}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
@@ -855,21 +858,23 @@ const NotasFiscaisLancamento = () => {
                           value={searchFornecedor}
                           onValueChange={setSearchFornecedor}
                         />
-                        <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
-                        <CommandGroup className="max-h-[300px] overflow-y-auto">
-                          {filteredFornecedores.map((fornecedor) => (
-                            <CommandItem
-                              key={fornecedor.id}
-                              value={`${fornecedor.cnpj} - ${fornecedor.razaoSocial}`}
-                              onSelect={() => handleSelectFornecedor(fornecedor)}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium">{fornecedor.razaoSocial}</span>
-                                <span className="text-sm text-muted-foreground">{fornecedor.cnpj}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
+                        <CommandList>
+                          <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredFornecedores.map((fornecedor) => (
+                              <CommandItem
+                                key={fornecedor.id}
+                                value={`${fornecedor.cnpj} - ${fornecedor.razaoSocial}`}
+                                onSelect={() => handleSelectFornecedor(fornecedor)}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{fornecedor.razaoSocial}</span>
+                                  <span className="text-sm text-muted-foreground">{fornecedor.cnpj}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>

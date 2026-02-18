@@ -23,9 +23,7 @@ export const ManutencaoAlertsProvider = ({ children }: { children: ReactNode }) 
     const alertasRef = collection(db, "alertas_manutencao");
     const q = query(
       alertasRef,
-      where("lido", "==", false),
-      orderBy("urgencia", "desc"),
-      orderBy("diasRestantes", "asc")
+      where("lido", "==", false)
     );
 
     const unsubscribe = onSnapshot(
@@ -38,6 +36,22 @@ export const ManutencaoAlertsProvider = ({ children }: { children: ReactNode }) 
             ...doc.data(),
           } as AlertaManutencao);
         });
+        
+        // Ordenar em memória: primeiro por urgência (desc) e depois por dias restantes (asc)
+        novosAlertas.sort((a, b) => {
+          // Mapear urgência para valores numéricos para ordenação
+          const urgenciaOrder = { critico: 3, alto: 2, medio: 1, baixo: 0 };
+          const ordemUrgenciaA = urgenciaOrder[a.urgencia] || 0;
+          const ordemUrgenciaB = urgenciaOrder[b.urgencia] || 0;
+          
+          if (ordemUrgenciaB !== ordemUrgenciaA) {
+            return ordemUrgenciaB - ordemUrgenciaA; // descendente
+          }
+          
+          // Se urgência igual, ordenar por dias restantes (ascendente)
+          return (a.diasRestantes || 0) - (b.diasRestantes || 0);
+        });
+        
         setAlertas(novosAlertas);
         setCarregando(false);
       },

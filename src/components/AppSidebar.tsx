@@ -193,6 +193,7 @@ const AppSidebar = () => {
       items: [
         { to: "/produtos", icon: PackageCheck, label: "Produtos", permission: "produtos" },
         { to: "/inventario", icon: Scan, label: "Inventário", permission: "inventario" },
+        { to: "/identificacao-produtos", icon: PackageSearch, label: "Identificação de Produtos" },
         { to: "/inventario-ciclico", icon: ListChecks, label: "Inventário Cíclico", permission: "inventario_ciclico" },
         { to: "/entrada-manual", icon: PackagePlus, label: "Entrada Manual", permission: "entrada_manual" },
         { to: "/notas-fiscais", icon: FileInput, label: "NF - Entrada XML", permission: "notas_fiscais" },
@@ -217,7 +218,8 @@ const AppSidebar = () => {
         { to: "/manutencao-preventiva", icon: Calendar, label: "Manutenção Preventiva", permission: "manutencao_preventiva" },
         { to: "/execucao-manutencao", icon: ClipboardCheck, label: "Execução de Manutenção", permission: "execucao_preventiva" },
         { to: "/parada-maquina", icon: Wrench, label: "Parada de Máquina", permission: "parada_maquina" },
-        { to: "/ordens-servico", icon: ClipboardList, label: "Ordens de Serviço", permission: "ordens_servico" }
+        { to: "/ordens-servico", icon: ClipboardList, label: "Ordens de Serviço", permission: "ordens_servico" },
+        { to: "/envio-retorno", icon: Truck, label: "Envio/Retorno", permission: "envio_retorno" }
       ]
     },
     {
