@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Bot, User, Loader2, Send } from "lucide-react";
+import { Bot, User, Loader2, Send, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import skillPrompt from "@/AI/Skill.md?raw";
+import { getGroqApiKey } from "@/services/apiKeyService";
 
 interface ProdutoSugestao {
   id: string;
@@ -917,11 +918,20 @@ const fetchWithTimeout = async (input: RequestInfo | URL, init?: RequestInit & {
   }
 };
 
-// Configuração da API do Groq
-const GROQ_CONFIG = {
-  baseUrl: "https://api.groq.com/openai/v1",
-  apiKey: (import.meta as any).env?.VITE_GROQ_API_KEY as string,
-  model: (import.meta as any).env?.VITE_GROQ_MODEL || "llama-3.3-70b-versatile",
+// Configuração da API do Groq será carregada dinamicamente
+const getGroqConfig = async () => {
+  const apiKey = await getGroqApiKey();
+  
+  if (!apiKey) {
+    console.error("[v0] Chave de API do Groq não foi encontrada na coleção 'api_key'. Configure a chave antes de usar o APEX Chat.");
+    return null;
+  }
+
+  return {
+    baseUrl: "https://api.groq.com/openai/v1",
+    apiKey: apiKey,
+    model: (import.meta as any).env?.VITE_GROQ_MODEL || "llama-3.3-70b-versatile",
+  };
 };
 
 // Componente para renderizar Markdown básico
@@ -1010,7 +1020,25 @@ Como posso ajudá-lo hoje?`,
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isApiConfigured, setIsApiConfigured] = useState<boolean | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Verificar se a API está configurada quando o chat abrir
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const checkApiConfiguration = async () => {
+      try {
+        const apiKey = await getGroqApiKey();
+        setIsApiConfigured(!!apiKey);
+      } catch (error) {
+        console.error("[v0] Erro ao verificar API:", error);
+        setIsApiConfigured(false);
+      }
+    };
+
+    checkApiConfiguration();
+  }, [isOpen]);
 
   // Carregar histórico do Firebase quando o chat abrir
   useEffect(() => {
@@ -1144,18 +1172,19 @@ Diretrizes:
         throw new Error("Sem conexao com a internet");
       }
 
-      if (!GROQ_CONFIG.apiKey) {
-        throw new Error("Chave da API Groq nao configurada");
+      const groqConfig = await getGroqConfig();
+      if (!groqConfig) {
+        throw new Error("Chave da API Groq nao configurada na colecao 'api_key'. Configure o campo 'groq' antes de usar o APEX Chat.");
       }
 
-      const response = await fetchWithTimeout(`${GROQ_CONFIG.baseUrl}/chat/completions`, {
+      const response = await fetchWithTimeout(`${groqConfig.baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${GROQ_CONFIG.apiKey}`,
+          "Authorization": `Bearer ${groqConfig.apiKey}`,
         },
         body: JSON.stringify({
-          model: GROQ_CONFIG.model,
+          model: groqConfig.model,
           messages: apiMessages,
           max_tokens: 4096,
           temperature: 0.7,
@@ -1379,17 +1408,28 @@ Diretrizes:
           </div>
         </ScrollArea>
 
-        <div className="p-4 border-t">
+        <div className="p-4 border-t space-y-3">
+          {isApiConfigured === false && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-2 text-sm text-yellow-800">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 text-yellow-600 mt-0.5" />
+              <div>
+                <strong>Chave de API não configurada</strong>
+                <p className="text-xs mt-1">
+                  Adicione sua chave do Groq no campo <code className="bg-yellow-100 px-1 rounded">groq</code> da coleção <code className="bg-yellow-100 px-1 rounded">api_key</code> no Firebase.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="flex gap-2">
             <Input
               placeholder="Pergunte sobre produtos, fornecedores, equipamentos..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              disabled={isLoading}
+              disabled={isLoading || isApiConfigured === false}
               className="flex-1"
             />
-            <Button size="icon" onClick={handleSend} disabled={isLoading || !input.trim()}>
+            <Button size="icon" onClick={handleSend} disabled={isLoading || !input.trim() || isApiConfigured === false}>
               <Send className="w-4 h-4" />
             </Button>
           </div>

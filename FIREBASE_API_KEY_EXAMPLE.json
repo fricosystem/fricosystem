@@ -1,0 +1,37 @@
+{
+  "colecao": "api_key",
+  "documento_id": "configuracao_principal",
+  "campos": {
+    "groq": {
+      "tipo": "String",
+      "descricao": "Chave de API do Groq para o APEX Chat",
+      "exemplo": "gsk_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "importante": "A chave deve começar com 'gsk_' e ser obtida em https://console.groq.com"
+    },
+    "criado_em": {
+      "tipo": "Timestamp",
+      "descricao": "Data de criação do documento",
+      "exemplo": "2026-03-22T10:30:00Z"
+    },
+    "atualizado_em": {
+      "tipo": "Timestamp",
+      "descricao": "Data da última atualização",
+      "exemplo": "2026-03-22T10:30:00Z"
+    }
+  },
+  "exemplo_completo": {
+    "groq": "gsk_sua_chave_real_aqui",
+    "criado_em": "2026-03-22T10:30:00Z",
+    "atualizado_em": "2026-03-22T10:30:00Z"
+  },
+  "notas": [
+    "Você pode adicionar mais campos conforme necessário (ex: openai, anthropic, etc)",
+    "O ID do documento pode ser qualquer um - o código busca apenas o primeiro documento",
+    "Recomenda-se proteger esta coleção com Firestore Security Rules",
+    "A chave deve ser atualizada se expirar ou for revogada no Groq"
+  ],
+  "regras_firestore_recomendadas": {
+    "descricao": "Adicione estas regras no Firebase Console > Firestore > Rules",
+    "regra": "match /api_key/{document=**} { allow read: if request.auth != null; allow write: if request.auth.uid == 'SEU_UID_ADMIN'; }"
+  }
+}
