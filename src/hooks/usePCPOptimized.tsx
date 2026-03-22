@@ -379,7 +379,7 @@ export const usePCPOptimized = () => {
   }, [isCacheValid]);
 
   // Função principal otimizada para buscar dados PCP
-  const fetchPCPData = useCallback(async (period: PeriodFilter = 'hoje', customStart?: Date, customEnd?: Date) => {
+  const fetchPCPData = useCallback(async (period: PeriodFilter = 'hoje', customStart?: Date, customEnd?: Date, skipStateUpdate = false): Promise<PCPData[]> => {
     const cacheKey = period === 'personalizado' 
       ? `pcp_${period}_${customStart?.getTime()}_${customEnd?.getTime()}`
       : `pcp_${period}`;
@@ -388,18 +388,24 @@ export const usePCPOptimized = () => {
     if (period !== 'personalizado') {
       const cachedData = cacheRef.current.pcpData.get(cacheKey);
       if (cachedData && isCacheValid(cachedData)) {
-        setPcpData(cachedData.data);
-        return;
+        if (!skipStateUpdate) {
+          setPcpData(cachedData.data);
+        }
+        return cachedData.data;
       }
     }
 
     try {
-      setLoading(true);
-      setError(null);
+      if (!skipStateUpdate) {
+        setLoading(true);
+        setError(null);
+      }
 
       // Carregar produtos de forma otimizada
       const produtosArray = await loadProdutosOptimized();
-      setPcpProdutos(produtosArray);
+      if (!skipStateUpdate) {
+        setPcpProdutos(produtosArray);
+      }
 
       // Buscar documentos PCP apenas com processado = "sim"
       const pcpCollectionQuery = query(
@@ -436,12 +442,21 @@ export const usePCPOptimized = () => {
         });
       }
 
-      setPcpData(filteredData);
+      if (!skipStateUpdate) {
+        setPcpData(filteredData);
+      }
+      
+      return filteredData;
 
     } catch (err) {
-      setError(`Erro ao carregar dados do PCP: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+      if (!skipStateUpdate) {
+        setError(`Erro ao carregar dados do PCP: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+      }
+      return [];
     } finally {
-      setLoading(false);
+      if (!skipStateUpdate) {
+        setLoading(false);
+      }
     }
   }, [loadProdutosOptimized, processarDocumentoPCPOptimized, getDateRange, isCacheValid]);
 

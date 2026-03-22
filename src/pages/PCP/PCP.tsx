@@ -259,11 +259,9 @@ const PCP = () => {
 
       try {
         // Usar a mesma lógica do hook para buscar dados do período anterior
-        const { fetchPCPData: fetchOriginal } = usePCPOptimized();
-        
-        // Como não podemos chamar o hook aqui, vamos simular os dados do período anterior
-        // Por ora, vamos usar dados vazios e calcular baseado em lógica simplificada
-        setDadosPeriodoAnterior([]);
+        // Passamos skipStateUpdate=true para não sobrescrever os dados atuais do hook
+        const dadosAnteriores = await fetchPCPData('personalizado', periodoAnterior.start, periodoAnterior.end, true);
+        setDadosPeriodoAnterior(dadosAnteriores || []);
       } catch (error) {
         console.error('Erro ao carregar dados do período anterior:', error);
         setDadosPeriodoAnterior([]);
@@ -271,7 +269,7 @@ const PCP = () => {
     };
 
     carregarDadosPeriodoAnterior();
-  }, [period, customStartDate, customEndDate, activeTab, calcularPeriodoAnterior]);
+  }, [period, customStartDate, customEndDate, activeTab, calcularPeriodoAnterior, fetchPCPData]);
 
   // Função para calcular porcentagem de mudança
   const calcularPorcentagemMudanca = useCallback((valorAtual: number, valorAnterior: number) => {
@@ -593,25 +591,27 @@ const PCP = () => {
                   </div>} icon={<Clock className="h-4 w-4" />} description="Turnos de Produção" className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/10" disableHover={true} />
               
               <StatsCard title="Produção Total" value={metrics.producaoTotal.toLocaleString()} icon={<Package className="h-4 w-4" />} trend={(() => {
-                // Simular dados do período anterior baseado em lógica histórica
-                const producaoAnterior = (() => {
-                  // Para demonstração, usar uma lógica simplificada
-                  // Em implementação real, isso viria dos dados históricos
-                  switch (period) {
-                    case 'hoje':
-                      return Math.max(0, metrics.producaoTotal * 0.85); // Simular que ontem produziu 85% do atual
-                    case 'semana':
-                      return Math.max(0, metrics.producaoTotal * 0.92); // Semana anterior 92%
-                    case 'mes':
-                      return Math.max(0, metrics.producaoTotal * 0.88); // Mês anterior 88%
-                    case 'ano':
-                      return Math.max(0, metrics.producaoTotal * 0.95); // Ano anterior 95%
-                    case 'personalizado':
-                      return Math.max(0, metrics.producaoTotal * 0.90); // Período anterior 90%
-                    default:
-                      return 0;
-                  }
-                })();
+                // Usar dados reais do período anterior se disponíveis, senão simular
+                const producaoAnterior = dadosPeriodoAnterior.length > 0 
+                  ? dadosPeriodoAnterior.reduce((acc, curr) => acc + (curr.quantidade_produzida || 0), 0)
+                  : (() => {
+                      // Para demonstração, usar uma lógica simplificada
+                      // Em implementação real, isso viria dos dados históricos
+                      switch (period) {
+                        case 'hoje':
+                          return Math.max(0, metrics.producaoTotal * 0.85); // Simular que ontem produziu 85% do atual
+                        case 'semana':
+                          return Math.max(0, metrics.producaoTotal * 0.92); // Semana anterior 92%
+                        case 'mes':
+                          return Math.max(0, metrics.producaoTotal * 0.88); // Mês anterior 88%
+                        case 'ano':
+                          return Math.max(0, metrics.producaoTotal * 0.95); // Ano anterior 95%
+                        case 'personalizado':
+                          return Math.max(0, metrics.producaoTotal * 0.90); // Período anterior 90%
+                        default:
+                          return 0;
+                      }
+                    })();
                 
                 const porcentagemMudanca = calcularPorcentagemMudanca(metrics.producaoTotal, producaoAnterior);
                 const labelPeriodo = period === 'hoje' ? 'dia anterior' : 
@@ -623,9 +623,9 @@ const PCP = () => {
                 return {
                   value: Math.abs(porcentagemMudanca),
                   positive: porcentagemMudanca >= 0,
-                  label: metrics.producaoTotal === 0 ? 
+                  label: metrics.producaoTotal === 0 && dadosPeriodoAnterior.length === 0 ? 
                     `Sem produção no período` : 
-                    `${porcentagemMudanca >= 0 ? '+' : ''}${porcentagemMudanca}% em relação ao ${labelPeriodo}`
+                    `${porcentagemMudanca >= 0 ? '+' : ''}${porcentagemMudanca}% em relação ao ${labelPeriodo}${dadosPeriodoAnterior.length > 0 ? '' : ' (estimado)'}`
                 };
               })()} description="KG produzidos" formula="Soma de toda produção realizada no período selecionado" className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-900/10" />
              
@@ -646,23 +646,29 @@ const PCP = () => {
                 const totalProduzido = metrics.producaoTotal;
                 const eficienciaAtual = totalPlanejado > 0 ? (totalProduzido / totalPlanejado) * 100 : 0;
                 
-                // Simular eficiência do período anterior
-                const eficienciaAnterior = (() => {
-                  switch (period) {
-                    case 'hoje':
-                      return Math.max(0, eficienciaAtual * 0.87); // Ontem teve 87% da eficiência atual
-                    case 'semana':
-                      return Math.max(0, eficienciaAtual * 0.94); // Semana anterior 94%
-                    case 'mes':
-                      return Math.max(0, eficienciaAtual * 0.91); // Mês anterior 91%
-                    case 'ano':
-                      return Math.max(0, eficienciaAtual * 0.96); // Ano anterior 96%
-                    case 'personalizado':
-                      return Math.max(0, eficienciaAtual * 0.89); // Período anterior 89%
-                    default:
-                      return 0;
-                  }
-                })();
+                // Usar dados reais do período anterior se disponíveis, senão simular
+                const eficienciaAnterior = dadosPeriodoAnterior.length > 0
+                  ? (() => {
+                      const pAnterior = dadosPeriodoAnterior.reduce((acc, curr) => acc + (curr.quantidade_planejada || 0), 0);
+                      const rAnterior = dadosPeriodoAnterior.reduce((acc, curr) => acc + (curr.quantidade_produzida || 0), 0);
+                      return pAnterior > 0 ? (rAnterior / pAnterior) * 100 : 0;
+                    })()
+                  : (() => {
+                      switch (period) {
+                        case 'hoje':
+                          return Math.max(0, eficienciaAtual * 0.87); // Ontem teve 87% da eficiência atual
+                        case 'semana':
+                          return Math.max(0, eficienciaAtual * 0.94); // Semana anterior 94%
+                        case 'mes':
+                          return Math.max(0, eficienciaAtual * 0.91); // Mês anterior 91%
+                        case 'ano':
+                          return Math.max(0, eficienciaAtual * 0.96); // Ano anterior 96%
+                        case 'personalizado':
+                          return Math.max(0, eficienciaAtual * 0.89); // Período anterior 89%
+                        default:
+                          return 0;
+                      }
+                    })();
                 
                 const diferencaEficiencia = eficienciaAtual - eficienciaAnterior;
                 const labelPeriodo = period === 'hoje' ? 'dia anterior' : 
@@ -674,9 +680,9 @@ const PCP = () => {
                 return {
                   value: Math.abs(Math.round(diferencaEficiencia)),
                   positive: diferencaEficiencia >= 0,
-                  label: totalPlanejado === 0 ? 
+                  label: totalPlanejado === 0 && dadosPeriodoAnterior.length === 0 ? 
                     `Sem dados para comparar` : 
-                    `${diferencaEficiencia >= 0 ? '+' : ''}${Math.round(diferencaEficiencia)}% em relação ao ${labelPeriodo}`
+                    `${diferencaEficiencia >= 0 ? '+' : ''}${Math.round(diferencaEficiencia)}% em relação ao ${labelPeriodo}${dadosPeriodoAnterior.length > 0 ? '' : ' (estimado)'}`
                 };
               })()} description={`Planejado: ${pcpData.reduce((acc, item) => acc + (item.quantidade_planejada || 0), 0).toLocaleString()} KG | Produzido: ${metrics.producaoTotal.toLocaleString()} KG`} formula="Total Produzido ÷ Total Planejado × 100" className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/10" />
             </div>

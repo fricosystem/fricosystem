@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
+import { collection, query, where, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import { AlertaManutencao } from "@/types/typesAlertasManutencao";
 
@@ -14,12 +14,23 @@ interface ManutencaoAlertsContextType {
 
 const ManutencaoAlertsContext = createContext<ManutencaoAlertsContextType | undefined>(undefined);
 
+// Função para ordenar alertas no cliente (evita necessidade de índices compostos)
+const ordenarAlertas = (alertas: AlertaManutencao[]): AlertaManutencao[] => {
+  const ordemUrgencia: Record<string, number> = { critico: 0, alto: 1, medio: 2, baixo: 3 };
+  return [...alertas].sort((a, b) => {
+    const urgenciaA = ordemUrgencia[a.urgencia] ?? 99;
+    const urgenciaB = ordemUrgencia[b.urgencia] ?? 99;
+    if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB;
+    return (a.diasRestantes ?? 0) - (b.diasRestantes ?? 0);
+  });
+};
+
 export const ManutencaoAlertsProvider = ({ children }: { children: ReactNode }) => {
   const [alertas, setAlertas] = useState<AlertaManutencao[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    // Listener para alertas em tempo real
+    // Listener para alertas em tempo real - query simples sem orderBy composto
     const alertasRef = collection(db, "alertas_manutencao");
     const q = query(
       alertasRef,
@@ -36,23 +47,8 @@ export const ManutencaoAlertsProvider = ({ children }: { children: ReactNode }) 
             ...doc.data(),
           } as AlertaManutencao);
         });
-        
-        // Ordenar em memória: primeiro por urgência (desc) e depois por dias restantes (asc)
-        novosAlertas.sort((a, b) => {
-          // Mapear urgência para valores numéricos para ordenação
-          const urgenciaOrder = { critico: 3, alto: 2, medio: 1, baixo: 0 };
-          const ordemUrgenciaA = urgenciaOrder[a.urgencia] || 0;
-          const ordemUrgenciaB = urgenciaOrder[b.urgencia] || 0;
-          
-          if (ordemUrgenciaB !== ordemUrgenciaA) {
-            return ordemUrgenciaB - ordemUrgenciaA; // descendente
-          }
-          
-          // Se urgência igual, ordenar por dias restantes (ascendente)
-          return (a.diasRestantes || 0) - (b.diasRestantes || 0);
-        });
-        
-        setAlertas(novosAlertas);
+        // Ordenar no cliente para evitar necessidade de índices
+        setAlertas(ordenarAlertas(novosAlertas));
         setCarregando(false);
       },
       (error) => {

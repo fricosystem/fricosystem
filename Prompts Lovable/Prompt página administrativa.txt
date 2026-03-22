@@ -1,0 +1,104 @@
+Crie uma página administrativa completa para gerenciar todas as coleções e campos do banco de dados Firestore fornecido, mantendo uma estrutura coesa e funcionalidades abrangentes.
+
+## Requisitos Técnicos
+
+1. **Framework**: Utilizar React.js com TypeScript
+2. **Bibliotecas Firebase**: 
+   - firebase/firestore para operações de banco de dados
+   - firebase/auth para autenticação
+3. **UI/UX**: 
+   - Componentes reutilizáveis e responsivos
+   - Design consistente em todas as seções
+   - Feedback visual para operações
+
+## Estrutura da Página Administrativa
+
+### 1. Módulo de Autenticação
+- Tela de login com validação de usuários da coleção 'usuarios'
+- Controle de acesso baseado no campo 'cargo'
+- Recuperação de senha
+
+### 2. Dashboard Principal
+- Resumo estatístico com:
+  - Total de produtos cadastrados
+  - Produtos próximos do vencimento
+  - Produtos abaixo do estoque mínimo
+  - Últimos registros de cada coleção
+
+### 3. Módulo de Depósitos
+- CRUD completo para coleção 'depositos'
+- Filtros por unidade (relacionado com coleção 'unidades')
+- Visualização em cards ou tabela
+
+### 4. Módulo de Fornecedores
+- Formulário completo com todos os campos, incluindo:
+  - Validação de CNPJ
+  - Componente de endereço estruturado (map/array)
+  - Campos de condições de pagamento e prazo de entrega
+- Visualização em tabela com ordenação e paginação
+- Filtros por razão social, CNPJ e estado
+
+### 5. Módulo de Produtos (Avançado)
+- Formulário complexo com:
+  - Relacionamento com fornecedores (dropdown com busca)
+  - Componente interativo para prateleira (estoque, rua, andar, palete)
+  - Upload de imagens para o Storage
+  - Alertas visuais quando quantidade < quantidade_minima
+- Tabela com:
+  - Ordenação por data de vencimento
+  - Filtros por depósito, fornecedor, status (vencido/próximo)
+  - Visualização rápida de estoque (barra de progresso)
+
+### 6. Módulo de Unidades
+- CRUD simples para unidades
+- Validação de CNPJ
+- Relacionamento com depósitos
+
+### 7. Módulo de Usuários
+- Formulário com:
+  - Upload de imagem de perfil
+  - Seleção de cargo e status (ativo/inativo)
+  - Controle de tema preferido
+- Tabela com status online/offline em tempo real
+- Histórico de último login
+
+## Funcionalidades Específicas
+
+1. **Sistema de Prateleiras**:
+   - Componente interativo que gera a string no formato "estoqueX - RuaXX - AXPX"
+   - Dropdowns encadeados para estoque (1-5), rua (1-6), andar (1-5) e palete (1-5)
+   - Possibilidade de expandir quantidade de opções no banco de dados
+
+2. **Validações**:
+   - CNPJ/CPF formatados e validados
+   - Datas de vencimento não podem ser inferiores à data atual
+   - Campos obrigatórios destacados
+
+3. **Operações em Lote**:
+   - Importação/exportação de dados (CSV/JSON)
+   - Edição múltipla de produtos (ex: atualizar preço para vários itens)
+
+4. **Notificações**:
+   - Alertas para produtos próximos do vencimento (30 dias)
+   - Alertas para estoque abaixo do mínimo
+
+## Requisitos Não-Funcionais
+
+1. **Performance**: 
+   - Paginação para coleções grandes
+   - Carregamento lazy de imagens
+
+2. **Segurança**:
+   - Regras de validação no frontend
+   - Proteção contra injeção
+
+3. **Experiência do Usuário**:
+   - Auto-complete para campos relacionados
+   - Confirmação para operações críticas (exclusão)
+   - Undo para operações acidentais
+
+4. **Responsividade**:
+   - Funcionamento em mobile/tablet
+   - Adaptação para diferentes tamanhos de tela
+
+Observação: A estrutura deve permitir fácil expansão para novos campos ou coleções que possam ser adicionadas posteriormente.

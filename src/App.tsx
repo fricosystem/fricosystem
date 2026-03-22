@@ -34,7 +34,6 @@ import RelatoriosES from "./pages/Relatorios/Relatorios";
 import PlanejamentoDesenvolvimento from "./pages/Planejamento/PlanejamentoDesenvolvimento";
 import IDE from "./pages/IDE";
 import Sistema from "./pages/Sistema";
-import IdentificacaoProdutos from "./pages/IdentificacaoProdutos";
 
 // Páginas de Transferência e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
@@ -72,7 +71,9 @@ import Manuais from "./pages/Manuais";
 
 // Página de Ordens de Serviço
 import OrdensServico from "./pages/OrdensServico";
-import EnvioRetornoPage from "./pages/EnvioRetorno";
+
+// Apex Chat
+import ApexChatFab from "@/components/ApexChatFab";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -193,11 +194,6 @@ const AppContent = () => {
           <Route path="/dashboard-manutencao" element={<AuthGuard><ManutencoesDashboard /></AuthGuard>} />
           <Route path="/manutencao-preventiva" element={<AuthGuard><ManutencaoPreventiva /></AuthGuard>} />
           <Route path="/execucao-manutencao" element={<AuthGuard><ManutentorGuard><ExecucaoPreventiva /></ManutentorGuard></AuthGuard>} />
-          <Route path="/identificacao-produtos" element={<AuthGuard><IdentificacaoProdutos /></AuthGuard>} />
-          
-          {/* Página de Envio e Retorno */}
-          <Route path="/envio-retorno" element={<AuthGuard><EnvioRetornoPage /></AuthGuard>} />
-          
           <Route path="/gestao-tarefas" element={<AuthGuard><GestaoTarefas /></AuthGuard>} />
            <Route path="/pcp" element={<AuthGuard><PCP /></AuthGuard>} />
            <Route path="/relatorios" element={<AuthGuard><RelatoriosES /></AuthGuard>} />
@@ -226,6 +222,7 @@ const AppContent = () => {
           {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <ApexChatFab />
       </BrowserRouter>
     </TooltipProvider>
   );

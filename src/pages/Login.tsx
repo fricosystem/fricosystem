@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,54 @@ import { RegisterForm } from "@/components/Login/Auth/RegisterForm";
 import { UserButton } from "@/components/Login/UserButton";
 import { 
   BarChart4, Calendar, Clipboard, CreditCard, Database, FileText, Users,
-  Phone, Mail, MessageSquare 
+  Phone, Mail, MessageSquare, Bot, Zap, ShieldCheck, TrendingUp, Package,
+  Wrench, ClipboardList, Building2, BookOpen, ArrowRight, CheckCircle2,
+  MessageCircle, Search, BarChart2, Layers
 } from "lucide-react";
 import { useThemedLogo } from "@/hooks/useThemedLogo";
 
 // Dados das seções
+const stats = [
+  { value: "98%", label: "Uptime garantido" },
+  { value: "+500", label: "Produtos gerenciados" },
+  { value: "100%", label: "Dados em tempo real" },
+  { value: "24/7", label: "Disponibilidade" },
+];
+
+const modules = [
+  { icon: <Package className="h-5 w-5" />, label: "Gestão de Produtos" },
+  { icon: <Wrench className="h-5 w-5" />, label: "Manutenção" },
+  { icon: <ClipboardList className="h-5 w-5" />, label: "Requisições" },
+  { icon: <Building2 className="h-5 w-5" />, label: "Fornecedores" },
+  { icon: <BookOpen className="h-5 w-5" />, label: "Manuais" },
+  { icon: <BarChart4 className="h-5 w-5" />, label: "Relatórios" },
+  { icon: <Users className="h-5 w-5" />, label: "Equipes" },
+  { icon: <Layers className="h-5 w-5" />, label: "Transferências" },
+];
+
+const aiCapabilities = [
+  {
+    icon: <Search className="h-6 w-6 text-blue-400" />,
+    title: "Consulta Inteligente",
+    description: "Pergunte sobre qualquer produto, fornecedor ou equipamento em linguagem natural e receba respostas precisas com dados em tempo real."
+  },
+  {
+    icon: <BarChart2 className="h-6 w-6 text-blue-400" />,
+    title: "Relatórios Automáticos",
+    description: "Solicite relatórios completos de estoque, manutenção ou custos e o APEX AI os monta instantaneamente para você."
+  },
+  {
+    icon: <MessageCircle className="h-6 w-6 text-blue-400" />,
+    title: "Chat em Tempo Real",
+    description: "Interface de chat integrada que acessa todas as coleções do sistema para responder perguntas operacionais sem sair da tela."
+  },
+  {
+    icon: <TrendingUp className="h-6 w-6 text-blue-400" />,
+    title: "Decisões Baseadas em Dados",
+    description: "Identifique produtos em falta, vencimentos próximos e gargalos operacionais com análises geradas por IA."
+  },
+];
+
 const features = [
   {
     title: "Gestão de Estoque",
@@ -187,6 +230,9 @@ const Login = () => {
           
           <nav className="hidden md:flex items-center space-x-8">
             <a href="#hero" className="text-white hover:text-gray-300 transition-colors duration-300">Início</a>
+            <a href="#apex-ai" className="text-blue-400 hover:text-blue-300 transition-colors duration-300 font-medium flex items-center gap-1">
+              <Bot className="w-3.5 h-3.5" />APEX AI
+            </a>
             <a href="#features" className="text-white hover:text-gray-300 transition-colors duration-300">Funcionalidades</a>
             <a href="#solutions" className="text-white hover:text-gray-300 transition-colors duration-300">Soluções</a>
             <a href="#testimonials" className="text-white hover:text-gray-300 transition-colors duration-300">Depoimentos</a>
@@ -215,20 +261,144 @@ const Login = () => {
         {/* Hero Section */}
         <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
           <div className="container mx-auto relative z-10 px-4 flex flex-col items-center text-center">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 animate-fade-in">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 animate-fade-in">
               Bem vindo ao <span>Gerenciador industrial</span>
               <br />
               <span className="text-3xl md:text-4xl text-frico-500">APEX HUB</span>
             </h1>
             
+            {/* Badge APEX AI */}
+            <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-full backdrop-blur-md">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-sm font-semibold text-blue-300">APEX AI</span>
+              <span className="text-xs text-gray-400 px-2 py-0.5 bg-gray-800/50 rounded-full">Novo</span>
+            </div>
+            
             <p className="text-xl text-gray-500 max-w-2xl mb-8 animate-fade-up">
-              O APEX HUB transforma a gestão corporativa com soluções integradas para estoque, finanças, recursos humanos e muito mais. Fazemos com que a empresa alcançe a excelência operacional.
+              O APEX HUB transforma a gestão corporativa com soluções integradas para estoque, finanças, recursos humanos e muito mais. Com inteligência artificial integrada para ajudá-lo em todas as suas decisões.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 animate-fade-up" style={{ animationDelay: "0.2s" }}>
               <Button variant="outline" size="lg" className="bg-white border-white text-black hover:bg-black hover:text-white" asChild>
                 <a href="#features">Saiba Mais</a>
               </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Stats Bar */}
+        <section className="border-y border-gray-800/60 bg-gray-900/30 backdrop-blur-sm py-10">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+              {stats.map((stat, i) => (
+                <div key={i} className="flex flex-col gap-1">
+                  <span className="text-3xl md:text-4xl font-bold text-frico-500">{stat.value}</span>
+                  <span className="text-sm text-gray-400">{stat.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Módulos do Sistema */}
+        <section className="py-14 border-b border-gray-800/40">
+          <div className="container mx-auto px-4">
+            <p className="text-center text-sm font-semibold text-gray-500 uppercase tracking-widest mb-8">
+              Módulos integrados na plataforma
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {modules.map((mod, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700/60 bg-gray-900/40 text-gray-300 text-sm hover:border-frico-500/50 hover:text-frico-400 transition-colors backdrop-blur-sm"
+                >
+                  {mod.icon}
+                  <span>{mod.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* APEX AI Section */}
+        <section id="apex-ai" className="py-24 relative overflow-hidden">
+          {/* Background glow */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-3xl" />
+          </div>
+
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+              {/* Left: texto */}
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600/15 border border-blue-500/25 rounded-full mb-6">
+                  <Bot className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-semibold text-blue-300 uppercase tracking-wide">Inteligência Artificial</span>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-5 text-balance leading-tight">
+                  Conheça o <span className="text-blue-400">APEX AI</span>,<br />
+                  seu assistente industrial
+                </h2>
+                <p className="text-gray-400 text-lg mb-8 leading-relaxed">
+                  O APEX AI está integrado a todas as coleções do sistema. Consulte produtos, fornecedores, equipamentos e ordens de serviço em linguagem natural — e receba respostas precisas em segundos.
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {[
+                    "Acesso completo aos dados de estoque em tempo real",
+                    "Gera relatórios sob demanda via chat",
+                    "Identifica produtos com estoque baixo ou vencidos",
+                    "Responde sobre fornecedores, CNPJ e condições",
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-gray-300 text-sm">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={openLoginModal}
+                  className="bg-blue-600 hover:bg-blue-500 text-white gap-2 px-6"
+                >
+                  Experimentar agora
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Right: cards de capacidades */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {aiCapabilities.map((cap, i) => (
+                  <div
+                    key={i}
+                    className="bg-gray-900/60 border border-gray-800/80 rounded-xl p-5 hover:border-blue-500/30 hover:bg-gray-900/80 transition-all backdrop-blur-sm group"
+                  >
+                    <div className="mb-3 p-2 bg-blue-600/10 rounded-lg w-fit group-hover:bg-blue-600/20 transition-colors">
+                      {cap.icon}
+                    </div>
+                    <h4 className="text-white font-semibold text-sm mb-2">{cap.title}</h4>
+                    <p className="text-gray-500 text-xs leading-relaxed">{cap.description}</p>
+                  </div>
+                ))}
+
+                {/* Mock chat preview */}
+                <div className="sm:col-span-2 bg-gray-950/80 border border-gray-800/80 rounded-xl p-4 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <span className="text-xs text-gray-400 font-medium">APEX AI — online</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-end">
+                      <span className="bg-blue-600/80 text-white text-xs px-3 py-1.5 rounded-2xl rounded-tr-sm max-w-[80%]">
+                        Quantos rolamentos temos em estoque?
+                      </span>
+                    </div>
+                    <div className="flex justify-start">
+                      <span className="bg-gray-800 text-gray-200 text-xs px-3 py-1.5 rounded-2xl rounded-tl-sm max-w-[80%]">
+                        Encontrei <strong>3 tipos</strong> de rolamentos em estoque: Rolamento 6204 (12 un.), Rolamento 6205 (8 un.) e Rolamento 6304 (5 un.). Total: 25 unidades.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -414,6 +584,7 @@ const Login = () => {
             <div>
               <h3 className="text-white text-lg font-bold mb-4">Links Rápidos</h3>
               <ul className="space-y-2">
+                <li><a href="#apex-ai" className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1.5"><Bot className="w-3.5 h-3.5" />APEX AI</a></li>
                 <li><a href="#features" className="text-gray-400 hover:text-frico-500 transition-colors">Funcionalidades</a></li>
                 <li><a href="#solutions" className="text-gray-400 hover:text-frico-500 transition-colors">Soluções</a></li>
                 <li><a href="#testimonials" className="text-gray-400 hover:text-frico-500 transition-colors">Depoimentos</a></li>
