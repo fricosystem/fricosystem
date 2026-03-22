@@ -1490,8 +1490,8 @@ Diretrizes OPERACIONAIS (voce auxilia FUNCIONARIOS, nao desenvolvedores):
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  // Conteudo do chat
-  const ChatContent = () => (
+  // JSX do conteudo do chat (inline para evitar remontagem a cada render)
+  const chatContentJSX = (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3 border-b bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
@@ -1779,9 +1779,7 @@ Diretrizes OPERACIONAIS (voce auxilia FUNCIONARIOS, nao desenvolvedores):
           className="h-[100dvh] !p-0 flex flex-col rounded-t-2xl border-t border-border [&>button]:hidden"
         >
           <SheetTitle className="sr-only">APEX AI</SheetTitle>
-          <div className="flex flex-col h-full overflow-hidden">
-            <ChatContent />
-          </div>
+          {chatContentJSX}
         </SheetContent>
       </Sheet>
     );
@@ -1791,9 +1789,7 @@ Diretrizes OPERACIONAIS (voce auxilia FUNCIONARIOS, nao desenvolvedores):
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent hideCloseButton className="sm:max-w-[600px] h-[700px] !p-0 gap-0 rounded-2xl overflow-hidden flex flex-col">
         <DialogTitle className="sr-only">APEX AI</DialogTitle>
-        <div className="flex flex-col h-full overflow-hidden">
-          <ChatContent />
-        </div>
+        {chatContentJSX}
       </DialogContent>
     </Dialog>
   );
