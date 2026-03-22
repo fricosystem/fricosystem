@@ -18,26 +18,19 @@ const ApexChatFab = () => {
   return (
     <>
       <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 group">
-        {/* Halo/Aura background effect */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-30 blur-xl group-hover:opacity-50 group-hover:scale-110 transition-all duration-300 animate-pulse"></div>
-        
-        {/* Inner glow */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-primary/60 opacity-20 blur-lg group-hover:opacity-40 transition-all duration-300"></div>
-
         {/* Main button */}
         <Button
           onClick={() => setIsOpen(true)}
-          className="relative w-16 h-16 md:w-20 md:h-20 rounded-full shadow-2xl group-hover:shadow-[0_0_30px_rgba(59,130,246,0.6)] transition-all duration-300 transform group-hover:scale-110 flex items-center justify-center p-0 bg-gradient-to-br from-blue-600 via-primary to-blue-700 hover:from-blue-500 hover:via-primary/90 hover:to-blue-600 border border-blue-400/50 backdrop-blur-sm"
+          className="relative w-14 h-14 md:w-16 md:h-16 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center p-0 bg-primary hover:bg-primary/90 border-0"
           aria-label="Abrir APEX Chat"
         >
-          <Bot className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-lg" />
-          
-          {/* Pulsing badge indicator */}
-          <div className="absolute top-2 right-2 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+          <Bot className="w-7 h-7 md:w-9 md:h-9 text-primary-foreground" />
+          {/* Status indicator */}
+          <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-background" />
         </Button>
 
-        {/* Tooltip */}
-        <div className="absolute bottom-full right-0 mb-2 bg-gray-900/95 text-white text-xs font-medium px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+        {/* Tooltip on hover */}
+        <div className="absolute bottom-full right-0 mb-2 bg-popover text-popover-foreground text-xs font-medium px-2.5 py-1 rounded-md shadow-md border border-border whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
           APEX AI
         </div>
       </div>

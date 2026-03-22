@@ -17,11 +17,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
-  DialogContent 
+  DialogContent,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { 
   Sheet, 
-  SheetContent 
+  SheetContent,
+  SheetTitle
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -1490,7 +1492,7 @@ Diretrizes OPERACIONAIS (voce auxilia FUNCIONARIOS, nao desenvolvedores):
 
   // Conteudo do chat
   const ChatContent = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3 border-b bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
         <div className="flex items-center justify-between">
@@ -1564,7 +1566,7 @@ Diretrizes OPERACIONAIS (voce auxilia FUNCIONARIOS, nao desenvolvedores):
       </div>
 
       {/* Area de mensagens */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 min-h-0 p-4" ref={scrollRef}>
         <div className="space-y-4">
           {messages.map((message) => (
             <div
@@ -1774,9 +1776,12 @@ Diretrizes OPERACIONAIS (voce auxilia FUNCIONARIOS, nao desenvolvedores):
       <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <SheetContent 
           side="bottom" 
-          className="h-[100dvh] p-0 rounded-t-xl"
+          className="h-[100dvh] !p-0 flex flex-col rounded-t-2xl border-t border-border [&>button]:hidden"
         >
-          <ChatContent />
+          <SheetTitle className="sr-only">APEX AI</SheetTitle>
+          <div className="flex flex-col h-full overflow-hidden">
+            <ChatContent />
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -1784,8 +1789,11 @@ Diretrizes OPERACIONAIS (voce auxilia FUNCIONARIOS, nao desenvolvedores):
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] h-[700px] p-0 gap-0 rounded-2xl overflow-hidden">
-        <ChatContent />
+      <DialogContent hideCloseButton className="sm:max-w-[600px] h-[700px] !p-0 gap-0 rounded-2xl overflow-hidden flex flex-col">
+        <DialogTitle className="sr-only">APEX AI</DialogTitle>
+        <div className="flex flex-col h-full overflow-hidden">
+          <ChatContent />
+        </div>
       </DialogContent>
     </Dialog>
   );
