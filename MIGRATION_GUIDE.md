@@ -13,7 +13,7 @@ VITE_GROQ_API_KEY=gsk_xxxxx  ← Exposto em código!
 ### Depois (v1.1) ✅
 ```
 Firebase Firestore
-└── ape_key (coleção privada)
+└── api_key (coleção privada)
     └── groq: "gsk_xxxxx"  ← Protegido por Firestore Rules
 ```
 
@@ -26,23 +26,22 @@ Firebase Firestore
 1. Abra [Firebase Console](https://console.firebase.google.com)
 2. Selecione seu projeto Fricosystem
 3. Vá para **Firestore Database**
-4. Clique em **+ Create collection**
-5. Nome: `ape_key`
-6. Clique em **Create document**
-7. ID: deixe em branco (auto-gerado) ou use `config`
+4. Você verá a coleção **`api_key`** já criada
+5. Selecione ou crie um documento
+6. ID: pode ser qualquer um (você pode usar `config` ou deixar auto-gerado)
 
 ### **Passo 2: Adicionar a Chave (1 minuto)**
 
-Na página de criação do documento:
+No documento selecionado:
 
 1. **Campo**: Digite `groq`
 2. **Tipo**: Selecione `String`
 3. **Valor**: Cole sua chave do Groq (começa com `gsk_`)
 4. Clique em **Save**
 
-✅ **Pronto!** Você criou:
+✅ **Pronto!** Você atualizou:
 ```
-ape_key
+api_key
 └── {documento}
     └── groq: "gsk_..."
 ```
@@ -70,8 +69,8 @@ Se você ainda não tem uma chave:
 
 ## 📋 Checklist de Migração
 
-- [ ] Criar coleção `ape_key` no Firebase
-- [ ] Adicionar documento com campo `groq`
+- [ ] Acessar coleção `api_key` no Firebase (já existe)
+- [ ] Adicionar campo `groq` ao documento
 - [ ] Colar chave de API válida (começa com `gsk_`)
 - [ ] Testar APEX Chat
 - [ ] Remover `.env` com `VITE_GROQ_API_KEY` (opcional)
@@ -91,8 +90,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Qualquer usuário autenticado pode ler ape_key
-    match /ape_key/{document=**} {
+    // Qualquer usuário autenticado pode ler api_key
+    match /api_key/{document=**} {
       allow read: if request.auth != null;
       // Apenas você pode escrever/atualizar
       allow write: if request.auth.uid == 'seu_uid_admin_aqui';
@@ -123,7 +122,7 @@ Variáveis de Ambiente (.env)
 
 ### Depois da Migração
 ```
-Firebase Firestore (coleção: ape_key)
+Firebase Firestore (coleção: api_key)
 - groq (String) - Chave de API obrigatória
 - openai (String) - Opcional, para futuro
 - anthropic (String) - Opcional, para futuro
@@ -138,7 +137,7 @@ Firebase Firestore (coleção: ape_key)
 **Causa**: Campo `groq` não encontrado ou vazio
 
 **Solução**:
-1. Verifique se existe documento em `ape_key`
+1. Verifique se existe documento em `api_key`
 2. Verifique se tem campo chamado `groq`
 3. Verifique se o campo não está vazio
 4. Verifique se a chave é válida (começa com `gsk_`)
@@ -172,7 +171,7 @@ Firebase Firestore (coleção: ape_key)
 
 ### Administrador (Atualizar Chave)
 1. Firebase Console > Firestore
-2. Vá para `ape_key` > documento
+2. Vá para `api_key` > documento
 3. Clique em `groq`
 4. Edite o valor
 5. Salve

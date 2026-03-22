@@ -2,7 +2,7 @@
 
 ## 📋 Resumo das Alterações
 
-O APEX Chat foi atualizado para usar a chave de API do Groq diretamente da coleção **"ape_key"** no Firebase Firestore, em vez de variáveis de ambiente (.env). Isso oferece melhor segurança e facilita o gerenciamento de chaves.
+O APEX Chat foi atualizado para usar a chave de API do Groq diretamente da coleção **"api_key"** no Firebase Firestore, em vez de variáveis de ambiente (.env). Isso oferece melhor segurança e facilita o gerenciamento de chaves.
 
 ## 🔧 Arquivos Modificados
 
@@ -50,7 +50,7 @@ O APEX Chat foi atualizado para usar a chave de API do Groq diretamente da cole�
 
 ```
 Firestore Database
-└── ape_key (coleção)
+└── api_key (coleção)
     └── {documento} (pode ser qualquer ID)
         └── groq: "gsk_sua_chave_aqui" (String)
 ```
@@ -60,7 +60,7 @@ Firestore Database
 ### Primeira vez:
 
 1. Abra o arquivo `APEX_CHAT_SETUP.md`
-2. Siga as instruções para criar a coleção "ape_key"
+2. Siga as instruções para criar a coleção "api_key"
 3. Adicione seu token do Groq no campo "groq"
 4. Abra o APEX Chat - ele verificará automaticamente
 
@@ -108,7 +108,7 @@ Mantém:
 
 ## ✅ Checklist de Migração
 
-- [ ] Criar coleção "ape_key" no Firebase
+- [ ] Criar coleção "api_key" no Firebase
 - [ ] Adicionar chave do Groq no campo "groq"
 - [ ] Remover `VITE_GROQ_API_KEY` do `.env` (opcional, será ignorada)
 - [ ] Testar APEX Chat para confirmar funcionamento
@@ -117,7 +117,7 @@ Mantém:
 ## 🆘 Troubleshooting
 
 **P: Recebo "Chave da API Groq não configurada"**
-R: Verifique se a coleção "ape_key" existe e tem o campo "groq" preenchido
+R: Verifique se a coleção "api_key" existe e tem o campo "groq" preenchido
 
 **P: Como alterar a chave do Groq?**
 R: Simplesmente atualize o valor no campo "groq" no Firebase - o chat carregará a nova chave

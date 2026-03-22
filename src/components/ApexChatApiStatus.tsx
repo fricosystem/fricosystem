@@ -48,7 +48,7 @@ export const ApexChatApiStatus = ({ className = "" }: ApiStatusProps) => {
       <AlertDescription className="text-yellow-800 text-sm">
         <strong>APEX Chat não configurado:</strong> A chave de API do Groq não foi encontrada. 
         Adicione o campo <code className="bg-yellow-100 px-1 rounded text-xs">groq</code> com sua chave de API na coleção 
-        <code className="bg-yellow-100 px-1 rounded text-xs">ape_key</code> do Firebase. 
+        <code className="bg-yellow-100 px-1 rounded text-xs">api_key</code> do Firebase. 
         Veja <a href="./APEX_CHAT_SETUP.md" className="underline hover:text-yellow-900">o guia de configuração</a>.
       </AlertDescription>
     </Alert>

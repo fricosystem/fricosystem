@@ -49,7 +49,7 @@
   - [ ] Botão de envio está desabilitado
 
 - [ ] **Com Configuração**
-  - [ ] Chave adicionada em ape_key
+  - [ ] Chave adicionada em api_key
   - [ ] Modal abre
   - [ ] Sem aviso amarelo
   - [ ] Input está habilitado
@@ -125,13 +125,13 @@
 - [ ] Remove debug logs após teste
 
 ### Staging
-- [ ] Coleção "ape_key" criada
+- [ ] Coleção "api_key" criada
 - [ ] Chave de API adicionada
 - [ ] Testes funcionais aprovados
 - [ ] Performance aceitável
 
 ### Produção
-- [ ] Coleção "ape_key" criada
+- [ ] Coleção "api_key" criada
 - [ ] Chave de API adicionada (produção)
 - [ ] Firestore Rules aplicadas
 - [ ] Backup da chave realizado
@@ -165,7 +165,7 @@
 - [ ] Linter passa (ESLint)
 
 ### Firebase
-- [ ] Coleção "ape_key" existe
+- [ ] Coleção "api_key" existe
 - [ ] Documento criado
 - [ ] Campo "groq" preenchido
 - [ ] Firestore Rules configuradas

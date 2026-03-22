@@ -29,7 +29,7 @@
            ↓
 ┌──────────────────────┐
 │  Firebase Firestore  │
-│  ape_key collection  │
+│  api_key collection  │
 └──────────────────────┘
 ```
 
@@ -100,7 +100,7 @@ atualiza UI
 ### Estrutura Esperada
 ```
 firestore
-└── ape_key (Collection)
+└── api_key (Collection)
     └── {auto_id} (Document)
         ├── groq: "gsk_..." (String)
         ├── criado_em: Timestamp
@@ -113,7 +113,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Leitura por usuários autenticados
-    match /ape_key/{document=**} {
+    match /api_key/{document=**} {
       allow read: if request.auth != null;
       // Escrita restrita a admin
       allow write: if request.auth.uid == 'UID_ADMIN_HERE';
@@ -234,7 +234,7 @@ POST https://api.groq.com/openai/v1/chat/completions
 ## Integrações
 
 ### Firebase
-- `collection(db, "ape_key")` - Leitura
+- `collection(db, "api_key")` - Leitura
 - `collection(db, "chat_messages")` - Leitura/Escrita
 - `onSnapshot()` - Real-time updates
 
@@ -249,7 +249,7 @@ POST https://api.groq.com/openai/v1/chat/completions
 
 ### Adicionar nova API
 
-1. Novo campo em `ape_key`: `openai: "sk_..."`
+1. Novo campo em `api_key`: `openai: "sk_..."`
 2. Nova função em `apiKeyService`:
    ```typescript
    export const getOpenAIKey = async () => {

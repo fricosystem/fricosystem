@@ -18,8 +18,8 @@ O **APEX Chat** é um assistente virtual alimentado por IA que oferece acesso in
 ```
 Firebase Console
 └── Firestore Database
-    └── Create Collection: "ape_key"
-        └── Add Document
+    └── Collection: "api_key" (já existe)
+        └── Document
             └── Field "groq" = "sua_chave_aqui"
 ```
 
@@ -35,7 +35,7 @@ Abra o app e clique no APEX Chat (ícone do robô).
 | **APEX_CHAT_SETUP.md** | Usuários | Como configurar a API |
 | **APEX_CHAT_TECHNICAL.md** | Desenvolvedores | Arquitetura e código |
 | **APEX_CHAT_CHANGES.md** | Desenvolvedores | Mudanças técnicas específicas |
-| **FIREBASE_APE_KEY_EXAMPLE.json** | Referência | Exemplo de estrutura |
+| **FIREBASE_API_KEY_EXAMPLE.json** | Referência | Exemplo de estrutura |
 | **IMPLEMENTATION_CHECKLIST.md** | QA/Ops | Checklist de deploy |
 
 ## 🔑 Obtendo uma Chave de API
@@ -45,7 +45,7 @@ Abra o app e clique no APEX Chat (ícone do robô).
 3. Vá para **API Keys**
 4. Clique em **Create API Key**
 5. Copie a chave (começa com `gsk_`)
-6. Adicione no Firebase em `ape_key.groq`
+6. Adicione no Firebase em `api_key.groq`
 
 ## 🎯 Características do APEX Chat
 
@@ -93,7 +93,7 @@ src/
 ### Firestore Collection
 ```json
 {
-  "ape_key": {
+  "api_key": {
     "documentId": {
       "groq": "gsk_...",
       "criado_em": "2026-03-22T10:00:00Z"
@@ -104,7 +104,7 @@ src/
 
 ### Firestore Security Rules
 ```javascript
-match /ape_key/{document=**} {
+match /api_key/{document=**} {
   allow read: if request.auth != null;
   allow write: if request.auth.uid == 'SEU_UID_ADMIN';
 }
@@ -117,8 +117,8 @@ match /ape_key/{document=**} {
 **Solução**:
 1. Abra Firebase Console
 2. Vá para Firestore Database
-3. Crie coleção "ape_key" se não existir
-4. Adicione documento com campo "groq"
+3. Acesse coleção "api_key"
+4. Adicione ou edite documento com campo "groq"
 5. Cole sua chave válida do Groq
 
 Ver: **APEX_CHAT_SETUP.md**

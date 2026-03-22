@@ -1,5 +1,5 @@
 {
-  "colecao": "ape_key",
+  "colecao": "api_key",
   "documento_id": "configuracao_principal",
   "campos": {
     "groq": {
@@ -32,6 +32,6 @@
   ],
   "regras_firestore_recomendadas": {
     "descricao": "Adicione estas regras no Firebase Console > Firestore > Rules",
-    "regra": "match /ape_key/{document=**} { allow read: if request.auth != null; allow write: if request.auth.uid == 'SEU_UID_ADMIN'; }"
+    "regra": "match /api_key/{document=**} { allow read: if request.auth != null; allow write: if request.auth.uid == 'SEU_UID_ADMIN'; }"
   }
 }

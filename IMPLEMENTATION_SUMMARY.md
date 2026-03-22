@@ -2,7 +2,7 @@
 
 ## 🎯 Objetivo Alcançado
 
-O APEX Chat foi **com sucesso migrado** para usar a chave de API do Groq armazenada na coleção **"ape_key"** do Firebase Firestore, em vez de variáveis de ambiente. Isso oferece maior segurança e facilita o gerenciamento de chaves sem necessidade de redeploy.
+O APEX Chat foi **com sucesso migrado** para usar a chave de API do Groq armazenada na coleção **"api_key"** do Firebase Firestore, em vez de variáveis de ambiente. Isso oferece maior segurança e facilita o gerenciamento de chaves sem necessidade de redeploy.
 
 ---
 
@@ -216,7 +216,7 @@ O APEX Chat foi **com sucesso migrado** para usar a chave de API do Groq armazen
 - [ ] Revisar apiKeyService.ts
 
 ### 2. **Deploy (Dev/Staging)**
-- [ ] Criar coleção "ape_key" no Firebase
+- [ ] Criar coleção "api_key" no Firebase
 - [ ] Adicionar chave do Groq
 - [ ] Configurar Firestore Rules
 - [ ] Testar usando IMPLEMENTATION_CHECKLIST.md

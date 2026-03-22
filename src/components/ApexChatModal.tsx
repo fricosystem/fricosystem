@@ -923,7 +923,7 @@ const getGroqConfig = async () => {
   const apiKey = await getGroqApiKey();
   
   if (!apiKey) {
-    console.error("[v0] Chave de API do Groq não foi encontrada na coleção 'ape_key'. Configure a chave antes de usar o APEX Chat.");
+    console.error("[v0] Chave de API do Groq não foi encontrada na coleção 'api_key'. Configure a chave antes de usar o APEX Chat.");
     return null;
   }
 
@@ -1174,7 +1174,7 @@ Diretrizes:
 
       const groqConfig = await getGroqConfig();
       if (!groqConfig) {
-        throw new Error("Chave da API Groq nao configurada na colecao 'ape_key'. Configure o campo 'groq' antes de usar o APEX Chat.");
+        throw new Error("Chave da API Groq nao configurada na colecao 'api_key'. Configure o campo 'groq' antes de usar o APEX Chat.");
       }
 
       const response = await fetchWithTimeout(`${groqConfig.baseUrl}/chat/completions`, {
@@ -1415,7 +1415,7 @@ Diretrizes:
               <div>
                 <strong>Chave de API não configurada</strong>
                 <p className="text-xs mt-1">
-                  Adicione sua chave do Groq no campo <code className="bg-yellow-100 px-1 rounded">groq</code> da coleção <code className="bg-yellow-100 px-1 rounded">ape_key</code> no Firebase.
+                  Adicione sua chave do Groq no campo <code className="bg-yellow-100 px-1 rounded">groq</code> da coleção <code className="bg-yellow-100 px-1 rounded">api_key</code> no Firebase.
                 </p>
               </div>
             </div>

@@ -59,7 +59,7 @@ Botão de envio desabilitado
 
 ### Se Recebeu Caso B: Configure Agora (5 min)
 1. Abra [Firebase Console](https://console.firebase.google.com)
-2. Crie coleção `ape_key`
+2. Crie coleção `api_key`
 3. Adicione campo `groq` com sua chave
 4. Volte ao app e **recarregue (F5)**
 5. Modal deve agora mostrar Caso A
@@ -170,7 +170,7 @@ Tente estas perguntas para validar funcionalidade:
 
 **Solução**:
 1. Firebase Console > Firestore
-2. Procure coleção `ape_key`
+2. Procure coleção `api_key`
 3. Procure campo `groq`
 4. Se não existe → Crie
 5. Recarregue a página (F5)
