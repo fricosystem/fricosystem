@@ -71,6 +71,7 @@ const pageDocMap: Record<string, () => Promise<string>> = {
   '/planejamento-desenvolvimento': () => import('./PlanejamentoDesenvolvimento.md?raw').then(m => m.default),
   '/ide': () => import('./IDE.md?raw').then(m => m.default),
   '/sistema': () => import('./Sistema.md?raw').then(m => m.default),
+  '/apex-ai': () => import('./ApexAI.md?raw').then(m => m.default),
   
   // Perfil
   '/perfil': () => import('./Perfil.md?raw').then(m => m.default),
@@ -110,10 +111,13 @@ export const hasPageDocumentation = (path: string): boolean => {
 
 /**
  * Lista todas as paginas com documentacao disponivel
- * @returns Array com todas as rotas documentadas
+ * @returns Array com nomes formatados de todas as paginas documentadas
  */
 export const getAllDocumentedPages = (): string[] => {
-  return Object.keys(pageDocMap);
+  return Object.keys(pageDocMap).map(route => {
+    const name = getPageName(route);
+    return `${name} (${route})`;
+  });
 };
 
 /**
@@ -162,6 +166,7 @@ export const getPageName = (path: string): string => {
     '/planejamento-desenvolvimento': 'Planejamento de Desenvolvimento',
     '/ide': 'IDE',
     '/sistema': 'Sistema',
+    '/apex-ai': 'APEX AI',
     '/perfil': 'Perfil',
   };
   
