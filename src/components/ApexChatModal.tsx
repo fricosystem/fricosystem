@@ -50,7 +50,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import skillPrompt from "@/AI/Skill.md?raw";
-import { getPageDocumentation, getPageName, hasPageDocumentation } from "@/AI/Documentacao/index";
+import { getPageDocumentation, getPageName, hasPageDocumentation, generateSemanticContext, searchRelatedPages, getAllDocumentedPages } from "@/AI/Documentacao/index";
 import { getGroqApiKey } from "@/services/apiKeyService";
 
 // =============================================
@@ -1339,6 +1339,29 @@ Como posso ajuda-lo?`,
         ? `\n\n=== DOCUMENTACAO DA PAGINA ATUAL: ${pageName} ===\n${pageDocumentation}\n\nUse esta documentacao para explicar funcionalidades, sugerir tratativas e orientar o usuario sobre como usar esta pagina do sistema.`
         : '';
 
+      // 4.1 Buscar contexto semantico baseado na pergunta do usuario
+      const semanticContext = generateSemanticContext(userContent);
+      const relatedPages = searchRelatedPages(userContent, 5);
+      
+      // 4.2 Se encontrou paginas relacionadas, adicionar ao contexto
+      let pagesFoundContext = '';
+      if (relatedPages.length > 0) {
+        pagesFoundContext = `\n\n=== PAGINAS DO APEX HUB RELACIONADAS A PERGUNTA ===\n`;
+        for (const { page, score } of relatedPages) {
+          const confidence = score >= 0.8 ? 'ALTA' : score >= 0.6 ? 'MEDIA' : 'BAIXA';
+          pagesFoundContext += `\n- **${page.name}** (rota: ${page.route}) - Confianca: ${confidence}`;
+          pagesFoundContext += `\n  Descricao: ${page.description}`;
+          pagesFoundContext += `\n  Palavras-chave: ${page.keywords.slice(0, 5).join(', ')}`;
+          pagesFoundContext += `\n  Acoes: ${page.actions.join(', ')}\n`;
+        }
+        pagesFoundContext += `\nIMPORTANTE: Se a pergunta do usuario mencionar qualquer termo relacionado as paginas acima, SEMPRE relacione a resposta com a funcionalidade do APEX HUB correspondente.`;
+        pagesFoundContext += `\nSe nao tiver certeza absoluta, pergunte: "Voce esta se referindo a pagina [nome da pagina] do APEX HUB?"\n`;
+      }
+
+      // 4.3 Lista de todas as paginas documentadas
+      const allPages = getAllDocumentedPages();
+      const allPagesContext = `\n\n=== TODAS AS PAGINAS DO APEX HUB ===\nO sistema possui as seguintes paginas: ${allPages.join(', ')}\nSempre que possivel, relacione perguntas do usuario com alguma dessas paginas.\n`;
+
       const systemPrompt = `${skillPrompt}
 
 Informacoes do usuario:
@@ -1393,7 +1416,26 @@ Quando receber uma solicitacao fora do escopo, responda:
 - Para relatorios, use listas ou formato tabular
 - Seja preciso e cite os dados exatos encontrados
 - Se nao encontrar o dado solicitado, informe claramente
-- Responda sempre em portugues do Brasil`;
+- Responda sempre em portugues do Brasil
+
+=== BUSCA SEMANTICA E INTERPRETACAO ===
+Voce possui uma capacidade de BUSCA SEMANTICA que relaciona palavras-chave, sinonimos e termos relacionados a cada pagina do sistema.
+
+REGRA CRITICA - NUNCA DIGA QUE ALGO NAO EXISTE NO SISTEMA SEM VERIFICAR:
+1. Antes de dizer que algo "nao esta relacionado ao sistema", verifique a lista de paginas abaixo
+2. Se o usuario mencionar termos como "cubagem", "lenha", "madeira", "medicao" - EXISTE a pagina "Cubagem e Medida de Lenha" em /medida-de-lenha
+3. Se nao tiver certeza, PERGUNTE: "Voce esta se referindo a pagina [X] do APEX HUB?"
+4. NUNCA assuma que algo nao existe - sempre busque primeiro nas paginas relacionadas
+
+QUANDO NAO ENTENDER OU TIVER DUVIDA:
+Em vez de recusar ou dizer que nao conhece, responda:
+"Encontrei algumas opcoes que podem estar relacionadas ao que voce perguntou. E sobre alguma dessas?
+- [Lista as paginas relacionadas encontradas]
+Por favor, me diga qual delas voce gostaria de saber mais."
+
+${allPagesContext}
+${pagesFoundContext}
+${semanticContext}`;
 
       // 5. Preparar as mensagens para a API Groq
       const fullSystemPrompt = databaseContext.hasRelevantData 
