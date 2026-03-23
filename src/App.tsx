@@ -34,6 +34,7 @@ import RelatoriosES from "./pages/Relatorios/Relatorios";
 import PlanejamentoDesenvolvimento from "./pages/Planejamento/PlanejamentoDesenvolvimento";
 import IDE from "./pages/IDE";
 import Sistema from "./pages/Sistema";
+import ApexAI from "./pages/ApexAI";
 
 // Páginas de Transferência e entrada manual
 import EntradaProdutosET from "./pages/EntradaProdutosET";
@@ -200,6 +201,7 @@ const AppContent = () => {
            <Route path="/planejamento-desenvolvimento" element={<AuthGuard><PlanejamentoDesenvolvimento /></AuthGuard>} />
            <Route path="/ide" element={<AuthGuard><IDE /></AuthGuard>} />
            <Route path="/sistema" element={<AuthGuard><Sistema /></AuthGuard>} />
+           <Route path="/apex-ai" element={<AuthGuard><ApexAI /></AuthGuard>} />
 
            {/* Rotas de Entrada Manual e Transferência */}
           <Route path="/entrada-manual" element={<AuthGuard><EntradaProdutosET /></AuthGuard>} />

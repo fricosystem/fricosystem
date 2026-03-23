@@ -76,7 +76,8 @@ import {
   WashingMachine,
   UserCog,
   IdCard,
-  BookOpen
+  BookOpen,
+  Bot
 } from "lucide-react";
 import { useCarrinho } from "@/hooks/useCarrinho";
 import { useEffect, useState, useMemo } from "react";
@@ -330,7 +331,8 @@ const AppSidebar = () => {
       items: [
         { to: "/planejamento-desenvolvimento", icon: ClipboardList, label: "Planejamento", permission: "planejamento_desenvolvimento" },
         { to: "/ide", icon: Monitor, label: "IDE", permission: "ide" },
-        { to: "/sistema", icon: Wrench, label: "Sistema", permission: "sistema" }
+        { to: "/sistema", icon: Wrench, label: "Sistema", permission: "sistema" },
+        { to: "/apex-ai", icon: Bot, label: "APEX AI", permission: "apex_ai" }
       ]
     }] : [])
   ], [pendingRequestsCount, isAdmin, isDesenvolvedor]);
