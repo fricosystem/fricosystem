@@ -1,9 +1,39 @@
-import { useState, useEffect, useRef } from "react";
-import { Bot, User, Loader2, Send, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
+import { 
+  Bot, 
+  User, 
+  Loader2, 
+  Send, 
+  AlertCircle, 
+  X, 
+  Trash2, 
+  Sparkles,
+  HelpCircle,
+  FileText,
+  Package,
+  ChevronDown
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { 
+  Sheet, 
+  SheetContent,
+  SheetTitle
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   collection, 
@@ -14,11 +44,18 @@ import {
   onSnapshot, 
   limit, 
   getDocs,
-  serverTimestamp 
+  serverTimestamp,
+  deleteDoc,
+  doc
 } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import skillPrompt from "@/AI/Skill.md?raw";
+import { getPageDocumentation, getPageName, hasPageDocumentation } from "@/AI/Documentacao/index";
 import { getGroqApiKey } from "@/services/apiKeyService";
+
+// =============================================
+// INTERFACES E TIPOS
+// =============================================
 
 interface ProdutoSugestao {
   id: string;
@@ -52,6 +89,12 @@ interface Message {
 interface ApexChatModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface ContextualSuggestion {
+  label: string;
+  query: string;
+  icon?: React.ReactNode;
 }
 
 // Interfaces para todas as coleções
@@ -181,6 +224,10 @@ interface DatabaseContextResult {
   produtosComImagem?: ProdutoCard[];
 }
 
+// =============================================
+// CONSTANTES E UTILITÁRIOS
+// =============================================
+
 const STOP_WORDS = new Set([
   "quais", "qual", "quero", "mostrar", "mostre", "listar", "liste", "tem", "tenho",
   "produto", "produtos", "item", "itens", "do", "da", "de", "dos", "das", "no", "na",
@@ -200,67 +247,111 @@ const normalizeText = (text: string) =>
 const formatCurrencyBRL = (value: number) =>
   Number.isFinite(value) ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "R$ 0,00";
 
-// Detectar qual coleção a pergunta está relacionada
+// Mapeamento de sugestões contextuais por página
+const PAGE_SUGGESTIONS: Record<string, ContextualSuggestion[]> = {
+  '/dashboard': [
+    { label: 'Resumo do dia', query: 'Me dê um resumo geral do sistema hoje' },
+    { label: 'Alertas de estoque', query: 'Quais produtos estão com estoque baixo?' },
+    { label: 'OS pendentes', query: 'Quantas ordens de serviço estão pendentes?' },
+  ],
+  '/produtos': [
+    { label: 'Estoque baixo', query: 'Liste produtos com estoque abaixo do mínimo' },
+    { label: 'Mais caros', query: 'Quais são os 10 produtos mais caros?' },
+    { label: 'Sem estoque', query: 'Quais produtos estão zerados?' },
+    { label: 'Vencendo', query: 'Quais produtos estão próximos do vencimento?' },
+  ],
+  '/maquinas': [
+    { label: 'Máquinas paradas', query: 'Quais máquinas estão paradas?' },
+    { label: 'Manutenção pendente', query: 'Quais equipamentos têm manutenção pendente?' },
+    { label: 'Status geral', query: 'Qual o status geral dos equipamentos?' },
+  ],
+  '/ordens-servico': [
+    { label: 'OS abertas', query: 'Liste todas as ordens de serviço abertas' },
+    { label: 'OS urgentes', query: 'Quais OS têm prioridade alta?' },
+    { label: 'OS concluídas hoje', query: 'Quantas OS foram concluídas hoje?' },
+  ],
+  '/manutencao-preventiva': [
+    { label: 'Próximas tarefas', query: 'Quais são as próximas tarefas de manutenção agendadas?' },
+    { label: 'Atrasadas', query: 'Existem tarefas de manutenção atrasadas?' },
+    { label: 'Por equipamento', query: 'Quais tarefas estão agendadas para cada equipamento?' },
+  ],
+  '/requisicoes': [
+    { label: 'Pendentes', query: 'Quais requisições estão pendentes de aprovação?' },
+    { label: 'Mais solicitados', query: 'Quais produtos são mais requisitados?' },
+  ],
+  '/fornecedor-produtos': [
+    { label: 'Fornecedores ativos', query: 'Liste todos os fornecedores ativos' },
+    { label: 'Por produto', query: 'Quais fornecedores fornecem quais produtos?' },
+  ],
+  '/inventario': [
+    { label: 'Divergências', query: 'Existem divergências no inventário?' },
+    { label: 'Último inventário', query: 'Quando foi realizado o último inventário completo?' },
+  ],
+  '/relatorios': [
+    { label: 'Relatório mensal', query: 'Gere um resumo mensal do estoque' },
+    { label: 'Movimentações', query: 'Quais foram as principais movimentações do mês?' },
+  ],
+};
+
+// Comandos rápidos disponíveis
+const QUICK_COMMANDS = [
+  { command: '/ajuda', description: 'Mostra comandos disponíveis', action: 'help' },
+  { command: '/pagina', description: 'Explica a página atual', action: 'page' },
+  { command: '/limpar', description: 'Limpa o histórico', action: 'clear' },
+];
+
+// =============================================
+// FUNÇÕES DE BUSCA DE DADOS
+// =============================================
+
 const detectRelevantCollections = (message: string): string[] => {
   const normalized = normalizeText(message);
   const collections: string[] = [];
+  
   if (/(produto|estoque|deposito|prateleira|vencimento|codigo|material|quantidade|barato|caro|item|itens|preco|valor|peca|pecas|veda|rosca|lubrificante|oleo|filtro|correia|rolamento|parafuso|arruela|anel|junta|vedacao|mangueira|bomba|motor|valvula|sensor|rele|fusivel|lampada|cabo|fio|tubo|conexao|abraca|braçadeira|chapa|barra|cantoneira|perfil|solda|eletrodo|disco|lixa|serra|broca|fresa|ferramenta|epi|luva|oculos|mascara|capacete|bota|uniforme)/.test(normalized)) {
     collections.push("produtos");
   }
 
-  // Fornecedores
   if (/(fornecedor|cnpj|razao social|pagamento|prazo entrega|contato|fornece|quem vende|onde compro)/.test(normalized)) {
     collections.push("fornecedores");
   }
 
-  // Equipamentos/Máquinas
   if (/(maquina|equipamento|patrimonio|tag)/.test(normalized) && !/(manutentor)/.test(normalized)) {
     collections.push("equipamentos");
   }
 
-  // Manutentores
   if (/(manutentor|tecnico|tecnicos|quem faz|responsavel)/.test(normalized) && !/(tarefa|ordem|servico)/.test(normalized)) {
     collections.push("manutentores");
   }
 
-  // Manuais
   if (/(manual|manuais|instrucao|instrucoes|documento)/.test(normalized)) {
     collections.push("manuais");
   }
 
-  // Tarefas de Manutenção
   if (/(tarefa|tarefas|preventiva|agendada|agendamento|frequencia)/.test(normalized)) {
     collections.push("tarefas_manutencao");
   }
 
-  // Ordens de Serviço
   if (/(ordem|ordens|os\b|servico|servicos|aberta|pendente|concluida)/.test(normalized)) {
     collections.push("ordens_servicos");
   }
 
-  // Unidades
   if (/(unidade|unidades|filial|filiais|loja|lojas)/.test(normalized) && !/(medida)/.test(normalized)) {
     collections.push("unidades");
   }
 
-  // Setores
   if (/(setor|setores|departamento|area)/.test(normalized) && !/(equipamento|maquina)/.test(normalized)) {
     collections.push("setores");
   }
 
-  // Centro de Custo
   if (/(centro de custo|centro custo|custo|centros)/.test(normalized)) {
     collections.push("centros_de_custo");
   }
 
-  // Se não detectou nenhuma coleção específica mas parece uma pergunta sobre dados
-  // SEMPRE buscar em produtos por padrão quando for pergunta sobre dados
   if (collections.length === 0 && /(quantos|quantas|lista|listar|mostre|mostrar|tem|temos|existe|buscar|encontrar|relatorio|resumo|total|qual|quais|onde|como|quanto)/.test(normalized)) {
-    // Buscar em todas as coleções principais
     collections.push("produtos", "fornecedores", "equipamentos");
   }
 
-  // Se ainda não detectou nada, mas a mensagem parece uma busca específica, buscar em produtos
   if (collections.length === 0) {
     const words = normalized.split(/\s+/).filter(w => w.length >= 3);
     if (words.length >= 1 && words.length <= 10) {
@@ -279,7 +370,6 @@ const extractSearchTerms = (message: string) => {
     .slice(0, 5);
 };
 
-// Busca bruta de produtos retornando objetos completos (para sugestões e cards)
 const fetchProdutosRaw = async (): Promise<ProdutoChatData[]> => {
   try {
     const snap = await getDocs(query(collection(db, "produtos"), limit(500)));
@@ -311,13 +401,12 @@ const fetchProdutosRaw = async (): Promise<ProdutoChatData[]> => {
   }
 };
 
-// Buscar dados de produtos
 const fetchProdutosContext = async (message: string): Promise<string> => {
   try {
     let produtosSnapshot;
     try {
       produtosSnapshot = await getDocs(query(collection(db, "produtos"), limit(500)));
-    } catch (queryError) {
+    } catch {
       produtosSnapshot = await getDocs(collection(db, "produtos"));
     }
     
@@ -347,11 +436,9 @@ const fetchProdutosContext = async (message: string): Promise<string> => {
     const normalizedMessage = normalizeText(message);
     let filtered = [...produtos];
 
-    // Filtros inteligentes
     if (normalizedMessage.includes("inativo")) {
       filtered = filtered.filter((p) => normalizeText(String(p.ativo)) === "nao" || normalizeText(String(p.ativo)) === "não" || p.ativo === false);
     } else if (!normalizedMessage.includes("todos") && !normalizedMessage.includes("todas")) {
-      // Por padrão, mostrar apenas ativos
       filtered = filtered.filter((p) => {
         const ativoStr = normalizeText(String(p.ativo));
         return ativoStr !== "nao" && ativoStr !== "não" && p.ativo !== false && p.ativo !== "false";
@@ -379,7 +466,6 @@ const fetchProdutosContext = async (message: string): Promise<string> => {
       }
     }
 
-    // Ordenação
     if (/(mais barato|menor preco)/.test(normalizedMessage)) {
       filtered.sort((a, b) => a.valor_unitario - b.valor_unitario);
     } else if (/(mais caro|maior preco)/.test(normalizedMessage)) {
@@ -391,23 +477,22 @@ const fetchProdutosContext = async (message: string): Promise<string> => {
     const totalFiltrado = filtered.length;
 
     if (topProdutos.length === 0) {
-      return `\n\n=== COLEÇÃO PRODUTOS ===\nTotal de produtos no sistema: ${totalProdutos}\nNenhum produto encontrado com os critérios de busca.`;
+      return `\n\n=== COLECAO PRODUTOS ===\nTotal de produtos no sistema: ${totalProdutos}\nNenhum produto encontrado com os criterios de busca.`;
     }
 
     const contextoProdutos = topProdutos
       .map((p, i) =>
-        `${i + 1}. Nome: ${p.nome} | Código Estoque: ${p.codigo_estoque} | Código Material: ${p.codigo_material} | Quantidade: ${p.quantidade} | Mínimo: ${p.quantidade_minima} | Valor: ${formatCurrencyBRL(p.valor_unitario)} | Unidade Medida: ${p.unidade_de_medida} | Depósito: ${p.deposito} | Prateleira: ${p.prateleira} | Unidade: ${p.unidade} | Fornecedor: ${p.fornecedor_nome || "não informado"} | CNPJ Fornecedor: ${p.fornecedor_cnpj || "não informado"} | Vencimento: ${p.data_vencimento || "não informado"} | Ativo: ${p.ativo} | Detalhes: ${p.detalhes || "não informado"}`
+        `${i + 1}. Nome: ${p.nome} | Codigo Estoque: ${p.codigo_estoque} | Codigo Material: ${p.codigo_material} | Quantidade: ${p.quantidade} | Minimo: ${p.quantidade_minima} | Valor: ${formatCurrencyBRL(p.valor_unitario)} | Unidade Medida: ${p.unidade_de_medida} | Deposito: ${p.deposito} | Prateleira: ${p.prateleira} | Unidade: ${p.unidade} | Fornecedor: ${p.fornecedor_nome || "nao informado"} | CNPJ Fornecedor: ${p.fornecedor_cnpj || "nao informado"} | Vencimento: ${p.data_vencimento || "nao informado"} | Ativo: ${p.ativo} | Detalhes: ${p.detalhes || "nao informado"}`
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO PRODUTOS ===\nTotal de produtos no sistema: ${totalProdutos}\nProdutos encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topProdutos.length} registros:\n${contextoProdutos}`;
+    return `\n\n=== COLECAO PRODUTOS ===\nTotal de produtos no sistema: ${totalProdutos}\nProdutos encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topProdutos.length} registros:\n${contextoProdutos}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar produtos:", error);
-    return `\n\n=== COLEÇÃO PRODUTOS ===\nErro ao acessar dados de produtos: ${error instanceof Error ? error.message : "Erro desconhecido"}`;
+    console.error("[APEX] Erro ao buscar produtos:", error);
+    return `\n\n=== COLECAO PRODUTOS ===\nErro ao acessar dados de produtos: ${error instanceof Error ? error.message : "Erro desconhecido"}`;
   }
 };
 
-// Buscar dados de fornecedores
 const fetchFornecedoresContext = async (message: string): Promise<string> => {
   try {
     const fornecedoresSnapshot = await getDocs(collection(db, "fornecedores"));
@@ -444,18 +529,17 @@ const fetchFornecedoresContext = async (message: string): Promise<string> => {
 
     const contextoFornecedores = topFornecedores
       .map((f, i) =>
-        `${i + 1}. Razão Social: ${f.razaoSocial} | CNPJ: ${f.cnpj} | Telefone: ${f.telefone} | Email: ${f.email} | Contato: ${f.pessoaContato} | Endereço: ${f.endereco.rua}, ${f.endereco.numero}, ${f.endereco.bairro}, ${f.endereco.cidade}/${f.endereco.estado} - CEP: ${f.endereco.cep} | Condições de Pagamento: ${f.condicoesPagamento} | Prazo de Entrega: ${f.prazoEntrega}`
+        `${i + 1}. Razao Social: ${f.razaoSocial} | CNPJ: ${f.cnpj} | Telefone: ${f.telefone} | Email: ${f.email} | Contato: ${f.pessoaContato} | Endereco: ${f.endereco.rua}, ${f.endereco.numero}, ${f.endereco.bairro}, ${f.endereco.cidade}/${f.endereco.estado} - CEP: ${f.endereco.cep} | Condicoes de Pagamento: ${f.condicoesPagamento} | Prazo de Entrega: ${f.prazoEntrega}`
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO FORNECEDORES ===\nTotal de fornecedores no sistema: ${totalFornecedores}\nFornecedores encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topFornecedores.length} registros:\n${contextoFornecedores}`;
+    return `\n\n=== COLECAO FORNECEDORES ===\nTotal de fornecedores no sistema: ${totalFornecedores}\nFornecedores encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topFornecedores.length} registros:\n${contextoFornecedores}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar fornecedores:", error);
-    return `\n\n=== COLEÇÃO FORNECEDORES ===\nErro ao acessar dados de fornecedores: ${error instanceof Error ? error.message : "Erro desconhecido"}`;
+    console.error("[APEX] Erro ao buscar fornecedores:", error);
+    return `\n\n=== COLECAO FORNECEDORES ===\nErro ao acessar dados de fornecedores: ${error instanceof Error ? error.message : "Erro desconhecido"}`;
   }
 };
 
-// Buscar dados de equipamentos/máquinas
 const fetchEquipamentosContext = async (message: string): Promise<string> => {
   try {
     const equipamentosSnapshot = await getDocs(collection(db, "equipamentos"));
@@ -488,18 +572,17 @@ const fetchEquipamentosContext = async (message: string): Promise<string> => {
 
     const contextoEquipamentos = topEquipamentos
       .map((e, i) =>
-        `${i + 1}. Equipamento: ${e.equipamento} | Patrimônio: ${e.patrimonio} | Setor: ${e.setor} | Tag: ${e.tag} | Status: ${e.status} | Descrição: ${e.descricao || "não informado"}`
+        `${i + 1}. Equipamento: ${e.equipamento} | Patrimonio: ${e.patrimonio} | Setor: ${e.setor} | Tag: ${e.tag} | Status: ${e.status} | Descricao: ${e.descricao || "nao informado"}`
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO EQUIPAMENTOS/MÁQUINAS ===\nTotal de equipamentos no sistema: ${totalEquipamentos}\nEquipamentos encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topEquipamentos.length} registros:\n${contextoEquipamentos}`;
+    return `\n\n=== COLECAO EQUIPAMENTOS/MAQUINAS ===\nTotal de equipamentos no sistema: ${totalEquipamentos}\nEquipamentos encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topEquipamentos.length} registros:\n${contextoEquipamentos}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar equipamentos:", error);
-    return `\n\n=== COLEÇÃO EQUIPAMENTOS ===\nErro ao acessar dados de equipamentos: ${error instanceof Error ? error.message : "Erro desconhecido"}`;
+    console.error("[APEX] Erro ao buscar equipamentos:", error);
+    return `\n\n=== COLECAO EQUIPAMENTOS ===\nErro ao acessar dados de equipamentos: ${error instanceof Error ? error.message : "Erro desconhecido"}`;
   }
 };
 
-// Buscar dados de manutentores
 const fetchManutentoresContext = async (message: string): Promise<string> => {
   try {
     const manutentoresSnapshot = await getDocs(collection(db, "manutentores"));
@@ -536,14 +619,13 @@ const fetchManutentoresContext = async (message: string): Promise<string> => {
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO MANUTENTORES ===\nTotal de manutentores no sistema: ${totalManutentores}\nManutentores encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topManutentores.length} registros:\n${contextoManutentores}`;
+    return `\n\n=== COLECAO MANUTENTORES ===\nTotal de manutentores no sistema: ${totalManutentores}\nManutentores encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topManutentores.length} registros:\n${contextoManutentores}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar manutentores:", error);
-    return "\n\n=== COLEÇÃO MANUTENTORES ===\nErro ao acessar dados de manutentores.";
+    console.error("[APEX] Erro ao buscar manutentores:", error);
+    return "\n\n=== COLECAO MANUTENTORES ===\nErro ao acessar dados de manutentores.";
   }
 };
 
-// Buscar dados de manuais
 const fetchManuaisContext = async (message: string): Promise<string> => {
   try {
     const manuaisSnapshot = await getDocs(collection(db, "pdf_manuais"));
@@ -574,18 +656,17 @@ const fetchManuaisContext = async (message: string): Promise<string> => {
 
     const contextoManuais = topManuais
       .map((m, i) =>
-        `${i + 1}. Título: ${m.titulo} | Subtítulo: ${m.subtitulo} | Ativo: ${m.ativo ? "Sim" : "Não"} | Data Criação: ${m.dataCriacao}`
+        `${i + 1}. Titulo: ${m.titulo} | Subtitulo: ${m.subtitulo} | Ativo: ${m.ativo ? "Sim" : "Nao"} | Data Criacao: ${m.dataCriacao}`
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO MANUAIS ===\nTotal de manuais no sistema: ${totalManuais}\nManuais encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topManuais.length} registros:\n${contextoManuais}`;
+    return `\n\n=== COLECAO MANUAIS ===\nTotal de manuais no sistema: ${totalManuais}\nManuais encontrados na busca: ${totalFiltrado}\nExibindo os primeiros ${topManuais.length} registros:\n${contextoManuais}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar manuais:", error);
-    return "\n\n=== COLEÇÃO MANUAIS ===\nErro ao acessar dados de manuais.";
+    console.error("[APEX] Erro ao buscar manuais:", error);
+    return "\n\n=== COLECAO MANUAIS ===\nErro ao acessar dados de manuais.";
   }
 };
 
-// Buscar dados de tarefas de manutenção
 const fetchTarefasManutencaoContext = async (message: string): Promise<string> => {
   try {
     const tarefasSnapshot = await getDocs(collection(db, "tarefas_manutencao"));
@@ -621,18 +702,17 @@ const fetchTarefasManutencaoContext = async (message: string): Promise<string> =
 
     const contextoTarefas = topTarefas
       .map((t, i) =>
-        `${i + 1}. Título: ${t.titulo} | Equipamento: ${t.equipamento} | Setor: ${t.setor} | Frequência: ${t.frequencia} | Status: ${t.status} | Prioridade: ${t.prioridade} | Manutentor: ${t.manutentor} | Agendada: ${t.dataHoraAgendada}`
+        `${i + 1}. Titulo: ${t.titulo} | Equipamento: ${t.equipamento} | Setor: ${t.setor} | Frequencia: ${t.frequencia} | Status: ${t.status} | Prioridade: ${t.prioridade} | Manutentor: ${t.manutentor} | Agendada: ${t.dataHoraAgendada}`
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO TAREFAS DE MANUTENÇÃO ===\nTotal de tarefas no sistema: ${totalTarefas}\nTarefas encontradas na busca: ${totalFiltrado}\nExibindo as primeiras ${topTarefas.length} registros:\n${contextoTarefas}`;
+    return `\n\n=== COLECAO TAREFAS DE MANUTENCAO ===\nTotal de tarefas no sistema: ${totalTarefas}\nTarefas encontradas na busca: ${totalFiltrado}\nExibindo as primeiras ${topTarefas.length} registros:\n${contextoTarefas}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar tarefas:", error);
-    return "\n\n=== COLEÇÃO TAREFAS DE MANUTENÇÃO ===\nErro ao acessar dados de tarefas.";
+    console.error("[APEX] Erro ao buscar tarefas:", error);
+    return "\n\n=== COLECAO TAREFAS DE MANUTENCAO ===\nErro ao acessar dados de tarefas.";
   }
 };
 
-// Buscar dados de ordens de serviço
 const fetchOrdensServicoContext = async (message: string): Promise<string> => {
   try {
     const ordensSnapshot = await getDocs(collection(db, "ordens_servicos"));
@@ -674,18 +754,17 @@ const fetchOrdensServicoContext = async (message: string): Promise<string> => {
 
     const contextoOrdens = topOrdens
       .map((o, i) =>
-        `${i + 1}. Título: ${o.titulo} | Equipamento: ${o.equipamento} | Setor: ${o.setor} | Status: ${o.status} | Prioridade: ${o.prioridade} | Abertura: ${o.dataAbertura} | Conclusão: ${o.dataConclusao || "não concluída"}`
+        `${i + 1}. Titulo: ${o.titulo} | Equipamento: ${o.equipamento} | Setor: ${o.setor} | Status: ${o.status} | Prioridade: ${o.prioridade} | Abertura: ${o.dataAbertura} | Conclusao: ${o.dataConclusao || "nao concluida"}`
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO ORDENS DE SERVIÇO ===\nTotal de ordens no sistema: ${totalOrdens}\nOrdens encontradas na busca: ${totalFiltrado}\nExibindo as primeiras ${topOrdens.length} registros:\n${contextoOrdens}`;
+    return `\n\n=== COLECAO ORDENS DE SERVICO ===\nTotal de ordens no sistema: ${totalOrdens}\nOrdens encontradas na busca: ${totalFiltrado}\nExibindo as primeiras ${topOrdens.length} registros:\n${contextoOrdens}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar ordens:", error);
-    return "\n\n=== COLEÇÃO ORDENS DE SERVIÇO ===\nErro ao acessar dados de ordens de serviço.";
+    console.error("[APEX] Erro ao buscar ordens:", error);
+    return "\n\n=== COLECAO ORDENS DE SERVICO ===\nErro ao acessar dados de ordens de servico.";
   }
 };
 
-// Buscar dados de unidades
 const fetchUnidadesContext = async (message: string): Promise<string> => {
   try {
     const unidadesSnapshot = await getDocs(collection(db, "unidades"));
@@ -713,18 +792,17 @@ const fetchUnidadesContext = async (message: string): Promise<string> => {
 
     const contextoUnidades = filtered
       .map((u, i) =>
-        `${i + 1}. Nome: ${u.nome} | Código: ${u.codigo} | Endereço: ${u.endereco} | Responsável: ${u.responsavel} | Telefone: ${u.telefone}`
+        `${i + 1}. Nome: ${u.nome} | Codigo: ${u.codigo} | Endereco: ${u.endereco} | Responsavel: ${u.responsavel} | Telefone: ${u.telefone}`
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO UNIDADES ===\nTotal de unidades no sistema: ${unidades.length}\nUnidades encontradas: ${filtered.length}\n${contextoUnidades}`;
+    return `\n\n=== COLECAO UNIDADES ===\nTotal de unidades no sistema: ${unidades.length}\nUnidades encontradas: ${filtered.length}\n${contextoUnidades}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar unidades:", error);
-    return "\n\n=== COLEÇÃO UNIDADES ===\nErro ao acessar dados de unidades.";
+    console.error("[APEX] Erro ao buscar unidades:", error);
+    return "\n\n=== COLECAO UNIDADES ===\nErro ao acessar dados de unidades.";
   }
 };
 
-// Buscar dados de setores
 const fetchSetoresContext = async (message: string): Promise<string> => {
   try {
     const setoresSnapshot = await getDocs(collection(db, "setores"));
@@ -751,18 +829,17 @@ const fetchSetoresContext = async (message: string): Promise<string> => {
 
     const contextoSetores = filtered
       .map((s, i) =>
-        `${i + 1}. Nome: ${s.nome} | Descrição: ${s.descricao} | Responsável: ${s.responsavel} | Unidade: ${s.unidade}`
+        `${i + 1}. Nome: ${s.nome} | Descricao: ${s.descricao} | Responsavel: ${s.responsavel} | Unidade: ${s.unidade}`
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO SETORES ===\nTotal de setores no sistema: ${setores.length}\nSetores encontrados: ${filtered.length}\n${contextoSetores}`;
+    return `\n\n=== COLECAO SETORES ===\nTotal de setores no sistema: ${setores.length}\nSetores encontrados: ${filtered.length}\n${contextoSetores}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar setores:", error);
-    return "\n\n=== COLEÇÃO SETORES ===\nErro ao acessar dados de setores.";
+    console.error("[APEX] Erro ao buscar setores:", error);
+    return "\n\n=== COLECAO SETORES ===\nErro ao acessar dados de setores.";
   }
 };
 
-// Buscar dados de centros de custo
 const fetchCentrosCustoContext = async (message: string): Promise<string> => {
   try {
     const centrosSnapshot = await getDocs(collection(db, "centros_de_custo"));
@@ -788,18 +865,17 @@ const fetchCentrosCustoContext = async (message: string): Promise<string> => {
 
     const contextoCentros = filtered
       .map((c, i) =>
-        `${i + 1}. Nome: ${c.nome} | Código: ${c.codigo} | Descrição: ${c.descricao}`
+        `${i + 1}. Nome: ${c.nome} | Codigo: ${c.codigo} | Descricao: ${c.descricao}`
       )
       .join("\n");
 
-    return `\n\n=== COLEÇÃO CENTROS DE CUSTO ===\nTotal de centros de custo: ${centros.length}\nCentros encontrados: ${filtered.length}\n${contextoCentros}`;
+    return `\n\n=== COLECAO CENTROS DE CUSTO ===\nTotal de centros de custo: ${centros.length}\nCentros encontrados: ${filtered.length}\n${contextoCentros}`;
   } catch (error) {
-    console.error("[v0] Erro ao buscar centros de custo:", error);
-    return "\n\n=== COLEÇÃO CENTROS DE CUSTO ===\nErro ao acessar dados de centros de custo.";
+    console.error("[APEX] Erro ao buscar centros de custo:", error);
+    return "\n\n=== COLECAO CENTROS DE CUSTO ===\nErro ao acessar dados de centros de custo.";
   }
 };
 
-// Função principal que busca contexto de todas as coleções relevantes
 const fetchDatabaseContext = async (message: string): Promise<DatabaseContextResult> => {
   const collections = detectRelevantCollections(message);
   
@@ -811,7 +887,7 @@ const fetchDatabaseContext = async (message: string): Promise<DatabaseContextRes
     };
   }
 
-  let fullContext = "\n\n=== DADOS DO SISTEMA APEX HUB ===\nAbaixo estão os dados das coleções relevantes para responder à pergunta do usuário:\n";
+  let fullContext = "\n\n=== DADOS DO SISTEMA APEX HUB ===\nAbaixo estao os dados das colecoes relevantes para responder a pergunta do usuario:\n";
   
   const contextPromises: Promise<string>[] = [];
 
@@ -850,7 +926,6 @@ const fetchDatabaseContext = async (message: string): Promise<DatabaseContextRes
     }
   }
 
-  // Se consultar produtos, também calcular sugestões e cards com imagem em paralelo
   let produtosSugeridos: ProdutoSugestao[] | undefined;
   let produtosComImagem: ProdutoCard[] | undefined;
 
@@ -858,13 +933,11 @@ const fetchDatabaseContext = async (message: string): Promise<DatabaseContextRes
     const todosOsProdutos = await fetchProdutosRaw();
     const searchTerms = extractSearchTerms(message);
 
-    // Produtos que correspondem à busca (parcial ou completa)
     const matched = todosOsProdutos.filter((p) => {
       const base = normalizeText(`${p.nome} ${p.codigo_estoque} ${p.codigo_material} ${p.detalhes}`);
       return searchTerms.some((t) => base.includes(t));
     });
 
-    // Se há mais de 1 produto relacionado, sugerir os demais como chips
     if (matched.length > 1) {
       produtosSugeridos = matched.slice(0, 8).map((p) => ({
         id: p.id,
@@ -873,7 +946,6 @@ const fetchDatabaseContext = async (message: string): Promise<DatabaseContextRes
       }));
     }
 
-    // Produtos com imagem vinculada
     const comImagem = matched.filter((p) => p.imageUrl && p.imageUrl.length > 0);
     if (comImagem.length > 0) {
       produtosComImagem = comImagem.slice(0, 6).map((p) => ({
@@ -895,7 +967,7 @@ const fetchDatabaseContext = async (message: string): Promise<DatabaseContextRes
   const results = await Promise.all(contextPromises);
   fullContext += results.join("");
   
-  fullContext += "\n\n=== INSTRUÇÕES PARA RESPOSTA ===\nUse APENAS os dados acima para responder à pergunta do usuário. Se o dado solicitado não estiver presente, informe que não foi encontrado. Formate a resposta de forma clara e organizada. Se for solicitado um relatório, organize os dados em formato tabular ou lista estruturada.";
+  fullContext += "\n\n=== INSTRUCOES PARA RESPOSTA ===\nUse APENAS os dados acima para responder a pergunta do usuario. Se o dado solicitado nao estiver presente, informe que nao foi encontrado. Formate a resposta de forma clara e organizada. Se for solicitado um relatorio, organize os dados em formato tabular ou lista estruturada.";
 
   return {
     hasRelevantData: true,
@@ -918,12 +990,11 @@ const fetchWithTimeout = async (input: RequestInfo | URL, init?: RequestInit & {
   }
 };
 
-// Configuração da API do Groq será carregada dinamicamente
 const getGroqConfig = async () => {
   const apiKey = await getGroqApiKey();
   
   if (!apiKey) {
-    console.error("[v0] Chave de API do Groq não foi encontrada na coleção 'api_key'. Configure a chave antes de usar o APEX Chat.");
+    console.error("[APEX] Chave de API do Groq nao foi encontrada na colecao 'api_key'. Configure a chave antes de usar o APEX Chat.");
     return null;
   }
 
@@ -934,7 +1005,10 @@ const getGroqConfig = async () => {
   };
 };
 
-// Componente para renderizar Markdown básico
+// =============================================
+// COMPONENTE DE MARKDOWN
+// =============================================
+
 const SimpleMarkdown = ({ content }: { content: string }) => {
   const processMarkdown = (text: string): React.ReactNode[] => {
     const parts: React.ReactNode[] = [];
@@ -996,34 +1070,76 @@ const SimpleMarkdown = ({ content }: { content: string }) => {
   );
 };
 
+// =============================================
+// COMPONENTE PRINCIPAL
+// =============================================
+
 const ApexChatModal = ({ isOpen, onClose }: ApexChatModalProps) => {
   const { user, userData } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: `Olá! Eu sou o **APEX Chat**, seu assistente virtual com acesso completo aos dados do sistema.
-
-Posso ajudá-lo com informações sobre:
-- **Produtos**: estoque, preços, fornecedores, vencimentos
-- **Fornecedores**: CNPJ, contatos, condições de pagamento
-- **Equipamentos/Máquinas**: patrimônio, setores, status
-- **Manutentores**: equipe técnica, contatos
-- **Tarefas de Manutenção**: agendamentos, frequências
-- **Ordens de Serviço**: abertas, pendentes, concluídas
-- **Manuais**: documentação técnica
-- **E muito mais!**
-
-Como posso ajudá-lo hoje?`,
-      timestamp: new Date(),
-    },
-  ]);
+  const location = useLocation();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isApiConfigured, setIsApiConfigured] = useState<boolean | null>(null);
+  const [pageDocumentation, setPageDocumentation] = useState<string>("");
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Verificar se a API está configurada quando o chat abrir
+  // Detectar se e mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Mensagem de boas-vindas contextual
+  const getWelcomeMessage = useCallback((): Message => {
+    const pageName = getPageName(location.pathname);
+    const hasDoc = hasPageDocumentation(location.pathname);
+    
+    return {
+      id: "welcome",
+      role: "assistant",
+      content: `Ola! Sou o **APEX AI**, seu assistente virtual inteligente.
+
+Voce esta na pagina **${pageName}**${hasDoc ? ' e tenho documentacao completa sobre ela.' : '.'}
+
+Posso ajudar com:
+- **Dados do sistema**: produtos, fornecedores, equipamentos, OS
+- **Funcionalidades**: explicar como usar cada recurso
+- **Tratativas**: sugerir acoes para resolver problemas
+
+${hasDoc ? `Digite **/pagina** para saber mais sobre ${pageName}.` : ''}
+
+Como posso ajuda-lo?`,
+      timestamp: new Date(),
+    };
+  }, [location.pathname]);
+
+  // Carregar documentacao da pagina atual
+  useEffect(() => {
+    const loadPageDoc = async () => {
+      if (location.pathname) {
+        const doc = await getPageDocumentation(location.pathname);
+        setPageDocumentation(doc);
+      }
+    };
+    loadPageDoc();
+  }, [location.pathname]);
+
+  // Inicializar mensagem de boas-vindas
+  useEffect(() => {
+    if (isOpen) {
+      setMessages([getWelcomeMessage()]);
+    }
+  }, [isOpen, getWelcomeMessage]);
+
+  // Verificar se a API esta configurada quando o chat abrir
   useEffect(() => {
     if (!isOpen) return;
 
@@ -1032,7 +1148,7 @@ Como posso ajudá-lo hoje?`,
         const apiKey = await getGroqApiKey();
         setIsApiConfigured(!!apiKey);
       } catch (error) {
-        console.error("[v0] Erro ao verificar API:", error);
+        console.error("[APEX] Erro ao verificar API:", error);
         setIsApiConfigured(false);
       }
     };
@@ -1040,7 +1156,7 @@ Como posso ajudá-lo hoje?`,
     checkApiConfiguration();
   }, [isOpen]);
 
-  // Carregar histórico do Firebase quando o chat abrir
+  // Carregar historico do Firebase quando o chat abrir
   useEffect(() => {
     if (!isOpen || !user) return;
 
@@ -1053,10 +1169,10 @@ Como posso ajudá-lo hoje?`,
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const history: Message[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
+      snapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
         history.push({
-          id: doc.id,
+          id: docSnapshot.id,
           role: data.role,
           content: data.content,
           timestamp: data.createdAt?.toDate() || new Date(),
@@ -1067,22 +1183,15 @@ Como posso ajudá-lo hoje?`,
       const recentHistory = history.slice(-50);
 
       if (recentHistory.length > 0) {
-        setMessages([
-          {
-            id: "welcome",
-            role: "assistant",
-            content: `Olá! Eu sou o **APEX Chat**, seu assistente virtual com acesso completo aos dados do sistema. Como posso ajudá-lo hoje?`,
-            timestamp: new Date(),
-          },
-          ...recentHistory
-        ]);
+        setMessages([getWelcomeMessage(), ...recentHistory]);
+        setShowSuggestions(false);
       }
     });
 
     return () => unsubscribe();
-  }, [isOpen, user]);
+  }, [isOpen, user, getWelcomeMessage]);
 
-  // Auto-scroll para a última mensagem
+  // Auto-scroll para a ultima mensagem
   useEffect(() => {
     if (scrollRef.current) {
       const scrollArea = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -1092,12 +1201,109 @@ Como posso ajudá-lo hoje?`,
     }
   }, [messages, isLoading]);
 
+  // Focar no input quando abrir
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
+
+  // Sugestoes contextuais baseadas na pagina atual
+  const contextualSuggestions = PAGE_SUGGESTIONS[location.pathname] || PAGE_SUGGESTIONS['/dashboard'] || [];
+
+  // Limpar historico do chat
+  const handleClearHistory = async () => {
+    if (!user) return;
+    
+    try {
+      const chatRef = collection(db, "chat_messages");
+      const q = query(chatRef, where("userId", "==", user.uid));
+      const snapshot = await getDocs(q);
+      
+      const deletePromises = snapshot.docs.map((docSnapshot) => 
+        deleteDoc(doc(db, "chat_messages", docSnapshot.id))
+      );
+      
+      await Promise.all(deletePromises);
+      setMessages([getWelcomeMessage()]);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error("[APEX] Erro ao limpar historico:", error);
+    }
+  };
+
+  // Processar comandos rapidos
+  const processCommand = async (command: string): Promise<boolean> => {
+    const lowerCommand = command.toLowerCase().trim();
+    
+    if (lowerCommand === '/ajuda' || lowerCommand === '/help') {
+      const helpMessage: Message = {
+        id: "help-" + Date.now(),
+        role: "assistant",
+        content: `**Comandos Disponiveis:**
+
+**/ajuda** - Mostra esta lista de comandos
+**/pagina** - Explica as funcionalidades da pagina atual
+**/limpar** - Limpa o historico de conversas
+
+**Dicas de Uso:**
+- Pergunte sobre **produtos**, **fornecedores**, **equipamentos**
+- Consulte **ordens de servico** e **tarefas de manutencao**
+- Peca **relatorios** e **resumos** dos dados
+- Use as **sugestoes contextuais** para perguntas rapidas`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, helpMessage]);
+      return true;
+    }
+    
+    if (lowerCommand === '/pagina' || lowerCommand === '/page') {
+      const pageName = getPageName(location.pathname);
+      
+      if (pageDocumentation) {
+        const pageMessage: Message = {
+          id: "page-" + Date.now(),
+          role: "assistant",
+          content: `**Documentacao: ${pageName}**\n\n${pageDocumentation.slice(0, 2000)}${pageDocumentation.length > 2000 ? '\n\n*[Documentacao resumida por ser muito extensa]*' : ''}`,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, pageMessage]);
+      } else {
+        const noDocMessage: Message = {
+          id: "page-" + Date.now(),
+          role: "assistant",
+          content: `A pagina **${pageName}** ainda nao possui documentacao detalhada. Posso ajuda-lo com duvidas especificas sobre as funcionalidades visiveis.`,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, noDocMessage]);
+      }
+      return true;
+    }
+    
+    if (lowerCommand === '/limpar' || lowerCommand === '/clear') {
+      await handleClearHistory();
+      return true;
+    }
+    
+    return false;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || !user) return;
 
     const userContent = input;
     setInput("");
+    setShowSuggestions(false);
     setIsLoading(true);
+    
+    // Verificar se e um comando
+    if (userContent.startsWith('/')) {
+      const wasCommand = await processCommand(userContent);
+      if (wasCommand) {
+        setIsLoading(false);
+        return;
+      }
+    }
     
     const userMessage: Message = {
       id: "user-" + Date.now(),
@@ -1110,7 +1316,7 @@ Como posso ajudá-lo hoje?`,
     let databaseContext: DatabaseContextResult = { hasRelevantData: false, context: "", fallbackAnswer: "" };
 
     try {
-      // 1. Salvar mensagem do usuário no Firebase
+      // 1. Salvar mensagem do usuario no Firebase
       await addDoc(collection(db, "chat_messages"), {
         userId: user.uid,
         role: "user",
@@ -1118,43 +1324,76 @@ Como posso ajudá-lo hoje?`,
         createdAt: serverTimestamp(),
       });
 
-      // 2. Buscar contexto de todas as coleções relevantes
+      // 2. Buscar contexto de todas as colecoes relevantes
       databaseContext = await fetchDatabaseContext(userContent);
 
-      // 3. Preparar o histórico de mensagens para o contexto
+      // 3. Preparar o historico de mensagens para o contexto
       const conversationHistory = messages.slice(-10).map(m => ({
         role: m.role,
         content: m.content
       }));
 
-      // 4. Preparar o system prompt com as habilidades e contexto do usuário
+      // 4. Preparar o system prompt com as habilidades, documentacao da pagina e contexto do usuario
+      const pageName = getPageName(location.pathname);
+      const pageContextSection = pageDocumentation 
+        ? `\n\n=== DOCUMENTACAO DA PAGINA ATUAL: ${pageName} ===\n${pageDocumentation}\n\nUse esta documentacao para explicar funcionalidades, sugerir tratativas e orientar o usuario sobre como usar esta pagina do sistema.`
+        : '';
+
       const systemPrompt = `${skillPrompt}
 
-Informações do usuário:
-- Nome: ${userData?.nome || user.email || "Usuário"}
-- Email: ${user?.email || "Não informado"}
+Informacoes do usuario:
+- Nome: ${userData?.nome || user.email || "Usuario"}
+- Email: ${user?.email || "Nao informado"}
+- Pagina atual: ${pageName} (${location.pathname})
 
-Você é o APEX Chat, um assistente virtual do sistema APEX HUB com ACESSO TOTAL aos dados do sistema.
-Você tem acesso às seguintes coleções do banco de dados:
-- produtos: informações de estoque, preços, fornecedores, vencimentos
-- fornecedores: razão social, CNPJ, contatos, condições de pagamento, endereços
-- equipamentos: máquinas, patrimônio, setores, tags, status
-- manutentores: técnicos de manutenção, contatos, setores
-- manuais: documentação técnica, instruções
+${pageContextSection}
+
+Voce e o APEX AI, um assistente virtual EXCLUSIVO do sistema APEX HUB.
+
+=== ESCOPO DE ATUACAO ===
+Voce APENAS responde sobre:
+- Dados e funcionalidades do sistema APEX HUB
+- Produtos, estoque, fornecedores, equipamentos, manutencao
+- Ordens de servico, tarefas, relatorios
+- Como usar as paginas e recursos do sistema
+- Tratativas operacionais para problemas do sistema
+
+=== RECUSA OBRIGATORIA ===
+Voce NAO PODE e DEVE RECUSAR educadamente:
+- Criar codigo, scripts ou programas
+- Gerar imagens, desenhos ou ilustracoes
+- Escrever textos nao relacionados ao sistema (redacoes, historias, poemas)
+- Responder sobre assuntos externos (politica, entretenimento, curiosidades gerais)
+- Fazer calculos matematicos nao relacionados ao sistema
+- Traduzir textos
+- Dar conselhos pessoais, medicos, juridicos ou financeiros
+- Qualquer solicitacao que nao seja sobre o APEX HUB
+
+Quando receber uma solicitacao fora do escopo, responda:
+"Desculpe, como assistente do APEX HUB, so posso ajudar com assuntos relacionados ao sistema. Posso ajuda-lo com informacoes sobre produtos, equipamentos, ordens de servico, fornecedores ou funcionalidades das paginas. Como posso ajudar?"
+
+=== COLECOES DO BANCO DE DADOS ===
+- produtos: informacoes de estoque, precos, fornecedores, vencimentos
+- fornecedores: razao social, CNPJ, contatos, condicoes de pagamento, enderecos
+- equipamentos: maquinas, patrimonio, setores, tags, status
+- manutentores: tecnicos de manutencao, contatos, setores
+- manuais: documentacao tecnica, instrucoes
 - tarefas_manutencao: tarefas preventivas, agendamentos
-- ordens_servicos: ordens de serviço abertas e concluídas
-- unidades: filiais, endereços
+- ordens_servicos: ordens de servico abertas e concluidas
+- unidades: filiais, enderecos
 - setores: departamentos
-- centros_de_custo: gestão financeira
+- centros_de_custo: gestao financeira
 
-Diretrizes:
+=== DIRETRIZES OPERACIONAIS ===
 - SEMPRE use os dados fornecidos no contexto para responder
-- Se perguntarem sobre quantidades, valores ou dados específicos, consulte os dados fornecidos
-- Formate respostas de forma clara e organizada
-- Para relatórios, use listas ou formato tabular
+- Se perguntarem sobre a pagina atual, use a DOCUMENTACAO DA PAGINA para explicar
+- Sugira TRATATIVAS praticas e operacionais para resolver problemas
+- Explique passo a passo como realizar tarefas no sistema
+- Use linguagem simples e direta, adequada para operadores e tecnicos
+- Para relatorios, use listas ou formato tabular
 - Seja preciso e cite os dados exatos encontrados
-- Se não encontrar o dado solicitado, informe claramente
-- Responda sempre em português do Brasil`;
+- Se nao encontrar o dado solicitado, informe claramente
+- Responda sempre em portugues do Brasil`;
 
       // 5. Preparar as mensagens para a API Groq
       const fullSystemPrompt = databaseContext.hasRelevantData 
@@ -1167,7 +1406,7 @@ Diretrizes:
         { role: "user", content: userContent }
       ];
 
-      // 6. Fazer requisição direta para a API Groq
+      // 6. Fazer requisicao direta para a API Groq
       if (typeof navigator !== "undefined" && navigator.onLine === false) {
         throw new Error("Sem conexao com a internet");
       }
@@ -1228,18 +1467,17 @@ Diretrizes:
     } catch (error) {
       console.error("Chat error:", error);
 
-      // Mensagem de erro amigável
       let errorMessageText = "Desculpe, houve um erro ao processar sua mensagem. ";
       
       if (error instanceof Error) {
         if (error.message.toLowerCase().includes("sem conexao") || (typeof navigator !== "undefined" && navigator.onLine === false)) {
-          errorMessageText += "Você está offline. Verifique sua conexão com a internet.";
+          errorMessageText += "Voce esta offline. Verifique sua conexao com a internet.";
         } else if (error.message.includes("API") || error.message.includes("401")) {
-          errorMessageText += "Problema com o serviço de IA. Tente novamente.";
+          errorMessageText += "Problema com o servico de IA. Tente novamente.";
         } else if (error.message.includes("fetch") || error.message.toLowerCase().includes("network") || error.message.toLowerCase().includes("abort")) {
-          errorMessageText += "Não foi possível conectar ao serviço. Verifique sua conexão com a internet.";
+          errorMessageText += "Nao foi possivel conectar ao servico. Verifique sua conexao com a internet.";
         } else if (error.message.includes("429")) {
-          errorMessageText += "Muitas requisições. Aguarde alguns segundos e tente novamente.";
+          errorMessageText += "Muitas requisicoes. Aguarde alguns segundos e tente novamente.";
         } else {
           errorMessageText += error.message;
         }
@@ -1268,172 +1506,312 @@ Diretrizes:
     }
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-4 py-3 border-b flex flex-row items-center justify-between space-y-0">
-          <DialogTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+  const handleSuggestionClick = (query: string) => {
+    setInput(query);
+    setShowSuggestions(false);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  // JSX do conteudo do chat (inline para evitar remontagem a cada render)
+  const chatContentJSX = (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="flex-shrink-0 px-4 py-3 border-b bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20">
               <Bot className="w-5 h-5 text-primary" />
             </div>
-            <span>APEX Chat</span>
-          </DialogTitle>
-        </DialogHeader>
-
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${
-                  message.role === "user" ? "flex-row-reverse" : ""
-                }`}
-              >
-                {message.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-primary" />
-                  </div>
-                )}
-                {message.role === "user" && (
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                )}
-                <div className={`max-w-[80%] flex flex-col gap-2 ${message.role === "user" ? "items-end" : "items-start"}`}>
-                  <div
-                    className={`rounded-lg px-3 py-2 ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
+            <div>
+              <h2 className="font-semibold text-foreground">APEX AI</h2>
+              <p className="text-xs text-muted-foreground">
+                {getPageName(location.pathname)}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={handleClearHistory}
                   >
-                    <div className="text-sm whitespace-pre-wrap">
-                      <SimpleMarkdown content={message.content} />
-                    </div>
-                    <p
-                      className={`text-xs mt-1 ${
-                        message.role === "user"
-                          ? "text-primary-foreground/70"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {message.timestamp.toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Limpar historico</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={onClose}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        
+        {/* Toolbar de comandos rapidos */}
+        <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1">
+          {QUICK_COMMANDS.map((cmd) => (
+            <Badge 
+              key={cmd.command}
+              variant="secondary"
+              className="cursor-pointer hover:bg-secondary/80 whitespace-nowrap text-xs py-1"
+              onClick={() => {
+                setInput(cmd.command);
+                setTimeout(() => handleSend(), 50);
+              }}
+            >
+              {cmd.command}
+            </Badge>
+          ))}
+          {hasPageDocumentation(location.pathname) && (
+            <Badge 
+              variant="outline"
+              className="cursor-pointer hover:bg-primary/10 whitespace-nowrap text-xs py-1 border-primary/30 text-primary"
+              onClick={() => {
+                setInput('/pagina');
+                setTimeout(() => handleSend(), 50);
+              }}
+            >
+              <FileText className="w-3 h-3 mr-1" />
+              Ver documentacao
+            </Badge>
+          )}
+        </div>
+      </div>
 
-                  {/* Cards de produtos com imagem */}
-                  {message.role === "assistant" && message.produtosComImagem && message.produtosComImagem.length > 0 && (
-                    <div className="flex flex-col gap-2 w-full">
-                      {message.produtosComImagem.map((prod) => (
-                        <div
-                          key={prod.id}
-                          className="rounded-lg border bg-card overflow-hidden flex gap-3 p-3 shadow-sm"
-                        >
-                          <img
-                            src={prod.imageUrl}
-                            alt={prod.nome}
-                            className="w-16 h-16 object-cover rounded-md flex-shrink-0 bg-muted"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = "none";
-                            }}
-                          />
-                          <div className="flex flex-col gap-0.5 min-w-0">
-                            <span className="text-xs font-semibold text-foreground leading-tight truncate">{prod.nome}</span>
-                            {prod.codigo_estoque && (
-                              <span className="text-xs text-muted-foreground">Cód: {prod.codigo_estoque}</span>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              Qtd: <span className={`font-medium ${prod.quantidade <= 0 ? "text-destructive" : "text-foreground"}`}>{prod.quantidade}</span>
-                              {prod.unidade_de_medida ? ` ${prod.unidade_de_medida}` : ""}
-                            </span>
-                            {prod.valor_unitario > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                Valor: <span className="font-medium text-foreground">{formatCurrencyBRL(prod.valor_unitario)}</span>
-                              </span>
-                            )}
-                            {prod.fornecedor_nome && (
-                              <span className="text-xs text-muted-foreground truncate">Fornecedor: {prod.fornecedor_nome}</span>
-                            )}
-                            {(prod.deposito || prod.prateleira) && (
-                              <span className="text-xs text-muted-foreground">
-                                {prod.deposito}{prod.prateleira ? ` / ${prod.prateleira}` : ""}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Chips de sugestões de produtos relacionados */}
-                  {message.role === "assistant" && message.produtosSugeridos && message.produtosSugeridos.length > 1 && (
-                    <div className="flex flex-col gap-1.5 w-full">
-                      <span className="text-xs text-muted-foreground">Produtos relacionados encontrados — clique para consultar:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {message.produtosSugeridos.map((sug) => (
-                          <button
-                            key={sug.id}
-                            type="button"
-                            onClick={() => setInput(sug.nome)}
-                            className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs text-primary font-medium hover:bg-primary/15 hover:border-primary/60 transition-colors cursor-pointer"
-                          >
-                            {sug.nome}
-                            {sug.codigo_estoque && (
-                              <span className="text-primary/60">#{sug.codigo_estoque}</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex gap-3">
+      {/* Area de mensagens */}
+      <ScrollArea className="flex-1 min-h-0 p-4" ref={scrollRef}>
+        <div className="space-y-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex gap-3 ${
+                message.role === "user" ? "flex-row-reverse" : ""
+              }`}
+            >
+              {message.role === "assistant" && (
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Bot className="w-4 h-4 text-primary" />
                 </div>
-                <div className="bg-muted rounded-lg px-3 py-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Consultando dados do sistema...
-                  </div>
+              )}
+              {message.role === "user" && (
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-muted-foreground" />
                 </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+              )}
+              <div className={`max-w-[85%] md:max-w-[80%] flex flex-col gap-2 ${message.role === "user" ? "items-end" : "items-start"}`}>
+                <div
+                  className={`rounded-2xl px-4 py-2.5 ${
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-br-md"
+                      : "bg-muted rounded-bl-md"
+                  }`}
+                >
+                  <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                    <SimpleMarkdown content={message.content} />
+                  </div>
+                  <p
+                    className={`text-[10px] mt-1.5 ${
+                      message.role === "user"
+                        ? "text-primary-foreground/60"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {message.timestamp.toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
 
-        <div className="p-4 border-t space-y-3">
-          {isApiConfigured === false && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-2 text-sm text-yellow-800">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 text-yellow-600 mt-0.5" />
-              <div>
-                <strong>Chave de API não configurada</strong>
-                <p className="text-xs mt-1">
-                  Adicione sua chave do Groq no campo <code className="bg-yellow-100 px-1 rounded">groq</code> da coleção <code className="bg-yellow-100 px-1 rounded">api_key</code> no Firebase.
-                </p>
+                {/* Cards de produtos com imagem */}
+                {message.role === "assistant" && message.produtosComImagem && message.produtosComImagem.length > 0 && (
+                  <div className="flex flex-col gap-2 w-full">
+                    {message.produtosComImagem.map((prod) => (
+                      <div
+                        key={prod.id}
+                        className="rounded-xl border bg-card overflow-hidden flex gap-3 p-3 shadow-sm"
+                      >
+                        <img
+                          src={prod.imageUrl}
+                          alt={prod.nome}
+                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0 bg-muted"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className="text-xs font-semibold text-foreground leading-tight truncate">{prod.nome}</span>
+                          {prod.codigo_estoque && (
+                            <span className="text-xs text-muted-foreground">Cod: {prod.codigo_estoque}</span>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            Qtd: <span className={`font-medium ${prod.quantidade <= 0 ? "text-destructive" : "text-foreground"}`}>{prod.quantidade}</span>
+                            {prod.unidade_de_medida ? ` ${prod.unidade_de_medida}` : ""}
+                          </span>
+                          {prod.valor_unitario > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              Valor: <span className="font-medium text-foreground">{formatCurrencyBRL(prod.valor_unitario)}</span>
+                            </span>
+                          )}
+                          {prod.fornecedor_nome && (
+                            <span className="text-xs text-muted-foreground truncate">Fornecedor: {prod.fornecedor_nome}</span>
+                          )}
+                          {(prod.deposito || prod.prateleira) && (
+                            <span className="text-xs text-muted-foreground">
+                              {prod.deposito}{prod.prateleira ? ` / ${prod.prateleira}` : ""}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Chips de sugestoes de produtos relacionados */}
+                {message.role === "assistant" && message.produtosSugeridos && message.produtosSugeridos.length > 1 && (
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <span className="text-xs text-muted-foreground">Produtos relacionados:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {message.produtosSugeridos.map((sug) => (
+                        <button
+                          key={sug.id}
+                          type="button"
+                          onClick={() => setInput(sug.nome)}
+                          className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs text-primary font-medium hover:bg-primary/15 hover:border-primary/60 transition-colors cursor-pointer"
+                        >
+                          {sug.nome}
+                          {sug.codigo_estoque && (
+                            <span className="text-primary/60">#{sug.codigo_estoque}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          
+          {/* Loading state */}
+          {isLoading && (
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-primary" />
+              </div>
+              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Consultando dados do sistema...</span>
+                </div>
               </div>
             </div>
           )}
-          <div className="flex gap-2">
+        </div>
+      </ScrollArea>
+
+      {/* Sugestoes contextuais */}
+      {showSuggestions && contextualSuggestions.length > 0 && messages.length <= 1 && (
+        <div className="flex-shrink-0 px-4 py-3 border-t bg-muted/30">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-muted-foreground">Sugestoes para esta pagina</span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-5 w-5 ml-auto"
+              onClick={() => setShowSuggestions(false)}
+            >
+              <ChevronDown className="w-3 h-3" />
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {contextualSuggestions.map((suggestion, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSuggestionClick(suggestion.query)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-background border px-3 py-1.5 text-xs font-medium hover:bg-primary/5 hover:border-primary/30 transition-colors"
+              >
+                {suggestion.icon || <Package className="w-3 h-3" />}
+                {suggestion.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Area de input */}
+      <div className="flex-shrink-0 p-4 border-t bg-background">
+        {isApiConfigured === false && (
+          <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 flex gap-2 text-sm text-yellow-800 dark:text-yellow-200 mb-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+            <div>
+              <strong>Chave de API nao configurada</strong>
+              <p className="text-xs mt-1">
+                Adicione sua chave do Groq no campo <code className="bg-yellow-100 dark:bg-yellow-900 px-1 rounded">groq</code> da colecao <code className="bg-yellow-100 dark:bg-yellow-900 px-1 rounded">api_key</code> no Firebase.
+              </p>
+            </div>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
             <Input
-              placeholder="Pergunte sobre produtos, fornecedores, equipamentos..."
+              ref={inputRef}
+              placeholder="Pergunte algo ou digite /ajuda..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               disabled={isLoading || isApiConfigured === false}
-              className="flex-1"
+              className="pr-10 rounded-full bg-muted/50 border-muted-foreground/20 focus:border-primary"
             />
-            <Button size="icon" onClick={handleSend} disabled={isLoading || !input.trim() || isApiConfigured === false}>
+            <Button 
+              size="icon" 
+              onClick={handleSend} 
+              disabled={isLoading || !input.trim() || isApiConfigured === false}
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+            >
               <Send className="w-4 h-4" />
             </Button>
           </div>
         </div>
+        <div className="flex items-center justify-center gap-2 mt-2">
+          <HelpCircle className="w-3 h-3 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">
+            Digite <code className="bg-muted px-1 rounded">/ajuda</code> para ver comandos
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Renderizar Sheet para mobile, Dialog para desktop
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <SheetContent 
+          side="bottom" 
+          className="h-[100dvh] !p-0 flex flex-col rounded-t-2xl border-t border-border [&>button]:hidden"
+        >
+          <SheetTitle className="sr-only">APEX AI</SheetTitle>
+          {chatContentJSX}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent hideCloseButton className="sm:max-w-[600px] h-[700px] !p-0 gap-0 rounded-2xl overflow-hidden flex flex-col">
+        <DialogTitle className="sr-only">APEX AI</DialogTitle>
+        {chatContentJSX}
       </DialogContent>
     </Dialog>
   );
