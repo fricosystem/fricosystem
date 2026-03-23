@@ -596,40 +596,44 @@ const Login = () => {
 
       {/* Modal de Autenticação */}
       <Dialog open={authModalOpen} onOpenChange={setAuthModalOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-[#0d1a2d]/95 backdrop-blur-xl border border-gray-700/50 text-white shadow-2xl">
+        <DialogContent className="sm:max-w-[425px] bg-gradient-to-b from-[#0d1a2d] to-[#0a1628] backdrop-blur-xl border border-blue-500/20 text-white shadow-2xl">
           <DialogHeader>
-            <div className="flex flex-col items-center gap-3 mb-2">
-              <img src={logoSrc} alt="APEX HUB" className="w-14 h-14 rounded-xl" />
-              <DialogTitle className="text-2xl font-bold text-center text-white">
-                {activeTab === "login" ? "Acesse sua conta" : "Crie sua conta"}
-              </DialogTitle>
-              <p className="text-gray-400 text-sm text-center">
-                {activeTab === "login" 
-                  ? "Entre com suas credenciais para acessar o sistema" 
-                  : "Preencha os dados para criar sua conta no APEX HUB"
-                }
-              </p>
+            <div className="flex flex-col items-center gap-4 mb-6 pt-4">
+              <div className="p-3 bg-blue-600/10 rounded-xl border border-blue-500/20">
+                <img src={logoSrc} alt="APEX HUB" className="w-12 h-12 rounded-lg" />
+              </div>
+              <div className="text-center">
+                <DialogTitle className="text-2xl font-bold text-white mb-2">
+                  {activeTab === "login" ? "Acesse sua conta" : "Crie sua conta"}
+                </DialogTitle>
+                <p className="text-gray-400 text-sm">
+                  {activeTab === "login" 
+                    ? "Entre com suas credenciais para acessar o APEX HUB" 
+                    : "Preencha os dados para criar sua conta"
+                  }
+                </p>
+              </div>
             </div>
           </DialogHeader>
           <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "login" | "register")} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-gray-800/50 rounded-lg p-1">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-900/50 border border-gray-800/50 rounded-lg p-1">
               <TabsTrigger 
                 value="login" 
-                className="text-gray-300 bg-transparent hover:bg-gray-700/50 data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-all duration-200"
+                className="text-gray-300 bg-transparent hover:bg-gray-800/50 data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-all duration-200"
               >
                 Login
               </TabsTrigger>
               <TabsTrigger 
                 value="register" 
-                className="text-gray-300 bg-transparent hover:bg-gray-700/50 data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-all duration-200"
+                className="text-gray-300 bg-transparent hover:bg-gray-800/50 data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-all duration-200"
               >
                 Cadastro
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="login" className="mt-4">
+            <TabsContent value="login" className="mt-6">
               <LoginForm onSuccess={handleSuccess} />
             </TabsContent>
-            <TabsContent value="register" className="mt-4">
+            <TabsContent value="register" className="mt-6">
               <RegisterForm onSuccess={handleSuccess} />
             </TabsContent>
           </Tabs>
