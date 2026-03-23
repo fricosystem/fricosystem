@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -14,23 +12,25 @@ import { LoginForm } from "@/components/Login/Auth/LoginForm";
 import { RegisterForm } from "@/components/Login/Auth/RegisterForm";
 import { UserButton } from "@/components/Login/UserButton";
 import { 
-  BarChart4, Calendar, Clipboard, CreditCard, Database, FileText, Users,
+  BarChart4, Calendar, Database, FileText, Users,
   Phone, Mail, MessageSquare, Bot, Zap, ShieldCheck, TrendingUp, Package,
   Wrench, ClipboardList, Building2, BookOpen, ArrowRight, CheckCircle2,
-  MessageCircle, Search, BarChart2, Layers
+  MessageCircle, Search, BarChart2, Layers, Settings, Factory, Truck,
+  AlertTriangle, FileCheck, Shield, Clock, Target, Gauge
 } from "lucide-react";
 import { useThemedLogo } from "@/hooks/useThemedLogo";
 
-// Dados das seções
+// Estatísticas do sistema
 const stats = [
-  { value: "98%", label: "Uptime garantido" },
-  { value: "+500", label: "Produtos gerenciados" },
+  { value: "99.9%", label: "Disponibilidade" },
+  { value: "24/7", label: "Suporte ativo" },
   { value: "100%", label: "Dados em tempo real" },
-  { value: "24/7", label: "Disponibilidade" },
+  { value: "256-bit", label: "Criptografia" },
 ];
 
+// Módulos principais do sistema
 const modules = [
-  { icon: <Package className="h-5 w-5" />, label: "Gestão de Produtos" },
+  { icon: <Package className="h-5 w-5" />, label: "Estoque" },
   { icon: <Wrench className="h-5 w-5" />, label: "Manutenção" },
   { icon: <ClipboardList className="h-5 w-5" />, label: "Requisições" },
   { icon: <Building2 className="h-5 w-5" />, label: "Fornecedores" },
@@ -40,108 +40,110 @@ const modules = [
   { icon: <Layers className="h-5 w-5" />, label: "Transferências" },
 ];
 
+// Capacidades do APEX AI
 const aiCapabilities = [
   {
     icon: <Search className="h-6 w-6 text-blue-400" />,
     title: "Consulta Inteligente",
-    description: "Pergunte sobre qualquer produto, fornecedor ou equipamento em linguagem natural e receba respostas precisas com dados em tempo real."
+    description: "Pergunte sobre qualquer produto, fornecedor ou equipamento em linguagem natural e receba respostas precisas."
   },
   {
     icon: <BarChart2 className="h-6 w-6 text-blue-400" />,
     title: "Relatórios Automáticos",
-    description: "Solicite relatórios completos de estoque, manutenção ou custos e o APEX AI os monta instantaneamente para você."
+    description: "Solicite relatórios completos de estoque, manutenção ou custos instantaneamente via chat."
   },
   {
     icon: <MessageCircle className="h-6 w-6 text-blue-400" />,
-    title: "Chat em Tempo Real",
-    description: "Interface de chat integrada que acessa todas as coleções do sistema para responder perguntas operacionais sem sair da tela."
+    title: "Assistente 24/7",
+    description: "Acesse ajuda sobre qualquer funcionalidade do sistema a qualquer momento, direto do chat."
   },
   {
     icon: <TrendingUp className="h-6 w-6 text-blue-400" />,
-    title: "Decisões Baseadas em Dados",
-    description: "Identifique produtos em falta, vencimentos próximos e gargalos operacionais com análises geradas por IA."
+    title: "Análise de Dados",
+    description: "Identifique produtos em falta, vencimentos próximos e gargalos operacionais automaticamente."
   },
 ];
 
-const features = [
+// Funcionalidades detalhadas do sistema (páginas reais)
+const systemFeatures = [
   {
-    title: "Gestão de Estoque",
-    description: "Controle total sobre o inventário com rastreamento em tempo real, previsão inteligente de demanda e alertas automatizados de reposição.",
-    icon: <Database className="h-10 w-10 text-frico-500" />
+    category: "Gestão de Estoque",
+    icon: <Package className="h-8 w-8 text-emerald-400" />,
+    color: "emerald",
+    items: [
+      { name: "Produtos", path: "/produtos", desc: "Cadastro completo com código, descrição, unidade, preço e localização em depósito" },
+      { name: "Notas Fiscais", path: "/notas-fiscais", desc: "Lançamento de entradas via XML ou manual com conferência automática" },
+      { name: "Requisições", path: "/requisicoes", desc: "Solicitação de materiais com aprovação multinível e rastreamento" },
+      { name: "Inventário", path: "/inventario", desc: "Contagem cíclica com ajustes automáticos e relatórios de divergência" },
+    ]
   },
   {
-    title: "Gestão Financeira",
-    description: "Acompanhamento detalhado de receitas e despesas, relatórios personalizados e integrado com processos contábeis.",
-    icon: <CreditCard className="h-10 w-10 text-frico-500" />
+    category: "Manutenção Industrial",
+    icon: <Wrench className="h-8 w-8 text-orange-400" />,
+    color: "orange",
+    items: [
+      { name: "Preventiva", path: "/manutencao-preventiva", desc: "Planejamento de manutenções com frequência, tarefas e responsáveis" },
+      { name: "Ordens de Serviço", path: "/ordens-servico", desc: "Abertura, acompanhamento e encerramento de OS com histórico completo" },
+      { name: "Execução", path: "/execucao-manutencao", desc: "Registro de execução com horas, peças utilizadas e observações" },
+      { name: "Parada de Máquina", path: "/parada-maquina", desc: "Registro de paradas com motivo, duração e impacto na produção" },
+    ]
   },
   {
-    title: "Recursos Humanos",
-    description: "Administração completa de colaboradores, folha de pagamento, recrutamento, treinamentos e avaliações de desempenho.",
-    icon: <Users className="h-10 w-10 text-frico-500" />
+    category: "Gestão de Ativos",
+    icon: <Factory className="h-8 w-8 text-blue-400" />,
+    color: "blue",
+    items: [
+      { name: "Máquinas", path: "/maquinas", desc: "Cadastro de equipamentos com patrimônio, setor e histórico de manutenção" },
+      { name: "Setores", path: "/setores", desc: "Organização da planta por áreas produtivas e centros de custo" },
+      { name: "Fornecedores", path: "/gestao-fornecedores", desc: "Gestão de parceiros com contatos, condições e avaliação" },
+      { name: "Manuais", path: "/manuais", desc: "Biblioteca digital de manuais técnicos e procedimentos" },
+    ]
   },
   {
-    title: "Planejamento Estratégico",
-    description: "Tenha controle total sobre sua operação: alinhe o planejamento estratégico com indicadores de estoque e garanta uma gestão eficiente.",
-    icon: <BarChart4 className="h-10 w-10 text-frico-500" />
+    category: "Administração",
+    icon: <Settings className="h-8 w-8 text-purple-400" />,
+    color: "purple",
+    items: [
+      { name: "Usuários", path: "/gestao-usuarios", desc: "Controle de acesso com perfis, permissões e unidades" },
+      { name: "Unidades", path: "/unidades", desc: "Gestão de filiais e plantas industriais" },
+      { name: "Centro de Custo", path: "/centro-custo", desc: "Alocação de despesas por área e projeto" },
+      { name: "Relatórios", path: "/relatorios", desc: "Dashboards e relatórios gerenciais personalizados" },
+    ]
   },
-  {
-    title: "Gestão de Documentos",
-    description: "Organize, armazene e compartilhe documentos com segurança, mantendo todo o controle organizacional.",
-    icon: <FileText className="h-10 w-10 text-frico-500" />
-  },
-  {
-    title: "Calendário Corporativo",
-    description: "Sincronização de eventos, reuniões e deadlines para toda a equipe com notificações inteligentes.",
-    icon: <Calendar className="h-10 w-10 text-frico-500" />
-  }
 ];
 
-const solutions = [
+// Diferenciais do sistema
+const differentials = [
   {
-    title: "Otimize seu Controle de Estoque",
-    description: "Reduza custos operacionais e evite perdas com um sistema preciso que mantém seus níveis de estoque sempre ideais, através de previsões baseadas em dados históricos e sazonalidade.",
-    imageSrc: "/images/inventory.jpg",
-    reverse: false,
-    quote: "A excelência no controle de estoque é o primeiro passo para uma operação eficiente."
+    icon: <Shield className="h-10 w-10 text-emerald-400" />,
+    title: "Segurança Avançada",
+    description: "Autenticação segura, criptografia de ponta a ponta e controle de acesso por perfil."
   },
   {
-    title: "Gerencie suas Finanças com Precisão",
-    description: "Tenha visibilidade completa sobre a saúde financeira da sua empresa, com dashboards personalizados que destacam oportunidades de crescimento e pontos de atenção em tempo real.",
-    imageSrc: "/images/dashboard.jpg",
-    reverse: true,
-    quote: "Informações financeiras precisas são a base para decisões estratégicas acertadas."
+    icon: <Zap className="h-10 w-10 text-yellow-400" />,
+    title: "Performance",
+    description: "Sistema otimizado para resposta rápida mesmo com grande volume de dados."
   },
   {
-    title: "Potencialize sua Gestão de Pessoas",
-    description: "Centralize todo o ciclo de vida do colaborador, desde o recrutamento até avaliações de desempenho, promovendo uma cultura organizacional forte e alinhada com seus objetivos.",
-    imageSrc: "/images/recursos-humanos.jpg",
-    reverse: false,
-    quote: "Pessoas motivadas e bem gerenciadas são o maior ativo de qualquer organização."
-  }
-];
-
-const testimonials = [
-  {
-    name: "Carlos Silva",
-    position: "Diretor de Operações",
-    company: "Distribuidora Nacional",
-    content: "O sistema Nexus Hub transformou completamente nossa gestão de estoque. Reduzimos perdas em 35% e aumentamos a eficiência logística em tempo recorde.",
-    initials: "CS"
+    icon: <Clock className="h-10 w-10 text-blue-400" />,
+    title: "Tempo Real",
+    description: "Atualizações instantâneas em todas as telas para tomada de decisão ágil."
   },
   {
-    name: "Ana Ferreira",
-    position: "CFO",
-    company: "Grupo Alimentício Brasil",
-    content: "A visibilidade que temos agora sobre nossos indicadores financeiros é incomparável. As decisões estratégicas organizacionais se tornaram muito mais assertivas e ágeis.",
-    initials: "AF"
+    icon: <Target className="h-10 w-10 text-purple-400" />,
+    title: "Foco Industrial",
+    description: "Desenvolvido especificamente para as necessidades da gestão industrial."
   },
   {
-    name: "Roberto Gomes",
-    position: "Gerente de RH",
-    company: "Indústria Alimentar SA",
-    content: "O módulo de recursos humanos simplificou processos que antes eram extremamente burocráticos. Nossa equipe está mais produtiva e satisfeita.",
-    initials: "RG"
-  }
+    icon: <Gauge className="h-10 w-10 text-orange-400" />,
+    title: "Indicadores",
+    description: "KPIs e métricas de desempenho para acompanhamento da operação."
+  },
+  {
+    icon: <Bot className="h-10 w-10 text-cyan-400" />,
+    title: "Inteligência Artificial",
+    description: "Assistente APEX AI integrado para suporte e consultas inteligentes."
+  },
 ];
 
 const Login = () => {
@@ -209,10 +211,10 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-screen max-w-full overflow-x-hidden bg-gradient-to-b from-black via-[#0a1118] to-[#060d14] text-white flex flex-col">
+    <div className="min-h-screen w-screen max-w-full overflow-x-hidden bg-gradient-to-b from-[#0a1628] via-[#0d1a2d] to-[#060d14] text-white flex flex-col">
       
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md py-2 md:py-3 h-20 bg-black/20 w-screen max-w-full">
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md py-2 md:py-3 h-20 bg-[#0a1628]/80 border-b border-gray-800/30 w-screen max-w-full">
         <div className="w-full px-2 md:px-4 flex items-center justify-between">
           <div className="flex items-center gap-2 pl-1">
             <a href="#hero" className="flex items-center gap-2">
@@ -223,7 +225,7 @@ const Login = () => {
               />
               <div>
                 <span className="text-2xl font-bold text-white">APEX HUB</span>
-                <h1 className="text-sm font-extrabold text-frico-500">ERP</h1>
+                <p className="text-xs font-medium text-gray-400">Sistema de Gestão Industrial</p>
               </div>
             </a>
           </div>
@@ -234,8 +236,7 @@ const Login = () => {
               <Bot className="w-3.5 h-3.5" />APEX AI
             </a>
             <a href="#features" className="text-white hover:text-gray-300 transition-colors duration-300">Funcionalidades</a>
-            <a href="#solutions" className="text-white hover:text-gray-300 transition-colors duration-300">Soluções</a>
-            <a href="#testimonials" className="text-white hover:text-gray-300 transition-colors duration-300">Depoimentos</a>
+            <a href="#modules" className="text-white hover:text-gray-300 transition-colors duration-300">Módulos</a>
             <a href="#contact" className="text-white hover:text-gray-300 transition-colors duration-300">Contato</a>
           </nav>
           
@@ -244,7 +245,7 @@ const Login = () => {
               <UserButton user={user} />
             ) : (
               <>
-                <Button variant="outline" onClick={openLoginModal} className="bg-white border-white text-black hover:bg-black hover:text-white mx-[18px]">
+                <Button variant="outline" onClick={openLoginModal} className="bg-transparent border-gray-600 text-white hover:bg-white hover:text-black transition-all mx-2">
                   Entrar
                 </Button>
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={openRegisterModal}>
@@ -262,37 +263,34 @@ const Login = () => {
         <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
           <div className="container mx-auto relative z-10 px-4 flex flex-col items-center text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 animate-fade-in">
-              Bem vindo ao <span>Gerenciador industrial</span>
+              Sistema de Gestão Industrial
               <br />
-              <span className="text-3xl md:text-4xl text-frico-500">APEX HUB</span>
+              <span className="text-3xl md:text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">APEX HUB</span>
             </h1>
             
-            {/* Badge APEX AI */}
-            <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-full backdrop-blur-md">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm font-semibold text-blue-300">APEX AI</span>
-              <span className="text-xs text-gray-400 px-2 py-0.5 bg-gray-800/50 rounded-full">Novo</span>
-            </div>
-            
-            <p className="text-xl text-gray-500 max-w-2xl mb-8 animate-fade-up">
-              O APEX HUB transforma a gestão corporativa com soluções integradas para estoque, finanças, recursos humanos e muito mais. Com inteligência artificial integrada para ajudá-lo em todas as suas decisões.
+            <p className="text-xl text-gray-400 max-w-2xl mb-8 animate-fade-up leading-relaxed">
+              Gerencie estoque, manutenção, requisições e toda a operação industrial em uma única plataforma integrada com inteligência artificial.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 animate-fade-up" style={{ animationDelay: "0.2s" }}>
-              <Button variant="outline" size="lg" className="bg-white border-white text-black hover:bg-black hover:text-white" asChild>
-                <a href="#features">Saiba Mais</a>
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={openLoginModal}>
+                Acessar Sistema
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="lg" className="bg-transparent border-gray-600 text-white hover:bg-white/10" asChild>
+                <a href="#features">Conhecer Funcionalidades</a>
               </Button>
             </div>
           </div>
         </section>
 
         {/* Stats Bar */}
-        <section className="border-y border-gray-800/60 bg-gray-900/30 backdrop-blur-sm py-10">
+        <section className="border-y border-gray-800/40 bg-[#0d1a2d]/50 backdrop-blur-sm py-10">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               {stats.map((stat, i) => (
                 <div key={i} className="flex flex-col gap-1">
-                  <span className="text-3xl md:text-4xl font-bold text-frico-500">{stat.value}</span>
+                  <span className="text-3xl md:text-4xl font-bold text-blue-400">{stat.value}</span>
                   <span className="text-sm text-gray-400">{stat.label}</span>
                 </div>
               ))}
@@ -310,7 +308,7 @@ const Login = () => {
               {modules.map((mod, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700/60 bg-gray-900/40 text-gray-300 text-sm hover:border-frico-500/50 hover:text-frico-400 transition-colors backdrop-blur-sm"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700/60 bg-gray-900/40 text-gray-300 text-sm hover:border-blue-500/50 hover:text-blue-400 transition-colors backdrop-blur-sm"
                 >
                   {mod.icon}
                   <span>{mod.label}</span>
@@ -340,14 +338,15 @@ const Login = () => {
                   seu assistente industrial
                 </h2>
                 <p className="text-gray-400 text-lg mb-8 leading-relaxed">
-                  O APEX AI está integrado a todas as coleções do sistema. Consulte produtos, fornecedores, equipamentos e ordens de serviço em linguagem natural — e receba respostas precisas em segundos.
+                  O APEX AI está integrado a todas as funcionalidades do sistema. Consulte produtos, fornecedores, equipamentos e ordens de serviço em linguagem natural e receba respostas precisas em segundos.
                 </p>
                 <ul className="space-y-3 mb-8">
                   {[
                     "Acesso completo aos dados de estoque em tempo real",
                     "Gera relatórios sob demanda via chat",
                     "Identifica produtos com estoque baixo ou vencidos",
-                    "Responde sobre fornecedores, CNPJ e condições",
+                    "Responde sobre fornecedores, equipamentos e manutenção",
+                    "Orienta sobre como usar cada funcionalidade do sistema",
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -383,7 +382,7 @@ const Login = () => {
                 <div className="sm:col-span-2 bg-gray-950/80 border border-gray-800/80 rounded-xl p-4 backdrop-blur-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    <span className="text-xs text-gray-400 font-medium">APEX AI — online</span>
+                    <span className="text-xs text-gray-400 font-medium">APEX AI - online</span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-end">
@@ -403,26 +402,29 @@ const Login = () => {
           </div>
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-24 text-xl">
-          <div className="container mx-auto px-4 text-xl">
+        {/* Differentials Section */}
+        <section id="features" className="py-24">
+          <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-white mb-4">Funcionalidades Integradas</h2>
-              <p className="text-gray-500 max-w-2xl mx-auto text-xl">
-                Nossa plataforma centraliza todas as operações essenciais da empresa em um único lugar, 
-                proporcionando facilidade, eficiência e acertividade em cada processo.
+              <h2 className="text-3xl font-bold text-white mb-4">Por que escolher o APEX HUB?</h2>
+              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                Uma plataforma completa desenvolvida para otimizar a gestão industrial com tecnologia de ponta.
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {features.map((feature, index) => (
-                <Card key={index} className="bg-gray-900/50 border-gray-800 shadow-lg hover:shadow-frico-900/10 transition-shadow backdrop-blur-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {differentials.map((item, index) => (
+                <Card key={index} className="bg-gray-900/50 border-gray-800 shadow-lg hover:border-gray-700 transition-all backdrop-blur-sm">
                   <CardHeader>
-                    <div className="flex items-center justify-center mb-4">{feature.icon}</div>
-                    <CardTitle className="text-center text-white">{feature.title}</CardTitle>
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-gray-800/50 rounded-xl">
+                        {item.icon}
+                      </div>
+                      <CardTitle className="text-white text-lg">{item.title}</CardTitle>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <CardDescription className="text-gray-400 text-center">{feature.description}</CardDescription>
+                    <CardDescription className="text-gray-400">{item.description}</CardDescription>
                   </CardContent>
                 </Card>
               ))}
@@ -430,69 +432,52 @@ const Login = () => {
           </div>
         </section>
 
-        {/* Solutions Section */}
-        <section id="solutions" className="py-24">
+        {/* System Features Section */}
+        <section id="modules" className="py-24 bg-[#0d1a2d]/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-white mb-4">Nossas Soluções</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto text-xl">
-                O APEX HUB foi desenvolvido para atender as necessidades específicas da empresa, 
-                trazendo soluções integradas para levar a eficiência operacional a um novo patamar.
+              <h2 className="text-3xl font-bold text-white mb-4">Funcionalidades do Sistema</h2>
+              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                Conheça todas as páginas e funcionalidades disponíveis no APEX HUB para gerenciar sua operação industrial.
               </p>
             </div>
             
-            <div className="space-y-24">
-              {solutions.map((solution, index) => (
-                <div key={index} className={`flex flex-col ${solution.reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} gap-8 items-center`}>
-                  <div className="lg:w-1/2">
-                    <div className="relative h-64 md:h-96 w-full overflow-hidden rounded-xl group">
-                      <div className="absolute inset-0 rounded-xl p-0.5 bg-transparent group-hover:bg-[conic-gradient(from_var(--shimmer-angle),#00ff87_0%,#7e3af2_20%,#ffffff_40%,#0084ff_60%,#00ff87_80%,#7e3af2_100%)] bg-[length:400%_400%] animate-[shimmer_3s_linear_infinite]">
-                        <div className="relative h-full w-full rounded-xl bg-gray-900 overflow-hidden">
-                          <img src={solution.imageSrc} alt={solution.title} className="w-full h-full object-cover transition-all duration-500 ease-in-out transform group-hover:scale-105" />
-                          <div className="absolute inset-0 bg-frico-800/20 transition-all duration-300 group-hover:bg-frico-800/10"></div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {systemFeatures.map((category, index) => (
+                <Card key={index} className="bg-gray-900/50 border-gray-800 shadow-lg backdrop-blur-sm overflow-hidden">
+                  <CardHeader className="border-b border-gray-800/50">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-gray-800/50 rounded-xl">
+                        {category.icon}
+                      </div>
+                      <div>
+                        <CardTitle className="text-white text-xl">{category.category}</CardTitle>
+                        <CardDescription className="text-gray-500">{category.items.length} funcionalidades</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="space-y-3">
+                      {category.items.map((item, i) => (
+                        <div 
+                          key={i} 
+                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-800/30 transition-colors group"
+                        >
+                          <CheckCircle2 className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                            category.color === 'emerald' ? 'text-emerald-400' :
+                            category.color === 'orange' ? 'text-orange-400' :
+                            category.color === 'blue' ? 'text-blue-400' :
+                            'text-purple-400'
+                          }`} />
+                          <div>
+                            <p className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
+                              {item.name}
+                            </p>
+                            <p className="text-gray-500 text-xs mt-0.5">{item.desc}</p>
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  </div>
-                  
-                  <div className="lg:w-1/2">
-                    <h3 className="text-2xl font-bold text-white mb-4">{solution.title}</h3>
-                    <p className="text-gray-400 mb-6">{solution.description}</p>
-                    <blockquote className="border-l-4 border-frico-600 pl-4 italic mb-6 text-gray-300">"{solution.quote}"</blockquote>
-                    <Button className="bg-frico-600 hover:bg-frico-700">Saiba Mais</Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials Section */}
-        <section id="testimonials" className="py-24">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-white mb-4">O que nossos clientes dizem</h2>
-              <p className="text-gray-200 max-w-2xl mx-auto text-xl">
-                Empresas de todos os portes já experimentaram o poder de transformação 
-                do Nexus Hub em suas operações diárias.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {testimonials.map((testimonial, index) => (
-                <Card key={index} className="bg-gray-900/50 border-gray-800 shadow-lg backdrop-blur-sm">
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col items-center mb-4">
-                      <Avatar className="h-16 w-16 mb-4">
-                        <AvatarFallback className="bg-frico-700 text-white text-xl">{testimonial.initials}</AvatarFallback>
-                      </Avatar>
-                      <div className="text-center">
-                        <p className="text-xl font-bold text-white">{testimonial.name}</p>
-                        <p className="text-frico-500">{testimonial.position}</p>
-                        <p className="text-gray-500 text-sm">{testimonial.company}</p>
-                      </div>
-                    </div>
-                    <p className="text-cyan-400 italic text-center">"{testimonial.content}"</p>
                   </CardContent>
                 </Card>
               ))}
@@ -505,124 +490,141 @@ const Login = () => {
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold text-white mb-4">Fale Conosco</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto text-xl">
-                Estamos à disposição para tirar suas dúvidas e apresentar as melhores soluções para sua empresa.
+              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                Estamos à disposição para tirar suas dúvidas sobre o sistema APEX HUB.
               </p>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-              <div>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label htmlFor="name" className="block text-white mb-2">Nome</label>
-                    <Input id="name" placeholder="Seu nome" value={name} onChange={(e) => setName(e.target.value)} required className="bg-gray-900/50 border-gray-800 text-white backdrop-blur-sm" />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-white mb-2">Email</label>
-                    <Input id="email" type="email" placeholder="Digite seu melhor email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-gray-900/50 border-gray-800 text-white backdrop-blur-sm" />
-                  </div>
-                  <div>
-                    <label htmlFor="message" className="block text-white mb-2">Mensagem</label>
-                    <Textarea id="message" placeholder="Como podemos ajudar?" rows={5} value={message} onChange={(e) => setMessage(e.target.value)} required className="bg-gray-900/50 border-gray-800 text-white backdrop-blur-sm" />
-                  </div>
-                  <Button type="submit" className="w-full bg-frico-600 hover:bg-frico-700" disabled={loading}>
-                    {loading ? "Enviando..." : "Enviar Mensagem"}
-                  </Button>
-                </form>
-              </div>
-              
-              <div className="space-y-8">
-                <div className="bg-gray-900/50 border border-gray-800 p-6 rounded-xl backdrop-blur-sm">
-                  <h3 className="text-xl font-bold text-white mb-4">Informações de Contato</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-start">
-                      <Phone className="h-5 w-5 text-frico-500 mt-1 mr-3" />
+            <div className="max-w-2xl mx-auto">
+              <Card className="bg-gray-900/50 border-gray-800 backdrop-blur-sm">
+                <CardContent className="pt-6">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-white font-medium">Telefone</p>
-                        <p className="text-gray-400">+55 (62) 3510-0100</p>
+                        <label htmlFor="name" className="block text-white mb-2 text-sm font-medium">Nome</label>
+                        <Input 
+                          id="name" 
+                          placeholder="Seu nome" 
+                          value={name} 
+                          onChange={(e) => setName(e.target.value)} 
+                          required 
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500" 
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="email" className="block text-white mb-2 text-sm font-medium">Email</label>
+                        <Input 
+                          id="email" 
+                          type="email" 
+                          placeholder="seu@email.com" 
+                          value={email} 
+                          onChange={(e) => setEmail(e.target.value)} 
+                          required 
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500" 
+                        />
                       </div>
                     </div>
-                    <div className="flex items-start">
-                      <MessageSquare className="h-5 w-5 text-frico-500 mt-1 mr-3" />
-                      <div>
-                        <p className="text-white font-medium">WhatsApp</p>
-                        <a href="https://wa.me/556235100100?text=%20" target="_blank" rel="noopener noreferrer" className="text-frico-500 hover:underline">Enviar mensagem</a>
-                      </div>
+                    <div>
+                      <label htmlFor="message" className="block text-white mb-2 text-sm font-medium">Mensagem</label>
+                      <Textarea 
+                        id="message" 
+                        placeholder="Como podemos ajudar?" 
+                        rows={5} 
+                        value={message} 
+                        onChange={(e) => setMessage(e.target.value)} 
+                        required 
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 resize-none" 
+                      />
                     </div>
-                    <div className="flex items-start">
-                      <Mail className="h-5 w-5 text-frico-500 mt-1 mr-3" />
-                      <div>
-                        <p className="text-white font-medium">Email</p>
-                        <a href="mailto:contato@frico.ind.br" className="text-frico-500 hover:underline">contato@frico.ind.br</a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-gray-900/50 border border-gray-800 p-6 rounded-xl h-64 overflow-hidden backdrop-blur-sm">
-                  <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15263.353856551582!2d-49.47381462032724!3d-16.6535792!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x935e673e31c193bb%3A0x52922e18e6cd4b00!2sFric%C3%B3%20Alimentos!5e0!3m2!1spt-BR!2sbr!4v1713888339927!5m2!1spt-BR!2sbr&map_style=night" 
-                    width="100%" height="100%" style={{border: 0}} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Localização da APEX HUB" className="rounded-lg"
-                  ></iframe>
-                </div>
-              </div>
+                    <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={loading}>
+                      {loading ? "Enviando..." : "Enviar Mensagem"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-gray-800/50">
+      <footer className="py-12 border-t border-gray-800/50 bg-[#060d14]">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>
-              <h3 className="text-white text-lg font-bold mb-4">APEX HUB</h3>
-              <p className="text-gray-400 mb-4">
-                Soluções corporativas integradas para maximizar a eficiência operacional da sua empresa no setor alimentício.
+              <div className="flex items-center gap-2 mb-4">
+                <img src={logoSrc} alt="APEX HUB" className="w-10 h-10 rounded-lg" />
+                <span className="text-white text-lg font-bold">APEX HUB</span>
+              </div>
+              <p className="text-gray-400 text-sm">
+                Sistema de gestão industrial completo para otimizar sua operação com tecnologia de ponta e inteligência artificial.
               </p>
             </div>
             <div>
-              <h3 className="text-white text-lg font-bold mb-4">Links Rápidos</h3>
+              <h3 className="text-white text-sm font-bold mb-4 uppercase tracking-wide">Navegação</h3>
               <ul className="space-y-2">
-                <li><a href="#apex-ai" className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1.5"><Bot className="w-3.5 h-3.5" />APEX AI</a></li>
-                <li><a href="#features" className="text-gray-400 hover:text-frico-500 transition-colors">Funcionalidades</a></li>
-                <li><a href="#solutions" className="text-gray-400 hover:text-frico-500 transition-colors">Soluções</a></li>
-                <li><a href="#testimonials" className="text-gray-400 hover:text-frico-500 transition-colors">Depoimentos</a></li>
-                <li><a href="#contact" className="text-gray-400 hover:text-frico-500 transition-colors">Contato</a></li>
+                <li><a href="#hero" className="text-gray-400 hover:text-blue-400 transition-colors text-sm">Início</a></li>
+                <li><a href="#apex-ai" className="text-gray-400 hover:text-blue-400 transition-colors text-sm flex items-center gap-1.5"><Bot className="w-3 h-3" />APEX AI</a></li>
+                <li><a href="#features" className="text-gray-400 hover:text-blue-400 transition-colors text-sm">Funcionalidades</a></li>
+                <li><a href="#modules" className="text-gray-400 hover:text-blue-400 transition-colors text-sm">Módulos</a></li>
+                <li><a href="#contact" className="text-gray-400 hover:text-blue-400 transition-colors text-sm">Contato</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-white text-lg font-bold mb-4">Contato</h3>
+              <h3 className="text-white text-sm font-bold mb-4 uppercase tracking-wide">Sistema</h3>
               <ul className="space-y-2">
-                <li className="text-gray-400"><span className="font-medium text-gray-300">Telefone:</span> +55 (62) 3510-0100</li>
-                <li><a href="https://wa.me/556235100100?text=%20" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-frico-500 transition-colors"><span className="font-medium text-gray-300">WhatsApp:</span> Enviar mensagem</a></li>
-                <li className="text-gray-400"><span className="font-medium text-gray-300">Email:</span> contato@fricoalimentos.com.br</li>
+                <li className="text-gray-400 text-sm flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-green-400" />
+                  Segurança avançada
+                </li>
+                <li className="text-gray-400 text-sm flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-yellow-400" />
+                  Alta performance
+                </li>
+                <li className="text-gray-400 text-sm flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-blue-400" />
+                  IA integrada
+                </li>
               </ul>
-            </div>
-            <div>
-              <h3 className="text-white text-lg font-bold mb-4">Desenvolvido por</h3>
-              <p className="text-gray-400 mb-2">Bruno Moreira de Assis</p>
-              <a href="https://wa.me/5562993046419?text=%20%20" target="_blank" rel="noopener noreferrer" className="text-frico-500 hover:underline">Contato do Desenvolvedor</a>
             </div>
           </div>
-          <div className="border-t border-gray-800 pt-8 mt-8 text-center">
-            <p className="text-gray-500">&copy; {new Date().getFullYear()} APEX HUB. Todos os direitos reservados.</p>
+          <div className="border-t border-gray-800 pt-8 text-center">
+            <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} APEX HUB. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>
 
       {/* Modal de Autenticação */}
       <Dialog open={authModalOpen} onOpenChange={setAuthModalOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-[#1A1F2C]/90 backdrop-blur-xl border border-gray-700 text-white">
+        <DialogContent className="sm:max-w-[425px] bg-[#0d1a2d]/95 backdrop-blur-xl border border-gray-700/50 text-white shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-bold text-center text-white">
-              {activeTab === "login" ? "Acesse sua conta" : "Crie sua conta"}
-            </DialogTitle>
+            <div className="flex flex-col items-center gap-3 mb-2">
+              <img src={logoSrc} alt="APEX HUB" className="w-14 h-14 rounded-xl" />
+              <DialogTitle className="text-2xl font-bold text-center text-white">
+                {activeTab === "login" ? "Acesse sua conta" : "Crie sua conta"}
+              </DialogTitle>
+              <p className="text-gray-400 text-sm text-center">
+                {activeTab === "login" 
+                  ? "Entre com suas credenciais para acessar o sistema" 
+                  : "Preencha os dados para criar sua conta no APEX HUB"
+                }
+              </p>
+            </div>
           </DialogHeader>
           <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "login" | "register")} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-primary/10 rounded-lg p-1">
-              <TabsTrigger value="login" className="text-white bg-transparent hover:bg-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md transition-all duration-200">Login</TabsTrigger>
-              <TabsTrigger value="register" className="text-white bg-transparent hover:bg-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md transition-all duration-200">Cadastro</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-gray-800/50 rounded-lg p-1">
+              <TabsTrigger 
+                value="login" 
+                className="text-gray-300 bg-transparent hover:bg-gray-700/50 data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-all duration-200"
+              >
+                Login
+              </TabsTrigger>
+              <TabsTrigger 
+                value="register" 
+                className="text-gray-300 bg-transparent hover:bg-gray-700/50 data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-all duration-200"
+              >
+                Cadastro
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="login" className="mt-4">
               <LoginForm onSuccess={handleSuccess} />
