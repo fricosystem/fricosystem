@@ -214,18 +214,18 @@ const Login = () => {
     <div className="min-h-screen w-screen max-w-full overflow-x-hidden bg-gradient-to-b from-[#0a1628] via-[#0d1a2d] to-[#060d14] text-white flex flex-col">
       
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md py-2 md:py-3 h-20 bg-[#0a1628]/80 border-b border-gray-800/30 w-screen max-w-full">
-        <div className="w-full px-2 md:px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 pl-1">
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md py-2 md:py-3 h-14 md:h-20 bg-[#0a1628]/80 border-b border-gray-800/30 w-screen max-w-full">
+        <div className="w-full h-full px-3 md:px-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <a href="#hero" className="flex items-center gap-2">
               <img 
                 src={logoSrc} 
                 alt="APEX HUB Logo" 
-                className="w-16 h-16 rounded-lg object-scale-down" 
+                className="w-8 h-8 md:w-14 md:h-14 rounded-lg object-scale-down" 
               />
-              <div>
-                <span className="text-2xl font-bold text-white">APEX HUB</span>
-                <p className="text-xs font-medium text-gray-400">Sistema de Gestão Industrial</p>
+              <div className="flex flex-col justify-center">
+                <span className="text-base md:text-2xl font-bold text-white leading-tight">APEX HUB</span>
+                <p className="hidden md:block text-xs font-medium text-gray-400">Sistema de Gestão Industrial</p>
               </div>
             </a>
           </div>
@@ -245,10 +245,10 @@ const Login = () => {
               <UserButton user={user} />
             ) : (
               <>
-                <Button variant="outline" onClick={openLoginModal} className="bg-transparent border-gray-600 text-white hover:bg-white hover:text-black transition-all mx-2">
+                <Button variant="outline" onClick={openLoginModal} className="bg-transparent border-gray-600 text-white hover:bg-white hover:text-black transition-all text-xs md:text-sm h-8 md:h-10 px-3 md:px-4">
                   Entrar
                 </Button>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={openRegisterModal}>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm h-8 md:h-10 px-3 md:px-4" onClick={openRegisterModal}>
                   Cadastre-se
                 </Button>
               </>
