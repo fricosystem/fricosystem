@@ -1,79 +1,155 @@
-# Configuracoes do Sistema
+# Sistema
 
-## Visao Geral
+## Visão Geral
+A página **Sistema** é um painel de diagnóstico e configuração técnica do APEX HUB. Aqui você pode verificar a saúde do sistema, fazer backups, gerenciar configurações globais e acessar informações técnicas importantes.
 
-O modulo de **Configuracoes do Sistema** permite aos administradores configurar parametros globais, personalizar comportamentos e gerenciar aspectos tecnicos do APEX HUB.
+## Para Quem é Esta Página?
+- Administradores do sistema
+- Desenvolvedores
+- Equipe de suporte técnico
+- Gestores de TI
 
-## Aviso Importante
+## Áreas Principais
 
-**Este modulo e restrito a administradores.** Alteracoes indevidas podem impactar todo o sistema.
+### 1. Status e Saúde do Sistema
+Visualização em tempo real do estado da aplicação:
+- **Status geral**: Verde (funcionando), Amarelo (problemas menores), Vermelho (crítico)
+- **Uptime**: Tempo que o sistema está ativo
+- **Versão do APEX HUB**: Versão atual instalada
+- **Data da última atualização**: Quando foi feita a última atualização
+- **Ambiente**: Produção / Teste
 
-## Funcionalidades Principais
+### 2. Informações Técnicas
+- **Base de dados**: Status da conexão, espaço em disco, quantidade de registros
+- **Tempo de resposta**: Latência do banco de dados
+- **Sesões ativas**: Quantos usuários estão logados agora
+- **Última sincronização**: Quando foram sincronizados dados críticos
 
-### 1. Parametros Gerais
+### 3. Configurações Globais
+Parâmetros da empresa:
+- **Razão Social**: Nome da organização
+- **CNPJ**: Identificação legal
+- **Logo**: Identidade visual do sistema
+- **Cores do tema**: Personalização visual
+- **Fuso horário**: Regional da empresa
+- **Moeda**: Padrão para valores
 
-- **Empresa**: Dados da organizacao
-- **Logo**: Identidade visual
-- **Regional**: Fuso horario, moeda, idioma
+### 4. Módulos Disponíveis
+Listar todos os módulos do APEX HUB e seu status:
+- **Ativo/Inativo**: Se o módulo está disponível
+- **Permissões**: Quem tem acesso
+- **Última atualização**: Quando foi modificado
+- **Configurações específicas**: Parâmetros do módulo
 
-### 2. Modulos
+Módulos principais:
+- Estoque
+- Manutenção
+- Compras
+- Financeiro
+- Produção (PCP)
+- Comunicação
 
-- **Ativar/Desativar**: Controlar modulos disponiveis
-- **Configurar**: Parametros especificos
-- **Permissoes**: Definir acessos padrao
+### 5. Integrações Externas
+Se APEX HUB está conectado a outros sistemas:
+- **APIs externas**: Status das conexões
+- **Webhooks**: Endpoints configurados
+- **Sincronização de dados**: Status das sincronizações
+- **Logs de integração**: Histórico de operações
 
-### 3. Integracao
+### 6. Notificações e Alertas
+Configurar como o sistema notifica sobre eventos:
+- **Email de envio**: Servidor SMTP configurado
+- **Templates de mensagem**: Modelos de notificação
+- **Frequência de alertas**: Com que frequência avisar
+- **Destinatários**: Quem recebe as notificações
 
-- **APIs**: Chaves e endpoints
-- **Webhooks**: Notificacoes externas
-- **SSO**: Login integrado
+### 7. Backup e Restore
+Gerenciar cópias de segurança:
+- **Frequência de backup**: Diário, semanal, mensal
+- **Retenção de dados**: Por quanto tempo manter backups antigos
+- **Local de armazenamento**: Onde os arquivos estão
+- **Último backup**: Data e hora
+- **Tamanho**: Quanto espaço os backups ocupam
 
-## Configuracoes Disponiveis
+## Como Usar - Fluxo Típico
 
-### Empresa
+### Verificar Saúde do Sistema
+1. Acesse **Sistema** no menu lateral
+2. Veja o **Status Geral** no topo (deve estar verde)
+3. Revise **Informações Técnicas** para confirmar performance
+4. Se houver alertas, clique neles para ver detalhes
 
-- Razao Social
-- CNPJ
-- Endereco
-- Logomarca
-- Cores do tema
+### Fazer Backup Manual
+1. Acesse **Sistema** → **Backup e Restore**
+2. Clique em **Novo Backup**
+3. Selecione o que deseja fazer backup:
+   - Todos os dados
+   - Apenas configurações
+   - Apenas registros (sem dados pessoais)
+4. Clique em **Iniciar Backup**
+5. Aguarde conclusão (pode levar alguns minutos)
+6. Baixe o arquivo gerado
 
-### Notificacoes
+### Restaurar de um Backup
+1. Acesse **Sistema** → **Backup e Restore**
+2. Veja a lista de backups disponíveis
+3. Clique em **Restaurar** ao lado do backup desejado
+4. **Atenção**: Isto vai SUBSTITUIR dados atuais
+5. Digite a confirmação: "RESTAURAR"
+6. Clique em **Confirmar**
+7. Aguarde conclusão
 
-- Email de envio
-- Servidor SMTP
-- Templates de mensagem
-- Frequencia de alertas
+### Configurar Notificações
+1. Acesse **Sistema** → **Notificações**
+2. Ative/desative tipos de notificação:
+   - Novos usuários
+   - Manutenção vencida
+   - Requisições pendentes
+   - Falhas do sistema
+3. Configure o email de envio (SMTP)
+4. Defina quem recebe as notificações
+5. Salve as configurações
 
-### Backup
+## Ações Disponíveis
 
-- Frequencia de backup
-- Retencao de dados
-- Local de armazenamento
+### Diagnóstico
+- **Executar Teste de Saúde**: Verifica tudo está funcionando
+- **Limpar Cache**: Força recalculação de dados
+- **Resetar Conexões**: Reconecta ao banco de dados
+- **Verificar Integrações**: Testa conexões externas
 
-## Boas Praticas
+### Manutenção
+- **Backup Manual**: Cria cópia imediata
+- **Restaurar**: Volta a um estado anterior
+- **Exportar Dados**: Gera arquivo CSV/Excel
+- **Limpeza de Logs**: Remove logs antigos
+- **Otimizar Banco de Dados**: Melhora performance
 
-- **Teste primeiro**: Valide mudancas em ambiente de teste
-- **Documente**: Registre alteracoes realizadas
-- **Backup**: Faca backup antes de mudancas criticas
-- **Comunicacao**: Avise usuarios sobre alteracoes
+### Configuração
+- **Editar Empresa**: Razão social, CNPJ, logo
+- **Ativar/Desativar Módulos**: Controlar quais módulos aparecem
+- **Gerenciar Integrações**: Configurar conexões externas
+- **Permissões Padrão**: Definir acesso por perfil
 
-## Quando Solicitar Ajuda
+## Dicas de Segurança
+- **Cuidado com restauração**: Você vai perder dados após o backup
+- **Backup semanal**: Realize backups regularmente
+- **Senha forte**: Proteja o sistema com senha segura
+- **Limite de acesso**: Restrinja acesso a "Sistema" por IP se possível
+- **Auditoria**: Revise logs de quem fez alterações
 
-Se voce e usuario e precisa de alguma configuracao:
-1. Identifique o que precisa mudar
-2. Solicite ao administrador do sistema
-3. Aguarde confirmacao
-4. Teste a alteracao
+## Alertas Comuns
 
-Se voce e administrador e tem duvidas:
-1. Consulte a documentacao tecnica
-2. Contate o suporte do sistema
-3. Faca alteracoes em horario de baixo uso
+| Alerta | Causa | Solução |
+|--------|-------|---------|
+| Espaço em disco baixo | Muitos logs e backups | Limpe logs antigos, exclua backups não usados |
+| Banco de dados lento | Muitos registros | Otimize banco, archive dados antigos |
+| Taxa alta de erro | Problema na aplicação | Veja logs, reinicie sistema |
+| Falha de integração | Sistema externo offline | Verifique conexão do sistema externo |
 
-## Seguranca
+## Próximos Passos
+- Se tudo está verde: Você pode voltar ao trabalho normal
+- Se há alertas: Siga as ações sugeridas
+- Para manutenção: Faça backup semanal
+- Comunique-se: Avise usuários sobre manutenção planejada
 
-- Alteracoes sao auditadas
-- Configuracoes criticas precisam de confirmacao
-- Acesso restrito por IP pode ser configurado
-- Logs de todas as mudancas

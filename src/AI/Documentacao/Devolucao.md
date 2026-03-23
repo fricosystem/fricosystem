@@ -1,117 +1,142 @@
-# Devolucoes
+# Devolução de Materiais
 
-## Visao Geral
-A pagina de Devolucoes permite registrar o retorno de materiais ao estoque. Usada quando sobra material de uma requisicao ou quando um produto nao sera mais utilizado pelo solicitante.
+## Visão Geral
+A página **Devolução de Materiais** permite registrar e processar devoluções de itens que foram retirados do estoque mas não foram utilizados, danificados ou precisam ser devolvidos por outro motivo.
 
-## Rota
-`/devolucao`
+## Para Quem é Esta Página?
+- Operadores e técnicos que precisam devolver material
+- Supervisores que autorizam devoluções
+- Pessoal de recepção/almoxarifado
+- Pessoal de controle de estoque
 
-## Funcionalidades
+## Como Funciona o Fluxo
 
-### Registro de Devolucao
-- **Nova devolucao**: Registrar retorno de material
-- **Vincular requisicao**: Associar a requisicao original
-- **Conferir material**: Verificar estado do produto
-- **Dar entrada**: Retornar ao estoque
+### 1. Abrir Requisição de Devolução
+1. Acesse **Devolução de Materiais** no menu
+2. Clique em **Nova Devolução**
+3. O sistema exibirá suas requisições abertas
+4. Selecione a requisição que contém o material a devolver
 
-### Motivos de Devolucao
-- Sobra de material
-- Produto errado retirado
-- Projeto cancelado
-- Material nao utilizado
-- Troca de produto
+### 2. Selecionar Materiais a Devolver
+Na tela de devolução:
+- **Listar itens**: Mostra todos os itens da requisição
+- **Selecionar itens**: Marque os itens que quer devolver
+- **Quantidade**: Indique quantos itens estão sendo devolvidos
+- **Motivo**: Escolha o motivo da devolução
 
-### Informacoes da Devolucao
-- Produto devolvido
-- Quantidade
-- Requisicao de origem
-- Motivo da devolucao
-- Estado do material
-- Quem devolveu
+### 3. Informar Motivo da Devolução
+Selecione uma das opções:
+- **Não utilizado**: Material saiu mas não foi usado
+- **Quantidade errada**: Recebeu mais do que pediu
+- **Defeituoso**: Veio com defeito
+- **Não conforme**: Não atende à especificação
+- **Projeto cancelado**: Projeto foi cancelado
+- **Outro**: Digite o motivo específico
 
-## Como Usar (Passo a Passo)
+### 4. Adicionar Observações
+Campo livre para detalhar:
+- Condição do material
+- Por que está sendo devolvido
+- Qualquer informação adicional
+- Quem recebeu na devolução
 
-### Registrar Devolucao Simples
-1. Clique em "Nova Devolucao"
-2. Busque o produto a devolver
-3. Informe a quantidade
-4. Selecione o motivo
-5. Adicione observacoes se necessario
-6. Confirme a devolucao
+### 5. Confirmar e Enviar
+1. Revise os dados informados
+2. Clique em **Confirmar Devolução**
+3. O material volta ao estoque
+4. Você receberá confirmação por email
 
-### Devolucao Vinculada a Requisicao
-1. Clique em "Devolver de Requisicao"
-2. Selecione a requisicao original
-3. Marque os itens a devolver
-4. Informe as quantidades
-5. O sistema vincula automaticamente
-6. Confirme a devolucao
+## O que Acontece Depois
 
-### Conferir Material Devolvido
-1. Receba o material fisicamente
-2. Verifique o estado (novo, usado, danificado)
-3. Registre a condicao no sistema
-4. Se danificado, nao devolver ao estoque normal
-5. Direcione para descarte ou reparo
+### Na Requisição Original
+- A requisição é parcialmente cancelada (somente itens devolvidos)
+- Se devolveu tudo: A requisição fica como cancelada
+- Se devolveu parte: A requisição mantém os itens não devolvidos
 
-### Rejeitar Devolucao
-1. Se material impróprio para estoque
-2. Clique em "Rejeitar"
-3. Informe o motivo da rejeicao
-4. Oriente o solicitante sobre destino
-5. Documente a ocorrencia
+### No Estoque
+- O material retorna à quantidade original
+- Fica disponível para outras requisições
+- Se estava com defeito: Pode ser marcado como sucata
+- Controlador de estoque recebe notificação
+
+### Na Sua Conta
+- Você pode consultar histórico de devoluções
+- Status aparece no acompanhamento de requisições
+
+## Principais Campos
+
+| Campo | O que é | Obrigatório |
+|-------|---------|-----------|
+| Requisição Original | Qual requisição está devolvendo | Sim |
+| Item | Código/nome do material | Sim |
+| Quantidade | Quantos itens estão devolvendo | Sim |
+| Motivo | Por que está devolvendo | Sim |
+| Observações | Detalhes adicionais | Não |
+| Recebido por | Quem recebeu a devolução | Recomendado |
+
+## Dicas e Boas Práticas
+
+### Para Operadores
+- **Devolver rápido**: Quanto antes devolver, melhor para o controle
+- **Manter em bom estado**: Material em bom estado pode ser reutilizado
+- **Motivo preciso**: Detalhe bem o motivo para controle
+- **Observações**: Se houver defeito, descreva bem
+
+### Para Supervisores
+- **Autorizar**: Revise as devoluções da equipe
+- **Auditar**: Verifique se o motivo está correto
+- **Acompanhar**: Monitore devoluções frequentes (pode indicar problema)
+
+### Para Almoxarifado
+- **Receber**: Confirme o recebimento fisicamente
+- **Conferir**: Valide quantidade e condição
+- **Registrar**: Use o campo "Recebido por"
+- **Documentar**: Se o material está danificado, tire fotos
 
 ## Tratativas Operacionais
 
-### Situacao 1: Material danificado
-**Problema**: Produto devolvido em mau estado
-**Solucao**:
-1. Nao aceite no estoque normal
+### Material Devolvido em Mau Estado
+**Problema**: Produto devolvido danificado
+**Solução**:
+1. Não aceite no estoque normal
 2. Registre como "Danificado"
-3. Direcione para area de avaria
+3. Direcione para área de avaria
 4. Analise possibilidade de reparo
-5. Se irrecuperavel, de baixa por perda
+5. Se irrecuperável, de baixa por perda
 
-### Situacao 2: Quantidade diferente da requisicao
+### Quantidade Diferente da Requisição
 **Problema**: Devolvendo mais do que retirou
-**Solucao**:
-1. Verifique a requisicao original
-2. Se realmente ha excedente, investigue
-3. Pode ser de outra requisicao
-4. Registre a diferenca para analise
+**Solução**:
+1. Verifique a requisição original
+2. Se realmente há excedente, investigue
+3. Pode ser de outra requisição
+4. Registre a diferença para análise
 
-### Situacao 3: Produto sem codigo
-**Problema**: Material sem identificacao
-**Solucao**:
+### Produto Sem Identificação
+**Problema**: Material sem código
+**Solução**:
 1. Tente identificar pelo produto
 2. Consulte com quem devolveu
 3. Se identificar, registre normalmente
-4. Se nao identificar, registre separado
+4. Se não identificar, registre separado
 
-### Situacao 4: Requisicao nao encontrada
-**Problema**: Nao acha a requisicao de origem
-**Solucao**:
+### Requisição Não Encontrada
+**Problema**: Não acha a requisição de origem
+**Solução**:
 1. Busque por diferentes filtros
 2. Consulte com o solicitante
-3. Se nao encontrar, registre sem vinculo
-4. Documente nas observacoes
+3. Se não encontrar, registre sem vínculo
+4. Documente nas observações
 
-## Dicas e Boas Praticas
-- Sempre vincule a requisicao quando possivel
-- Confira o estado do material devolvido
-- Nao aceite material impróprio no estoque
-- Registre devolucoes imediatamente
-- Mantenha rastreabilidade
-- Oriente usuarios sobre processo correto
+## Integração com Outras Páginas
 
-## Permissoes Necessarias
-- **Registrar devolucao**: Estoquistas
-- **Conferir material**: Conferentes
-- **Rejeitar**: Gestores de estoque
-- **Visualizar historico**: Todos do setor
+- **Requisições** (/requisicoes): Veja requisições abertas
+- **Produtos** (/produtos): Consulte dados do material
+- **Relatórios** (/relatorios): Veja estatísticas de devoluções
+- **Carrinho** (/carrinho): Prepare uma devolução em lotes
 
-## Relacionamentos
-- **Requisicoes**: Origem do material
-- **Produtos**: Itens devolvidos
-- **Estoque**: Entrada do retorno
-- **Inventario**: Pode gerar ajustes
+## Próximos Passos
+- Se está com material para devolver: Use esta página
+- Se precisa requisitar novo material: Vá para /requisicoes
+- Para consultar estoque: Vá para /produtos
+
