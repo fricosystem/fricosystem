@@ -11,14 +11,15 @@ import { auth } from "@/firebase/firebase";
 import { LoginForm } from "@/components/Login/Auth/LoginForm";
 import { RegisterForm } from "@/components/Login/Auth/RegisterForm";
 import { UserButton } from "@/components/Login/UserButton";
-import { 
-  BarChart4, Calendar, Database, FileText, Users,
-  Phone, Mail, MessageSquare, Bot, Zap, ShieldCheck, TrendingUp, Package,
-  Wrench, ClipboardList, Building2, BookOpen, ArrowRight, CheckCircle2,
-  MessageCircle, Search, BarChart2, Layers, Settings, Factory, Truck,
-  AlertTriangle, FileCheck, Shield, Clock, Target, Gauge, Scan
+import {
+  BarChart4, Users, Zap, ShieldCheck, Package, Wrench, ClipboardList,
+  Building2, BookOpen, ArrowRight, Layers, Shield, Clock, Target, Gauge,
+  FileCheck
 } from "lucide-react";
 import { useThemedLogo } from "@/hooks/useThemedLogo";
+import { Reveal } from "@/components/Login/Reveal";
+import { ModuleSectionBlock } from "@/components/Login/ModuleSectionBlock";
+import { moduleSections } from "@/components/Login/modulesData";
 
 // Estatísticas do sistema
 const stats = [
@@ -39,89 +40,7 @@ const modules = [
   { icon: <Users className="h-5 w-5" />, label: "Equipes" },
   { icon: <Layers className="h-5 w-5" />, label: "Transferências" },
   { icon: <FileCheck className="h-5 w-5" />, label: "Qualidade" },
-];
-
-// Capacidades do APEX AI
-const aiCapabilities = [
-  {
-    icon: <Search className="h-6 w-6 text-blue-400" />,
-    title: "Consulta Inteligente",
-    description: "Pergunte sobre qualquer produto, fornecedor ou equipamento em linguagem natural e receba respostas precisas."
-  },
-  {
-    icon: <BarChart2 className="h-6 w-6 text-blue-400" />,
-    title: "Relatórios Automáticos",
-    description: "Solicite relatórios completos de estoque, manutenção ou custos instantaneamente via chat."
-  },
-  {
-    icon: <MessageCircle className="h-6 w-6 text-blue-400" />,
-    title: "Assistente 24/7",
-    description: "Acesse ajuda sobre qualquer funcionalidade do sistema a qualquer momento, direto do chat."
-  },
-  {
-    icon: <TrendingUp className="h-6 w-6 text-blue-400" />,
-    title: "Análise de Dados",
-    description: "Identifique produtos em falta, vencimentos próximos e gargalos operacionais automaticamente."
-  },
-];
-
-// Funcionalidades detalhadas do sistema (páginas reais)
-const systemFeatures = [
-  {
-    category: "Gestão de Estoque",
-    icon: <Package className="h-8 w-8 text-emerald-400" />,
-    color: "emerald",
-    items: [
-      { name: "Produtos", path: "/produtos", desc: "Cadastro completo com código, descrição, unidade, preço e localização em depósito" },
-      { name: "Notas Fiscais", path: "/notas-fiscais", desc: "Lançamento de entradas via XML ou manual com conferência automática" },
-      { name: "Requisições", path: "/requisicoes", desc: "Solicitação de materiais com aprovação multinível e rastreamento" },
-      { name: "Inventário", path: "/inventario", desc: "Contagem cíclica com ajustes automáticos e relatórios de divergência" },
-    ]
-  },
-  {
-    category: "Manutenção Industrial",
-    icon: <Wrench className="h-8 w-8 text-orange-400" />,
-    color: "orange",
-    items: [
-      { name: "Preventiva", path: "/manutencao-preventiva", desc: "Planejamento de manutenções com frequência, tarefas e responsáveis" },
-      { name: "Ordens de Serviço", path: "/ordens-servico", desc: "Abertura, acompanhamento e encerramento de OS com histórico completo" },
-      { name: "Execução", path: "/execucao-manutencao", desc: "Registro de execução com horas, peças utilizadas e observações" },
-      { name: "Parada de Máquina", path: "/parada-maquina", desc: "Registro de paradas com motivo, duração e impacto na produção" },
-    ]
-  },
-  {
-    category: "Gestão de Ativos",
-    icon: <Factory className="h-8 w-8 text-blue-400" />,
-    color: "blue",
-    items: [
-      { name: "Máquinas", path: "/maquinas", desc: "Cadastro de equipamentos com patrimônio, setor e histórico de manutenção" },
-      { name: "Setores", path: "/setores", desc: "Organização da planta por áreas produtivas e centros de custo" },
-      { name: "Fornecedores", path: "/gestao-fornecedores", desc: "Gestão de parceiros com contatos, condições e avaliação" },
-      { name: "Manuais", path: "/manuais", desc: "Biblioteca digital de manuais técnicos e procedimentos" },
-    ]
-  },
-  {
-    category: "Administração",
-    icon: <Settings className="h-8 w-8 text-purple-400" />,
-    color: "purple",
-    items: [
-      { name: "Usuários", path: "/gestao-usuarios", desc: "Controle de acesso com perfis, permissões e unidades" },
-      { name: "Unidades", path: "/unidades", desc: "Gestão de filiais e plantas industriais" },
-      { name: "Centro de Custo", path: "/centro-custo", desc: "Alocação de despesas por área e projeto" },
-      { name: "Relatórios", path: "/relatorios", desc: "Dashboards e relatórios gerenciais personalizados" },
-    ]
-  },
-  {
-    category: "Controle de Qualidade",
-    icon: <FileCheck className="h-8 w-8 text-cyan-400" />,
-    color: "cyan",
-    items: [
-      { name: "Engenharia de Checklists", path: "/cq/planilhas", desc: "Criação de modelos de inspeção dinâmicos e versionados" },
-      { name: "Execução Mobile", path: "/cq/execucao", desc: "Coleta de dados em tempo real no chão de fábrica com evidências" },
-      { name: "Trilha de Auditoria", path: "/cq/rastreabilidade", desc: "Histórico imutável de todas as alterações para conformidade ISO/MAPA" },
-      { name: "Não Conformidades", path: "/cq/melhoria-continua", desc: "Gestão de desvios com análise de causa raiz (Ishikawa) e 5W2H" },
-    ]
-  },
+  { icon: <Gauge className="h-5 w-5" />, label: "PCP" },
 ];
 
 // Diferenciais do sistema
@@ -152,9 +71,9 @@ const differentials = [
     description: "KPIs e métricas de desempenho para acompanhamento da operação."
   },
   {
-    icon: <Bot className="h-10 w-10 text-cyan-400" />,
-    title: "Inteligência Artificial",
-    description: "Assistente APEX AI integrado para suporte e consultas inteligentes."
+    icon: <Layers className="h-10 w-10 text-cyan-400" />,
+    title: "Módulos Integrados",
+    description: "Estoque, manutenção, qualidade e administração compartilhando a mesma base de dados."
   },
 ];
 
@@ -244,12 +163,9 @@ const Login = () => {
           
           <nav className="hidden md:flex items-center space-x-8">
             <a href="#hero" className="text-white hover:text-gray-300 transition-colors duration-300">Início</a>
-            <a href="#apex-ai" className="text-blue-400 hover:text-blue-300 transition-colors duration-300 font-medium flex items-center gap-1">
-              <Bot className="w-3.5 h-3.5" />APEX AI
-            </a>
             <a href="#features" className="text-white hover:text-gray-300 transition-colors duration-300">Funcionalidades</a>
             <a href="#modules" className="text-white hover:text-gray-300 transition-colors duration-300">Módulos</a>
-            <a href="#quality" className="text-cyan-400 hover:text-cyan-300 transition-colors duration-300 font-medium">Qualidade</a>
+            <a href="#modulo-qualidade" className="text-cyan-400 hover:text-cyan-300 transition-colors duration-300 font-medium">Qualidade</a>
             <a href="#contact" className="text-white hover:text-gray-300 transition-colors duration-300">Contato</a>
           </nav>
           
@@ -282,7 +198,7 @@ const Login = () => {
             </h1>
             
             <p className="text-xl text-gray-400 max-w-2xl mb-8 animate-fade-up leading-relaxed">
-              Gerencie estoque, manutenção, requisições e toda a operação industrial em uma única plataforma integrada com inteligência artificial.
+              Gerencie estoque, manutenção, requisições, qualidade e toda a operação industrial em uma única plataforma integrada.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 animate-fade-up" style={{ animationDelay: "0.2s" }}>
@@ -302,10 +218,10 @@ const Login = () => {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               {stats.map((stat, i) => (
-                <div key={i} className="flex flex-col gap-1">
+                <Reveal key={i} direction="up" delay={i * 90} className="flex flex-col gap-1">
                   <span className="text-3xl md:text-4xl font-bold text-blue-400">{stat.value}</span>
                   <span className="text-sm text-gray-400">{stat.label}</span>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -314,167 +230,20 @@ const Login = () => {
         {/* Módulos do Sistema */}
         <section className="py-14 border-b border-gray-800/40">
           <div className="container mx-auto px-4">
-            <p className="text-center text-sm font-semibold text-gray-500 uppercase tracking-widest mb-8">
-              Módulos integrados na plataforma
-            </p>
+            <Reveal direction="up">
+              <p className="text-center text-sm font-semibold text-gray-500 uppercase tracking-widest mb-8">
+                Módulos integrados na plataforma
+              </p>
+            </Reveal>
             <div className="flex flex-wrap justify-center gap-3">
               {modules.map((mod, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700/60 bg-gray-900/40 text-gray-300 text-sm hover:border-blue-500/50 hover:text-blue-400 transition-colors backdrop-blur-sm"
-                >
-                  {mod.icon}
-                  <span>{mod.label}</span>
-                </div>
+                <Reveal key={i} direction="up" delay={i * 60}>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700/60 bg-gray-900/40 text-gray-300 text-sm hover:border-blue-500/50 hover:text-blue-400 transition-colors backdrop-blur-sm">
+                    {mod.icon}
+                    <span>{mod.label}</span>
+                  </div>
+                </Reveal>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* APEX AI Section */}
-        <section id="apex-ai" className="py-24 relative overflow-hidden">
-          {/* Background glow */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-3xl" />
-          </div>
-
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              {/* Left: texto */}
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600/15 border border-blue-500/25 rounded-full mb-6">
-                  <Bot className="w-4 h-4 text-blue-400" />
-                  <span className="text-xs font-semibold text-blue-300 uppercase tracking-wide">Inteligência Artificial</span>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-5 text-balance leading-tight">
-                  Conheça o <span className="text-blue-400">APEX AI</span>,<br />
-                  seu assistente industrial
-                </h2>
-                <p className="text-gray-400 text-lg mb-8 leading-relaxed">
-                  O APEX AI está integrado a todas as funcionalidades do sistema. Consulte produtos, fornecedores, equipamentos e ordens de serviço em linguagem natural e receba respostas precisas em segundos.
-                </p>
-                <ul className="space-y-3 mb-8">
-                  {[
-                    "Acesso completo aos dados de estoque em tempo real",
-                    "Gera relatórios sob demanda via chat",
-                    "Identifica produtos com estoque baixo ou vencidos",
-                    "Responde sobre fornecedores, equipamentos e manutenção",
-                    "Orienta sobre como usar cada funcionalidade do sistema",
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-300 text-sm">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  onClick={openLoginModal}
-                  className="bg-blue-600 hover:bg-blue-500 text-white gap-2 px-6"
-                >
-                  Experimentar agora
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Right: cards de capacidades */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {aiCapabilities.map((cap, i) => (
-                  <div
-                    key={i}
-                    className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 hover:bg-white/10 transition-all backdrop-blur-xl group"
-                  >
-                    <div className="mb-3 p-2 bg-blue-600/10 rounded-lg w-fit group-hover:bg-blue-600/20 transition-colors">
-                      {cap.icon}
-                    </div>
-                    <h4 className="text-white font-semibold text-sm mb-2">{cap.title}</h4>
-                    <p className="text-gray-500 text-xs leading-relaxed">{cap.description}</p>
-                  </div>
-                ))}
-
-                {/* Mock chat preview */}
-                <div className="sm:col-span-2 bg-black/40 border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    <span className="text-xs text-gray-400 font-medium">APEX AI - online</span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-end">
-                      <span className="bg-blue-600/80 text-white text-xs px-3 py-1.5 rounded-2xl rounded-tr-sm max-w-[80%]">
-                        Quantos rolamentos temos em estoque?
-                      </span>
-                    </div>
-                    <div className="flex justify-start">
-                      <span className="bg-gray-800 text-gray-200 text-xs px-3 py-1.5 rounded-2xl rounded-tl-sm max-w-[80%]">
-                        Encontrei <strong>3 tipos</strong> de rolamentos em estoque: Rolamento 6204 (12 un.), Rolamento 6205 (8 un.) e Rolamento 6304 (5 un.). Total: 25 unidades.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Quality Control Section */}
-        <section id="quality" className="py-24 bg-[#0a1628]">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center flex-row-reverse">
-              {/* Right: Illustration/Cards (Order flipped in CSS or grid) */}
-              <div className="order-2 lg:order-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-2xl p-6 backdrop-blur-xl hover:bg-cyan-500/10 transition-all">
-                  <ShieldCheck className="h-8 w-8 text-cyan-400 mb-4" />
-                  <h4 className="text-white font-bold mb-2 uppercase text-sm tracking-wide">Zero Defeito</h4>
-                  <p className="text-gray-400 text-xs leading-relaxed">Checklists inteligentes com validação rigorosa e bloqueio de não conformidades.</p>
-                </div>
-                <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-6 backdrop-blur-xl hover:bg-blue-500/10 transition-all">
-                  <FileCheck className="h-8 w-8 text-blue-400 mb-4" />
-                  <h4 className="text-white font-bold mb-2 uppercase text-sm tracking-wide">Trilha de Auditoria</h4>
-                  <p className="text-gray-400 text-xs leading-relaxed">Histórico 100% auditável e imutável, garantindo conformidade com normas MAPA e ISO.</p>
-                </div>
-                <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-6 backdrop-blur-xl hover:bg-indigo-500/10 transition-all">
-                  <Scan className="h-8 w-8 text-indigo-400 mb-4" />
-                  <h4 className="text-white font-bold mb-2 uppercase text-sm tracking-wide">Coleta Mobile</h4>
-                  <p className="text-gray-400 text-xs leading-relaxed">Inspeção em tempo real com captura de fotos, assinaturas e geolocalização.</p>
-                </div>
-                <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-6 backdrop-blur-xl hover:bg-purple-500/10 transition-all">
-                  <Target className="h-8 w-8 text-purple-400 mb-4" />
-                  <h4 className="text-white font-bold mb-2 uppercase text-sm tracking-wide">Melhoria Contínua</h4>
-                  <p className="text-gray-400 text-xs leading-relaxed">Análise de causa raiz via Ishikawa e planos de ação 5W2H automatizados.</p>
-                </div>
-              </div>
-
-              {/* Left: Content */}
-              <div className="order-1 lg:order-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-600/15 border border-cyan-500/25 rounded-full mb-6">
-                  <Shield className="w-4 h-4 text-cyan-400" />
-                  <span className="text-xs font-semibold text-cyan-300 uppercase tracking-wide">Pilar de Conformidade</span>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-5 leading-tight">
-                  Controle de <span className="text-cyan-400">Qualidade</span><br />
-                  e Rastreabilidade Total
-                </h2>
-                <p className="text-gray-400 text-lg mb-8 leading-relaxed">
-                  Elimine o papel e garanta a excelência produtiva. Nosso módulo de Qualidade conecta o laboratório ao chão de fábrica, registrando cada desvio e automatizando a correção.
-                </p>
-                <div className="space-y-4 mb-8">
-                  <div className="flex gap-4 p-4 bg-gray-900/40 border border-gray-800 rounded-lg">
-                    <div className="p-2 bg-cyan-500/10 rounded-lg h-fit">
-                      <Zap className="h-5 w-5 text-cyan-400" />
-                    </div>
-                    <div>
-                      <h5 className="text-white font-semibold text-sm">Homologação de Versões</h5>
-                      <p className="text-gray-500 text-xs">Mantenha o histórico de revisões de planilhas sempre atualizado e seguro.</p>
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  onClick={openLoginModal}
-                  className="bg-cyan-600 hover:bg-cyan-500 text-white gap-2 px-6"
-                >
-                  Conhecer o Módulo CQ
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
             </div>
           </div>
         </section>
@@ -483,15 +252,20 @@ const Login = () => {
         <section id="features" className="py-24">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-white mb-4">Por que escolher o APEX ERP?</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-                Uma plataforma completa desenvolvida para otimizar a gestão industrial com tecnologia de ponta.
-              </p>
+              <Reveal direction="up">
+                <h2 className="text-3xl font-bold text-white mb-4">Por que escolher o APEX ERP?</h2>
+              </Reveal>
+              <Reveal direction="up" delay={120}>
+                <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                  Uma plataforma completa desenvolvida para otimizar a gestão industrial com tecnologia de ponta.
+                </p>
+              </Reveal>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {differentials.map((item, index) => (
-                <Card key={index} className="bg-white/5 border-white/10 shadow-2xl hover:border-blue-500/40 hover:bg-white/10 transition-all backdrop-blur-xl rounded-3xl">
+                <Reveal key={index} direction="up" delay={index * 90} className="h-full">
+                <Card className="h-full bg-white/5 border-white/10 shadow-2xl hover:border-blue-500/40 hover:bg-white/10 hover:-translate-y-1 transition-all duration-300 backdrop-blur-xl rounded-3xl">
                   <CardHeader>
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-gray-800/50 rounded-xl">
@@ -504,76 +278,53 @@ const Login = () => {
                     <CardDescription className="text-gray-400">{item.description}</CardDescription>
                   </CardContent>
                 </Card>
+                </Reveal>
               ))}
             </div>
           </div>
         </section>
 
-        {/* System Features Section */}
-        <section id="modules" className="py-24 bg-[#0d1a2d]/30">
+        {/* Seções por módulo */}
+        <section id="modules" className="pt-24 pb-4">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-white mb-4">Funcionalidades do Sistema</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-                Conheça todas as páginas e funcionalidades disponíveis no APEX ERP para gerenciar sua operação industrial.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {systemFeatures.map((category, index) => (
-                <Card key={index} className="bg-white/5 border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden rounded-3xl group">
-                  <CardHeader className="border-b border-white/5 bg-white/5">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-gray-800/50 rounded-xl">
-                        {category.icon}
-                      </div>
-                      <div>
-                        <CardTitle className="text-white text-xl">{category.category}</CardTitle>
-                        <CardDescription className="text-gray-500">{category.items.length} funcionalidades</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="space-y-3">
-                      {category.items.map((item, i) => (
-                        <div 
-                          key={i} 
-                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-800/30 transition-colors group"
-                        >
-                          <CheckCircle2 className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                            category.color === 'emerald' ? 'text-emerald-400' :
-                            category.color === 'orange' ? 'text-orange-400' :
-                            category.color === 'blue' ? 'text-blue-400' :
-                            category.color === 'cyan' ? 'text-cyan-400' :
-                            'text-purple-400'
-                          }`} />
-                          <div>
-                            <p className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
-                              {item.name}
-                            </p>
-                            <p className="text-gray-500 text-xs mt-0.5">{item.desc}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="text-center mb-4">
+              <Reveal direction="up">
+                <h2 className="text-3xl font-bold text-white mb-4">Módulos do Sistema</h2>
+              </Reveal>
+              <Reveal direction="up" delay={120}>
+                <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                  Cada módulo do APEX ERP com todas as suas funcionalidades, prontas para operar de forma integrada.
+                </p>
+              </Reveal>
             </div>
           </div>
         </section>
+
+        {moduleSections.map((mod, index) => (
+          <ModuleSectionBlock
+            key={mod.id}
+            module={mod}
+            index={index}
+            onAccess={openLoginModal}
+          />
+        ))}
 
         {/* Contact Section */}
         <section id="contact" className="py-24">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-white mb-4">Fale Conosco</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-                Estamos à disposição para tirar suas dúvidas sobre o sistema APEX ERP.
-              </p>
+              <Reveal direction="up">
+                <h2 className="text-3xl font-bold text-white mb-4">Fale Conosco</h2>
+              </Reveal>
+              <Reveal direction="up" delay={120}>
+                <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                  Estamos à disposição para tirar suas dúvidas sobre o sistema APEX ERP.
+                </p>
+              </Reveal>
             </div>
             
             <div className="max-w-2xl mx-auto">
+              <Reveal direction="up" delay={100}>
               <Card className="bg-white/5 border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl">
                 <CardContent className="pt-6">
                   <form onSubmit={handleSubmit} className="space-y-6">
@@ -620,6 +371,7 @@ const Login = () => {
                   </form>
                 </CardContent>
               </Card>
+              </Reveal>
             </div>
           </div>
         </section>
@@ -635,14 +387,13 @@ const Login = () => {
                 <span className="text-white text-lg font-bold">APEX ERP</span>
               </div>
               <p className="text-gray-400 text-sm">
-                Sistema de gestão industrial completo para otimizar sua operação com tecnologia de ponta e inteligência artificial.
+                Sistema de gestão industrial completo para otimizar sua operação, do almoxarifado ao controle de qualidade.
               </p>
             </div>
             <div>
               <h3 className="text-white text-sm font-bold mb-4 uppercase tracking-wide">Navegação</h3>
               <ul className="space-y-2">
                 <li><a href="#hero" className="text-gray-400 hover:text-blue-400 transition-colors text-sm">Início</a></li>
-                <li><a href="#apex-ai" className="text-gray-400 hover:text-blue-400 transition-colors text-sm flex items-center gap-1.5"><Bot className="w-3 h-3" />APEX AI</a></li>
                 <li><a href="#features" className="text-gray-400 hover:text-blue-400 transition-colors text-sm">Funcionalidades</a></li>
                 <li><a href="#modules" className="text-gray-400 hover:text-blue-400 transition-colors text-sm">Módulos</a></li>
                 <li><a href="#contact" className="text-gray-400 hover:text-blue-400 transition-colors text-sm">Contato</a></li>
@@ -660,8 +411,8 @@ const Login = () => {
                   Alta performance
                 </li>
                 <li className="text-gray-400 text-sm flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-blue-400" />
-                  IA integrada
+                  <Layers className="w-4 h-4 text-blue-400" />
+                  Módulos integrados
                 </li>
               </ul>
             </div>
