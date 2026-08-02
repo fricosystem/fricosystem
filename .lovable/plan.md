@@ -1,80 +1,46 @@
-# Plano de Segurança — APEX ERP (config via .env + Vercel)
+# Setores: árvore de nós até a última peça + vida útil e responsividade
 
-## Diagnóstico atual
+## Objetivo
+Na página `/setores`, ao selecionar um setor e uma máquina, abrir o mapa/diagrama em nós expansíveis (Setor → Máquina → Sistema → Peça → Sub-peça) até o último componente cadastrado, exibindo vida útil e risco de parada por falta de estoque, usando os dados reais já existentes no Firestore. Nada é removido: tudo é adicionado ao lado do que já funciona.
 
-| Item | Onde está | Risco | Ação |
-|---|---|---|---|
-| `apiSecret` do Cloudinary (`6K9Rz...`) | `src/Cloudinary/cloudinaryUploadProdutos.ts` | **Crítico** — segredo real no bundle público | Remover do código e **rotacionar** no painel Cloudinary |
-| `apiKey` do Cloudinary | 3 arquivos em `src/Cloudinary/` | Baixo (é público em unsigned upload), mas hardcoded | Mover para `VITE_CLOUDINARY_*` |
-| Config Firebase (fallback `AIzaSy...`) | `src/firebase/firebase.ts` | Baixo (chave é pública por design), mas fixa o projeto no código | Mover 100% para `VITE_FIREBASE_*`, sem fallback |
-| Supabase URL + anon key | `src/integrations/supabase/client.ts` | Baixo (anon key é pública), mas hardcoded | Mover para `VITE_SUPABASE_*` |
-| Token do GitHub em `btoa()` | `src/firebase/firestore.ts` | **Alto** — base64 não é criptografia; token com escopo `repo` legível no Firestore | Bloquear leitura no cliente / mover fluxo para Cloud Function |
-| Chave Groq lida da coleção `api_key` | `functions/src/index.ts` | Médio — segredo em banco em vez de Secret Manager | Migrar para `defineSecret("GROQ_API_KEY")` |
+## Fonte de dados (coleções reais já usadas no sistema)
+- `equipamentos` — setor, máquina e o array aninhado `sistemas[].pecas[].subPecas[]` (x, y, status, vidaUtil, vidaUtilRestante, ultimaManutencao, proximaManutencao, emEstoque, estoqueMinimo, codigo, fornecedor, valorUnitario).
+- `produtos` — estoque real do almoxarifado, cruzado por `codigo` da peça (fallback: nome normalizado).
+- `tarefas_manutencao` + `historico_execucoes` — próxima preventiva e última execução real por componente.
+- `paradas_maquina` e `ordens_servicos` — histórico de parada/OS aberta por máquina/peça.
+Nenhuma coleção nova é criada; nenhum valor mockado é usado.
 
-Nota importante: chaves de API do Firebase e a anon key do Supabase **não são segredos** — a segurança real vem das Firestore Rules e do App Check. Mesmo assim, saem do código-fonte conforme pedido.
+## Etapas
 
-## O que será feito
+### 1. Camada de dados (novos hooks, sem tocar nos existentes)
+- `src/hooks/useArvoreSetor.ts`: monta a árvore Setor → Máquinas → Sistemas → Peças → Sub-peças a partir de `equipamentos`, com contagem de nós e propagação de status do filho mais crítico para o pai.
+- `src/hooks/useEstoquePecas.ts`: indexa `produtos` por código/nome e devolve a quantidade real disponível para cada peça/sub-peça, com `estoqueMinimo` do cadastro.
+- `src/utils/vidaUtilPeca.ts`: funções puras de cálculo — percentual de vida útil restante, dias até a próxima preventiva, e nível de risco de parada combinando vida útil + cobertura de estoque (Crítico / Atenção / Normal). Sem estado, testável.
 
-### 1. Camada de configuração central (`src/config/env.ts`)
-Um único módulo lê `import.meta.env`, valida os valores obrigatórios e exporta objetos tipados (`firebaseConfig`, `cloudinaryConfig`, `supabaseConfig`, `appCheckSiteKey`).
+### 2. Árvore de nós no diagrama
+- Novo componente `src/components/Setores/ArvoreComponentes.tsx`: nós expansíveis/recolhíveis com indentação por nível, badge de status, barra de vida útil e chip de estoque (`emEstoque/estoqueMinimo`). Expansão em cascata até a última sub-peça cadastrada, com "Expandir tudo"/"Recolher tudo" e busca por nome/código.
+- `src/components/Setores/NoComponente.tsx`: item recursivo da árvore (renderiza a si mesmo para os filhos), com clique abrindo o modal de detalhes existente.
+- Integração no `MaquinaDetalhes`: o diagrama SVG atual permanece intacto; a árvore entra como uma segunda visão ("Diagrama" / "Árvore") controlada por um toggle, e no mobile a árvore vira a visão padrão porque o SVG de 900px não cabe.
+- Clique em um nó da árvore seleciona o mesmo sistema/peça no diagrama (estado compartilhado), preservando todos os handlers atuais.
 
-Comportamento:
-- Em **dev**, se faltar variável: aviso claro no console listando o que falta.
-- Em **build/produção**, se faltar variável obrigatória: erro explícito na inicialização (evita deploy silenciosamente quebrado).
-- Nada de fallback com valor real hardcoded.
+### 3. Vida útil e prevenção de parada
+- Cada nó exibe: % de vida útil restante (barra colorida), data da próxima manutenção e dias restantes, estoque atual vs. mínimo.
+- Regra de risco (em `vidaUtilPeca.ts`): peça com vida útil restante abaixo do limite **e** estoque abaixo do mínimo é marcada como "Risco de parada" com destaque visual e é somada em um painel-resumo no topo do setor/máquina (total de peças, críticas, sem estoque, preventivas vencendo em 30 dias).
+- O resumo reaproveita os cálculos já existentes de `pecasStats`, sem duplicar lógica de negócio.
 
-### 2. Arquivos de ambiente
-- `.env.example` versionado, com todas as chaves e comentários (é o mapa para preencher a Vercel).
-- `.env` local (já coberto pelo `.gitignore`) criado com os valores atuais para o sistema seguir 100% funcional em desenvolvimento.
-- Na Vercel: as mesmas chaves em Project Settings → Environment Variables (Production/Preview/Development). Como Vite injeta em build, nenhum código muda — as variáveis simplesmente vêm do ambiente quando o `.env` não existe.
+### 4. Responsividade (tablet e mobile)
+- `/setores`: container `p-4 sm:p-6`, cabeçalho empilhando em coluna no mobile, botão "Adicionar Setor" em largura total abaixo do título, títulos `text-2xl sm:text-3xl`, busca em largura total.
+- Grids: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` nos cards de setor e no resumo de estatísticas.
+- Diagrama: altura responsiva (`h-[60vh] sm:h-[600px]`), controles de zoom e camadas com quebra de linha e rolagem horizontal, toolbar compacta no mobile.
+- Modais: `w-[95vw] max-w-[…] max-h-[90vh] overflow-y-auto`, rodapés com botões empilhados no mobile — aplicado aos modais de setor, peça, sub-peça, sistema, manutenção e métrica.
+- Textos e tabelas com truncamento e `text-sm sm:text-base`, sem estouro horizontal em 360px.
 
-### 3. Remoção de segredos do front-end
-- `apiSecret` do Cloudinary **excluído** do código (upload unsigned não precisa dele). Você rotaciona a chave no Cloudinary depois.
-- Os 3 arquivos de upload passam a usar `cloudinaryConfig` do módulo central; nomes de cloud/preset via env.
-- `src/firebase/firebase.ts` e `src/integrations/supabase/client.ts` passam a consumir o módulo central.
+### 5. Verificação
+- Typecheck do projeto.
+- Testes no navegador em 390px (mobile), 820px (tablet) e desktop: abrir setor, expandir a árvore até a sub-peça, abrir modais, conferir ausência de scroll horizontal e de erros de console.
 
-### 4. Token do GitHub
-- Firestore Rules: negar leitura da config de GitHub pelo cliente (hoje o token é recuperável).
-- O `GitHubConfigComponent` continua funcionando via Cloud Function que guarda/usa o token no servidor; o front nunca recebe o token de volta (só `owner/repo` e status conectado).
-- Remover o `btoa/atob` chamado de "criptografia".
-
-### 5. Backend (Cloud Functions)
-- Groq: `defineSecret("GROQ_API_KEY")` em vez de ler a coleção `api_key`; a coleção deixa de existir no fluxo.
-- Regras já negam `api_key`/`github` no cliente — manter e reforçar.
-
-### 6. Endurecimento complementar
-- App Check obrigatório (`VITE_FIREBASE_APP_CHECK_SITE_KEY` no env; enforcement no console Firebase).
-- Headers de segurança no `vercel.json`: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS.
-- Revisar regras `isActiveUser()` amplas em coleções operacionais (hoje qualquer usuário ativo escreve em tudo) — proposta de escopo por perfil numa etapa seguinte, para não quebrar o sistema agora.
-
-## Variáveis a cadastrar na Vercel
-
-```text
-VITE_FIREBASE_API_KEY
-VITE_FIREBASE_AUTH_DOMAIN
-VITE_FIREBASE_PROJECT_ID
-VITE_FIREBASE_STORAGE_BUCKET
-VITE_FIREBASE_MESSAGING_SENDER_ID
-VITE_FIREBASE_APP_ID
-VITE_FIREBASE_MEASUREMENT_ID
-VITE_FIREBASE_APP_CHECK_SITE_KEY
-VITE_CLOUDINARY_CLOUD_NAME
-VITE_CLOUDINARY_API_KEY
-VITE_CLOUDINARY_UPLOAD_PRESET
-VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
-```
-(Segredos de servidor — Groq, token GitHub — ficam no Firebase Secret Manager, nunca com prefixo `VITE_`.)
-
-## Ações manuais suas (fora do código)
-1. Rotacionar o API secret do Cloudinary (ele está exposto no histórico do repo).
-2. Revogar/recriar o Personal Access Token do GitHub.
-3. Cadastrar as variáveis na Vercel.
-4. Restringir a API key do Firebase por domínio no Google Cloud Console.
-
-## Ordem de execução
-1. `src/config/env.ts` + `.env.example` + `.env` local
-2. Migrar Firebase, Supabase e Cloudinary para o módulo (remover o secret)
-3. `vercel.json` com headers
-4. Token GitHub via Cloud Function + regras
-5. Groq via Secret Manager
+## Detalhes técnicos
+- Sem alteração de schema, de regras do Firestore ou de rotas existentes.
+- Nenhum componente ou funcionalidade atual é removido — o diagrama SVG, filtros de camada, abas e modais continuam como estão.
+- Cores e espaçamentos usam os tokens semânticos já definidos em `index.css` (nada de cores fixas).
+- Cruzamento peça↔produto é tolerante a falha: se não houver correspondência em `produtos`, o valor de `emEstoque` do próprio cadastro da peça é usado.
