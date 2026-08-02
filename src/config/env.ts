@@ -57,15 +57,19 @@ export const supabaseConfig = {
 export const hasSupabaseConfig = Boolean(supabaseConfig.url && supabaseConfig.anonKey);
 
 /* -------------------------------------------------------- Validação final */
-if (missing.length > 0) {
-  const message =
-    `[APEX CONFIG] Variáveis de ambiente ausentes: ${missing.join(", ")}. ` +
-    "Defina-as no arquivo .env (local) ou nas Environment Variables da Vercel. " +
-    "Use .env.example como referência.";
+/**
+ * Lista das variáveis obrigatórias que não foram encontradas.
+ * NUNCA lançamos erro aqui: um `throw` durante a avaliação do módulo derruba
+ * o bundle inteiro (tela branca). Em vez disso expomos o diagnóstico e a
+ * aplicação exibe uma tela de configuração amigável.
+ */
+export const missingEnvVars: readonly string[] = missing;
+export const isEnvConfigured = missing.length === 0;
 
-  if (import.meta.env.DEV) {
-    console.error(message);
-  } else {
-    throw new Error(message);
-  }
+if (missing.length > 0) {
+  console.error(
+    `[APEX CONFIG] Variáveis de ambiente ausentes: ${missing.join(", ")}. ` +
+      "Defina-as no arquivo .env (local) ou nas Environment Variables da Vercel. " +
+      "Use .env.example como referência."
+  );
 }
