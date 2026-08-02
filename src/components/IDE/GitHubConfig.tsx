@@ -13,8 +13,15 @@ interface GitHubConfigProps {
   onConfigured: () => void;
 }
 
+/** O token só existe neste formulário; após salvar ele vive apenas no servidor. */
+interface FormState {
+  token: string;
+  owner: string;
+  repo: string;
+}
+
 const GitHubConfigComponent: React.FC<GitHubConfigProps> = ({ onConfigured }) => {
-  const [config, setConfig] = useState<GitHubConfig>({
+  const [config, setConfig] = useState<FormState>({
     token: '',
     owner: '',
     repo: '',
@@ -42,7 +49,7 @@ const GitHubConfigComponent: React.FC<GitHubConfigProps> = ({ onConfigured }) =>
     initializeService();
   }, []);
 
-  const handleInputChange = (field: keyof GitHubConfig, value: string) => {
+  const handleInputChange = (field: keyof FormState, value: string) => {
     setConfig(prev => ({ ...prev, [field]: value }));
   };
 
@@ -65,7 +72,8 @@ const GitHubConfigComponent: React.FC<GitHubConfigProps> = ({ onConfigured }) =>
       
       if (connected) {
         setIsConnected(true);
-        setCurrentConfig(config);
+        setCurrentConfig({ owner: config.owner, repo: config.repo });
+        setConfig((prev) => ({ ...prev, token: '' }));
         toast({
           title: "Sucesso",
           description: "Conectado ao GitHub com sucesso! Configuração salva no Firestore.",
@@ -273,7 +281,7 @@ const GitHubConfigComponent: React.FC<GitHubConfigProps> = ({ onConfigured }) =>
               </ul>
               <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
                 <p className="text-yellow-800 dark:text-yellow-200 font-medium">
-                  🔒 Segurança: Seus tokens são criptografados e salvos de forma segura no banco de dados.
+                  🔒 Segurança: o token é enviado uma única vez ao servidor, fica armazenado apenas no backend e nunca retorna ao navegador.
                 </p>
               </div>
             </div>
