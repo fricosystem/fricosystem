@@ -634,6 +634,31 @@ const MaquinaDetalhes = () => {
     setSelectedSistema(null);
   };
 
+  // Clique em um nó da árvore reaproveita a mesma seleção usada no diagrama
+  const handleSelecionarNo = (no: NoArvore) => {
+    if (no.tipo === "sistema") {
+      setSelectedMaquina(no.id);
+      setSelectedPeca(null);
+      setSelectedSubPeca(null);
+      setSelectedSistema(no.origem as Sistema);
+      return;
+    }
+    if (no.tipo === "peca") {
+      setSelectedMaquina(no.sistemaId);
+      setSelectedSistema(null);
+      setSelectedSubPeca(null);
+      setExpandedPecaId(no.id);
+      setSelectedPeca({ ...(no.origem as Peca), maquinaId: no.sistemaId, equipamentoId: id || "" });
+      return;
+    }
+    const pecaPai = todasPecas.find(p => p.id === no.pecaPaiId) || null;
+    setSelectedMaquina(no.sistemaId);
+    setSelectedSistema(null);
+    setSelectedPeca(pecaPai);
+    setExpandedPecaId(no.pecaPaiId || null);
+    setSelectedSubPeca(no.origem as SubPeca);
+  };
+
   if (loading) {
     return (
       <AppLayout title="Detalhes da Máquina">
