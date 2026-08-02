@@ -288,6 +288,10 @@ const MaquinaDetalhes = () => {
     return subPecas;
   }, [todasPecas]);
 
+  // Árvore de nós: Sistema → Peça → Sub-peça, com vida útil e risco de parada
+  const sistemasParaArvore = useMemo(() => maquina?.sistemas || [], [maquina]);
+  const { arvore, resumo: resumoArvore } = useArvoreSetor(sistemasParaArvore, buscarEstoque);
+
   // Filtrar peças por camada e sistema selecionado
   const pecasPorCamada = useMemo(() => {
     if (!selectedMaquina) return [];
