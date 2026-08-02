@@ -1,7 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
 import './index.css';
+import { isEnvConfigured } from './config/env';
+import EnvSetupScreen from './components/EnvSetupScreen';
 
 console.log('🚀 [APEX ERP] main.tsx iniciado');
 
@@ -9,11 +10,24 @@ const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Root element not found");
 
 const root = createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+
+if (isEnvConfigured) {
+  // Import dinâmico: o App só é avaliado quando o ambiente está configurado,
+  // evitando que a inicialização do Firebase quebre o bundle inteiro.
+  void import('./App').then(({ default: App }) => {
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+  });
+} else {
+  root.render(
+    <React.StrictMode>
+      <EnvSetupScreen />
+    </React.StrictMode>
+  );
+}
 
 // Registrar Service Worker para PWA (apenas em produção, nunca no preview/dev)
 const shouldRegisterSW = (() => {
