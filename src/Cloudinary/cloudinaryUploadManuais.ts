@@ -1,4 +1,6 @@
 // src/Cloudinary/cloudinaryUploadManuais.ts
+import { cloudinaryConfig } from '@/config/env';
+
 export interface CloudinaryConfig {
   cloudName: string;
   apiKey: string;
@@ -6,9 +8,9 @@ export interface CloudinaryConfig {
 }
 
 export const CLOUDINARY_MANUAIS_CONFIG: CloudinaryConfig = {
-  cloudName: 'diomtgcvb',
-  apiKey: '857689276165648',
-  uploadPreset: 'UploadProdutos' // Using same preset, works for raw files too
+  cloudName: cloudinaryConfig.cloudName,
+  apiKey: cloudinaryConfig.apiKey,
+  uploadPreset: cloudinaryConfig.uploadPresetManuais,
 };
 
 export const uploadPdfToCloudinary = async (file: File): Promise<string> => {
@@ -28,12 +30,12 @@ export const uploadPdfToCloudinary = async (file: File): Promise<string> => {
     );
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       console.error('Cloudinary upload error:', data);
       throw new Error(data.error?.message || 'Failed to upload PDF');
     }
-    
+
     return data.secure_url;
   } catch (error) {
     console.error('Error uploading PDF to Cloudinary:', error);
