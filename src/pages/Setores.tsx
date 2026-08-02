@@ -210,23 +210,23 @@ const Setores = () => {
 
   return (
     <AppLayout title="Setores">
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Setores</h1>
-            <p className="text-muted-foreground mt-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold sm:text-3xl">Setores</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
               Selecione um setor para visualizar as máquinas
             </p>
           </div>
-          <Button onClick={() => setIsModalOpen(true)} className="gap-2">
+          <Button onClick={() => setIsModalOpen(true)} className="w-full gap-2 sm:w-auto">
             <Plus className="h-4 w-4" />
             Adicionar Setor
           </Button>
         </div>
 
         {/* Busca */}
-        <div className="relative max-w-md">
+        <div className="relative w-full sm:max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar máquina..."
@@ -256,22 +256,22 @@ const Setores = () => {
         ) : (
           <div className="space-y-6">
             {/* Stats resumo */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold">{setores.length}</div>
+                  <div className="text-xl font-bold sm:text-2xl">{setores.length}</div>
                   <p className="text-sm text-muted-foreground">Setores</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold">{maquinas.length}</div>
+                  <div className="text-xl font-bold sm:text-2xl">{maquinas.length}</div>
                   <p className="text-sm text-muted-foreground">Total de Máquinas</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-green-600">
+                  <div className="text-xl font-bold text-green-600 sm:text-2xl">
                     {maquinas.filter(m => m.status === "Ativa").length}
                   </div>
                   <p className="text-sm text-muted-foreground">Máquinas Ativas</p>
@@ -280,7 +280,7 @@ const Setores = () => {
             </div>
 
             {/* Grid de setores */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {setores.map((setor) => (
                 <SetorCard
                   key={setor.nome}
@@ -298,7 +298,7 @@ const Setores = () => {
 
         {/* Modal Adicionar Setor */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-[400px]">
+          <DialogContent className="w-[95vw] max-h-[90vh] overflow-y-auto sm:max-w-[400px]">
             <DialogHeader>
               <DialogTitle>Adicionar Novo Setor</DialogTitle>
             </DialogHeader>
@@ -334,7 +334,7 @@ const Setores = () => {
 
         {/* Modal Editar Setor */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="sm:max-w-[400px]">
+          <DialogContent className="w-[95vw] max-h-[90vh] overflow-y-auto sm:max-w-[400px]">
             <DialogHeader>
               <DialogTitle>Editar Nome do Setor</DialogTitle>
             </DialogHeader>
