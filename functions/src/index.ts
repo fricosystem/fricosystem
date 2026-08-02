@@ -915,3 +915,23 @@ export const githubProxy = onCall(
     };
   }
 );
+
+/** Configuracao de destino do "Commit Entrada" (sem token). */
+export const getCommitEntradaConfig = onCall(
+  { region: REGION, timeoutSeconds: 60, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = assertAuthenticated(request);
+    await assertGitHubOperator(uid);
+
+    const snapshot = await db.collection("github_commit_entrada").limit(1).get();
+    if (snapshot.empty) return { configured: false };
+
+    const data = snapshot.docs[0].data() ?? {};
+    return {
+      configured: true,
+      owner: String(data.owner ?? ""),
+      repo: String(data.repo ?? ""),
+      branch: String(data.branch ?? "main"),
+    };
+  }
+);

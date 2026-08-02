@@ -88,3 +88,18 @@ export const proxiedFetch = async (
     headers: { 'Content-Type': 'application/json' },
   });
 };
+
+const callCommitEntrada = httpsCallable<Record<string, never>, CommitEntradaInfo>(
+  firebaseFunctions,
+  'getCommitEntradaConfig'
+);
+
+/** Destino do "Commit Entrada" — apenas owner/repo/branch, nunca o token. */
+export const getCommitEntradaConfig = async (): Promise<CommitEntradaInfo> => {
+  try {
+    return (await callCommitEntrada({} as Record<string, never>)).data;
+  } catch (error) {
+    console.error('[GitHub] Falha ao carregar destino do Commit Entrada:', error);
+    return { configured: false };
+  }
+};
