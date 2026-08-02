@@ -27,7 +27,6 @@ import { useTarefasMaquina } from "@/hooks/useTarefasMaquina";
 import ArvoreComponentes from "@/components/Setores/ArvoreComponentes";
 import { useArvoreSetor, type NoArvore } from "@/hooks/useArvoreSetor";
 import { useEstoquePecas } from "@/hooks/useEstoquePecas";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SubPeca {
   id: string;
@@ -130,7 +129,6 @@ const MaquinaDetalhes = () => {
   const [visualizacao, setVisualizacao] = useState<"diagrama" | "arvore">(() =>
     typeof window !== "undefined" && window.innerWidth < 768 ? "arvore" : "diagrama"
   );
-  const isMobile = useIsMobile();
 
   // Estados para gerenciamento de modais
   const [isPecaModalOpen, setIsPecaModalOpen] = useState(false);
