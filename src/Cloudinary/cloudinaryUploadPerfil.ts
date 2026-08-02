@@ -1,3 +1,6 @@
+// src/Cloudinary/cloudinaryUploadPerfil.ts
+import { cloudinaryConfig } from '@/config/env';
+
 // Function to upload image to Cloudinary
 export const uploadImageToCloudinary = async (file: File): Promise<string> => {
   try {
@@ -63,10 +66,9 @@ export const getOptimizedImageUrl = (imageUrl: string, width: number = 500, heig
   }
 };
 
-// Cloudinary configuration constants
+// Cloudinary configuration constants (upload unsigned, sem api_secret)
 export const CLOUDINARY_CONFIG = {
-  cloudName: 'diomtgcvb',
-  apiKey: '857689276165648',
-  apiSecret: '6K9RzRA4F29uGodb7PhspqsOZHY', 
-  uploadPreset: 'UploadPerfil' // Updated to FRStockManager upload preset
+  cloudName: cloudinaryConfig.cloudName,
+  apiKey: cloudinaryConfig.apiKey,
+  uploadPreset: cloudinaryConfig.uploadPresetPerfil,
 };

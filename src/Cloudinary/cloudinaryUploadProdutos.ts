@@ -1,16 +1,17 @@
-// src/lib/cloudinary.ts
+// src/Cloudinary/cloudinaryUploadProdutos.ts
+import { cloudinaryConfig } from '@/config/env';
+
 export interface CloudinaryConfig {
   cloudName: string;
   apiKey: string;
-  apiSecret: string;
   uploadPreset: string;
 }
 
+// Upload unsigned: o api_secret NUNCA deve existir no front-end.
 export const CLOUDINARY_CONFIG: CloudinaryConfig = {
-  cloudName: 'diomtgcvb',
-  apiKey: '857689276165648',
-  apiSecret: '6K9RzRA4F29uGodb7PhspqsOZHY', 
-  uploadPreset: 'UploadProdutos'
+  cloudName: cloudinaryConfig.cloudName,
+  apiKey: cloudinaryConfig.apiKey,
+  uploadPreset: cloudinaryConfig.uploadPresetProdutos,
 };
 
 export const uploadImageToCloudinary = async (file: File): Promise<string> => {
