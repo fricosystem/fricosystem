@@ -814,7 +814,7 @@ const MaquinaDetalhes = () => {
                     <TransformComponent
                       wrapperStyle={{
                         width: "100%",
-                        height: isFullscreen ? "calc(100vh - 80px)" : "600px"
+                        height: "100%"
                       }}
                     >
                       <svg width="900" height="600" className="diagram-background">
