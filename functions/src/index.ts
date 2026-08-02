@@ -689,6 +689,7 @@ export const getProductPriceQuotes = onCall(
     timeoutSeconds: 120,
     memory: "1GiB",
     enforceAppCheck: true,
+    secrets: [GROQ_API_KEY],
   },
 
   async (request) => {
@@ -736,3 +737,181 @@ export const getProductPriceQuotes = onCall(
   }
 );
 
+
+/* ======================================================================
+ * Integracao GitHub (IDE)
+ * O token NUNCA vai para o front-end. Fica no Secret Manager (GITHUB_TOKEN)
+ * ou em uma colecao acessivel apenas pelo Admin SDK (github_tokens),
+ * bloqueada pelas Firestore Rules. O cliente so conversa com este proxy.
+ * ==================================================================== */
+
+const PRIVILEGED_ROLES = ["DESENVOLVEDOR", "ADMIN"];
+
+async function assertGitHubOperator(uid: string) {
+  const snapshot = await db.collection("usuarios").doc(uid).get();
+  const data = snapshot.data() ?? {};
+
+  if (!snapshot.exists || data.ativo !== "sim") {
+    throw new HttpsError("permission-denied", "Usuario sem acesso ativo.");
+  }
+
+  const perfil = String(data.perfil ?? "").toUpperCase();
+  const cargo = String(data.cargo ?? "").toUpperCase();
+
+  if (!PRIVILEGED_ROLES.includes(perfil) && !PRIVILEGED_ROLES.includes(cargo)) {
+    throw new HttpsError("permission-denied", "Acesso restrito ao IDE.");
+  }
+
+  return uid;
+}
+
+type GitHubStoredConfig = {
+  owner: string;
+  repo: string;
+  token: string;
+};
+
+async function loadGitHubConfig(uid: string): Promise<GitHubStoredConfig | null> {
+  const doc = await db.collection("github_tokens").doc(uid).get();
+  if (!doc.exists) return null;
+
+  const data = doc.data() ?? {};
+  const token = String(data.token ?? "") || GITHUB_TOKEN.value() || "";
+
+  if (!token) return null;
+
+  return {
+    owner: String(data.owner ?? ""),
+    repo: String(data.repo ?? ""),
+    token,
+  };
+}
+
+/** Salva/atualiza a configuracao. O token entra e nunca mais sai. */
+export const saveGitHubIntegration = onCall(
+  { region: REGION, timeoutSeconds: 60, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = assertAuthenticated(request);
+    await assertGitHubOperator(uid);
+
+    const token = String(request.data?.token ?? "").trim();
+    const owner = String(request.data?.owner ?? "").trim();
+    const repo = String(request.data?.repo ?? "").trim();
+
+    if (!token || !owner || !repo) {
+      throw new HttpsError("invalid-argument", "token, owner e repo sao obrigatorios.");
+    }
+    if (owner.length > 120 || repo.length > 200 || token.length > 500) {
+      throw new HttpsError("invalid-argument", "Valores acima do tamanho permitido.");
+    }
+
+    await db.collection("github_tokens").doc(uid).set(
+      {
+        owner,
+        repo,
+        token,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return { connected: true, owner, repo };
+  }
+);
+
+/** Retorna apenas metadados publicos: nunca o token. */
+export const getGitHubIntegration = onCall(
+  { region: REGION, timeoutSeconds: 60, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = assertAuthenticated(request);
+    await assertGitHubOperator(uid);
+
+    const config = await loadGitHubConfig(uid);
+    if (!config) return { connected: false };
+
+    return { connected: true, owner: config.owner, repo: config.repo };
+  }
+);
+
+export const deleteGitHubIntegration = onCall(
+  { region: REGION, timeoutSeconds: 60, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = assertAuthenticated(request);
+    await assertGitHubOperator(uid);
+
+    await db.collection("github_tokens").doc(uid).delete();
+    return { connected: false };
+  }
+);
+
+/**
+ * Proxy autenticado para a API do GitHub.
+ * O cliente envia metodo/url/corpo; o servidor injeta o token.
+ */
+export const githubProxy = onCall(
+  {
+    region: REGION,
+    timeoutSeconds: 300,
+    memory: "1GiB",
+    enforceAppCheck: true,
+    secrets: [GITHUB_TOKEN],
+  },
+  async (request) => {
+    const uid = assertAuthenticated(request);
+    await assertGitHubOperator(uid);
+
+    const config = await loadGitHubConfig(uid);
+    if (!config) {
+      throw new HttpsError("failed-precondition", "Integracao GitHub nao configurada.");
+    }
+
+    const method = String(request.data?.method ?? "GET").toUpperCase();
+    const url = String(request.data?.url ?? "");
+    const body = request.data?.body;
+    const headers = (request.data?.headers ?? {}) as Record<string, string>;
+
+    if (!["GET", "POST", "PATCH", "PUT", "DELETE", "HEAD"].includes(method)) {
+      throw new HttpsError("invalid-argument", "Metodo HTTP nao permitido.");
+    }
+
+    // Somente a API oficial do GitHub e alcancavel (evita SSRF).
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new HttpsError("invalid-argument", "URL invalida.");
+    }
+    if (parsed.protocol !== "https:" || parsed.hostname !== "api.github.com") {
+      throw new HttpsError("invalid-argument", "Somente https://api.github.com e permitido.");
+    }
+
+    const safeHeaders: Record<string, string> = {
+      Accept: headers.accept || headers.Accept || "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "User-Agent": "apex-erp-ide",
+      "X-GitHub-Api-Version": "2022-11-28",
+      Authorization: `Bearer ${config.token}`,
+    };
+
+    const response = await fetch(parsed.toString(), {
+      method,
+      headers: safeHeaders,
+      body: method === "GET" || method === "HEAD" ? undefined :
+        typeof body === "string" ? body : JSON.stringify(body ?? {}),
+    });
+
+    const text = await response.text();
+    let data: unknown = text;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      /* resposta nao-JSON: devolve texto */
+    }
+
+    return {
+      status: response.status,
+      ok: response.ok,
+      data,
+    };
+  }
+);
