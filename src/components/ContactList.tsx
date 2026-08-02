@@ -107,14 +107,14 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
   return (
     <div className="h-full flex flex-col bg-background border-r">
       {/* Header da lista de contatos */}
-      <div className="p-4 border-b bg-background">
-        <h2 className="text-lg font-semibold mb-3">Mensagens</h2>
+      <div className="p-3 sm:p-4 border-b bg-background">
+        <h2 className="text-base sm:text-lg font-semibold mb-3">Mensagens</h2>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Buscar contatos..."
-            className="pl-9 border-muted"
+            className="pl-9 border-muted text-base sm:text-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -130,16 +130,16 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
                 <Button
                   key={contact.id}
                   variant="ghost"
-                  className={`w-full justify-start p-3 h-auto ${
+                  className={`w-full justify-start p-2 sm:p-3 h-auto ${
                     selectedContact?.id === contact.id 
                       ? "bg-primary/10 text-primary border-l-2 border-primary" 
                       : "hover:bg-muted/50"
                   }`}
                   onClick={() => onSelectContact(contact)}
                 >
-                  <div className="flex items-center w-full gap-3">
+                  <div className="flex items-center w-full gap-2 sm:gap-3 min-w-0">
                     <div className="relative">
-                      <Avatar className="h-10 w-10">
+                      <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
                         <AvatarFallback className="bg-primary/10 text-primary font-medium">
                           {getInitials(contact.nome)}
                         </AvatarFallback>
@@ -168,7 +168,7 @@ const ContactsList = ({ onSelectContact, selectedContact }: ContactsListProps) =
                         {contact.email || 'Email não disponível'}
                       </p>
                       <div className="flex items-center gap-1 mt-1">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[11px] sm:text-xs text-muted-foreground truncate">
                           {onlineStatuses[contact.id] === "online" 
                             ? "Online agora"
                             : `Offline ${contact.ultimo_login ? '• último acesso ' + formatDistanceToNow(contact.ultimo_login.toDate(), { locale: ptBR }) + ' atrás' : ''}`
