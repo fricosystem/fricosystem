@@ -9,9 +9,11 @@ import { usePostMessageFix } from "@/hooks/usePostMessageFix";
 interface AppLayoutProps {
   children: ReactNode;
   title: string;
+  /** Ocupa toda a altura disponível, sem padding nem scroll na main (ex.: Chat) */
+  fullHeight?: boolean;
 }
 
-const AppLayout = ({ children, title }: AppLayoutProps) => {
+const AppLayout = ({ children, title, fullHeight = false }: AppLayoutProps) => {
   // Aplica correção para DataCloneError globalmente
   usePostMessageFix();
   
@@ -40,12 +42,12 @@ const AppLayout = ({ children, title }: AppLayoutProps) => {
   
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden">
+      <div className="flex h-[100dvh] w-full overflow-hidden">
         <AppSidebar />
         <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
           <AppHeader title={title} />
-          <main className={`flex-1 ${isIDEPage ? 'p-0 overflow-hidden' : 'overflow-auto p-2 sm:p-4 md:p-6'}`}>
-            <div className={`w-full max-w-full ${isIDEPage ? 'h-full flex flex-col' : ''}`}>
+          <main className={`flex-1 min-h-0 ${isIDEPage || fullHeight ? 'p-0 overflow-hidden' : 'overflow-auto p-2 sm:p-4 md:p-6'}`}>
+            <div className={`w-full max-w-full ${isIDEPage || fullHeight ? 'h-full flex flex-col min-h-0' : ''}`}>
               {children}
             </div>
           </main>

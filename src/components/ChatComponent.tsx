@@ -25,7 +25,7 @@ const ChatComponent = () => {
 
   if (loading) {
     return (
-      <AppLayout title="Chat">
+      <AppLayout title="Chat" fullHeight>
         <div className="h-full flex items-center justify-center">Carregando...</div>
       </AppLayout>
     );
@@ -33,7 +33,7 @@ const ChatComponent = () => {
 
   if (!user || !userData) {
     return (
-      <AppLayout title="Chat">
+      <AppLayout title="Chat" fullHeight>
         <div className="h-full flex items-center justify-center">Usuário não autenticado</div>
       </AppLayout>
     );
@@ -107,8 +107,8 @@ const ChatComponent = () => {
   };
 
   return (
-    <AppLayout title="Chat">
-      <div className="h-full -m-6 bg-background overflow-hidden"> {/* Remove padding e usa toda altura */}
+    <AppLayout title="Chat" fullHeight>
+      <div className="h-full min-h-0 bg-background overflow-hidden">
         {renderContent()}
       </div>
     </AppLayout>
