@@ -127,7 +127,9 @@ const MaquinaDetalhes = () => {
   const [expandedPecaId, setExpandedPecaId] = useState<string | null>(null);
   const [camadasVisiveis, setCamadasVisiveis] = useState<string[]>(["Mecânica", "Elétrica", "Hidráulica"]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [visualizacao, setVisualizacao] = useState<"diagrama" | "arvore">("arvore");
+  const [visualizacao, setVisualizacao] = useState<"diagrama" | "arvore">(() =>
+    typeof window !== "undefined" && window.innerWidth < 768 ? "arvore" : "diagrama"
+  );
   const isMobile = useIsMobile();
 
   // Estados para gerenciamento de modais
