@@ -85,7 +85,7 @@ const NotificationCenter = () => {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[calc(100vw-2rem)] sm:w-96 p-0">
+      <PopoverContent align="end" className="w-[calc(100vw-2rem)] sm:w-[32rem] lg:w-[40rem] max-w-[95vw] p-0">
         <div className="flex items-center justify-between p-3 border-b">
           <div>
             <h3 className="font-semibold text-sm">Notificações</h3>
@@ -153,8 +153,8 @@ const NotificationCenter = () => {
                       {n.nivel === "critico" ? <AlertTriangle className="h-4 w-4" /> : iconePorCategoria(n.categoria)}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-medium truncate">{n.titulo}</span>
-                      <span className="block text-xs text-muted-foreground line-clamp-2">{n.descricao}</span>
+                      <span className="block text-sm font-medium break-words">{n.titulo}</span>
+                      <span className="block text-xs text-muted-foreground break-words">{n.descricao}</span>
                       <span className="block text-[11px] text-muted-foreground mt-1">
                         {n.data
                           ? `${formatDistanceToNow(n.data, { locale: ptBR })} atrás`
