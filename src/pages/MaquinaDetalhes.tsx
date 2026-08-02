@@ -677,28 +677,69 @@ const MaquinaDetalhes = () => {
 
   return (
     <AppLayout title={`Detalhes - ${maquina.nome}`}>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Button variant="outline" size="icon" onClick={() => navigate(`/maquinas?setor=${encodeURIComponent(maquina.setor || "")}`)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold">{maquina.nome}</h1>
-            <p className="text-muted-foreground mt-1">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-bold sm:text-2xl lg:text-3xl">{maquina.nome}</h1>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               Mapa interativo de componentes e peças
             </p>
           </div>
-          <Badge variant={maquina.status === "Ativa" ? "default" : "secondary"}>
+          <Badge variant={maquina.status === "Ativa" ? "default" : "secondary"} className="shrink-0">
             {maquina.status}
           </Badge>
         </div>
 
+        {/* Árvore de componentes (Setor → Máquina → Sistema → Peça → Sub-peça) */}
+        <Card>
+          <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">Árvore de Componentes</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+                {maquina.setor ? `${maquina.setor} › ` : ""}
+                {maquina.nome} — vida útil, preventiva e estoque de cada componente
+              </p>
+            </div>
+            <div className="flex w-full gap-2 sm:w-auto">
+              <Button
+                variant={visualizacao === "arvore" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 sm:flex-none"
+                onClick={() => setVisualizacao("arvore")}
+              >
+                Árvore
+              </Button>
+              <Button
+                variant={visualizacao === "diagrama" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 sm:flex-none"
+                onClick={() => setVisualizacao("diagrama")}
+              >
+                Diagrama
+              </Button>
+            </div>
+          </CardHeader>
+          {visualizacao === "arvore" && (
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <ArvoreComponentes
+                arvore={arvore}
+                resumo={resumoArvore}
+                onSelecionar={handleSelecionarNo}
+                selecionadoId={selectedSubPeca?.id || selectedPeca?.id || selectedMaquina}
+              />
+            </CardContent>
+          )}
+        </Card>
+
         {/* Mapa de Peças */}
-        <Card className={`overflow-hidden ${isFullscreen ? "fixed inset-0 z-50 rounded-none" : ""}`}>
-          <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <CardTitle>Diagrama de Componentes</CardTitle>
+        <Card className={`overflow-hidden ${isFullscreen ? "fixed inset-0 z-50 rounded-none" : ""} ${visualizacao === "diagrama" ? "" : "hidden"}`}>
+          <CardHeader className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              <CardTitle className="text-base sm:text-lg">Diagrama de Componentes</CardTitle>
               
               {selectedMaquina && (
                 <>
@@ -707,11 +748,11 @@ const MaquinaDetalhes = () => {
                     Voltar
                   </Button>
                   
-                  <Separator orientation="vertical" className="h-6" />
+                  <Separator orientation="vertical" className="hidden h-6 sm:block" />
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Layers className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Camadas:</span>
+                    <span className="text-xs text-muted-foreground sm:text-sm">Camadas:</span>
                     {["Mecânica", "Elétrica", "Hidráulica"].map(camada => (
                       <Button
                         key={camada}
@@ -739,10 +780,10 @@ const MaquinaDetalhes = () => {
           </CardHeader>
 
           <CardContent className="p-0">
-            <div className="diagram-container diagram-background rounded-lg relative" style={{ 
-              width: "100%", 
-              height: isFullscreen ? "calc(100vh - 80px)" : "600px" 
-            }}>
+            <div
+              className="diagram-container diagram-background rounded-lg relative h-[55vh] min-h-[320px] w-full sm:h-[600px]"
+              style={isFullscreen ? { height: "calc(100vh - 80px)" } : undefined}
+            >
               <TransformWrapper
                 initialScale={1}
                 minScale={0.5}
