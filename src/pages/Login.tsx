@@ -11,12 +11,10 @@ import { auth } from "@/firebase/firebase";
 import { LoginForm } from "@/components/Login/Auth/LoginForm";
 import { RegisterForm } from "@/components/Login/Auth/RegisterForm";
 import { UserButton } from "@/components/Login/UserButton";
-import { 
-  BarChart4, Calendar, Database, FileText, Users,
-  Phone, Mail, MessageSquare, Bot, Zap, ShieldCheck, TrendingUp, Package,
-  Wrench, ClipboardList, Building2, BookOpen, ArrowRight, CheckCircle2,
-  MessageCircle, Search, BarChart2, Layers, Settings, Factory, Truck,
-  AlertTriangle, FileCheck, Shield, Clock, Target, Gauge, Scan
+import {
+  BarChart4, Users, Zap, ShieldCheck, Package, Wrench, ClipboardList,
+  Building2, BookOpen, ArrowRight, Layers, Shield, Clock, Target, Gauge,
+  FileCheck
 } from "lucide-react";
 import { useThemedLogo } from "@/hooks/useThemedLogo";
 import { Reveal } from "@/components/Login/Reveal";
@@ -220,10 +218,10 @@ const Login = () => {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               {stats.map((stat, i) => (
-                <div key={i} className="flex flex-col gap-1">
+                <Reveal key={i} direction="up" delay={i * 90} className="flex flex-col gap-1">
                   <span className="text-3xl md:text-4xl font-bold text-blue-400">{stat.value}</span>
                   <span className="text-sm text-gray-400">{stat.label}</span>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -232,18 +230,19 @@ const Login = () => {
         {/* Módulos do Sistema */}
         <section className="py-14 border-b border-gray-800/40">
           <div className="container mx-auto px-4">
-            <p className="text-center text-sm font-semibold text-gray-500 uppercase tracking-widest mb-8">
-              Módulos integrados na plataforma
-            </p>
+            <Reveal direction="up">
+              <p className="text-center text-sm font-semibold text-gray-500 uppercase tracking-widest mb-8">
+                Módulos integrados na plataforma
+              </p>
+            </Reveal>
             <div className="flex flex-wrap justify-center gap-3">
               {modules.map((mod, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700/60 bg-gray-900/40 text-gray-300 text-sm hover:border-blue-500/50 hover:text-blue-400 transition-colors backdrop-blur-sm"
-                >
-                  {mod.icon}
-                  <span>{mod.label}</span>
-                </div>
+                <Reveal key={i} direction="up" delay={i * 60}>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700/60 bg-gray-900/40 text-gray-300 text-sm hover:border-blue-500/50 hover:text-blue-400 transition-colors backdrop-blur-sm">
+                    {mod.icon}
+                    <span>{mod.label}</span>
+                  </div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -253,15 +252,20 @@ const Login = () => {
         <section id="features" className="py-24">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-white mb-4">Por que escolher o APEX ERP?</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-                Uma plataforma completa desenvolvida para otimizar a gestão industrial com tecnologia de ponta.
-              </p>
+              <Reveal direction="up">
+                <h2 className="text-3xl font-bold text-white mb-4">Por que escolher o APEX ERP?</h2>
+              </Reveal>
+              <Reveal direction="up" delay={120}>
+                <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                  Uma plataforma completa desenvolvida para otimizar a gestão industrial com tecnologia de ponta.
+                </p>
+              </Reveal>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {differentials.map((item, index) => (
-                <Card key={index} className="bg-white/5 border-white/10 shadow-2xl hover:border-blue-500/40 hover:bg-white/10 transition-all backdrop-blur-xl rounded-3xl">
+                <Reveal key={index} direction="up" delay={index * 90} className="h-full">
+                <Card className="h-full bg-white/5 border-white/10 shadow-2xl hover:border-blue-500/40 hover:bg-white/10 hover:-translate-y-1 transition-all duration-300 backdrop-blur-xl rounded-3xl">
                   <CardHeader>
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-gray-800/50 rounded-xl">
@@ -274,6 +278,7 @@ const Login = () => {
                     <CardDescription className="text-gray-400">{item.description}</CardDescription>
                   </CardContent>
                 </Card>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -308,13 +313,18 @@ const Login = () => {
         <section id="contact" className="py-24">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-white mb-4">Fale Conosco</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-                Estamos à disposição para tirar suas dúvidas sobre o sistema APEX ERP.
-              </p>
+              <Reveal direction="up">
+                <h2 className="text-3xl font-bold text-white mb-4">Fale Conosco</h2>
+              </Reveal>
+              <Reveal direction="up" delay={120}>
+                <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                  Estamos à disposição para tirar suas dúvidas sobre o sistema APEX ERP.
+                </p>
+              </Reveal>
             </div>
             
             <div className="max-w-2xl mx-auto">
+              <Reveal direction="up" delay={100}>
               <Card className="bg-white/5 border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl">
                 <CardContent className="pt-6">
                   <form onSubmit={handleSubmit} className="space-y-6">
@@ -361,6 +371,7 @@ const Login = () => {
                   </form>
                 </CardContent>
               </Card>
+              </Reveal>
             </div>
           </div>
         </section>
