@@ -1326,7 +1326,7 @@ const MaquinaDetalhes = () => {
 
         {/* Modal de Detalhes do Sistema */}
         <Dialog open={!!selectedSistema} onOpenChange={() => setSelectedSistema(null)}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] max-w-3xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Info className="h-5 w-5" />

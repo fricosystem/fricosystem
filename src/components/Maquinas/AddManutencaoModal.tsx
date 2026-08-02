@@ -89,7 +89,7 @@ export const AddManutencaoModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Manutenção</DialogTitle>
         </DialogHeader>
