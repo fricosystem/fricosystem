@@ -1,12 +1,16 @@
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
 
 admin.initializeApp();
 
 const db = admin.firestore();
-// Removido Secret Manager pois agora as chaves estao no Firestore
-// const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
+// Segredos ficam no Secret Manager, nunca no Firestore nem no front-end.
+// Configure com: firebase functions:secrets:set GROQ_API_KEY
+const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
+// Token do GitHub usado pelo proxy do IDE (opcional).
+const GITHUB_TOKEN = defineSecret("GITHUB_TOKEN");
 
 
 const REGION = "southamerica-east1";
@@ -404,22 +408,13 @@ async function callGroqChat(input: {
   history: ChatHistoryItem[];
   systemPrompt: string;
 }) {
-  // Busca a chave diretamente do Firestore na colecao api_key
-  const apiKeySnapshot = await db.collection("api_key").limit(1).get();
-  
-  if (apiKeySnapshot.empty) {
-    throw new HttpsError(
-      "failed-precondition",
-      "Colecao 'api_key' nao encontrada no Firestore."
-    );
-  }
-
-  const apiKey = apiKeySnapshot.docs[0].data()?.groq;
+  // A chave vem exclusivamente do Secret Manager (nunca do Firestore).
+  const apiKey = GROQ_API_KEY.value() || process.env.GROQ_API_KEY || "";
 
   if (!apiKey) {
     throw new HttpsError(
       "failed-precondition",
-      "Campo 'groq' nao encontrado na colecao 'api_key'."
+      "GROQ_API_KEY nao configurada. Rode: firebase functions:secrets:set GROQ_API_KEY"
     );
   }
 
@@ -476,6 +471,7 @@ export const apexChatMessage = onCall(
     timeoutSeconds: 120,
     memory: "1GiB",
     enforceAppCheck: true,
+    secrets: [GROQ_API_KEY],
   },
 
   async (request) => {
@@ -571,6 +567,7 @@ export const generateFullReport = onCall(
     timeoutSeconds: 300,
     memory: "1GiB",
     enforceAppCheck: true,
+    secrets: [GROQ_API_KEY],
   },
   async (request) => {
     const uid = assertAuthenticated(request);
