@@ -1494,7 +1494,7 @@ const MaquinaDetalhes = () => {
 
         {/* Tabs Principais */}
         <Tabs defaultValue="visao-geral" className="w-full">
-          <TabsList>
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 lg:inline-flex lg:w-auto lg:flex-nowrap">
             <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
             <TabsTrigger value="pecas">Gerenciar Peças</TabsTrigger>
             <TabsTrigger value="historico">Histórico</TabsTrigger>
@@ -1504,7 +1504,7 @@ const MaquinaDetalhes = () => {
 
           {/* Aba Gerenciar Peças */}
           <TabsContent value="pecas" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">Total de Peças</CardTitle>
@@ -1547,10 +1547,10 @@ const MaquinaDetalhes = () => {
               </Card>
             </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
                 <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Categoria" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1561,7 +1561,7 @@ const MaquinaDetalhes = () => {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1572,7 +1572,7 @@ const MaquinaDetalhes = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAddPeca} className="gap-2">
+              <Button onClick={handleAddPeca} className="w-full gap-2 sm:w-auto">
                 <Plus className="h-4 w-4" />
                 Adicionar Peça
               </Button>
@@ -1607,14 +1607,14 @@ const MaquinaDetalhes = () => {
 
           {/* Aba Histórico */}
           <TabsContent value="historico" className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Histórico de Manutenções</h3>
+                <h3 className="text-base font-semibold sm:text-lg">Histórico de Manutenções</h3>
                 <p className="text-sm text-muted-foreground">
                   Total: {manutencoesStats.total} | Preventivas: {manutencoesStats.preventivas} | Corretivas: {manutencoesStats.corretivas}
                 </p>
               </div>
-              <Button onClick={() => setIsManutencaoModalOpen(true)}>
+              <Button onClick={() => setIsManutencaoModalOpen(true)} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar Manutenção
               </Button>
