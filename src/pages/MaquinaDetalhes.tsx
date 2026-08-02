@@ -1252,7 +1252,7 @@ const MaquinaDetalhes = () => {
         </Card>
 
         {/* Indicadores de Saúde */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Disponibilidade</CardTitle>
@@ -1304,10 +1304,10 @@ const MaquinaDetalhes = () => {
         {/* Legenda */}
         <Card>
           <CardHeader>
-            <CardTitle>Legenda de Status</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Legenda de Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-4 sm:gap-6">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-full bg-green-500" />
                 <span className="text-sm">Normal</span>
