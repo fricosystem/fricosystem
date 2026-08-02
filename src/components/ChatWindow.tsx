@@ -129,10 +129,10 @@ const ChatWindow = ({ selectedContact }: ChatWindowProps) => {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header da conversa */}
-      <div className="p-4 border-b bg-background">
-        <div className="flex items-center gap-3">
+      <div className="p-3 sm:p-4 border-b bg-background">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="relative">
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
               <AvatarFallback className="bg-primary/10 text-primary font-medium">
                 {getInitials(selectedContact.nome)}
               </AvatarFallback>
@@ -142,7 +142,7 @@ const ChatWindow = ({ selectedContact }: ChatWindowProps) => {
             }`} />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-foreground">{selectedContact.nome}</h2>
+            <h2 className="font-semibold text-foreground text-sm sm:text-base truncate">{selectedContact.nome}</h2>
             <p className="text-xs text-muted-foreground">
               {contactStatus === "online" ? "Online agora" : "Offline"}
             </p>
@@ -151,7 +151,7 @@ const ChatWindow = ({ selectedContact }: ChatWindowProps) => {
       </div>
   
       {/* Área de mensagens */}
-      <div className="flex-1 min-h-0 p-4">
+      <div className="flex-1 min-h-0 p-2 sm:p-4">
         <ScrollArea className="h-full">
           <div className="space-y-4 pb-4">
             {messages.length > 0 ? (
@@ -163,7 +163,7 @@ const ChatWindow = ({ selectedContact }: ChatWindowProps) => {
                     key={message.id}
                     className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
                   >
-                    <div className={`flex items-end gap-2 max-w-[75%] ${isSentByMe ? "flex-row-reverse" : "flex-row"}`}>
+                    <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] ${isSentByMe ? "flex-row-reverse" : "flex-row"}`}>
                       {!isSentByMe && (
                         <Avatar className="h-6 w-6 mb-1">
                           <AvatarFallback className="text-xs bg-muted">
@@ -172,13 +172,13 @@ const ChatWindow = ({ selectedContact }: ChatWindowProps) => {
                         </Avatar>
                       )}
                       <div
-                        className={`px-4 py-3 rounded-2xl ${
+                        className={`px-3 py-2 sm:px-4 sm:py-3 rounded-2xl ${
                           isSentByMe
                             ? "bg-primary text-primary-foreground rounded-br-md"
                             : "bg-muted text-foreground rounded-bl-md"
                         } shadow-sm`}
                       >
-                        <p className="text-sm leading-relaxed">{message.text}</p>
+                        <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{message.text}</p>
                         <div className={`flex items-center gap-1 mt-2 text-xs ${
                           isSentByMe ? "justify-end text-primary-foreground/70" : "justify-start text-muted-foreground"
                         }`}>
@@ -229,20 +229,20 @@ const ChatWindow = ({ selectedContact }: ChatWindowProps) => {
       </div>
   
       {/* Input de mensagem */}
-      <div className="p-4 border-t bg-background">
+      <div className="p-2 sm:p-4 border-t bg-background pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <Input
             placeholder="Escreva uma mensagem..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-1 bg-muted/50 border-muted focus:bg-background"
+            className="flex-1 bg-muted/50 border-muted focus:bg-background text-base sm:text-sm"
             autoComplete="off"
           />
           <Button 
             type="submit" 
             size="icon" 
             disabled={!newMessage.trim()}
-            className="h-10 w-10"
+            className="h-10 w-10 shrink-0"
           >
             <ArrowRight className="h-4 w-4" />
           </Button>

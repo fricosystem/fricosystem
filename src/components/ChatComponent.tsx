@@ -50,7 +50,7 @@ const ChatComponent = () => {
             />
           ) : (
             <div className="h-full flex flex-col">
-              <div className="p-4 border-b bg-background">
+              <div className="p-3 border-b bg-background">
                 <button
                   onClick={handleBackToContacts}
                   className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
@@ -69,7 +69,7 @@ const ChatComponent = () => {
     
     return (
       <div className="h-full flex">
-        <div className="w-80 border-r bg-background">
+        <div className="w-72 lg:w-80 border-r bg-background shrink-0">
           <ContactsList
             onSelectContact={handleSelectContact}
             selectedContact={selectedContact}

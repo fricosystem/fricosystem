@@ -75,12 +75,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Refs para gerenciar os listeners e intervals
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
   const statusListenersSetup = useRef<boolean>(false);
+  const currentUserIdRef = useRef<string | null>(null);
 
-  const updateOnlineStatus = async (status: 'online' | 'offline', updateLastLogin: boolean = false) => {
-    if (!user) return;
+  const updateOnlineStatus = async (
+    status: 'online' | 'offline',
+    updateLastLogin: boolean = false,
+    userId?: string
+  ) => {
+    const uid = userId ?? currentUserIdRef.current;
+    if (!uid) return;
     
     try {
-      const userDocRef = doc(db, "usuarios", user.uid);
+      const userDocRef = doc(db, "usuarios", uid);
       const updateData: any = { online: status };
       
       if (updateLastLogin || status === 'offline') {
@@ -94,7 +100,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Backup no localStorage se falhar
       if (typeof window !== 'undefined') {
         const backupData = {
-          userId: user.uid,
+          userId: uid,
           status,
           timestamp: Date.now(),
           updateLastLogin
@@ -106,34 +112,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Função para tentar enviar com Navigator.sendBeacon (mais confiável)
   const sendOfflineStatus = (userId: string) => {
-    const data = JSON.stringify({
-      userId,
-      status: 'offline',
-      timestamp: Date.now()
-    });
-    
-    try {
-      // Tenta usar sendBeacon primeiro (mais confiável para beforeunload)
-      if (navigator.sendBeacon) {
-        const blob = new Blob([data], { type: 'application/json' });
-        navigator.sendBeacon('/api/offline-status', blob);
-      }
-    } catch (error) {
-      console.warn('sendBeacon failed, usando backup');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pendingStatusUpdate', JSON.stringify({
+        userId,
+        status: 'offline',
+        timestamp: Date.now(),
+        updateLastLogin: true
+      }));
     }
-    
-    // Backup: tenta update normal do Firestore
-    updateOnlineStatus('offline', true).catch(() => {
-      // Se falhar, salva no localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('pendingStatusUpdate', JSON.stringify({
-          userId,
-          status: 'offline',
-          timestamp: Date.now(),
-          updateLastLogin: true
-        }));
-      }
-    });
+
+    updateOnlineStatus('offline', true, userId)
+      .then(() => {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('pendingStatusUpdate');
+        }
+      })
+      .catch(() => undefined);
   };
 
   // Função para configurar os listeners de status
@@ -150,12 +144,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       heartbeatInterval.current = setInterval(() => {
         if (document.visibilityState !== 'hidden') {
-          updateOnlineStatus('online');
+          updateOnlineStatus('online', false, userId);
         }
       }, 30000); // A cada 30 segundos
     };
 
     // Handler para beforeunload (fechamento de página/navegador)
+    const handlePageHide = () => {
+      sendOfflineStatus(userId);
+    };
+
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       sendOfflineStatus(userId);
       // Não mostrar dialog de confirmação para melhor UX
@@ -169,16 +167,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
           clearInterval(heartbeatInterval.current);
           heartbeatInterval.current = null;
         }
-        updateOnlineStatus('offline', true);
+        updateOnlineStatus('offline', true, userId);
       } else {
-        updateOnlineStatus('online');
+        updateOnlineStatus('online', false, userId);
         startHeartbeat();
       }
     };
 
     // Handler para quando volta a ter conexão
     const handleOnline = () => {
-      updateOnlineStatus('online');
+      updateOnlineStatus('online', false, userId);
       startHeartbeat();
     };
 
@@ -191,11 +189,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     // Inicializa como online e começa heartbeat
-    updateOnlineStatus('online', true);
+    updateOnlineStatus('online', true, userId);
     startHeartbeat();
     
     // Registra todos os listeners
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -206,24 +205,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         heartbeatInterval.current = null;
       }
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       statusListenersSetup.current = false;
-      updateOnlineStatus('offline', true);
+      updateOnlineStatus('offline', true, userId);
     };
   };
 
   // Função para verificar e processar atualizações pendentes
-  const processPendingStatusUpdates = async () => {
-    if (typeof window === 'undefined' || !user) return;
+  const processPendingStatusUpdates = async (uid: string) => {
+    if (typeof window === 'undefined' || !uid) return;
     
     const pendingUpdate = localStorage.getItem('pendingStatusUpdate');
     if (pendingUpdate) {
       try {
         const { userId, status, updateLastLogin } = JSON.parse(pendingUpdate);
-        if (userId === user.uid) {
-          await updateOnlineStatus(status, updateLastLogin);
+        if (userId === uid) {
+          await updateOnlineStatus(status, updateLastLogin, uid);
           localStorage.removeItem('pendingStatusUpdate');
         }
       } catch (error) {
@@ -239,6 +239,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       
       if (currentUser) {
+        currentUserIdRef.current = currentUser.uid;
         try {
           const userDocRef = doc(db, "usuarios", currentUser.uid);
           const userDoc = await getDoc(userDocRef);
@@ -254,7 +255,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (userData.ativo === "sim") {
               
               // Processa atualizações pendentes primeiro
-              await processPendingStatusUpdates();
+              await processPendingStatusUpdates(currentUser.uid);
               
               // Configura listeners de status
               cleanupStatusListeners = setupStatusListeners(currentUser.uid);
@@ -269,6 +270,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           cleanupStatusListeners();
           cleanupStatusListeners = null;
         }
+        currentUserIdRef.current = null;
         setUserData(null);
       }
       
@@ -345,7 +347,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   async function logout(): Promise<void> {
     try {
-      if (user) {
+      const uid = currentUserIdRef.current ?? user?.uid;
+      if (uid) {
         // Limpa heartbeat
         if (heartbeatInterval.current) {
           clearInterval(heartbeatInterval.current);
@@ -353,10 +356,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         
         // Atualiza status para offline e ultimo_login
-        await updateOnlineStatus('offline', true);
-        
-        // Aguarda um pouco para garantir que a atualização foi enviada
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await updateOnlineStatus('offline', true, uid);
       }
       
       await signOut(auth);
