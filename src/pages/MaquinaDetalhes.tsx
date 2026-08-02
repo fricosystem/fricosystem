@@ -24,6 +24,10 @@ import { AddTarefaPreventivaMaquinaModal } from "@/components/Maquinas/AddTarefa
 import { TarefasListagem } from "@/components/Maquinas/TarefasListagem";
 import { PecaCard } from "@/components/Maquinas/PecaCard";
 import { useTarefasMaquina } from "@/hooks/useTarefasMaquina";
+import ArvoreComponentes from "@/components/Setores/ArvoreComponentes";
+import { useArvoreSetor, type NoArvore } from "@/hooks/useArvoreSetor";
+import { useEstoquePecas } from "@/hooks/useEstoquePecas";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SubPeca {
   id: string;
@@ -123,6 +127,8 @@ const MaquinaDetalhes = () => {
   const [expandedPecaId, setExpandedPecaId] = useState<string | null>(null);
   const [camadasVisiveis, setCamadasVisiveis] = useState<string[]>(["Mecânica", "Elétrica", "Hidráulica"]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [visualizacao, setVisualizacao] = useState<"diagrama" | "arvore">("arvore");
+  const isMobile = useIsMobile();
 
   // Estados para gerenciamento de modais
   const [isPecaModalOpen, setIsPecaModalOpen] = useState(false);
@@ -155,6 +161,9 @@ const MaquinaDetalhes = () => {
     tarefasPorSistema,
     tarefasPorComponente
   } = useTarefasMaquina(id || "");
+
+  // Estoque real do almoxarifado (coleção `produtos`) para cruzar com as peças
+  const { buscarEstoque } = useEstoquePecas();
 
   // Buscar máquina
   useEffect(() => {
