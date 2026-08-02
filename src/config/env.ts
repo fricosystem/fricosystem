@@ -18,10 +18,30 @@ type EnvRecord = Record<string, string | undefined>;
 
 const env = import.meta.env as unknown as EnvRecord;
 
-/** Lê a variável de ambiente; se ausente/vazia, usa o padrão de desenvolvimento. */
+const invalidEnvironmentValues = new Set([
+  "undefined",
+  "null",
+  "placeholder",
+  "your_api_key",
+  "your-project-id",
+  "seu_valor_aqui",
+]);
+
+/**
+ * Lê a variável de ambiente e ignora placeholders comuns. Isso evita que uma
+ * variável vazia ou de exemplo configurada no provedor de deploy substitua os
+ * padrões funcionais do projeto.
+ */
 function readEnv(key: string, fallback = ""): string {
   const value = (env[key] ?? "").trim();
-  return value || fallback;
+  const normalizedValue = value.toLowerCase();
+  const isPlaceholder =
+    invalidEnvironmentValues.has(normalizedValue) ||
+    normalizedValue.startsWith("your_") ||
+    normalizedValue.startsWith("replace_") ||
+    normalizedValue.includes("change-me");
+
+  return value && !isPlaceholder ? value : fallback;
 }
 
 /* -------------------------------------------------------------- Firebase */

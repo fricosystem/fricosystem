@@ -104,7 +104,6 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
         data_atualizacao: serverTimestamp(),
         ultimo_login: null,
         imagem_perfil: "",
-        senha: confirmPassword,
         permissoes: [
           "dashboard"
         ] // Páginas que o usuário pode acessar inicialmente

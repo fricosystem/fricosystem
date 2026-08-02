@@ -19,7 +19,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true);
     
     try {
-      const { user, isActive } = await signIn(email, password);
+      const { user, isActive } = await signIn(email.trim().toLowerCase(), password);
       
       if (!isActive) {
         setTimeout(() => navigate('/bem-vindo'), 0);
@@ -44,8 +44,18 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       console.error(error);
       let errorMessage = "Ocorreu um erro ao fazer login. Tente novamente.";
       
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      if (
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/user-not-found' ||
+        error.code === 'auth/wrong-password'
+      ) {
         errorMessage = "Email ou senha incorretos.";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Informe um endereço de email válido.";
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = "Não foi possível conectar ao serviço de autenticação. Verifique sua conexão.";
+      } else if (error.code === 'auth/api-key-not-valid') {
+        errorMessage = "A configuração de autenticação deste ambiente é inválida.";
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = "Muitas tentativas de login. Procure o RH para verificar sua conta.";
       }
