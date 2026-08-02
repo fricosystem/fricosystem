@@ -435,7 +435,7 @@ const Login = () => {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 mt-8 text-center">
-            <p className="text-gray-500">&copy; {new Date().getFullYear()} APEX ERP. Todos os direitos reservados.</p>
+            <p className="text-gray-500">&copy; {new Date().getFullYear()} APEX HUB. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>
