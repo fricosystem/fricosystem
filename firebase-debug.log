@@ -1,0 +1,31 @@
+[debug] [2026-05-04T16:29:19.564Z] ----------------------------------------------------------------------
+[debug] [2026-05-04T16:29:19.591Z] Command:       D:\Node JS\node.exe C:\Users\bruno\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2026-05-04T16:29:19.594Z] CLI Version:   15.16.0
+[debug] [2026-05-04T16:29:19.595Z] Platform:      win32
+[debug] [2026-05-04T16:29:19.597Z] Node Version:  v22.18.0
+[debug] [2026-05-04T16:29:19.600Z] Time:          Mon May 04 2026 13:29:19 GMT-0300 (Horário Padrão de Brasília)
+[debug] [2026-05-04T16:29:19.607Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-04T16:29:19.630Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-05-04T16:33:27.751Z] No OAuth tokens found
+[debug] [2026-05-04T16:33:27.752Z] No OAuth tokens found
+[debug] [2026-05-04T16:33:27.754Z] [functions] service account IAM check errored, deploy may fail: Unable to refresh auth: not yet authenticated. {"name":"FirebaseError","children":[],"exit":1,"message":"Unable to refresh auth: not yet authenticated.","status":500}
+[error] 
+[error] Error: No currently active project.
+To run this command, you need to specify a project. You have two options:
+- Run this command with --project <alias_or_project_id>.
+- Set an active project by running firebase use --add, then rerun this command.
+To list all the Firebase projects to which you have access, run firebase projects:list.
+To learn about active projects for the CLI, visit https://firebase.google.com/docs/cli#project_aliases
+
+
+[debug] [2026-05-04T16:33:29.620Z] Error: EBUSY: resource busy or locked, unlink 'D:\APEX HUB\firebase-debug.log'
+    at Object.unlinkSync (node:fs:1952:11)
+    at process.<anonymous> (C:\Users\bruno\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\bin\cli.js:44:16)
+    at process.emit (node:events:530:35)
+    at process.exit (node:internal/process/per_thread:194:15)
+    at Timeout._onTimeout (C:\Users\bruno\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\errorOut.js:20:17)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
+[error] 
+[error] Error: An unexpected error has occurred.

@@ -1,0 +1,229 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function isActiveUser() {
+      return signedIn() && userDoc().exists() && userDoc().data.ativo == "sim";
+    }
+
+    function hasPrivilegedRole() {
+      return isActiveUser() && (
+        userDoc().data.perfil in ["DESENVOLVEDOR", "ADMIN", "GESTOR"] ||
+        userDoc().data.cargo in ["DESENVOLVEDOR", "ADMIN", "GESTOR"]
+      );
+    }
+
+    function isOwnUserRecord(uid) {
+      return isActiveUser() && request.auth.uid == uid;
+    }
+
+    match /usuarios/{uid} {
+      allow read: if isOwnUserRecord(uid) || hasPrivilegedRole();
+      allow create: if isOwner(uid);
+      allow update: if isOwnUserRecord(uid) || hasPrivilegedRole();
+      allow delete: if false;
+
+      match /apex_chat_messages/{messageId} {
+        allow read, write, delete: if isOwnUserRecord(uid);
+      }
+
+      match /secure_reports/{reportId} {
+        allow read: if isOwnUserRecord(uid);
+        allow write: if false;
+
+        match /chunks/{chunkId} {
+          allow read: if isOwnUserRecord(uid);
+          allow write: if false;
+        }
+      }
+    }
+
+    match /usuarios_publicos/{uid} {
+      allow read: if isActiveUser();
+      allow create: if isOwner(uid) || hasPrivilegedRole();
+      allow update: if isOwner(uid) || hasPrivilegedRole();
+      allow delete: if false;
+    }
+
+    match /apex_ai_config/{docId} {
+      allow read: if isActiveUser();
+      allow write: if hasPrivilegedRole();
+    }
+
+    match /api_key/{docId} {
+      allow read, write: if false;
+    }
+
+    match /github/{docId} {
+      allow read, write: if false;
+    }
+
+    match /github_commit_entrada/{docId} {
+      allow read, write: if false;
+    }
+
+    match /chat_messages/{docId} {
+      allow read, write: if false;
+    }
+
+    match /secure_audit/{docId} {
+      allow read: if hasPrivilegedRole();
+      allow write: if false;
+    }
+
+    match /produtos/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /fornecedores/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /equipamentos/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /manutentores/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /pdf_manuais/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /tarefas_manutencao/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /ordens_servicos/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /unidades/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /setores/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /centros_de_custo/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /medidas_lenha/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /paradas_maquina/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /emails/{docId} {
+      allow read, write: if isActiveUser();
+    }
+
+    match /chat/{chatId} {
+      allow read, write: if isActiveUser();
+
+      match /messages/{messageId} {
+        allow read, write: if isActiveUser();
+      }
+    }
+
+    /* ---------------- Módulo Controle de Qualidade (CQ) ---------------- */
+
+    function isCQGestor() {
+      return isActiveUser() && (
+        hasPrivilegedRole() ||
+        userDoc().data.perfil in ["QUALIDADE", "CQ", "ENCARREGADO"] ||
+        userDoc().data.cargo in ["QUALIDADE", "CQ", "ENCARREGADO"]
+      );
+    }
+
+    match /cq_cadastros/{docId} {
+      allow read: if isActiveUser();
+      allow create, update: if isCQGestor();
+      allow delete: if false;
+    }
+
+    match /cq_modelos_planilhas/{docId} {
+      allow read: if isActiveUser();
+      allow create, update: if isCQGestor();
+      allow delete: if false;
+    }
+
+    match /cq_planos_amostragem/{docId} {
+      allow read: if isActiveUser();
+      allow create, update: if isCQGestor();
+      allow delete: if false;
+    }
+
+    match /cq_agendamentos/{docId} {
+      allow read: if isActiveUser();
+      allow create, update: if isActiveUser();
+      allow delete: if false;
+    }
+
+    // Execuções são imutáveis: apenas criação pelo executor autenticado.
+    match /cq_execucoes/{docId} {
+      allow read: if isActiveUser();
+      allow create: if isActiveUser();
+      allow update: if isCQGestor() && request.resource.data.ativo == "nao";
+      allow delete: if false;
+    }
+
+    match /cq_nao_conformidades/{docId} {
+      allow read: if isActiveUser();
+      allow create, update: if isActiveUser();
+      allow delete: if false;
+    }
+
+    match /cq_acoes_corretivas/{docId} {
+      allow read: if isActiveUser();
+      allow create, update: if isActiveUser();
+      allow delete: if false;
+    }
+
+    match /cq_melhoria_continua/{docId} {
+      allow read: if isActiveUser();
+      allow create, update: if isActiveUser();
+      allow delete: if false;
+    }
+
+    match /cq_lotes/{docId} {
+      allow read: if isActiveUser();
+      allow create, update: if isActiveUser();
+      allow delete: if false;
+    }
+
+    match /cq_configuracoes/{docId} {
+      allow read: if isActiveUser();
+      allow create, update: if isCQGestor();
+      allow delete: if false;
+    }
+
+    // Log imutável: cliente pode criar e ler, nunca alterar ou apagar.
+    match /cq_auditoria/{docId} {
+      allow read: if isActiveUser();
+      allow create: if isActiveUser();
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APEX ERP</title>
+  <meta name="description" content="Sistema para gestão industrial" />
+  <meta name="author" content="ATOM Corp." />
+
+  <meta property="og:title" content="APEX ERP" />
+  <meta property="og:description" content="Sistema ERP para gestão industrial" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image"
+    content="/apex-icone-site.png" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@atomcorp" />
+  <meta name="twitter:image"
+    content="/apex-icone-site.png" />
+
+  <link rel="icon" type="image/png"
+    href="/apex-icone-site.png">
+  <link rel="apple-touch-icon"
+    href="/apex-icone-site.png">
+  <link rel="shortcut icon" href="/apex-icone-site.png"
+    type="image/png">
+
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1c2834">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="APEX ERP">
+  <link rel="apple-touch-icon" sizes="192x192" href="/apex-icone-site.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/apex-icone-site.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Aplicar Poppins como fonte principal em todo o site */
+    body,
+    html {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    /* Reset de transformações de escala */
+    .login-container,
+    .dashboard-container,
+    .sidebar,
+    .auth-container,
+    [data-component="login"],
+    [data-component="dashboard"],
+    [data-component="sidebar"] {
+      transform: none !important;
+      width: auto !important;
+    }
+
+    /* Ajustar contêineres pai */
+    .login-wrapper,
+    .dashboard-wrapper,
+    .sidebar-wrapper,
+    .auth-wrapper {
+      overflow: visible;
+    }
+
+    /* Manter a classe font-roboto para compatibilidade, mas usar Poppins */
+    .font-roboto,
+    .font-roboto * {
+      font-family: 'Poppins', sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 1rem;
+    }
+
+    /* Ajustes para pesos de fonte específicos do Firebase */
+    .font-roboto .text-sm {
+      font-weight: 600;
+    }
+
+    .font-roboto .text-xs {
+      font-weight: 600;
+    }
+
+    .font-roboto .font-medium {
+      font-weight: 600;
+    }
+
+    /* Ajustes para melhorar a visibilidade no tema claro */
+    :root:not(.dark) .font-roboto {
+      color: #333333;
+    }
+
+    :root:not(.dark) .text-gray-300 {
+      color: #333333 !important;
+    }
+
+    :root:not(.dark) .text-gray-400 {
+      color: #555555 !important;
+    }
+
+    :root:not(.dark) .text-gray-500 {
+      color: #666666 !important;
+    }
+
+    /* Ajustes para os items do menu no tema claro */
+    :root:not(.dark) .hover\:bg-\[\#2c384a\]:hover {
+      background-color: #e0e0e0 !important;
+    }
+
+    :root:not(.dark) .bg-\[\#2c384a\] {
+      background-color: #f0f0f0 !important;
+    }
+
+    :root:not(.dark) .bg-\[\#1c2834\] {
+      background-color: #ffffff !important;
+    }
+
+    :root:not(.dark) .border-\[\#3e4a5e\] {
+      border-color: #dddddd !important;
+    }
+
+    /* Garantir que o root ocupe toda a tela */
+    #root {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script>
+    // Workaround for some preview/proxy environments where Vite's WS token injection can fail,
+    // causing /@vite/client to crash with "__WS_TOKEN__ is not defined".
+    // This keeps the app loading even if HMR token checks can't run.
+    // eslint-disable-next-line no-var
+    if (typeof __WS_TOKEN__ === "undefined") var __WS_TOKEN__ = "";
+  </script>
+  <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+  <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>
