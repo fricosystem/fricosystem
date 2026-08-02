@@ -1,5 +1,10 @@
 import { Octokit } from '@octokit/rest';
-import { saveGitHubConfig, getGitHubConfig, updateGitHubConfig, deleteGitHubConfig } from '@/firebase/firestore';
+import {
+  saveGitHubIntegration,
+  getGitHubIntegration,
+  deleteGitHubIntegration,
+  proxiedFetch,
+} from '@/services/githubSecureClient';
 import { auth } from '@/firebase/firebase';
 import { format } from 'date-fns';
 
@@ -14,10 +19,15 @@ interface FileNode {
 }
 
 interface GitHubConfig {
-  token: string;
+  /** Nunca contém o token: ele vive apenas no servidor. */
   owner: string;
   repo: string;
 }
+
+const createProxiedOctokit = () =>
+  new Octokit({
+    request: { fetch: proxiedFetch },
+  });
 
 interface CodespaceConfig {
   machine: 'basicLinux32gb' | 'standardLinux32gb' | 'premiumLinux64gb';
@@ -121,19 +131,15 @@ class GitHubService {
     try {
       const user = auth.currentUser;
       if (!user) {
-        console.warn('Usuário não autenticado. Configure do GitHub requer autenticação.');
+        console.warn('Usuário não autenticado. A configuração do GitHub requer autenticação.');
         return false;
       }
 
-      const storedConfig = await getGitHubConfig(user.uid);
-      if (storedConfig) {
-        this.config = {
-          token: storedConfig.token,
-          owner: storedConfig.owner,
-          repo: storedConfig.repo
-        };
-        this.configId = storedConfig.id;
-        this.octokit = new Octokit({ auth: storedConfig.token });
+      const stored = await getGitHubIntegration();
+      if (stored.connected && stored.owner && stored.repo) {
+        this.config = { owner: stored.owner, repo: stored.repo };
+        this.configId = user.uid;
+        this.octokit = createProxiedOctokit();
         return true;
       }
     } catch (error) {
@@ -156,8 +162,8 @@ class GitHubService {
       const user = auth.currentUser;
       if (!user) return false;
 
-      const storedConfig = await getGitHubConfig(user.uid);
-      return storedConfig !== null;
+      const stored = await getGitHubIntegration();
+      return stored.connected === true;
     } catch (error) {
       console.error('Erro ao verificar configuração existente do GitHub:', error);
       return false;
@@ -174,21 +180,17 @@ class GitHubService {
       throw new Error('Usuário não autenticado. Faça login para configurar o GitHub.');
     }
 
-    this.config = { token, owner, repo };
-    this.octokit = new Octokit({ auth: token });
-    
     try {
-      if (this.configId) {
-        // Atualiza configuração existente
-        await updateGitHubConfig(this.configId, this.config);
-      } else {
-        // Cria nova configuração
-        this.configId = await saveGitHubConfig(user.uid, this.config);
-      }
+      // O token é enviado uma única vez ao backend e nunca mais retorna.
+      await saveGitHubIntegration(token, owner, repo);
     } catch (error) {
       console.error('Erro ao salvar configuração do GitHub:', error);
-      throw new Error('Falha ao salvar configuração do GitHub no banco de dados.');
+      throw new Error('Falha ao salvar configuração do GitHub com segurança.');
     }
+
+    this.config = { owner, repo };
+    this.configId = user.uid;
+    this.octokit = createProxiedOctokit();
   }
 
   public getConfig(): GitHubConfig | null {
@@ -1068,8 +1070,8 @@ class GitHubService {
 
   public async disconnect(): Promise<void> {
     try {
-      if (this.configId && auth.currentUser) {
-        await deleteGitHubConfig(this.configId);
+      if (auth.currentUser) {
+        await deleteGitHubIntegration();
       }
     } catch (error) {
       console.error('Erro ao remover configuração do GitHub:', error);
