@@ -1,11 +1,20 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database.types';
-
-const SUPABASE_URL = "https://uljimwdnsvamunvxfntr.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsamltd2Ruc3ZhbXVudnhmbnRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyNDE5MzksImV4cCI6MjA1OTgxNzkzOX0.9XGC8uy4CsAT-0p-hfw0alFiQGbutDnwekS7QFhMsyA";
+import { supabaseConfig, hasSupabaseConfig } from '@/config/env';
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
+//
+// A anon key é pública por design (protegida por RLS), mas fica fora do
+// código-fonte: vem de VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+if (!hasSupabaseConfig) {
+  console.warn(
+    '[APEX CONFIG] Supabase não configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY ausentes).'
+  );
+}
+
+export const supabase = createClient<Database>(
+  supabaseConfig.url || 'http://localhost',
+  supabaseConfig.anonKey || 'public-anon-key-missing'
+);

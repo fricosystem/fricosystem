@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { githubService } from '@/services/githubService';
-import { getCommitEntradaConfig } from '@/firebase/firestore';
+import { getCommitEntradaConfig } from '@/services/githubSecureClient';
 import { Trash2, Download, Folder, Loader2, GitBranch, CheckCircle2, Upload } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
@@ -197,7 +197,7 @@ const RepositoryManager: React.FC = () => {
       
       // Buscar configuração de commit entrada do Firestore
       const commitEntradaConfig = await getCommitEntradaConfig();
-      if (!commitEntradaConfig) {
+      if (!commitEntradaConfig.configured) {
         toast({
           title: "Configuração não encontrada",
           description: "Configure o repositório de destino para Commit Entrada no Firestore (coleção: github_commit_entrada)",
@@ -210,8 +210,8 @@ const RepositoryManager: React.FC = () => {
       const sourceOctokit = githubService.getOctokit();
       if (!sourceOctokit) throw new Error("GitHub não configurado");
 
-      // Criar Octokit para destino (fricosystem)
-      const destOctokit = new Octokit({ auth: commitEntradaConfig.token });
+      // Destino usa o mesmo proxy autenticado (token fica no servidor)
+      const destOctokit = sourceOctokit;
       
       const [sourceOwner, sourceRepoName] = repo.full_name.split('/');
       const destOwner = commitEntradaConfig.owner;

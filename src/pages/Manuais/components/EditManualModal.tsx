@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
+import { cloudinaryConfig } from "@/config/env";
 import { useToast } from "@/components/ui/use-toast";
 import { Manual } from "@/pages/Manuais";
 import {
@@ -127,11 +128,11 @@ const EditManualModal = ({ isOpen, onClose, manual, onSuccess }: EditManualModal
   const uploadImageToCloudinary = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "UploadProdutos");
-    formData.append("cloud_name", "diomtgcvb");
+    formData.append("upload_preset", cloudinaryConfig.uploadPresetProdutos);
+    formData.append("cloud_name", cloudinaryConfig.cloudName);
 
     const response = await fetch(
-      "https://api.cloudinary.com/v1_1/diomtgcvb/image/upload",
+      `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`,
       {
         method: "POST",
         body: formData,
