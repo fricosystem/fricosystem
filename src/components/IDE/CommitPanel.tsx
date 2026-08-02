@@ -508,9 +508,8 @@ const CommitPanel: React.FC = () => {
         throw new Error('GitHub não está configurado. Configure primeiro o GitHub para acessar repositórios.');
       }
 
-      const { Octokit } = await import('@octokit/rest');
-      const config = githubService.getConfig();
-      const sourceOctokit = new Octokit({ auth: config?.token });
+      const sourceOctokit = githubService.getOctokit();
+      if (!sourceOctokit) throw new Error('GitHub não configurado.');
 
       toast({
         title: "Iniciando download",
@@ -629,7 +628,8 @@ const CommitPanel: React.FC = () => {
         throw new Error('Configuração do GitHub não encontrada');
       }
       
-      const destOctokit = new Octokit({ auth: currentConfig.token });
+      const destOctokit = githubService.getOctokit();
+      if (!destOctokit) throw new Error('GitHub não configurado.');
       
       try {
         toast({
@@ -878,9 +878,8 @@ const CommitPanel: React.FC = () => {
         throw new Error('GitHub não está configurado.');
       }
 
-      const { Octokit } = await import('@octokit/rest');
-      const config = githubService.getConfig();
-      const octokit = new Octokit({ auth: config?.token });
+      const octokit = githubService.getOctokit();
+      if (!octokit) throw new Error('GitHub não configurado.');
 
       // 1) Download do repositório origem
       const { data: repoData } = await octokit.rest.repos.get({

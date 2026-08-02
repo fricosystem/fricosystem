@@ -1207,7 +1207,7 @@ class GitHubService {
       }
 
       const downloads: { path: string; content: string }[] = [];
-      const sourceOctokit = new Octokit({ auth: this.config.token });
+      const sourceOctokit = this.octokit;
 
       for (let i = 0; i < filesToTransfer.length; i++) {
         const file = filesToTransfer[i];
