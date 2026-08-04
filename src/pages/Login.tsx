@@ -165,7 +165,7 @@ const Login = () => {
             <a href="#hero" className="text-white hover:text-gray-300 transition-colors duration-300">Início</a>
             <a href="#features" className="text-white hover:text-gray-300 transition-colors duration-300">Funcionalidades</a>
             <a href="#modules" className="text-white hover:text-gray-300 transition-colors duration-300">Módulos</a>
-            <a href="#modulo-qualidade" className="text-cyan-400 hover:text-cyan-300 transition-colors duration-300 font-medium">Qualidade</a>
+            <a href="#modulo-qualidade" className="text-white hover:text-gray-300 transition-colors duration-300">Qualidade</a>
             <a href="#contact" className="text-white hover:text-gray-300 transition-colors duration-300">Contato</a>
           </nav>
           
