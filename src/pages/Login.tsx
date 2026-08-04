@@ -26,7 +26,7 @@ const stats = [
   { value: "99.9%", label: "Disponibilidade" },
   { value: "24/7", label: "Suporte ativo" },
   { value: "100%", label: "Dados em tempo real" },
-  { value: "256-bit", label: "Criptografia" },
+  { value: "+7", label: "Módulos integrados" },
 ];
 
 // Módulos principais do sistema
