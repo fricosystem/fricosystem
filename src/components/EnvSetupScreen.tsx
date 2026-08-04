@@ -33,7 +33,7 @@ const EnvSetupScreen = () => {
         </div>
 
         <p className="mt-6 text-xs text-muted-foreground">
-          Depois de definir as variáveis, reinicie o servidor de desenvolvimento ou
+          Após definir as variáveis, reinicie o servidor de desenvolvimento ou
           refaça o deploy para que o build as inclua.
         </p>
       </div>
