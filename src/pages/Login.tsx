@@ -191,6 +191,11 @@ const Login = () => {
         {/* Hero Section */}
         <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
           <div className="container mx-auto relative z-10 px-4 flex flex-col items-center text-center">
+            <img
+              src={logoSrc}
+              alt="APEX ERP Logo"
+              className="w-24 h-24 md:w-36 md:h-36 mb-6 object-scale-down animate-fade-in drop-shadow-2xl"
+            />
             <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 animate-fade-in tracking-tight">
               Sistema de Gestão Industrial
               <br />
