@@ -1,97 +1,25 @@
 {
-  "name": "APEX ERP",
-  "short_name": "APEX ERP",
-  "description": "Sistema de Gestão Industrial - APEX ERP",
-  "start_url": "/dashboard",
+  "id": "/",
+  "name": "APEX HUB - Sistema de Gestão Industrial",
+  "short_name": "APEX HUB",
+  "description": "Sistema de Gestão Industrial - APEX HUB",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#ffffff",
+  "background_color": "#1c2834",
   "theme_color": "#1c2834",
-  "categories": [
-    "business",
-    "productivity"
-  ],
-  "screenshots": [
-    {
-      "src": "/apex-icone-site.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/apex-icone-site.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "wide"
-    }
-  ],
+  "categories": ["business", "productivity"],
   "icons": [
-    {
-      "src": "/apex-icone-site.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/apex-icone-site.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/apex-icone-site.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/apex-icone-site.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "prefer_related_applications": false,
   "shortcuts": [
-    {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "Acesse o dashboard do APEX HUB",
-      "url": "/dashboard",
-      "icons": [
-        {
-          "src": "/apex-icone-site.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Produtos",
-      "short_name": "Produtos",
-      "description": "Gestão de produtos",
-      "url": "/produtos",
-      "icons": [
-        {
-          "src": "/apex-icone-site.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Requisições",
-      "short_name": "Requisições",
-      "description": "Gerenciar requisições",
-      "url": "/requisicoes",
-      "icons": [
-        {
-          "src": "/apex-icone-site.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    }
+    { "name": "Dashboard", "short_name": "Dashboard", "url": "/dashboard", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Produtos", "short_name": "Produtos", "url": "/produtos", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Requisições", "short_name": "Requisições", "url": "/requisicoes", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
   ]
 }
