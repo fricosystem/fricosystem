@@ -18,23 +18,24 @@ const AppLayout = ({ children, title, fullHeight = false }: AppLayoutProps) => {
   usePostMessageFix();
   
   const location = useLocation();
-  const [isMobile, setIsMobile] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   // Detectar se é um dispositivo móvel com base na largura da tela
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px é o breakpoint para md no Tailwind
+    const checkIfDesktop = () => {
+      // Sidebar apenas no desktop (lg). Tablet e mobile usam o menu flutuante.
+      setIsDesktop(window.innerWidth >= 1024);
     };
 
     // Verificar inicialmente
-    checkIfMobile();
+    checkIfDesktop();
 
     // Adicionar um listener para quando a janela for redimensionada
-    window.addEventListener("resize", checkIfMobile);
+    window.addEventListener("resize", checkIfDesktop);
 
     // Cleanup do listener quando o componente for desmontado
     return () => {
-      window.removeEventListener("resize", checkIfMobile);
+      window.removeEventListener("resize", checkIfDesktop);
     };
   }, []);
   
@@ -43,7 +44,7 @@ const AppLayout = ({ children, title, fullHeight = false }: AppLayoutProps) => {
   return (
     <SidebarProvider>
       <div className="flex h-[100dvh] w-full overflow-hidden">
-        <AppSidebar />
+        {isDesktop && <AppSidebar />}
         <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
           <AppHeader title={title} />
           <main className={`flex-1 min-h-0 ${isIDEPage || fullHeight ? 'p-0 overflow-hidden' : 'overflow-auto p-2 sm:p-4 md:p-6'}`}>
@@ -53,7 +54,7 @@ const AppLayout = ({ children, title, fullHeight = false }: AppLayoutProps) => {
           </main>
         </div>
         
-        {isMobile && <FloatingActionBar />}
+        {!isDesktop && <FloatingActionBar />}
       </div>
     </SidebarProvider>
   );
