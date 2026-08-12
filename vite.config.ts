@@ -13,6 +13,7 @@ export default defineConfig({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: ['.monkeycode-ai.live'],
     headers: {
       "Cache-Control": "no-store",
     },
