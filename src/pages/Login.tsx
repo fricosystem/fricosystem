@@ -195,7 +195,7 @@ const Login = () => {
               <h1 className="text-6xl md:text-8xl font-extrabold text-white tracking-tight">
                 APEX ERP
               </h1>
-              <p className="text-lg md:text-2xl font-medium text-gray-300 tracking-wide mt-16 md:mt-10">
+              <p className="text-lg md:text-5xl font-medium text-gray-300 tracking-wide mt-16 md:mt-10">
                 Sistema de Gestão Industrial
               </p>
             </div>
