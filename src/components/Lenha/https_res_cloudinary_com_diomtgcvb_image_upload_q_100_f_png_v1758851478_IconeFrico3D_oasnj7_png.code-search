@@ -1,0 +1,81 @@
+# Query: https://res.cloudinary.com/diomtgcvb/image/upload/q_100,f_png/v1758851478/IconeFrico3D_oasnj7.png
+# ContextLines: 1
+
+16 results - 13 files
+
+src/components/Lenha/FormMedidaLenha.tsx:
+  373                <div class="logo-container">
+  374:                 <img src="/IconeFrico3D.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+  375                </div>
+
+  451                <div class="logo-container">
+  452:                 <img src="/IconeFrico3D.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+  453                </div>
+
+src/components/Lenha/ModalComprovanteTotal.tsx:
+  156                <div class="header">
+  157:                 <img src="/IconeFrico3D.png" alt="Fricó Alimentos Logo" class="logo" onerror="this.style.display='none'" />
+  158                  <div class="header-text">
+
+  241              <div className="mr-4">
+  242:               <img src="/IconeFrico3D.png" 
+  243                alt="Fricó Alimentos Logo" className="h-12" onError={(e) => (e.currentTarget.style.display = 'none')} />
+
+src/components/Lenha/ModalRecibo.tsx:
+  143                <div class="logo-container">
+  144:                 <img src="/IconeFrico3D.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+  145                </div>
+
+  218                <div class="logo-container">
+  219:                 <img src="/IconeFrico3D.png" alt="Fricó Alimentos Logo" onError="this.style.display='none'" />
+  220                </div>
+
+src/layouts/AuthLayout.tsx:
+  32                transition={{ duration: 0.5 }}
+  33:               src="/IconeFrico3D.png" 
+  34                alt="Fricó Alimentos Logo" 
+
+src/pages/ExecucaoPreventiva.tsx:
+  113            <div className="container mx-auto py-4 px-6 flex items-center gap-3">
+  114:             <img src="/IconeFrico3D.png" alt="Fricó" className="h-10 w-10 object-contain" />
+  115              <div>
+
+src/pages/Login.tsx:
+  173                <img 
+  174:                 src="/IconeFrico3D.png" 
+  175                  alt="Fricó Alimentos Logo" 
+
+src/pages/OrdensServico.tsx:
+  85            <img 
+  86:             src="/IconeFrico3D.png" 
+  87              alt="Fricó" 
+
+src/pages/ParadaMaquina.tsx:
+  190            <div className="container mx-auto py-4 px-6 flex items-center gap-3">
+  191:             <img src="/IconeFrico3D.png" alt="Fricó" className="h-10 w-10 object-contain" />
+  192              <div>
+
+src/pages/Requisicoes.tsx:
+  557            <div style="display: flex; align-items: center; gap: 16px;">
+  558:             <img src="/IconeFrico3D.png" alt="Fricó Logo" style="width: 48px; height: 48px; object-fit: contain;" />
+  559              <div>
+
+src/pages/ExecucaoPreventiva/index.tsx:
+  113            <div className="container mx-auto py-4 px-6 flex items-center gap-3">
+  114:             <img src="/IconeFrico3D.png" alt="Fricó" className="h-10 w-10 object-contain" />
+  115              <div>
+
+src/pages/Fornecedor/FornecedorProdutos.tsx:
+  239                <img 
+  240:                 src="/IconeFrico3D.png" 
+  241                  alt="Fricó Alimentos" 
+
+src/pages/OrdensServico/index.tsx:
+  85            <img 
+  86:             src="/IconeFrico3D.png" 
+  87              alt="Fricó" 
+
+src/pages/ParadaMaquina/index.tsx:
+  190            <div className="container mx-auto py-4 px-6 flex items-center gap-3">
+  191:             <img src="/IconeFrico3D.png" alt="Fricó" className="h-10 w-10 object-contain" />
+  192              <div>

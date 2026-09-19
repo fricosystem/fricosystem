@@ -1,0 +1,244 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "apex_chat_messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "cq_cadastros",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_cadastros",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_original_raiz", "order": "ASCENDING" },
+        { "fieldPath": "versao", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_modelos_planilhas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_modelos_planilhas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "publicado", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_modelos_planilhas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_original_raiz", "order": "ASCENDING" },
+        { "fieldPath": "versao", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_planos_amostragem",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_agendamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "data_prevista", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_agendamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "responsavel_id", "order": "ASCENDING" },
+        { "fieldPath": "data_prevista", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_agendamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_execucoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_execucoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_execucoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "lote_id", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_execucoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "setor", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_nao_conformidades",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_nao_conformidades",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "gravidade", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_nao_conformidades",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_nao_conformidades",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "lote_id", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_acoes_corretivas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "nc_id", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_acoes_corretivas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "prazo", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_acoes_corretivas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_melhoria_continua",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_melhoria_continua",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "nc_id", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_lotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_lotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_configuracoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ativo", "order": "ASCENDING" },
+        { "fieldPath": "atualizado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_auditoria",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "colecao", "order": "ASCENDING" },
+        { "fieldPath": "data_hora", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cq_auditoria",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "entidade_id", "order": "ASCENDING" },
+        { "fieldPath": "data_hora", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,37 @@
+Para ENVIAR diretamente para a branch main, você pode seguir estes passos simplificados:
+
+1- Primeiro, garanta que você está na branch main:
+git switch main
+
+2- Iniciar o Git no Antigravity:
+git init
+
+3- Adicione todos os arquivos modificados:
+git add .
+
+4- Faça um commit das alterações:
+git commit -m "Subi o projeto no dia - [data de hoje]"
+
+5- Envie para o GitHub:
+git push origin main
+
+
+
+
+executar antes de subir pro Vercel e colocar no build dele: npm install --force
+
+
+
+Para RECEBER ( CLONE ) o projeto do GitHub (ou seja, baixar a versão mais recente do repositório), você tem algumas opções dependendo do seu cenário:
+Se você já tem o repositório localmente e quer atualizar:
+
+1- Certifique-se de estar na branch main:
+git switch main
+
+2- Baixe as alterações do GitHub:
+git pull origin main
+
+
+Esse comando git pull combina dois comandos: git fetch (baixa as mudanças) e git merge (integra as mudanças ao seu código local).
+
+USE npx vite para executar o projeto localmente.
